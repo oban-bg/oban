@@ -8,8 +8,7 @@ defmodule Oban.Database do
 
   @type db :: GenServer.server()
   @type id :: binary() | integer()
-  @type cursor :: binary() | integer() | :ets.continuation()
-  @type jobs :: [Job.t()]
+  @type cursor :: id() | :ets.continuation()
   @type conf :: Config.t()
   @type stream :: binary()
   @type count :: pos_integer()
@@ -26,7 +25,7 @@ defmodule Oban.Database do
   If storage is successful then the list of jobs will be returned with the `id` assigned by the
   database and optional metadata additions.
   """
-  @callback push(db(), jobs(), conf()) :: jobs()
+  @callback push(db(), Job.t(), conf()) :: Job.t()
 
   @doc """
   Pull one or more jobs from the database for processing.
@@ -35,7 +34,7 @@ defmodule Oban.Database do
   `:timeout`, indicating that no jobs were available within the blocking period. It is essential
   that jobs remain in the database until they are acknowledged through `ack/2`.
   """
-  @callback pull(db(), stream(), count(), conf()) :: jobs()
+  @callback pull(db(), stream(), count(), conf()) :: [Job.t()]
 
   @doc """
   Check what is coming up in the stream without pulling anything out.
@@ -46,7 +45,7 @@ defmodule Oban.Database do
   The function returns a tuple with the last matched id and a list of jobs. The id may be used to
   continue pagination.
   """
-  @callback peek(db(), stream(), count(), nil | cursor(), conf()) :: {jobs(), cursor()} | []
+  @callback peek(db(), stream(), count(), nil | cursor(), conf()) :: {[Job.t()], cursor()} | []
 
   @doc """
   Acknowledge that a job has been processed successfully.
