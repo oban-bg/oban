@@ -17,7 +17,7 @@ defmodule Oban.Supervisor do
   def init(conf) do
     children = [
       {Config, conf: conf, name: conf.config_name},
-      {Database, conf: conf, name: conf.database_name}
+      {conf.database, conf: conf, name: conf.database_name}
     ]
 
     Supervisor.init(children, strategy: :one_for_one)

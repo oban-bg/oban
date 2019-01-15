@@ -47,9 +47,9 @@ defmodule Oban do
         db_pid = Process.whereis(@database_name)
         cf_pid = Process.whereis(@config_name)
 
-        %Config{database: database} = Config.get(cf_pid)
+        %Config{database: database} = conf = Config.get(cf_pid)
 
-        database.push(db_pid, Job.new(job), conf)
+        database.push(db_pid, Job.new(job_opts), conf)
       end
     end
   end

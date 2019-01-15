@@ -10,7 +10,7 @@ defmodule Oban.Database do
   @type id :: binary() | integer()
   @type cursor :: id() | :ets.continuation()
   @type conf :: Config.t()
-  @type stream :: binary()
+  @type queue :: binary()
   @type count :: pos_integer()
   @type info_mode :: :all | :processes | :queues | :stats
 
@@ -34,10 +34,10 @@ defmodule Oban.Database do
   `:timeout`, indicating that no jobs were available within the blocking period. It is essential
   that jobs remain in the database until they are acknowledged through `ack/2`.
   """
-  @callback pull(db(), stream(), count(), conf()) :: [Job.t()]
+  @callback pull(db(), queue(), count(), conf()) :: [Job.t()]
 
   @doc """
-  Check what is coming up in the stream without pulling anything out.
+  Check what is coming up in the queue without pulling anything out.
 
   Peeking can be done in chunks, where the `count` limits the number of entries returned per call
   and the `id` is a cursor used for pagination.
@@ -45,7 +45,7 @@ defmodule Oban.Database do
   The function returns a tuple with the last matched id and a list of jobs. The id may be used to
   continue pagination.
   """
-  @callback peek(db(), stream(), count(), nil | cursor(), conf()) :: {[Job.t()], cursor()} | []
+  @callback peek(db(), queue(), count(), nil | cursor(), conf()) :: {[Job.t()], cursor()} | []
 
   @doc """
   Acknowledge that a job has been processed successfully.
@@ -56,18 +56,18 @@ defmodule Oban.Database do
 
   The return value is `true` if the job was acknowledged, or `false` if it wasn't.
   """
-  @callback ack(db(), stream(), id(), conf()) :: boolean()
+  @callback ack(db(), queue(), id(), conf()) :: boolean()
 
   @doc """
-  Restore a pending job back into its stream for processing.
+  Restore a pending job back into its queue for processing.
 
-  If a job is consumed from the stream via `pull/4`, but it is never acknowledged via `ack/4` it
+  If a job is consumed from the queue via `pull/4`, but it is never acknowledged via `ack/4` it
   will be stuck in a pending state. Calling `restore/4` will push a pending job back to its
-  original stream.
+  original queue.
 
   The return value is `true` if the job was restored, `false` if it wasn't.
   """
-  @callback restore(db(), stream(), id(), conf()) :: boolean()
+  @callback restore(db(), queue(), id(), conf()) :: boolean()
 
   @doc """
   Purge all queues, stats and other data associated with this database instance.

@@ -22,18 +22,18 @@ defmodule Oban.Database.Memory do
     jid = System.unique_integer([:positive, :monotonic])
     job = %{job | id: jid}
 
-    true = :ets.insert(stream_table(conf), {{job.stream, job.id}, job})
+    true = :ets.insert(queue_table(conf), {{job.queue, job.id}, job})
 
     job
   end
 
   @impl Oban.Database
-  def pull(_db, stream, limit, conf) when is_binary(stream) and limit > 0 do
-    stream_table = stream_table(conf)
+  def pull(_db, queue, limit, conf) when is_binary(queue) and limit > 0 do
+    queue_table = queue_table(conf)
     claim_table = claim_table(conf)
 
     reducer = fn {key, job}, acc ->
-      case :ets.take(stream_table, key) do
+      case :ets.take(queue_table, key) do
         [{^key, ^job}] ->
           :ets.insert(claim_table, {key, job})
 
@@ -44,7 +44,7 @@ defmodule Oban.Database.Memory do
       end
     end
 
-    case :ets.select(stream_table, [{{{stream, :_}, :_}, [], [:"$_"]}], limit) do
+    case :ets.select(queue_table, [{{{queue, :_}, :_}, [], [:"$_"]}], limit) do
       {matches, _cont} ->
         matches
         |> Enum.reduce([], reducer)
@@ -56,33 +56,34 @@ defmodule Oban.Database.Memory do
   end
 
   @impl Oban.Database
-  def peek(_db, _stream, _limit, cont, _conf) do
+  def peek(_db, queue, limit, nil, conf) when is_binary(queue) and limit > 0 do
+    case :ets.select(queue_table(conf), [{{{queue, :_}, :"$1"}, [], [:"$1"]}], limit) do
+      {_matches, _cont} = result -> result
+      _ -> []
+    end
+  end
+
+  def peek(_db, _queue, _limit, cont, _conf) do
     case :ets.select(cont) do
       {_matches, _cont} = result -> result
       _ -> []
     end
   end
 
-  def peek(_db, stream, limit, cont, conf) when is_binary(stream) and limit > 0 do
-    case :ets.select(stream_table(conf), [{{{stream, :_}, :"$1"}, [], [:"$1"]}], limit) do
-      {_matches, _cont} = result -> result
-      _ -> []
-    end
-  end
 
   @impl Oban.Database
-  def ack(_db, stream, id, conf) when is_binary(stream) and is_integer(id) do
-    case :ets.select_delete(claim_table(conf), [{{{stream, id}, :_}, [], [true]}]) do
+  def ack(_db, queue, id, conf) when is_binary(queue) and is_integer(id) do
+    case :ets.select_delete(claim_table(conf), [{{{queue, id}, :_}, [], [true]}]) do
       1 -> true
       0 -> false
     end
   end
 
   @impl Oban.Database
-  def restore(_db, stream, id, conf) when is_binary(stream) and is_integer(id) do
-    case :ets.take(claim_table(conf), {stream, id}) do
+  def restore(_db, queue, id, conf) when is_binary(queue) and is_integer(id) do
+    case :ets.take(claim_table(conf), {queue, id}) do
       [{key, job}] ->
-        :ets.insert(stream_table(conf), {key, job})
+        :ets.insert(queue_table(conf), {key, job})
 
       [] ->
         false
@@ -92,7 +93,7 @@ defmodule Oban.Database.Memory do
   @impl Oban.Database
   def clear(_db, conf) do
     true = :ets.delete_all_objects(claim_table(conf))
-    true = :ets.delete_all_objects(stream_table(conf))
+    true = :ets.delete_all_objects(queue_table(conf))
 
     :ok
   end
@@ -102,16 +103,16 @@ defmodule Oban.Database.Memory do
   @impl GenServer
   def init(%Config{} = conf) do
     maybe_create_table(claim_table(conf))
-    maybe_create_table(stream_table(conf))
+    maybe_create_table(queue_table(conf))
 
     {:ok, nil}
   end
 
   # Helpers
 
-  defp claim_table(%Config{otp_app: app}), do: Module.concat([app, "Claim"])
+  defp claim_table(%Config{main: main}), do: Module.concat([main, "Claim"])
 
-  defp stream_table(%Config{otp_app: app}), do: Module.concat([app, "Streams"])
+  defp queue_table(%Config{main: main}), do: Module.concat([main, "queues"])
 
   defp maybe_create_table(table_name) do
     case :ets.whereis(table_name) do
