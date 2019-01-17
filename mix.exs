@@ -57,6 +57,7 @@ defmodule Oban.MixProject do
       {:jason, "~> 1.1"},
       {:gen_stage, "~> 0.14"},
       {:redix, "~> 0.9"},
+      {:telemetry, "~> 0.3"},
       {:propcheck, "~> 1.0", only: [:test]},
       {:credo, "~> 1.0", only: [:dev], runtime: false},
       {:dialyxir, "~> 0.5", only: [:dev], runtime: false}

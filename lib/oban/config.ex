@@ -24,9 +24,15 @@ defmodule Oban.Config do
             queues: [default: 10]
 
   @doc false
-  @spec child_spec(t()) :: Supervisor.child_spec()
-  def child_spec(config) do
-    %{id: __MODULE__, start: {Agent, :start_link, [fn -> config end]}}
+  @spec start_link(Keyword.t()) :: GenServer.server()
+  def start_link(conf: conf, name: name) do
+    Agent.start_link(fn -> conf end, name: name)
+  end
+
+  @doc false
+  @spec child_spec(Keyword.t()) :: Supervisor.child_spec()
+  def child_spec(opts) do
+    %{id: __MODULE__, start: {__MODULE__, :start_link, [opts]}}
   end
 
   @doc """

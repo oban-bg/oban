@@ -8,19 +8,28 @@ defmodule Oban.Integration.ExecutionTest do
   @moduletag timeout: :infinity
   @moduletag capture_log: true
 
-  @streams [alpha: 5, beta: 5, gamma: 5, delta: 5]
+  @queues ~w(alpha beta gamma delta)
 
-  defmodule State do
-    defstruct oban: :empty, pending: 0, success: 0, failure: 0
+  defmodule TestOban do
+    use Oban, queues: [alpha: 5, beta: 5, gamma: 5, delta: 5]
   end
 
-  property "jobs are continuously executed" do
+  defmodule Worker do
+    def call(%Oban.Job{args: _args}, %Oban.Config{}) do
+      true
+    end
+  end
+
+  property "jobs are continuously executed", [:verbose] do
     forall commands in commands(__MODULE__) do
-      # flush redis?
+      unless Process.whereis(TestOban) do
+        TestOban.start_link()
+      end
 
       {history, state, result} = run_commands(__MODULE__, commands)
 
       (result == :ok)
+      |> aggregate(command_names(commands))
       |> when_fail(
         IO.puts("""
         History: #{inspect(history, pretty: true)}
@@ -28,62 +37,55 @@ defmodule Oban.Integration.ExecutionTest do
         Result: #{inspect(result, pretty: true)}
         """)
       )
-      |> aggregate(command_names(cmds))
     end
   end
 
   # Oban Helpers
 
-  def start_oban do
-    Oban.start_link(streams: @streams)
-  end
-
-  def stream do
-    streams = Keyword.keys(@streams)
-
-    one_of(streams)
+  def queue do
+    oneof(@queues)
   end
 
   def args do
-    fixed_list([bool(), oneof([integer(), string()])])
+    fixed_list([bool(), integer()])
   end
 
   # State Model
 
-  def initial_state, do: %State{}
+  def initial_state, do: %{pending: 0, success: 0, failure: 0}
 
-  def command(%{oban: :empty}) do
-    {:call, __MODULE__, :start_oban, []}
+  # Pushing a processable job into a known queue succeeds
+  # Pushing a processable job into an unknown queue is pending
+  # Pushing a job with an unknown worker fails
+  # Pushing an unprocessable job with a known worker fails
+  def command(_state) do
+    oneof([{:call, TestOban, :push, [[args: args(), queue: queue(), worker: Worker]]}])
   end
 
-  def command(%{oban: oban}) do
-    oneof([{:call, Oban, :push, [oban, [args: args(), stream: stream(), worker: @worker]]}])
-  end
+  def precondition(_state, {:call, _mod, _fun, _args}), do: true
 
-  def precondition(%{oban: :empty}, {:call, Oban, _, _}), do: false
-  def precondition(_, _), do: true
+  def postcondition(_state, {:call, _mod, _fun, _args}, _res), do: true
 
-  # Any job where the initial argument is `true` will succeed. All other jobs can be considered
-  # failures.
-  def next_state(state, _value, {:call, _, :push, [_, [args: [true | _] | _]]}) do
-    %{state | success: state.success + 1}
-  end
-
-  def next_state(state, _value, {:call, _, :push, [_, _]}) do
-    %{state | failure: state.failure + 1}
-  end
-
-  def next_state(state, {:ok, oban}, {:call, _, :start_oban, _}) do
-    %{state | oban: oban}
-  end
-
-  def next_state(state, _, {:call, _, :start_oban, _}) do
+  def next_state(state, _res, {:call, _mod, _fun, _args}) do
     state
   end
 
-  def postcondition(%{success: succ, failure: fail}, {:call, Oban, :push, [_, opts]}, result) do
-    # Can I do a postcondition? The execution is asynchronous and won't necessarily be accurate.
-  end
+  # Any job where the initial argument is `true` will succeed. All other jobs can be considered
+  # failures.
+  # def next_state(state, _value, {:call, _, :push, opts}) do
+  #   case Keyword.get(opts, :args) do
+  #     [true | _] ->
+  #       %{state | success: state.success + 1}
+  #     _ ->
+  #       %{state | failure: state.failure + 1}
+  #   end
+  # end
 
-  def postcondition(_, _, _), do: true
+  # def next_state(state, {:ok, oban}, {:call, _, :start_oban, _}) do
+  #   %{state | oban: oban}
+  # end
+
+  # def next_state(state, _res, {:call, _, :start_oban, _}) do
+  #   state
+  # end
 end
