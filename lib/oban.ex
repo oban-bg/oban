@@ -74,6 +74,11 @@ defmodule Oban do
   """
   @callback push([job_option()]) :: Job.t()
 
+  @doc """
+  Clear all job streams, stats and any other stored data associated with the Oban instance.
+  """
+  @callback clear() :: :ok
+
   @doc false
   defmacro __using__(opts) do
     quote location: :keep do
@@ -109,6 +114,16 @@ defmodule Oban do
         %Config{database: database} = conf = Config.get(cf_pid)
 
         database.push(db_pid, Job.new(job_opts), conf)
+      end
+
+      @impl Oban
+      def clear do
+        db_pid = Process.whereis(@database_name)
+        cf_pid = Process.whereis(@config_name)
+
+        %Config{database: database} = conf = Config.get(cf_pid)
+
+        database.clear(db_pid, conf)
       end
     end
   end

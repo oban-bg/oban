@@ -27,7 +27,7 @@ defmodule Oban.Queue.Executor do
         report(:success, timing, job)
 
       {:failure, ^job, error, stack} ->
-        report(:failure, timing, job, error: error, stack: stack)
+        report(:failure, timing, job, %{error: error, stack: stack})
     end
 
     :ok
@@ -66,7 +66,10 @@ defmodule Oban.Queue.Executor do
   end
 
   defp report(event, timing, job, meta \\ %{}) do
-    meta = Map.merge(meta, %{args: job.args, queue: job.queue, worker: job.worker})
+    meta =
+      job
+      |> Map.take([:id, :args, :queue, :worker])
+      |> Map.merge(meta)
 
     :telemetry.execute([:oban, :job, event], timing, meta)
   end

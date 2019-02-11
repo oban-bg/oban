@@ -15,7 +15,7 @@ defmodule Oban.MixProject do
       # Hex
       package: package(),
       description: """
-      Robust job queue compatible powered by Redis Streams
+      Smooth job queue powered by PostgreSQL and GenStage
       """,
 
       # Dialyzer
@@ -54,11 +54,10 @@ defmodule Oban.MixProject do
 
   defp deps do
     [
-      {:jason, "~> 1.1"},
+      {:ecto_sql, "~> 3.0"},
       {:gen_stage, "~> 0.14"},
-      {:redix, "~> 0.9"},
+      {:postgrex, "~> 0.14"},
       {:telemetry, "~> 0.3"},
-      {:propcheck, "~> 1.0", only: [:test]},
       {:credo, "~> 1.0", only: [:dev], runtime: false},
       {:dialyxir, "~> 0.5", only: [:dev], runtime: false}
     ]
