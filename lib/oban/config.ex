@@ -1,39 +1,16 @@
 defmodule Oban.Config do
   @moduledoc false
 
-  # main (the module that "used" oban) -- used for the consumer group name
-  # node (node, dyno or hostname) -- should be static, this is the consumer
-
   @type t :: %__MODULE__{
-    config_name: GenServer.name(),
-    database: module(),
-    database_name: GenServer.name(),
-    database_opts: Keyword.t(),
-    main: module(),
-    node: binary(),
-    queues: [{atom(), pos_integer()}]
-  }
+          config_name: GenServer.name(),
+          node: binary(),
+          poll_interval: pos_integer(),
+          queues: [{atom(), pos_integer()}],
+          repo: module()
+        }
 
-  @enforce_keys [:main, :node]
-  defstruct config_name: Oban.Config,
-            database: Oban.Database.Memory,
-            database_name: Oban.Database,
-            database_opts: [],
-            main: nil,
-            node: nil,
-            queues: [default: 10]
-
-  @doc false
-  @spec start_link(Keyword.t()) :: GenServer.server()
-  def start_link(conf: conf, name: name) do
-    Agent.start_link(fn -> conf end, name: name)
-  end
-
-  @doc false
-  @spec child_spec(Keyword.t()) :: Supervisor.child_spec()
-  def child_spec(opts) do
-    %{id: __MODULE__, start: {__MODULE__, :start_link, [opts]}}
-  end
+  @enforce_keys [:node, :repo]
+  defstruct [:node, :repo, config_name: __MODULE__, poll_interval: 1_000, queues: [default: 10]]
 
   @doc """
   Instantiate a new config struct with auto-generated fields provided and types validated.
@@ -49,16 +26,6 @@ defmodule Oban.Config do
     opts = Keyword.put_new(opts, :node, node_name())
 
     struct!(__MODULE__, opts)
-  end
-
-  @doc """
-  Get the configuration for a given pid.
-
-  Each oban supervision tree stores a configuration instance.
-  """
-  @spec get(server :: pid()) :: t()
-  def get(server) when is_pid(server) do
-    Agent.get(server, &(&1))
   end
 
   @doc false

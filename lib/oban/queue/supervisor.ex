@@ -14,22 +14,18 @@ defmodule Oban.Queue.Supervisor do
 
   @impl Supervisor
   def init(conf: conf, queue: queue, limit: limit) do
-    data_name = child_name(queue, "Database")
     prod_name = child_name(queue, "Producer")
     cons_name = child_name(queue, "Consumer")
 
-    data_opts = [conf: conf, name: data_name]
-    prod_opts = [conf: conf, db: data_name, queue: queue, name: prod_name]
+    prod_opts = [conf: conf, queue: queue, name: prod_name]
 
     cons_opts = [
       conf: conf,
-      db: data_name,
       subscribe_to: [{prod_name, max_demand: limit}],
       name: cons_name
     ]
 
     children = [
-      {conf.database, data_opts},
       {Producer, prod_opts},
       {Consumer, cons_opts}
     ]

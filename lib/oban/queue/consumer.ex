@@ -13,8 +13,8 @@ defmodule Oban.Queue.Consumer do
   end
 
   @impl ConsumerSupervisor
-  def init(conf: conf, db: db, subscribe_to: subscribe_to) do
-    children = [{Executor, conf: conf, db: db}]
+  def init(conf: conf, subscribe_to: subscribe_to) do
+    children = [{Executor, conf: conf}]
 
     ConsumerSupervisor.init(children, strategy: :one_for_one, subscribe_to: subscribe_to)
   end

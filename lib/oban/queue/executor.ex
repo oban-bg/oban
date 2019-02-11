@@ -14,12 +14,12 @@ defmodule Oban.Queue.Executor do
   end
 
   @spec start_link(Keyword.t(), Job.t()) :: {:ok, pid()}
-  def start_link([conf: conf, db: db], job) do
-    Task.start_link(__MODULE__, :call, [job, db, conf])
+  def start_link([conf: conf], job) do
+    Task.start_link(__MODULE__, :call, [job, conf])
   end
 
-  @spec call(Job.t(), GenServer.server(), Config.t()) :: :ok
-  def call(%Job{} = job, _db, conf) do
+  @spec call(job :: Job.t(), conf :: Config.t()) :: :ok
+  def call(%Job{} = job, conf) do
     {timing, return} = :timer.tc(__MODULE__, :safe_call, [job, conf])
 
     case return do
@@ -34,11 +34,11 @@ defmodule Oban.Queue.Executor do
   end
 
   @doc false
-  def safe_call(%Job{worker: worker} = job, conf) do
+  def safe_call(%Job{worker: worker} = job, _conf) do
     try do
       worker
       |> to_module()
-      |> apply(:call, [job, conf])
+      |> apply(:perform, [job])
 
       {:success, job}
     rescue

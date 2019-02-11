@@ -17,7 +17,7 @@ defmodule Oban.Migrations do
       add :state, :oban_job_state, null: false, default: "available"
       add :queue, :text, null: false, default: "default"
       add :worker, :text, null: false
-      add :args, :jsonb, null: false, default: "[]"
+      add :args, :map, null: false
       add :attempt, :integer, null: false, default: 0
       add :max_attempts, :integer, null: false, default: 20
 

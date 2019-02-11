@@ -6,8 +6,8 @@ defmodule Oban.Queue.Producer do
   defmodule State do
     @moduledoc false
 
-    @enforce_keys [:conf, :db, :queue]
-    defstruct [:conf, :db, :queue, demand: 0, interval: 10]
+    @enforce_keys [:conf, :queue]
+    defstruct [:conf, :queue, demand: 0]
   end
 
   @spec start_link(Keyword.t()) :: GenServer.on_start()
@@ -18,18 +18,16 @@ defmodule Oban.Queue.Producer do
   end
 
   @impl GenStage
-  def init(opts) do
-    send(self(), :pull)
+  def init(conf: conf, queue: queue) do
+    send(self(), :poll)
 
-    {:producer, struct!(State, opts)}
+    {:ok, _ref} = :timer.send_interval(conf.poll_interval, :poll)
+
+    {:producer, %State{conf: conf, queue: queue}}
   end
 
   @impl GenStage
-  def handle_info(:pull, state) do
-    state
-    |> schedule_pull()
-    |> dispatch()
-  end
+  def handle_info(:poll, state), do: dispatch(state)
 
   @impl GenStage
   def handle_demand(demand, %State{demand: buffered_demand} = state) do
@@ -40,15 +38,9 @@ defmodule Oban.Queue.Producer do
     {:noreply, [], state}
   end
 
-  defp dispatch(%State{conf: conf, db: db, demand: demand, queue: queue} = state) do
-    jobs = conf.database.pull(db, queue, demand, conf)
+  defp dispatch(%State{conf: _conf, demand: demand, queue: _queue} = state) do
+    jobs = [] # do some queue query here
 
     {:noreply, jobs, %{state | demand: demand - length(jobs)}}
-  end
-
-  defp schedule_pull(%State{interval: interval} = state) do
-    Process.send_after(self(), :pull, interval)
-
-    state
   end
 end

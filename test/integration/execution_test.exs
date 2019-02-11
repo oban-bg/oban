@@ -1,7 +1,5 @@
 defmodule Oban.Integration.ExecutionTest do
-  use ExUnit.Case, async: true
-
-  @moduletag timeout: :infinity
+  use Oban.Case, async: true
 
   @queues ~w(alpha beta gamma delta)a
 
@@ -14,14 +12,14 @@ defmodule Oban.Integration.ExecutionTest do
   defmodule Worker do
     use Oban.Worker
 
-    @impl Oban.Worker
-    def call(%{params: [index, "OK", bin_pid]}) do
+    @impl Worker
+    def perform(%{params: [index, "OK", bin_pid]}) do
       bin_pid
       |> bin_to_pid()
       |> send({:ok, index})
     end
 
-    def call(%{params: [_index, "FAIL", _bin_pid]}) do
+    def perform(%{params: [_index, "FAIL", _bin_pid]}) do
       raise RuntimeError, "FAILED!"
     end
 
@@ -39,10 +37,10 @@ defmodule Oban.Integration.ExecutionTest do
   end
 
   test "jobs enqueued in configured queues are executed" do
-    :ok = start_supervised!(Supervisor)
+    {:ok, _} = start_supervised(Supervisor)
 
     for index <- 1..10, status <- ~w(OK FAIL), queue <- @queues do
-      [index, status, Worker.pid_to_bin()]
+      %{index: index, status: status, bin_pid: Worker.pid_to_bin()}
       |> Worker.new(queue: queue)
       |> Repo.insert!()
 
@@ -51,9 +49,11 @@ defmodule Oban.Integration.ExecutionTest do
 
     # check the database table:
     #   all jobs should be in there, we should have N available and N completed
+
+    :ok = stop_supervised(Supervisor)
   end
 
   # telemetry integration
-  # priority
   # retries
+  # rescue jobs that have timed out
 end

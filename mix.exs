@@ -56,6 +56,7 @@ defmodule Oban.MixProject do
     [
       {:ecto_sql, "~> 3.0"},
       {:gen_stage, "~> 0.14"},
+      {:jason, "~> 1.1"},
       {:postgrex, "~> 0.14"},
       {:telemetry, "~> 0.3"},
       {:credo, "~> 1.0", only: [:dev], runtime: false},

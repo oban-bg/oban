@@ -15,14 +15,7 @@ defmodule Oban.Supervisor do
 
   @impl Supervisor
   def init(%Config{queues: queues} = conf) do
-    children = [
-      {Config, conf: conf, name: conf.config_name},
-      {conf.database, conf: conf, name: conf.database_name}
-    ]
-
-    queue_children = Enum.map(queues, &queue_spec(&1, conf))
-
-    children = children ++ queue_children
+    children = Enum.map(queues, &queue_spec(&1, conf))
 
     Supervisor.init(children, strategy: :one_for_one)
   end
