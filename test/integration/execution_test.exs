@@ -62,8 +62,20 @@ defmodule Oban.Integration.ExecutionTest do
     :ok = stop_supervised(Supervisor)
   end
 
-  # test telemetry integration
-  # test scheduled jobs
-  # test retries
-  # test expired job rescue
+  test "jobs can be scheduled for future execution" do
+    [queue | _] = @queues
+
+    for seconds <- 1..5 do
+      %{}
+      |> Worker.new(scheduled_in: seconds, queue: queue)
+      |> Repo.insert!()
+    end
+
+    query =
+      Job
+      |> where([job], job.scheduled_at > ^NaiveDateTime.utc_now())
+      |> select([job], count(job.id))
+
+    assert Repo.one(query) == 5
+  end
 end

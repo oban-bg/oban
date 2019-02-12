@@ -1,28 +1,32 @@
 defmodule Oban.Job do
-  @moduledoc false
-
-  # TODO: Re-work these docs
-
-  @doc """
+  @moduledoc """
   A Job is an Ecto schema used for asynchronous execution.
 
   ## Options
 
-    * `:args` — a list of arguments passed to the worker during execution
+    * `:max_attempts` — the maximum number of times a job can be retried if there are errors during execution
     * `:queue` — a named queue to push the job into. Jobs may be pushed into any queue, regardless
       of whether jobs are currently being processed for the queue.
+    * `:scheduled_in` - the number of seconds until the job should be executed
+    * `:scheduled_at` - a time in the future after which the job should be executed
     * `:worker` — a module to execute the job in. The module must implement the `Oban.Worker`
       behaviour.
 
   ## Examples
 
-  Push a job into the `:default` queue
+  Insert a job with the `:default` queue:
 
-      MyApp.Oban.push(args: [1, 2, 3], queue: :default, worker: MyApp.Worker)
+      %{id: 1, user_id: 2}
+      |> Oban.Job.new(queue: :default, worker: MyApp.Worker)
+      |> MyApp.Repo.insert()
 
-  Generate a pre-configured job for `MyApp.Worker` and push it.
+  Generate a pre-configured job for `MyApp.Worker` and push it:
 
-      [args: [1, 2, 3]] |> MyApp.Worker.new() |> MyApp.Oban.push()
+      %{id: 1, user_id: 2} |> MyApp.Worker.new() |> MyApp.Repo.insert()
+
+  Schedule a job to run in 5 seconds:
+
+      %{id: 1} |> MyApp.Worker.new(schedule_in: 5) |> MyApp.Repo.insert()
   """
 
   use Ecto.Schema
@@ -65,6 +69,7 @@ defmodule Oban.Job do
       |> Map.new()
       |> coerce_field(:queue)
       |> coerce_field(:worker)
+      |> coerce_scheduling()
 
     %__MODULE__{}
     |> cast(params, @permitted)
@@ -81,4 +86,14 @@ defmodule Oban.Job do
         params
     end
   end
+
+  defp coerce_scheduling(%{scheduled_in: in_seconds} = params) when is_integer(in_seconds) do
+    scheduled_at = NaiveDateTime.add(NaiveDateTime.utc_now(), in_seconds)
+
+    params
+    |> Map.delete(:in)
+    |> Map.put(:scheduled_at, scheduled_at)
+  end
+
+  defp coerce_scheduling(params), do: params
 end

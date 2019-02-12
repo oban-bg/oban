@@ -51,3 +51,27 @@ Miscellaneous thoughts and notes:
 * The underlying structure and behavior should be easily replicated in other
   languages (ruby, python, node).
 * Get rid of the `init` function and optional callback.
+
+Inspired by https://github.com/mbuhot/ecto_job
+
+- Liberal use of `SELECT NO LOCK FOR UPDATE`
+- Timestamp based job scheduling
+- Separate queues managed from a single table
+- Persistent stats
+- Use of LISTEN/NOTIFY to avoid heavy polling (I don't think this matters much)
+- Different execution modes: fake, inline, real (some combination of behaviours?)
+
+## Execution Life Cycle
+
+We can activate jobs and run them all in the same producer loop. Do we copy the use of a
+`scheduled` state? It does make it abundantly clear what is happening.
+
+- "AVAILABLE" - The job is available for execution
+- "EXECUTING" - The job is currently being run
+- "COMPLETED" - The job completed successfully
+
+- Enqueueing a job writes it in the "AVAILABLE" state and a scheduled_at time
+- A query finds N available jobs in a particular queue with a scheduled_at time greater than now,
+  these are marked as "EXECUTING" and dispatched to consumers
+- When a job has finished successfully it is marked as "COMPLETED", if there are any errors it is
+  set back to "AVAILAVBLE" with an increased attempt counter
