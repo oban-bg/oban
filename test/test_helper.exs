@@ -1,3 +1,5 @@
+Logger.configure(level: :info)
+
 ExUnit.start()
 
 Oban.Test.Repo.start_link()

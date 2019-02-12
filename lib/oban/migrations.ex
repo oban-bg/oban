@@ -10,7 +10,9 @@ defmodule Oban.Migrations do
   end
 
   def up do
-    execute("create type oban_job_state as enum ('available', 'executing', 'completed')")
+    execute(
+      "create type oban_job_state as enum ('available', 'executing', 'completed', 'discarded')"
+    )
 
     create table(:oban_jobs, primary_key: false) do
       add :id, :bigserial, primary_key: true

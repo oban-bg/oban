@@ -1,7 +1,7 @@
 defmodule Oban.Queue.Executor do
   @moduledoc false
 
-  alias Oban.{Config, Job}
+  alias Oban.{Config, Job, Query}
 
   @spec child_spec(Keyword.t()) :: Supervisor.child_spec()
   def child_spec(args) do
@@ -19,14 +19,18 @@ defmodule Oban.Queue.Executor do
   end
 
   @spec call(job :: Job.t(), conf :: Config.t()) :: :ok
-  def call(%Job{} = job, conf) do
-    {timing, return} = :timer.tc(__MODULE__, :safe_call, [job, conf])
+  def call(%Job{} = job, %Config{repo: repo}) do
+    {timing, return} = :timer.tc(__MODULE__, :safe_call, [job])
 
     case return do
       {:success, ^job} ->
+        Query.complete_job(repo, job)
+
         report(:success, timing, job)
 
       {:failure, ^job, error, stack} ->
+        Query.retry_job(repo, job)
+
         report(:failure, timing, job, %{error: error, stack: stack})
     end
 
@@ -34,7 +38,7 @@ defmodule Oban.Queue.Executor do
   end
 
   @doc false
-  def safe_call(%Job{worker: worker} = job, _conf) do
+  def safe_call(%Job{worker: worker} = job) do
     try do
       worker
       |> to_module()

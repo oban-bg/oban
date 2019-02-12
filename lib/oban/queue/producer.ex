@@ -3,6 +3,8 @@ defmodule Oban.Queue.Producer do
 
   use GenStage
 
+  alias Oban.Query
+
   defmodule State do
     @moduledoc false
 
@@ -38,9 +40,13 @@ defmodule Oban.Queue.Producer do
     {:noreply, [], state}
   end
 
-  defp dispatch(%State{conf: _conf, demand: demand, queue: _queue} = state) do
-    jobs = [] # do some queue query here
+  defp dispatch(%State{conf: conf, demand: demand, queue: queue} = state) do
+    {count, jobs} =
+      case Query.fetch_available_jobs(conf.repo, queue, demand) do
+        {0, nil} -> {0, []}
+        {count, jobs} -> {count, jobs}
+      end
 
-    {:noreply, jobs, %{state | demand: demand - length(jobs)}}
+    {:noreply, jobs, %{state | demand: demand - count}}
   end
 end

@@ -1,5 +1,7 @@
 defmodule Oban.Integration.ExecutionTest do
-  use Oban.Case, async: true
+  use Oban.Case
+
+  import Ecto.Query
 
   @queues ~w(alpha beta gamma delta)a
 
@@ -13,14 +15,18 @@ defmodule Oban.Integration.ExecutionTest do
     use Oban.Worker
 
     @impl Worker
-    def perform(%{params: [index, "OK", bin_pid]}) do
-      bin_pid
-      |> bin_to_pid()
-      |> send({:ok, index})
-    end
+    def perform(%{args: %{"index" => index, "status" => status, "bin_pid" => bin_pid}}) do
+      pid = bin_to_pid(bin_pid)
 
-    def perform(%{params: [_index, "FAIL", _bin_pid]}) do
-      raise RuntimeError, "FAILED!"
+      case status do
+        "OK" ->
+          send(pid, {:ok, index})
+
+        "FAIL" ->
+          send(pid, {:error, index})
+
+          raise RuntimeError, "FAILED"
+      end
     end
 
     def pid_to_bin(pid \\ self()) do
@@ -37,23 +43,27 @@ defmodule Oban.Integration.ExecutionTest do
   end
 
   test "jobs enqueued in configured queues are executed" do
-    {:ok, _} = start_supervised(Supervisor)
+    {:ok, _} = start_supervised({Supervisor, poll_interval: 10})
 
-    for index <- 1..10, status <- ~w(OK FAIL), queue <- @queues do
+    for index <- 1..5, status <- ~w(OK FAIL), queue <- @queues do
       %{index: index, status: status, bin_pid: Worker.pid_to_bin()}
       |> Worker.new(queue: queue)
       |> Repo.insert!()
 
-      if status == "OK", do: assert_receive {:ok, index}
+      assert_receive {_, index}
     end
 
-    # check the database table:
-    #   all jobs should be in there, we should have N available and N completed
+    Process.sleep(10)
+
+    query = from(job in Job, group_by: job.state, select: {job.state, count()})
+
+    assert Repo.all(query) == [{"available", 20}, {"completed", 20}]
 
     :ok = stop_supervised(Supervisor)
   end
 
-  # telemetry integration
-  # retries
-  # rescue jobs that have timed out
+  # test telemetry integration
+  # test scheduled jobs
+  # test retries
+  # test expired job rescue
 end
