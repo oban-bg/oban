@@ -3,13 +3,39 @@ defmodule Oban.Queue.Consumer do
 
   use ConsumerSupervisor
 
+  alias Oban.Config
   alias Oban.Queue.Executor
 
-  @spec start_link(Keyword.t()) :: Supervisor.on_start()
+  @type option ::
+          {:name, module()}
+          | {:conf, Config.t()}
+          | GenStage.consumer_and_producer_consumer_option()
+
+  @spec start_link([option]) :: Supervisor.on_start()
   def start_link(opts) do
     {name, opts} = Keyword.pop(opts, :name)
 
     ConsumerSupervisor.start_link(__MODULE__, opts, name: name)
+  end
+
+  @spec wait_for_executing(Supervisor.name(), pos_integer()) :: :ok
+  def wait_for_executing(consumer, interval \\ 100) do
+    children =
+      try do
+        ConsumerSupervisor.count_children(consumer)
+      catch
+        _ -> %{active: 0}
+      end
+
+    case children do
+      %{active: 0} ->
+        :ok
+
+      _ ->
+        :ok = Process.sleep(interval)
+
+        wait_for_executing(consumer, interval)
+    end
   end
 
   @impl ConsumerSupervisor

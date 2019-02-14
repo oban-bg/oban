@@ -58,7 +58,7 @@ defmodule Oban.Job do
     field :attempted_at, :utc_datetime_usec
   end
 
-  @permitted ~w(queue worker args max_attempts scheduled_at)a
+  @permitted ~w(queue worker args max_attempts scheduled_at state)a
   @required ~w(worker args)a
 
   @spec new(args :: map(), opts :: Keyword.t()) :: Ecto.Changeset.t()

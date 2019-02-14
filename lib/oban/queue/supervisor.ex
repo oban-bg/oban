@@ -3,9 +3,16 @@ defmodule Oban.Queue.Supervisor do
 
   use Supervisor
 
-  alias Oban.Queue.{Consumer, Producer}
+  alias Oban.Config
+  alias Oban.Queue.{Consumer, Producer, Watchman}
 
-  @spec start_link(Keyword.t()) :: Supervisor.on_start()
+  @type option ::
+          {:name, module()}
+          | {:conf, Config.t()}
+          | {:queue, binary()}
+          | {:limit, pos_integer()}
+
+  @spec start_link([option]) :: Supervisor.on_start()
   def start_link(opts) when is_list(opts) do
     {name, opts} = Keyword.pop(opts, :name, __MODULE__)
 
@@ -25,9 +32,17 @@ defmodule Oban.Queue.Supervisor do
       name: cons_name
     ]
 
+    watch_opts = [
+      consumer: cons_name,
+      name: child_name(queue, "Watchman"),
+      producer: prod_name,
+      shutdown: conf.shutdown_grace_period
+    ]
+
     children = [
       {Producer, prod_opts},
-      {Consumer, cons_opts}
+      {Consumer, cons_opts},
+      {Watchman, watch_opts}
     ]
 
     Supervisor.init(children, strategy: :rest_for_one)

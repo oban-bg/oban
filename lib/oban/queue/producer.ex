@@ -9,7 +9,7 @@ defmodule Oban.Queue.Producer do
     @moduledoc false
 
     @enforce_keys [:conf, :queue]
-    defstruct [:conf, :queue, demand: 0]
+    defstruct [:conf, :queue, demand: 0, paused: false]
   end
 
   @spec start_link(Keyword.t()) :: GenServer.on_start()
@@ -17,6 +17,11 @@ defmodule Oban.Queue.Producer do
     {name, opts} = Keyword.pop(opts, :name)
 
     GenStage.start_link(__MODULE__, opts, name: name)
+  end
+
+  @spec pause(GenServer.name()) :: :ok
+  def pause(producer) do
+    GenStage.call(producer, :pause)
   end
 
   @impl GenStage
@@ -32,11 +37,16 @@ defmodule Oban.Queue.Producer do
   def handle_info(:poll, state), do: dispatch(state)
 
   @impl GenStage
+  def handle_call(:pause, _from, %State{} = state) do
+    {:reply, :ok, [], %{state | demand: 0, paused: true}}
+  end
+
+  @impl GenStage
   def handle_demand(demand, %State{demand: buffered_demand} = state) do
     dispatch(%{state | demand: demand + buffered_demand})
   end
 
-  defp dispatch(%State{demand: 0} = state) do
+  defp dispatch(%State{demand: demand, paused: paused} = state) when demand == 0 or paused do
     {:noreply, [], state}
   end
 

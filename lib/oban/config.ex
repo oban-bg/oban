@@ -6,11 +6,19 @@ defmodule Oban.Config do
           node: binary(),
           poll_interval: pos_integer(),
           queues: [{atom(), pos_integer()}],
-          repo: module()
+          repo: module(),
+          shutdown_grace_period: timeout()
         }
 
   @enforce_keys [:node, :repo]
-  defstruct [:node, :repo, config_name: __MODULE__, poll_interval: 1_000, queues: [default: 10]]
+  defstruct [
+    :node,
+    :repo,
+    config_name: __MODULE__,
+    poll_interval: 1_000,
+    queues: [default: 10],
+    shutdown_grace_period: 15_000
+  ]
 
   @doc """
   Instantiate a new config struct with auto-generated fields provided and types validated.
