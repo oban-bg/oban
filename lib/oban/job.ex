@@ -33,14 +33,23 @@ defmodule Oban.Job do
 
   import Ecto.Changeset
 
+  @type args :: map()
+  @type option ::
+          {:queue, atom() | binary()}
+          | {:worker, atom() | binary()}
+          | {:args, args()}
+          | {:max_attempts, pos_integer()}
+          | {:scheduled_at, DateTime.t()}
+          | {:scheduled_in, pos_integer()}
+
   @type t :: %__MODULE__{
           id: pos_integer(),
           state: binary(),
           queue: binary(),
           worker: binary(),
-          args: map(),
+          args: args(),
           attempt: non_neg_integer(),
-          max_attempts: non_neg_integer(),
+          max_attempts: pos_integer(),
           inserted_at: DateTime.t(),
           scheduled_at: DateTime.t(),
           attempted_at: DateTime.t()
@@ -61,7 +70,7 @@ defmodule Oban.Job do
   @permitted ~w(queue worker args max_attempts scheduled_at state)a
   @required ~w(worker args)a
 
-  @spec new(args :: map(), opts :: Keyword.t()) :: Ecto.Changeset.t()
+  @spec new(args(), [option]) :: Ecto.Changeset.t()
   def new(args, opts \\ []) when is_map(args) and is_list(opts) do
     params =
       opts

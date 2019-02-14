@@ -44,7 +44,7 @@ defmodule Oban.Worker do
   @doc """
   Build a job changeset for this worker with optional overrides.
   """
-  @callback new(args :: Job.args(), opts :: Job.opts()) :: Ecto.Changeset.t()
+  @callback new(args :: Job.args(), opts :: [Job.option()]) :: Ecto.Changeset.t()
 
   @doc """
   The `perform/1` function is called when the job is executed.

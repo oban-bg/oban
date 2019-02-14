@@ -2,7 +2,6 @@ defmodule Oban.Config do
   @moduledoc false
 
   @type t :: %__MODULE__{
-          config_name: GenServer.name(),
           node: binary(),
           poll_interval: pos_integer(),
           queues: [{atom(), pos_integer()}],
@@ -14,7 +13,6 @@ defmodule Oban.Config do
   defstruct [
     :node,
     :repo,
-    config_name: __MODULE__,
     poll_interval: 1_000,
     queues: [default: 10],
     shutdown_grace_period: 15_000

@@ -3,13 +3,9 @@ defmodule Oban.Integration.ExecutionTest do
 
   import Ecto.Query
 
-  @queues ~w(alpha beta gamma delta)a
-
-  defmodule Supervisor do
-    use Oban,
-      repo: Oban.Test.Repo,
-      queues: [alpha: 5, beta: 5, gamma: 5, delta: 5]
-  end
+  @oban_opts poll_interval: 10,
+             repo: Oban.Test.Repo,
+             queues: [alpha: 5, beta: 5, gamma: 5, delta: 5]
 
   defmodule Worker do
     use Oban.Worker
@@ -51,9 +47,9 @@ defmodule Oban.Integration.ExecutionTest do
   end
 
   test "jobs enqueued in configured queues are executed" do
-    {:ok, _} = start_supervised({Supervisor, poll_interval: 10})
+    {:ok, _} = start_supervised({Oban, @oban_opts})
 
-    for id <- 1..5, status <- ~w(OK FAIL), queue <- @queues do
+    for id <- 1..5, status <- ~w(OK FAIL), queue <- ~w(alpha beta gamma delta) do
       insert_job!(%{id: id, status: status}, queue: queue)
 
       assert_receive {_, id}
@@ -69,7 +65,7 @@ defmodule Oban.Integration.ExecutionTest do
       assert Repo.one(completed_query) == 20
     end)
 
-    :ok = stop_supervised(Supervisor)
+    :ok = stop_supervised(Oban)
   end
 
   test "jobs can be scheduled for future execution" do
@@ -84,7 +80,7 @@ defmodule Oban.Integration.ExecutionTest do
   end
 
   test "jobs that have reached their maximum attempts are marked as discarded" do
-    {:ok, _} = start_supervised({Supervisor, poll_interval: 10})
+    {:ok, _} = start_supervised({Oban, @oban_opts})
 
     %Job{id: id} = insert_job!(%{id: 0, status: "FAIL"}, max_attempts: 1)
 
@@ -92,22 +88,44 @@ defmodule Oban.Integration.ExecutionTest do
 
     with_backoff(fn -> assert Repo.get(Job, id).state == "discarded" end)
 
-    :ok = stop_supervised(Supervisor)
+    :ok = stop_supervised(Oban)
   end
 
   test "slow jobs are allowed to complete within the shutdown grace period" do
-    _pd = start_supervised!({Supervisor, poll_interval: 10, shutdown_grace_period: 500})
+    _pd = start_supervised!({Oban, Keyword.put(@oban_opts, :shutdown_grace_period, 500)})
 
-    %Job{id: id_1} = insert_job!(%{id: 1, sleep: 200})
+    %Job{id: id_1} = insert_job!(%{id: 1, sleep: 50})
     %Job{id: id_2} = insert_job!(%{id: 2, sleep: 4000})
 
-    :ok = stop_supervised(Supervisor)
-
     assert_receive {:ok, 1}
-    refute_receive {:ok, 2}
+
+    :ok = stop_supervised(Oban)
 
     assert Repo.get(Job, id_1).state == "completed"
     assert Repo.get(Job, id_2).state == "executing"
+  end
+
+  test "telemetry events are emitted for executed jobs" do
+    defmodule Handler do
+      def handle([:oban, :job, :executed], timing, meta, pid) do
+        send(pid, {:executed, meta[:event], timing})
+      end
+    end
+
+    :telemetry.attach("job-handler", [:oban, :job, :executed], &Handler.handle/4, self())
+
+    {:ok, _} = start_supervised({Oban, @oban_opts})
+
+    insert_job!(%{id: 1, status: "OK"})
+    insert_job!(%{id: 2, status: "FAIL"})
+
+    assert_receive {:executed, :success, success_timing}
+    assert_receive {:executed, :failure, failure_timing}
+
+    assert success_timing > 0
+    assert failure_timing > 0
+
+    :ok = stop_supervised(Oban)
   end
 
   defp insert_job!(args, opts \\ []) do

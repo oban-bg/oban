@@ -1,13 +1,16 @@
 defmodule Oban do
   @moduledoc false
 
-  alias Oban.Supervisor
+  use Supervisor
+
+  alias Oban.Config
+  alias Oban.Queue.Supervisor, as: QueueSupervisor
 
   @type supervisor_option ::
-    {:name, module()}
-    | {:node, binary()}
-    | {:queues, [{atom(), pos_integer()}]}
-    | {:repo, module()}
+          {:name, module()}
+          | {:node, binary()}
+          | {:queues, [{atom(), pos_integer()}]}
+          | {:repo, module()}
 
   @doc """
   Starts an `Oban` supervision tree linked to the current process.
@@ -42,31 +45,25 @@ defmodule Oban do
         Supervisor.start_link(children, strategy: :one_for_one, name: MyApp.Supervisor)
       end
   """
-  @callback start_link([supervisor_option()]) :: Supervisor.on_start()
+  @spec start_link([supervisor_option()]) :: Supervisor.on_start()
+  def start_link(opts) when is_list(opts) do
+    {name, opts} = Keyword.pop(opts, :name, __MODULE__)
 
-  @doc false
-  defmacro __using__(opts) do
-    quote location: :keep do
-      @behaviour Oban
+    Supervisor.start_link(__MODULE__, Config.new(opts), name: name)
+  end
 
-      @supervisor_name Module.concat(__MODULE__, "Supervisor")
-      @config_name Module.concat(__MODULE__, "Config")
+  @impl Supervisor
+  def init(%Config{queues: queues} = conf) do
+    children = Enum.map(queues, &queue_spec(&1, conf))
 
-      @opts unquote(opts)
-            |> Keyword.put(:name, @supervisor_name)
-            |> Keyword.put(:config_name, @config_name)
+    Supervisor.init(children, strategy: :one_for_one)
+  end
 
-      @doc false
-      def child_spec(opts) do
-        %{id: __MODULE__, start: {__MODULE__, :start_link, [opts]}, type: :supervisor}
-      end
+  defp queue_spec({queue, limit}, conf) do
+    queue = to_string(queue)
+    name = Module.concat(["Oban", "Queue", String.capitalize(queue)])
+    opts = [conf: conf, queue: queue, limit: limit, name: name]
 
-      @impl Oban
-      def start_link(opts \\ []) do
-        @opts
-        |> Keyword.merge(opts)
-        |> Supervisor.start_link()
-      end
-    end
+    Supervisor.child_spec({QueueSupervisor, opts}, id: name)
   end
 end

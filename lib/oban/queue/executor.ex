@@ -26,12 +26,12 @@ defmodule Oban.Queue.Executor do
       {:success, ^job} ->
         Query.complete_job(repo, job)
 
-        report(:success, timing, job)
+        report(timing, job, %{event: :success})
 
       {:failure, ^job, error, stack} ->
         Query.retry_job(repo, job)
 
-        report(:failure, timing, job, %{error: error, stack: stack})
+        report(timing, job, %{event: :failure, error: error, stack: stack})
     end
 
     :ok
@@ -69,12 +69,12 @@ defmodule Oban.Queue.Executor do
     |> Enum.join(".")
   end
 
-  defp report(event, timing, job, meta \\ %{}) do
+  defp report(timing, job, meta) do
     meta =
       job
       |> Map.take([:id, :args, :queue, :worker])
       |> Map.merge(meta)
 
-    :telemetry.execute([:oban, :job, event], timing, meta)
+    :telemetry.execute([:oban, :job, :executed], timing, meta)
   end
 end
