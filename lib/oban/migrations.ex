@@ -25,9 +25,10 @@ defmodule Oban.Migrations do
       add :inserted_at, :utc_datetime_usec, null: false, default: now()
       add :scheduled_at, :utc_datetime_usec, null: false, default: now()
       add :attempted_at, :utc_datetime_usec
+      add :completed_at, :utc_datetime_usec
     end
 
-    create index(:oban_jobs, [:queue, :state])
+    create index(:oban_jobs, [:state, :queue])
     create index(:oban_jobs, [:scheduled_at])
   end
 

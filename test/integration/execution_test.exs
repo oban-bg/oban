@@ -5,7 +5,7 @@ defmodule Oban.Integration.ExecutionTest do
 
   @oban_opts poll_interval: 10,
              repo: Oban.Test.Repo,
-             queues: [alpha: 5, beta: 5, gamma: 5, delta: 5]
+             queues: [alpha: 3, beta: 3, gamma: 3, delta: 3]
 
   defmodule Worker do
     use Oban.Worker

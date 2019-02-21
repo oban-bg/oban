@@ -65,6 +65,7 @@ defmodule Oban.Job do
     field :inserted_at, :utc_datetime_usec
     field :scheduled_at, :utc_datetime_usec
     field :attempted_at, :utc_datetime_usec
+    field :completed_at, :utc_datetime_usec
   end
 
   @permitted ~w(queue worker args max_attempts scheduled_at state)a

@@ -61,7 +61,7 @@ defmodule Oban.Query do
 
   @spec complete_job(module(), Job.t()) :: :ok
   def complete_job(repo, %Job{id: id}) do
-    repo.update_all(select_for_update(id), set: [state: "completed"])
+    repo.update_all(select_for_update(id), set: [state: "completed", completed_at: utc_now()])
 
     :ok
   end
