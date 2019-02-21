@@ -26,6 +26,7 @@ defmodule Oban.Queue.Producer do
 
   @impl GenStage
   def init(conf: conf, queue: queue) do
+    send(self(), :rescue_orphans)
     send(self(), :poll)
 
     {:ok, _ref} = :timer.send_interval(conf.poll_interval, :poll)
@@ -35,6 +36,12 @@ defmodule Oban.Queue.Producer do
 
   @impl GenStage
   def handle_info(:poll, state), do: dispatch(state)
+
+  def handle_info(:rescue_orphans, %State{conf: conf, queue: queue} = state) do
+    Query.rescue_orphaned_jobs(conf.repo, queue)
+
+    {:noreply, [], state}
+  end
 
   @impl GenStage
   def handle_call(:pause, _from, %State{} = state) do

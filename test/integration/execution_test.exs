@@ -47,10 +47,10 @@ defmodule Oban.Integration.ExecutionTest do
   end
 
   test "jobs enqueued in configured queues are executed" do
-    {:ok, _} = start_supervised({Oban, @oban_opts})
+    start_supervised!({Oban, @oban_opts})
 
     for id <- 1..5, status <- ~w(OK FAIL), queue <- ~w(alpha beta gamma delta) do
-      insert_job!(%{id: id, status: status}, queue: queue)
+      insert_job!([id: id, status: status], queue: queue)
 
       assert_receive {_, id}
     end
@@ -69,7 +69,7 @@ defmodule Oban.Integration.ExecutionTest do
   end
 
   test "jobs can be scheduled for future execution" do
-    for seconds <- 1..5, do: insert_job!(%{}, scheduled_in: seconds)
+    for seconds <- 1..5, do: insert_job!([], scheduled_in: seconds)
 
     query =
       Job
@@ -80,9 +80,9 @@ defmodule Oban.Integration.ExecutionTest do
   end
 
   test "jobs that have reached their maximum attempts are marked as discarded" do
-    {:ok, _} = start_supervised({Oban, @oban_opts})
+    start_supervised!({Oban, @oban_opts})
 
-    %Job{id: id} = insert_job!(%{id: 0, status: "FAIL"}, max_attempts: 1)
+    %Job{id: id} = insert_job!([id: 0, status: "FAIL"], max_attempts: 1)
 
     assert_receive {:error, 0}
 
@@ -92,10 +92,10 @@ defmodule Oban.Integration.ExecutionTest do
   end
 
   test "slow jobs are allowed to complete within the shutdown grace period" do
-    _pd = start_supervised!({Oban, Keyword.put(@oban_opts, :shutdown_grace_period, 500)})
+    start_supervised!({Oban, Keyword.put(@oban_opts, :shutdown_grace_period, 500)})
 
-    %Job{id: id_1} = insert_job!(%{id: 1, sleep: 50})
-    %Job{id: id_2} = insert_job!(%{id: 2, sleep: 4000})
+    %Job{id: id_1} = insert_job!(id: 1, sleep: 50)
+    %Job{id: id_2} = insert_job!(id: 2, sleep: 4000)
 
     assert_receive {:ok, 1}
 
@@ -103,6 +103,33 @@ defmodule Oban.Integration.ExecutionTest do
 
     assert Repo.get(Job, id_1).state == "completed"
     assert Repo.get(Job, id_2).state == "executing"
+  end
+
+  # Orphaned jobs were started but never managed to finish. This is likely
+  # because the job couldn't complete within the shutdown grace period.
+  # Regardless, we want to start the job again and give it another chance to
+  # finish.
+  test "orphaned jobs are transitioned back to an available state" do
+    start_supervised({Oban, Keyword.put(@oban_opts, :shutdown_grace_period, 50)})
+
+    insert_job!(id: 1, sleep: 1)
+    insert_job!(id: 2, sleep: 100)
+
+    # By confirming that the first job completed we can be sure that the second
+    # job had time to start.
+    assert_receive {:ok, 1}
+    refute_receive {:ok, 2}, 50
+
+    :ok = stop_supervised(Oban)
+
+    unlock_all()
+
+    start_supervised({Oban, @oban_opts})
+
+    assert_receive {:ok, 2}, 200
+    refute_receive {:ok, 1}
+
+    :ok = stop_supervised(Oban)
   end
 
   test "telemetry events are emitted for executed jobs" do
@@ -132,8 +159,13 @@ defmodule Oban.Integration.ExecutionTest do
     opts = Keyword.put_new(opts, :queue, "alpha")
 
     args
+    |> Map.new()
     |> Map.put(:bin_pid, Worker.pid_to_bin())
     |> Worker.new(opts)
     |> Repo.insert!()
+  end
+
+  defp unlock_all do
+    Repo.query("SELECT pg_advisory_unlock_all()")
   end
 end
