@@ -39,16 +39,14 @@ defmodule Oban.Queue.Executor do
 
   @doc false
   def safe_call(%Job{worker: worker} = job) do
-    try do
-      worker
-      |> to_module()
-      |> apply(:perform, [job])
+    worker
+    |> to_module()
+    |> apply(:perform, [job])
 
-      {:success, job}
-    rescue
-      exception ->
-        {:failure, job, error_name(exception), __STACKTRACE__}
-    end
+    {:success, job}
+  rescue
+    exception ->
+      {:failure, job, error_name(exception), __STACKTRACE__}
   end
 
   # Helpers

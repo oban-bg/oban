@@ -40,7 +40,7 @@ defmodule Oban do
   To start an `Oban` supervisor within an application's supervision tree:
 
       def start(_type, _args) do
-        children = [MyApp.Repo, MyApp.Oban]
+        children = [MyApp.Repo, {Oban, queues: [default: 50]}]
 
         Supervisor.start_link(children, strategy: :one_for_one, name: MyApp.Supervisor)
       end
