@@ -3,7 +3,12 @@ defmodule Oban.Queue.Producer do
 
   use GenStage
 
-  alias Oban.Query
+  alias Oban.{Config, Query}
+
+  @type option ::
+          {:name, module()}
+          | {:conf, Config.t()}
+          | {:queue, binary()}
 
   defmodule State do
     @moduledoc false
@@ -12,7 +17,7 @@ defmodule Oban.Queue.Producer do
     defstruct [:conf, :queue, demand: 0, paused: false]
   end
 
-  @spec start_link(Keyword.t()) :: GenServer.on_start()
+  @spec start_link([option()]) :: GenServer.on_start()
   def start_link(opts) do
     {name, opts} = Keyword.pop(opts, :name)
 

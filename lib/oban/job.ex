@@ -2,31 +2,9 @@ defmodule Oban.Job do
   @moduledoc """
   A Job is an Ecto schema used for asynchronous execution.
 
-  ## Options
-
-    * `:max_attempts` — the maximum number of times a job can be retried if there are errors during execution
-    * `:queue` — a named queue to push the job into. Jobs may be pushed into any queue, regardless
-      of whether jobs are currently being processed for the queue.
-    * `:scheduled_in` - the number of seconds until the job should be executed
-    * `:scheduled_at` - a time in the future after which the job should be executed
-    * `:worker` — a module to execute the job in. The module must implement the `Oban.Worker`
-      behaviour.
-
-  ## Examples
-
-  Insert a job with the `:default` queue:
-
-      %{id: 1, user_id: 2}
-      |> Oban.Job.new(queue: :default, worker: MyApp.Worker)
-      |> MyApp.Repo.insert()
-
-  Generate a pre-configured job for `MyApp.Worker` and push it:
-
-      %{id: 1, user_id: 2} |> MyApp.Worker.new() |> MyApp.Repo.insert()
-
-  Schedule a job to run in 5 seconds:
-
-      %{id: 1} |> MyApp.Worker.new(schedule_in: 5) |> MyApp.Repo.insert()
+  Job changesets are created by your application code and inserted into the database for
+  asynchronous execution. Jobs can be inserted along with other application data as part of a
+  transaction, which guarantees that jobs will only be triggered from a successful transaction.
   """
 
   use Ecto.Schema
@@ -71,6 +49,35 @@ defmodule Oban.Job do
   @permitted ~w(queue worker args max_attempts scheduled_at state)a
   @required ~w(worker args)a
 
+  @doc """
+  Construct a new job changeset ready for insertion into the database.
+
+  ## Options
+
+    * `:max_attempts` — the maximum number of times a job can be retried if there are errors during execution
+    * `:queue` — a named queue to push the job into. Jobs may be pushed into any queue, regardless
+      of whether jobs are currently being processed for the queue.
+    * `:scheduled_in` - the number of seconds until the job should be executed
+    * `:scheduled_at` - a time in the future after which the job should be executed
+    * `:worker` — a module to execute the job in. The module must implement the `Oban.Worker`
+      behaviour.
+
+  ## Examples
+
+  Insert a job with the `:default` queue:
+
+      %{id: 1, user_id: 2}
+      |> Oban.Job.new(queue: :default, worker: MyApp.Worker)
+      |> MyApp.Repo.insert()
+
+  Generate a pre-configured job for `MyApp.Worker` and push it:
+
+      %{id: 1, user_id: 2} |> MyApp.Worker.new() |> MyApp.Repo.insert()
+
+  Schedule a job to run in 5 seconds:
+
+      %{id: 1} |> MyApp.Worker.new(schedule_in: 5) |> MyApp.Repo.insert()
+  """
   @spec new(args(), [option]) :: Ecto.Changeset.t()
   def new(args, opts \\ []) when is_map(args) and is_list(opts) do
     params =

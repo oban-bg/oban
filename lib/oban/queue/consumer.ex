@@ -19,7 +19,9 @@ defmodule Oban.Queue.Consumer do
   end
 
   @spec wait_for_executing(Supervisor.name(), pos_integer()) :: :ok
-  def wait_for_executing(consumer, interval \\ 100) do
+  def wait_for_executing(consumer, interval \\ 50) do
+    # There is a chance that the consumer process doesn't exist, and we never want to raise
+    # another error as part of the shut down process.
     children =
       try do
         ConsumerSupervisor.count_children(consumer)

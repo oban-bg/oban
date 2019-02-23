@@ -7,8 +7,9 @@ defmodule Oban.Queue.Watchman do
 
   @type option ::
           {:name, module()}
-          | {:producer, identifier()}
           | {:consumer, identifier()}
+          | {:producer, identifier()}
+          | {:shutdown, timeout()}
 
   defmodule State do
     @moduledoc false
@@ -16,7 +17,7 @@ defmodule Oban.Queue.Watchman do
     defstruct [:consumer, :producer]
   end
 
-  @doc false
+  @spec child_spec([option]) :: Supervisor.child_spec()
   def child_spec(opts) do
     {down, opts} = Keyword.pop(opts, :shutdown)
 

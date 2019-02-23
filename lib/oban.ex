@@ -17,11 +17,11 @@ defmodule Oban do
 
   ## Options
 
-  * `:repo` — specifies the Ecto repo used to insert and retreive jobs.
   * `:name` — used for name supervisor registration
   * `:node` — used to identify the node that the supervision tree is running in. If no value is
     provided it will use the `node` name in a distributed system, the `hostname` in an isolated
-    node.
+    node. See the "Node Name"
+  * `:repo` — specifies the Ecto repo used to insert and retreive jobs.
   * `:queues` — a keyword list where the keys are queue names and the values are the concurrency
     setting. For example, setting queues to `[default: 10, exports: 5]` would start the queues
     `default` and `exports` with a combined concurrency level of 20. The concurrency setting
@@ -44,6 +44,14 @@ defmodule Oban do
 
         Supervisor.start_link(children, strategy: :one_for_one, name: MyApp.Supervisor)
       end
+
+  ## Node Name
+
+  When the `node` value hasn't been configured it will be generated based on the environment:
+
+  * In a distributed system the node name is used
+  * In a Heroku environment the system environment's `DYNO` value is used
+  * Otherwise, the system hostname is used
   """
   @spec start_link([supervisor_option()]) :: Supervisor.on_start()
   def start_link(opts) when is_list(opts) do

@@ -18,15 +18,6 @@ defmodule Oban.Config do
     shutdown_grace_period: 15_000
   ]
 
-  @doc """
-  Instantiate a new config struct with auto-generated fields provided and types validated.
-
-  When the `node` value hasn't been configured it will be generated based on the environment.
-
-    - In a distributed system then the node name is used
-    - In the Heroku environment the system environment's `DYNO` value is used
-    - Otherwise the node name is the system hostname
-  """
   @spec new(Keyword.t()) :: t()
   def new(opts) when is_list(opts) do
     opts = Keyword.put_new(opts, :node, node_name())
@@ -34,7 +25,7 @@ defmodule Oban.Config do
     struct!(__MODULE__, opts)
   end
 
-  @doc false
+  @spec node_name(%{optional(binary()) => binary()}) :: binary()
   def node_name(env \\ System.get_env()) do
     cond do
       Node.alive?() ->
