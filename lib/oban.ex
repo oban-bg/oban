@@ -55,9 +55,9 @@ defmodule Oban do
   """
   @spec start_link([supervisor_option()]) :: Supervisor.on_start()
   def start_link(opts) when is_list(opts) do
-    {name, opts} = Keyword.pop(opts, :name, __MODULE__)
+    conf = Config.new(opts)
 
-    Supervisor.start_link(__MODULE__, Config.new(opts), name: name)
+    Supervisor.start_link(__MODULE__, conf, name: conf.name)
   end
 
   @impl Supervisor
@@ -69,7 +69,7 @@ defmodule Oban do
 
   defp queue_spec({queue, limit}, conf) do
     queue = to_string(queue)
-    name = Module.concat(["Oban", "Queue", String.capitalize(queue)])
+    name = Module.concat([conf.name, "Queue", String.capitalize(queue)])
     opts = [conf: conf, queue: queue, limit: limit, name: name]
 
     Supervisor.child_spec({QueueSupervisor, opts}, id: name)
