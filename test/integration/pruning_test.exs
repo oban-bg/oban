@@ -1,0 +1,54 @@
+defmodule Oban.Integration.PruningTest do
+  use Oban.Case
+
+  import Ecto.Query
+
+  # {:maxage, {unit, value}}
+
+  test "historic jobs may be pruned based on a maximum rows count" do
+    %Job{id: id_1} = insert_job(state: "available")
+    %Job{id: _id_} = insert_job(state: "completed")
+    %Job{id: _id_} = insert_job(state: "discarded")
+    %Job{id: id_4} = insert_job(state: "executing")
+    %Job{id: _id_} = insert_job(state: "completed")
+    %Job{id: id_6} = insert_job(state: "completed")
+
+    start_supervised!({Oban, repo: Repo, prune: {:maxlen, 1}})
+
+    assert retained_ids() == [id_1, id_4, id_6]
+
+    :ok = stop_supervised(Oban)
+  end
+
+  test "historic jobs may be be pruned based on a maximum age in seconds" do
+    %Job{id: _id_} = insert_job(state: "completed", completed_at: minutes_ago(6))
+    %Job{id: _id_} = insert_job(state: "completed", completed_at: minutes_ago(5))
+    %Job{id: id_1} = insert_job(state: "completed", completed_at: minutes_ago(3))
+    %Job{id: id_2} = insert_job(state: "completed", completed_at: minutes_ago(1))
+
+    start_supervised!({Oban, repo: Repo, prune: {:maxage, 60 * 4}})
+
+    assert retained_ids() == [id_1, id_2]
+
+    :ok = stop_supervised(Oban)
+  end
+
+  defp insert_job(opts) do
+    opts = Keyword.merge(opts, worker: FakeWorker, queue: "default")
+
+    %{}
+    |> Job.new(opts)
+    |> Repo.insert!()
+  end
+
+  defp retained_ids do
+    Job
+    |> select([j], j.id)
+    |> order_by(asc: :id)
+    |> Repo.all()
+  end
+
+  defp minutes_ago(minutes) do
+    DateTime.add(DateTime.utc_now(), minutes * 60 * -1)
+  end
+end

@@ -2,7 +2,7 @@ defmodule Oban.Query do
   @moduledoc false
 
   import Ecto.Query
-  import NaiveDateTime, only: [utc_now: 0]
+  import DateTime, only: [utc_now: 0]
 
   alias Oban.Job
 
@@ -50,13 +50,34 @@ defmodule Oban.Query do
     )
   end
 
-  @spec rescue_orphaned_jobs(module(), binary()) :: {integer(), nil | [Job.t()]}
+  @spec rescue_orphaned_jobs(module(), binary()) :: {integer(), nil}
   def rescue_orphaned_jobs(repo, queue) do
     Job
     |> where([j], j.state == "executing")
     |> where([j], j.queue == ^queue)
     |> where([j], j.id not in fragment("SELECT objid FROM pg_locks WHERE locktype = 'advisory'"))
     |> repo.update_all(set: [state: "available"])
+  end
+
+  @spec delete_truncated_jobs(module(), pos_integer()) :: {integer(), nil}
+  def delete_truncated_jobs(repo, limit) do
+    subquery =
+      Job
+      |> where([j], j.state in ["completed", "discarded"])
+      |> offset(^limit)
+      |> order_by([desc: :id])
+
+    repo.delete_all(from(j in Job, join: x in subquery(subquery), on: j.id == x.id))
+  end
+
+  @spec delete_outdated_jobs(module(), pos_integer()) :: {integer(), nil}
+  def delete_outdated_jobs(repo, seconds) do
+    outdated_at = DateTime.add(utc_now(), -seconds)
+
+    Job
+    |> where([j], j.state == "completed" and j.completed_at < ^outdated_at)
+    |> or_where([j], j.state == "discarded" and j.attempted_at < ^outdated_at)
+    |> repo.delete_all()
   end
 
   @spec complete_job(module(), Job.t()) :: :ok
@@ -78,8 +99,9 @@ defmodule Oban.Query do
     repo.update_all(select_for_update(id), set: updates)
   end
 
-  @spec next_attempt_at(pos_integer(), pos_integer()) :: NaiveDateTime.t()
-  def next_attempt_at(attempt, base_offset \\ 15) do
+  # Helpers
+
+  defp next_attempt_at(attempt, base_offset \\ 15) do
     offset = trunc(:math.pow(attempt, 5) + base_offset)
 
     NaiveDateTime.add(utc_now(), offset, :second)

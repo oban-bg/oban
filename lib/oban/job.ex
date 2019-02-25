@@ -30,7 +30,8 @@ defmodule Oban.Job do
           max_attempts: pos_integer(),
           inserted_at: DateTime.t(),
           scheduled_at: DateTime.t(),
-          attempted_at: DateTime.t()
+          attempted_at: DateTime.t(),
+          completed_at: DateTime.t()
         }
 
   schema "oban_jobs" do
@@ -46,7 +47,7 @@ defmodule Oban.Job do
     field :completed_at, :utc_datetime_usec
   end
 
-  @permitted ~w(queue worker args max_attempts scheduled_at state)a
+  @permitted ~w(queue worker args max_attempts scheduled_at attempted_at completed_at state)a
   @required ~w(worker args)a
 
   @doc """
