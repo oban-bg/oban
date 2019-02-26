@@ -43,6 +43,8 @@ defmodule Oban.Worker do
 
   @doc """
   Build a job changeset for this worker with optional overrides.
+
+  See `Oban.Job.new/2` for the available options.
   """
   @callback new(args :: Job.args(), opts :: [Job.option()]) :: Ecto.Changeset.t()
 
