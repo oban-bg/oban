@@ -4,7 +4,7 @@ elixir:
   - 1.7
   - 1.8
 otp_release:
-  - 21.3
+  - 21.2
 services:
   - postgresql
 cache:
