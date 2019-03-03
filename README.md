@@ -1,6 +1,7 @@
 # Oban
 
-This is a WIP, documentation is coming.
+[![CircleCI](https://circleci.com/gh/sorentwo/oban.svg?style=svg)](https://circleci.com/gh/sorentwo/oban)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
 ## License
 

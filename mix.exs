@@ -59,8 +59,8 @@ defmodule Oban.MixProject do
       {:postgrex, "~> 0.14"},
       {:telemetry, "~> 0.3"},
       {:propcheck, "~> 1.0", only: [:test]},
-      {:credo, "~> 1.0", only: [:dev], runtime: false},
-      {:dialyxir, "~> 0.5", only: [:dev], runtime: false}
+      {:credo, "~> 1.0", only: [:test, :dev], runtime: false},
+      {:dialyxir, "~> 0.5", only: [:test, :dev], runtime: false}
     ]
   end
 end
