@@ -6,10 +6,6 @@ defmodule Oban.Query do
 
   alias Oban.Job
 
-  # Advisory locks have two signatures, either (key bigint) or (key1 int, key2 int), where the
-  # first int acts as a namespace. We want to use the second variant where the `oban_jobs` table's
-  # object identifier is the namespace, and the job's id is the secondary key.
-  #
   # Taking a shared lock this way will always work, even if a lock has been taken by another
   # connection.
   defmacrop take_lock(id) do
@@ -65,7 +61,7 @@ defmodule Oban.Query do
       Job
       |> where([j], j.state in ["completed", "discarded"])
       |> offset(^limit)
-      |> order_by([desc: :id])
+      |> order_by(desc: :id)
 
     repo.delete_all(from(j in Job, join: x in subquery(subquery), on: j.id == x.id))
   end

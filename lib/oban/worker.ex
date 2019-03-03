@@ -13,13 +13,14 @@ defmodule Oban.Worker do
         use Oban.Worker, queue: "events", max_attempts: 10
 
         @impl Oban.Worker
-        def perform(%{args: args}) do
+        def perform(args) do
           IO.inspect(args)
         end
       end
 
-  The `perform/1` function will always receive the full job struct with an `args` map. In this
-  example the worker will simply inspect any arguments that are provided.
+  The `perform/1` function will always receive the jobs `args` map. In this example the worker
+  will simply inspect any arguments that are provided. Note that the return value isn't important.
+  If `perform/1` returns without raising an exception the job is considered complete.
 
   ## Enqueuing Jobs
 
@@ -51,11 +52,13 @@ defmodule Oban.Worker do
   @doc """
   The `perform/1` function is called when the job is executed.
 
+  The function is passed a job's args, which is always a map with string keys.
+
   The return value is not important. If the function executes without raising an exception it is
   considered a success. If the job raises an exception it is a failure and the job may be
   scheduled for a retry.
   """
-  @callback perform(job :: Job.t()) :: any()
+  @callback perform(args :: map()) :: term()
 
   @doc false
   defmacro __using__(opts) do
@@ -74,7 +77,7 @@ defmodule Oban.Worker do
       end
 
       @impl Worker
-      def perform(%Job{}) do
+      def perform(args) when is_map(args) do
         :ok
       end
 

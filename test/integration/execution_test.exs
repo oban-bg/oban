@@ -11,7 +11,7 @@ defmodule Oban.Integration.ExecutionTest do
     use Oban.Worker
 
     @impl Worker
-    def perform(%{args: %{"id" => id, "status" => status, "bin_pid" => bin_pid}}) do
+    def perform(%{"id" => id, "status" => status, "bin_pid" => bin_pid}) do
       pid = bin_to_pid(bin_pid)
 
       case status do
@@ -25,7 +25,7 @@ defmodule Oban.Integration.ExecutionTest do
       end
     end
 
-    def perform(%{args: %{"id" => id, "sleep" => sleep, "bin_pid" => bin_pid}}) do
+    def perform(%{"id" => id, "sleep" => sleep, "bin_pid" => bin_pid}) do
       :ok = Process.sleep(sleep)
 
       bin_pid
