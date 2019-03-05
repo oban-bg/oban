@@ -68,17 +68,6 @@ defmodule Oban.Integration.ExecutionTest do
     :ok = stop_supervised(Oban)
   end
 
-  test "jobs can be scheduled for future execution" do
-    for seconds <- 1..5, do: insert_job!([], scheduled_in: seconds)
-
-    query =
-      Job
-      |> where([job], job.scheduled_at > ^NaiveDateTime.utc_now())
-      |> select([job], count(job.id))
-
-    assert Repo.one(query) == 5
-  end
-
   test "jobs that have reached their maximum attempts are marked as discarded" do
     start_supervised!({Oban, @oban_opts})
 
