@@ -46,18 +46,6 @@ defmodule Oban.Integration.ExecutionTest do
     end
   end
 
-  test "jobs that have reached their maximum attempts are marked as discarded" do
-    start_supervised!({Oban, @oban_opts})
-
-    %Job{id: id} = insert_job!([id: 0, status: "FAIL"], max_attempts: 1)
-
-    assert_receive {:error, 0}
-
-    with_backoff(fn -> assert Repo.get(Job, id).state == "discarded" end)
-
-    :ok = stop_supervised(Oban)
-  end
-
   test "slow jobs are allowed to complete within the shutdown grace period" do
     start_supervised!({Oban, Keyword.put(@oban_opts, :shutdown_grace_period, 500)})
 

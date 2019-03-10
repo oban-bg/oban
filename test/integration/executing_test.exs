@@ -62,7 +62,7 @@ defmodule Oban.Integration.ExecutingTest do
         jobs = Enum.map(jobs, &Repo.insert!/1)
 
         for job <- jobs do
-          %{args: %{ref: ref, action: action}, id: id} = job
+          %{args: %{ref: ref, action: action}, id: id, max_attempts: max} = job
 
           assert_receive {_, ^ref}
 
@@ -71,7 +71,7 @@ defmodule Oban.Integration.ExecutingTest do
 
             assert job.attempt == 1
             assert job.attempted_at
-            assert job.state == action_to_state(action)
+            assert job.state == action_to_state(action, max)
           end)
         end
 
@@ -83,14 +83,18 @@ defmodule Oban.Integration.ExecutingTest do
   # Generators
 
   def jobs do
-    let list <- list({queue(), integer(), action()}) do
-      for {queue, ref, action} <- list do
+    let list <- list({queue(), integer(), action(), max_attempts()}) do
+      for {queue, ref, action, max_attempts} <- list do
         args = %{ref: ref, bin_pid: Worker.pid_to_bin(), action: action}
-        opts = [queue: queue, max_attempts: 1]
+        opts = [queue: queue, max_attempts: max_attempts]
 
         Worker.new(args, opts)
       end
     end
+  end
+
+  def max_attempts do
+    range(1, 25)
   end
 
   def queue do
@@ -105,7 +109,7 @@ defmodule Oban.Integration.ExecutingTest do
 
   # The `maximum_attempts` option is set to 1 to prevent retries. This ensures that the state for
   # failed jobs will be `discarded`.
-  defp action_to_state("OK"), do: "completed"
-  defp action_to_state("FAIL"), do: "discarded"
-  defp action_to_state("EXIT"), do: "discarded"
+  defp action_to_state("OK", _max), do: "completed"
+  defp action_to_state(_state, 1), do: "discarded"
+  defp action_to_state(_state, max) when max > 1, do: "available"
 end
