@@ -87,29 +87,6 @@ defmodule Oban.Integration.ExecutionTest do
     :ok = stop_supervised(Oban)
   end
 
-  test "telemetry events are emitted for executed jobs" do
-    defmodule Handler do
-      def handle([:oban, :job, :executed], timing, meta, pid) do
-        send(pid, {:executed, meta[:event], timing})
-      end
-    end
-
-    :telemetry.attach("job-handler", [:oban, :job, :executed], &Handler.handle/4, self())
-
-    {:ok, _} = start_supervised({Oban, @oban_opts})
-
-    insert_job!(%{id: 1, status: "OK"})
-    insert_job!(%{id: 2, status: "FAIL"})
-
-    assert_receive {:executed, :success, success_timing}
-    assert_receive {:executed, :failure, failure_timing}
-
-    assert success_timing > 0
-    assert failure_timing > 0
-
-    :ok = stop_supervised(Oban)
-  end
-
   defp insert_job!(args, opts \\ []) do
     opts = Keyword.put_new(opts, :queue, "alpha")
 

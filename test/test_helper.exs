@@ -5,6 +5,42 @@ ExUnit.start()
 Oban.Test.Repo.start_link()
 Ecto.Adapters.SQL.Sandbox.mode(Oban.Test.Repo, :manual)
 
+defmodule Oban.Integration.Worker do
+  use Oban.Worker
+
+  @impl Worker
+  def perform(%{"ref" => ref, "action" => action, "bin_pid" => bin_pid}) do
+    pid = bin_to_pid(bin_pid)
+
+    case action do
+      "OK" ->
+        send(pid, {:ok, ref})
+
+      "FAIL" ->
+        send(pid, {:fail, ref})
+
+        raise RuntimeError, "FAILED"
+
+      "EXIT" ->
+        send(pid, {:exit, ref})
+
+        GenServer.call(FakeServer, :exit)
+    end
+  end
+
+  def pid_to_bin(pid \\ self()) do
+    pid
+    |> :erlang.term_to_binary()
+    |> Base.encode64()
+  end
+
+  def bin_to_pid(bin) do
+    bin
+    |> Base.decode64!()
+    |> :erlang.binary_to_term()
+  end
+end
+
 defmodule Oban.Case do
   @moduledoc false
 
@@ -15,6 +51,7 @@ defmodule Oban.Case do
 
   using do
     quote do
+      alias Oban.Integration.Worker
       alias Oban.Job
       alias Repo
 

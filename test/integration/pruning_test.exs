@@ -3,8 +3,6 @@ defmodule Oban.Integration.PruningTest do
 
   import Ecto.Query
 
-  # {:maxage, {unit, value}}
-
   test "historic jobs may be pruned based on a maximum rows count" do
     %Job{id: id_1} = insert_job(state: "available")
     %Job{id: _id_} = insert_job(state: "completed")
