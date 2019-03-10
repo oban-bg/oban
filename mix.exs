@@ -60,7 +60,8 @@ defmodule Oban.MixProject do
       {:telemetry, "~> 0.3"},
       {:propcheck, "~> 1.0", only: [:test]},
       {:credo, "~> 1.0", only: [:test, :dev], runtime: false},
-      {:dialyxir, "~> 0.5", only: [:test, :dev], runtime: false}
+      {:dialyxir, "~> 0.5", only: [:test, :dev], runtime: false},
+      {:ex_doc, "~> 0.19", only: [:dev, :test], runtime: false}
     ]
   end
 end
