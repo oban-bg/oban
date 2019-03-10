@@ -48,7 +48,14 @@ defmodule Oban.Queue.Executor do
     {:success, job}
   rescue
     exception ->
-      {:failure, job, error_name(exception), __STACKTRACE__}
+      error = Exception.normalize(:error, exception, __STACKTRACE__)
+
+      {:failure, job, error, __STACKTRACE__}
+  catch
+    kind, value ->
+      error = Exception.normalize(kind, value, __STACKTRACE__)
+
+      {:failure, job, error, __STACKTRACE__}
   end
 
   # Helpers
@@ -60,14 +67,6 @@ defmodule Oban.Queue.Executor do
   end
 
   defp to_module(worker) when is_atom(worker), do: worker
-
-  defp error_name(error) do
-    %{__struct__: module} = Exception.normalize(:error, error)
-
-    module
-    |> Module.split()
-    |> Enum.join(".")
-  end
 
   defp report(timing, job, meta) do
     meta =

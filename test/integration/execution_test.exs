@@ -46,28 +46,6 @@ defmodule Oban.Integration.ExecutionTest do
     end
   end
 
-  test "jobs enqueued in configured queues are executed" do
-    start_supervised!({Oban, @oban_opts})
-
-    for id <- 1..5, status <- ~w(OK FAIL), queue <- ~w(alpha beta gamma delta) do
-      insert_job!([id: id, status: status], queue: queue)
-
-      assert_receive {_, id}
-    end
-
-    with_backoff(fn ->
-      query = from(job in Job, select: count())
-
-      available_query = where(query, state: "available", attempt: 1)
-      completed_query = where(query, state: "completed", attempt: 1)
-
-      assert Repo.one(available_query) == 20
-      assert Repo.one(completed_query) == 20
-    end)
-
-    :ok = stop_supervised(Oban)
-  end
-
   test "jobs that have reached their maximum attempts are marked as discarded" do
     start_supervised!({Oban, @oban_opts})
 

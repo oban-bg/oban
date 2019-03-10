@@ -10,7 +10,7 @@
   "gen_stage": {:hex, :gen_stage, "0.14.1", "9d46723fda072d4f4bb31a102560013f7960f5d80ea44dcb96fd6304ed61e7a4", [:mix], [], "hexpm"},
   "jason": {:hex, :jason, "1.1.2", "b03dedea67a99223a2eaf9f1264ce37154564de899fd3d8b9a21b1a6fd64afe7", [:mix], [{:decimal, "~> 1.0", [hex: :decimal, repo: "hexpm", optional: true]}], "hexpm"},
   "postgrex": {:hex, :postgrex, "0.14.1", "63247d4a5ad6b9de57a0bac5d807e1c32d41e39c04b8a4156a26c63bcd8a2e49", [:mix], [{:connection, "~> 1.0", [hex: :connection, repo: "hexpm", optional: false]}, {:db_connection, "~> 2.0", [hex: :db_connection, repo: "hexpm", optional: false]}, {:decimal, "~> 1.5", [hex: :decimal, repo: "hexpm", optional: false]}, {:jason, "~> 1.0", [hex: :jason, repo: "hexpm", optional: true]}], "hexpm"},
-  "propcheck": {:hex, :propcheck, "1.1.2", "6ec0e74cfd535ee3923c359f1f1f572451d9915faf9b8312245993e42edd7c84", [:mix], [{:proper, "~> 1.2", [hex: :proper, repo: "hexpm", optional: false]}], "hexpm"},
+  "propcheck": {:hex, :propcheck, "1.1.4", "95852a3f050cc3ee1ef5c9ade14a3bd34e29b54cb8db7ae8bc7f716d904d5120", [:mix], [{:proper, "~> 1.3", [hex: :proper, repo: "hexpm", optional: false]}], "hexpm"},
   "proper": {:hex, :proper, "1.3.0", "c1acd51c51da17a2fe91d7a6fc6a0c25a6a9849d8dc77093533109d1218d8457", [:make, :mix, :rebar3], [], "hexpm"},
   "telemetry": {:hex, :telemetry, "0.3.0", "099a7f3ce31e4780f971b4630a3c22ec66d22208bc090fe33a2a3a6a67754a73", [:rebar3], [], "hexpm"},
 }
