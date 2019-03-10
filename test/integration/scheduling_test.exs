@@ -7,7 +7,7 @@ defmodule Oban.Integration.SchedulingTest do
   @queue "scheduled"
   @demand 10
 
-  property "jobs scheduled in the future are unavailable for execution", [:verbose] do
+  property "jobs scheduled in the future are unavailable for execution" do
     forall seconds <- pos_integer() do
       %Job{scheduled_at: at} = insert_job!(scheduled_in: seconds)
 
@@ -19,7 +19,7 @@ defmodule Oban.Integration.SchedulingTest do
     end
   end
 
-  property "jobs scheduled in the past are available for execution", [:verbose] do
+  property "jobs scheduled in the past are available for execution" do
     forall seconds <- neg_integer() do
       %Job{scheduled_at: at} = insert_job!(scheduled_in: seconds)
 

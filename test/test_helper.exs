@@ -28,6 +28,14 @@ defmodule Oban.Integration.Worker do
     end
   end
 
+  def perform(%{"ref" => ref, "sleep" => sleep, "bin_pid" => bin_pid}) do
+    :ok = Process.sleep(sleep)
+
+    bin_pid
+    |> bin_to_pid()
+    |> send({:ok, ref})
+  end
+
   def pid_to_bin(pid \\ self()) do
     pid
     |> :erlang.term_to_binary()

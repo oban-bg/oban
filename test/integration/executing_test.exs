@@ -17,7 +17,7 @@ defmodule Oban.Integration.ExecutingTest do
     fn -> stop_supervised(Oban) end
   end
 
-  property "jobs in running queues are executed", [:verbose] do
+  property "jobs in running queues are executed" do
     property_setup(
       &setup/0,
       forall jobs <- jobs() do
