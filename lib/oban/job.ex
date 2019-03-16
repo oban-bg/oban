@@ -12,6 +12,7 @@ defmodule Oban.Job do
   import Ecto.Changeset
 
   @type args :: map()
+  @type errors :: [%{at: DateTime.t(), attempt: pos_integer(), error: binary()}]
   @type option ::
           {:queue, atom() | binary()}
           | {:worker, atom() | binary()}
@@ -26,6 +27,7 @@ defmodule Oban.Job do
           queue: binary(),
           worker: binary(),
           args: args(),
+          errors: errors(),
           attempt: non_neg_integer(),
           max_attempts: pos_integer(),
           inserted_at: DateTime.t(),
@@ -39,6 +41,7 @@ defmodule Oban.Job do
     field :queue, :string, default: "default"
     field :worker, :string
     field :args, :map
+    field :errors, {:array, :map}, default: []
     field :attempt, :integer, default: 0
     field :max_attempts, :integer, default: 20
     field :inserted_at, :utc_datetime_usec
@@ -47,7 +50,18 @@ defmodule Oban.Job do
     field :completed_at, :utc_datetime_usec
   end
 
-  @permitted ~w(queue worker args max_attempts scheduled_at attempted_at completed_at state)a
+  @permitted ~w(
+    args
+    attempted_at
+    completed_at
+    errors
+    max_attempts
+    queue
+    scheduled_at
+    state
+    worker
+  )a
+
   @required ~w(worker args)a
 
   @doc """

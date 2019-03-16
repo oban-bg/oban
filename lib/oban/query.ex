@@ -83,22 +83,28 @@ defmodule Oban.Query do
     :ok
   end
 
-  @spec retry_job(module(), Job.t()) :: :ok
-  def retry_job(repo, %Job{attempt: attempt, id: id, max_attempts: max_attempts}) do
+  @spec retry_job(module(), Job.t(), binary()) :: :ok
+  def retry_job(repo, %Job{} = job, formatted_error) do
+    %Job{attempt: attempt, id: id, max_attempts: max_attempts} = job
+
     updates =
       if attempt >= max_attempts do
-        [state: "discarded"]
+        [state: "discarded", completed_at: utc_now()]
       else
-        [state: "available", scheduled_at: next_attempt_at(attempt)]
+        [state: "available", completed_at: utc_now(), scheduled_at: next_attempt_at(attempt)]
       end
 
-    repo.update_all(select_for_update(id), set: updates)
+    repo.update_all(
+      select_for_update(id),
+      set: updates,
+      push: [errors: %{attempt: attempt, at: utc_now(), error: formatted_error}]
+    )
   end
 
   # Helpers
 
   defp next_attempt_at(attempt, base_offset \\ 15) do
-    offset = trunc(:math.pow(attempt, 5) + base_offset)
+    offset = trunc(:math.pow(attempt, 4) + base_offset)
 
     NaiveDateTime.add(utc_now(), offset, :second)
   end

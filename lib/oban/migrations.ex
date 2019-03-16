@@ -10,15 +10,16 @@ defmodule Oban.Migrations do
   end
 
   def up do
-    execute(
-      "create type oban_job_state as enum ('available', 'executing', 'completed', 'discarded')"
-    )
+    execute """
+    create type oban_job_state as enum ('available', 'executing', 'completed', 'discarded')
+    """
 
     create table(:oban_jobs) do
       add :state, :oban_job_state, null: false, default: "available"
       add :queue, :text, null: false, default: "default"
       add :worker, :text, null: false
       add :args, :map, null: false
+      add :errors, {:array, :map}, null: false, default: []
       add :attempt, :integer, null: false, default: 0
       add :max_attempts, :integer, null: false, default: 20
 

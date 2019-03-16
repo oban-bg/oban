@@ -3,6 +3,31 @@ defmodule Oban do
   This is a stub. New documentation will be added below, but this module isn't properly
   documented.
 
+  ## Error Handling
+
+  When a job raises an error or exits during execution the details are recorded within the
+  `errors` array on the job. Provided the number of execution attempts is below the configured
+  `max_attempts`, the job will automatically be retried in the future. The retry delay has a
+  quadratic backoff, meaning the job's second attempt will be after 16s, third after 31s, fourth
+  after 1m 36s, etc.
+
+  #### Error Details
+
+  Execution errors are stored as a formatted exception along with metadata about when the failure
+  ocurred and which attempt caused it. Each error is stored with the following keys:
+
+  - `at` The utc timestamp when the error occurred at
+  - `attempt` The attempt number when the error ocurred
+  - `error` A formatted error message and stacktrace
+
+  ### Limiting Retries
+
+  By default jobs will be retried up to 20 times. The number of retries is controlled by the
+  `max_attempts` value, which can be set at the Worker or Job level. For example, to instruct a
+  worker to discard jobs after three failures:
+
+      use Oban.Worker, queue: "limited", max_attempts: 3
+
   ## Pruning Historic Jobs
 
   Job stats and queue introspection is built on keeping job rows in the database after they have

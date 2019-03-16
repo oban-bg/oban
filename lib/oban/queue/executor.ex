@@ -30,10 +30,10 @@ defmodule Oban.Queue.Executor do
 
         report(timing, job, %{event: :success})
 
-      {:failure, ^job, error, stack} ->
-        Query.retry_job(repo, job)
+      {:failure, ^job, kind, error, stack} ->
+        Query.retry_job(repo, job, Exception.format(kind, error, stack))
 
-        report(timing, job, %{event: :failure, error: error, stack: stack})
+        report(timing, job, %{event: :failure, kind: kind, error: error, stack: stack})
     end
 
     :ok
@@ -48,14 +48,10 @@ defmodule Oban.Queue.Executor do
     {:success, job}
   rescue
     exception ->
-      error = Exception.normalize(:error, exception, __STACKTRACE__)
-
-      {:failure, job, error, __STACKTRACE__}
+      {:failure, job, :error, exception, __STACKTRACE__}
   catch
     kind, value ->
-      error = Exception.normalize(kind, value, __STACKTRACE__)
-
-      {:failure, job, error, __STACKTRACE__}
+      {:failure, job, kind, value, __STACKTRACE__}
   end
 
   # Helpers

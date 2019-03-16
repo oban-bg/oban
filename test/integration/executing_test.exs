@@ -35,7 +35,13 @@ defmodule Oban.Integration.ExecutingTest do
 
             assert job.attempt == 1
             assert job.attempted_at
+            assert job.completed_at
             assert job.state == action_to_state(action, max)
+
+            if job.state != "completed" do
+              assert length(job.errors) > 0
+              assert [%{"attempt" => 1, "at" => _, "error" => _} | _] = job.errors
+            end
           end)
         end
 
