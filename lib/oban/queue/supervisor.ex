@@ -29,7 +29,7 @@ defmodule Oban.Queue.Supervisor do
     cons_opts = [
       conf: conf,
       name: cons_name,
-      subscribe_to: [{prod_name, max_demand: limit}]
+      subscribe_to: [{prod_name, max_demand: limit, min_demand: 1}]
     ]
 
     watch_opts = [
