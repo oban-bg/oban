@@ -31,7 +31,35 @@ Brief description here
   - Scheduling Jobs
 - FAQ
 - Contributing
-- License
+- [License](#License)
+
+## Usage
+
+Oban isn't an application, it is started by a supervisor that must be included in your
+application's supervision tree.  All of the configuration may be passed into the `Oban`
+supervisor, allowing you to configure Oban like the rest of your application.
+
+    # confg/config.exs
+    config :my_app, Oban, repo: MyApp.Repo, queues: [default: 10, events: 50, media: 20]
+
+    # lib/my_app/application.ex
+    defmodule MyApp.Application do
+      @moduledoc false
+
+      use Application
+
+      alias MyApp.{Endpoint, Repo}
+
+      def start(_type, _args) do
+        children = [
+          Repo,
+          Endpoint,
+          {Oban, Application.get_env(:my_app, Oban)}
+        ]
+
+        Supervisor.start_link(children, strategy: :one_for_one, name: MyApp.Supervisor)
+      end
+    end
 
 ## License
 

@@ -74,7 +74,7 @@ defmodule Oban do
   * `:name` — used for name supervisor registration
   * `:node` — used to identify the node that the supervision tree is running in. If no value is
     provided it will use the `node` name in a distributed system, the `hostname` in an isolated
-    node. See the "Node Name"
+    node. See "Node Name" below.
   * `:repo` — specifies the Ecto repo used to insert and retreive jobs.
   * `:queues` — a keyword list where the keys are queue names and the values are the concurrency
     setting. For example, setting queues to `[default: 10, exports: 5]` would start the queues
