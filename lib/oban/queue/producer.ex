@@ -14,7 +14,7 @@ defmodule Oban.Queue.Producer do
     @moduledoc false
 
     @enforce_keys [:conf, :queue]
-    defstruct [:conf, :queue, demand: 0, paused: false]
+    defstruct [:conf, :queue, demand: 0, pause_demand: 0, paused: false]
   end
 
   @spec start_link([option()]) :: GenServer.on_start()
@@ -29,8 +29,15 @@ defmodule Oban.Queue.Producer do
     GenStage.call(producer, :pause)
   end
 
+  @spec resume(GenServer.name()) :: :ok
+  def resume(producer) do
+    GenStage.call(producer, :resume)
+  end
+
   @impl GenStage
   def init(conf: conf, queue: queue) do
+    Registry.register(Module.concat([conf.name, "Registry"]), {:producer, queue}, [])
+
     send(self(), :rescue_orphans)
     send(self(), :poll)
 
@@ -49,8 +56,12 @@ defmodule Oban.Queue.Producer do
   end
 
   @impl GenStage
-  def handle_call(:pause, _from, %State{} = state) do
-    {:reply, :ok, [], %{state | demand: 0, paused: true}}
+  def handle_call(:pause, _from, %State{demand: demand} = state) do
+    {:reply, :ok, [], %{state | demand: 0, paused: true, pause_demand: demand}}
+  end
+
+  def handle_call(:resume, _from, %State{pause_demand: demand} = state) do
+    {:reply, :ok, [], %{state | paused: false, demand: demand, pause_demand: 0}}
   end
 
   @impl GenStage

@@ -117,15 +117,63 @@ defmodule Oban do
 
   @impl Supervisor
   def init(%Config{queues: queues} = conf) do
-    children = [prune_spec(conf) | Enum.map(queues, &queue_spec(&1, conf))]
+    children = Enum.map(queues, &queue_spec(&1, conf))
+    children = [registry_spec(conf), prune_spec(conf)] ++ children
 
     Supervisor.init(children, strategy: :one_for_one)
   end
 
+  @doc """
+  Pause a running queue, preventing it from executing any new jobs. All running jobs will remain
+  running until they are finished.
+
+  When shutdown begins all queues are paused.
+
+  ## Example
+
+  Pause the default queue:
+
+      Oban.pause_queue(:default)
+
+  Pause a queue with a custom named Oban supervisor:
+
+      Oban.pause_queue(MyOban, :priority)
+  """
+  @spec pause_queue(name :: module(), queue :: atom()) :: :ok
+  def pause_queue(name \\ __MODULE__, queue) when is_atom(name) and is_atom(queue) do
+    call_registered(name, {:producer, Atom.to_string(queue)}, :pause)
+  end
+
+  @doc """
+  Resume executing jobs in a paused queue.
+
+  ## Example
+
+  Resume a paused default queue:
+
+      Oban.resume_queue(:default)
+
+  Resume a paused queue with custom named Oban supervisor:
+
+      Oban.resume_queue(MyOban, :priority)
+  """
+  @spec resume_queue(name :: module(), queue :: atom()) :: :ok
+  def resume_queue(name \\ __MODULE__, queue) when is_atom(name) and is_atom(queue) do
+    call_registered(name, {:producer, Atom.to_string(queue)}, :resume)
+  end
+
   defp prune_spec(conf) do
     name = Module.concat([conf.name, "Pruner"])
+    opts = [conf: conf, name: name]
 
-    {Pruner, conf: conf, name: name}
+    Supervisor.child_spec({Pruner, opts}, id: name)
+  end
+
+  defp registry_spec(conf) do
+    name = Module.concat([conf.name, "Registry"])
+    opts = [keys: :unique, name: name]
+
+    Supervisor.child_spec({Registry, opts}, id: name)
   end
 
   defp queue_spec({queue, limit}, conf) do
@@ -134,5 +182,16 @@ defmodule Oban do
     opts = [conf: conf, queue: queue, limit: limit, name: name]
 
     Supervisor.child_spec({QueueSupervisor, opts}, id: name)
+  end
+
+  defp call_registered(name, key, request) do
+    registry_name = Module.concat([name, "Registry"])
+
+    case Registry.lookup(registry_name, key) do
+      [{pid, _}] -> GenServer.call(pid, request)
+      [] -> :ok
+    end
+
+    :ok
   end
 end
