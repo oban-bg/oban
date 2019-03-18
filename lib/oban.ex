@@ -60,11 +60,14 @@ defmodule Oban do
   alias Oban.{Config, Pruner}
   alias Oban.Queue.Supervisor, as: QueueSupervisor
 
-  @type supervisor_option ::
+  @type option ::
           {:name, module()}
           | {:node, binary()}
+          | {:poll_interval, pos_integer()}
+          | {:prune, :disabled | {:maxlen, pos_integer()} | {:maxage, pos_integer()}}
           | {:queues, [{atom(), pos_integer()}]}
           | {:repo, module()}
+          | {:shutdown_grace_period, timeout()}
 
   @doc """
   Starts an `Oban` supervision tree linked to the current process.
@@ -108,7 +111,7 @@ defmodule Oban do
   * In a Heroku environment the system environment's `DYNO` value is used
   * Otherwise, the system hostname is used
   """
-  @spec start_link([supervisor_option()]) :: Supervisor.on_start()
+  @spec start_link([option()]) :: Supervisor.on_start()
   def start_link(opts) when is_list(opts) do
     conf = Config.new(opts)
 
