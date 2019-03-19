@@ -43,22 +43,24 @@ defmodule Oban.Queue.Producer do
   end
 
   @impl GenServer
-  def init(conf: conf, foreman: foreman, limit: limit, queue: queue) do
-    send(self(), :rescue_orphans)
-    send(self(), :poll)
+  def init(opts) do
+    %Config{poll_interval: interval} = Keyword.fetch!(opts, :conf)
 
-    {:ok, _ref} = :timer.send_interval(conf.poll_interval, :poll)
+    {:ok, _ref} = :timer.send_interval(interval, :poll)
 
-    {:ok, %State{conf: conf, foreman: foreman, limit: limit, queue: queue}}
+    {:ok, struct!(State, opts), {:continue, :start}}
   end
 
   @impl GenServer
-  def handle_info(:poll, state), do: dispatch(state)
-
-  def handle_info(:rescue_orphans, %State{conf: conf, queue: queue} = state) do
+  def handle_continue(:start, %State{conf: conf, queue: queue} = state) do
     Query.rescue_orphaned_jobs(conf.repo, queue)
 
-    {:noreply, state}
+    dispatch(state)
+  end
+
+  @impl GenServer
+  def handle_info(:poll, state) do
+    dispatch(state)
   end
 
   def handle_info({:DOWN, _ref, :process, _pid, _reason}, %State{running: running} = state) do

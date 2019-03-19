@@ -199,18 +199,24 @@ defmodule Oban do
 
   defp queue_spec({queue, limit}, conf) do
     queue = to_string(queue)
-    name = Module.concat([conf.name, "Queue", String.capitalize(queue)])
+    name = queue_name(conf.name, queue)
     opts = [conf: conf, queue: queue, limit: limit, name: name]
 
     Supervisor.child_spec({QueueSupervisor, opts}, id: name)
   end
 
-  defp producer_name(base, queue) do
+  defp queue_name(base, queue) do
     queue =
       queue
       |> to_string()
       |> String.capitalize()
 
-    Module.concat([base, "Queue", queue, "Producer"])
+    Module.concat([base, "Queue", queue])
+  end
+
+  defp producer_name(base, queue) do
+    base
+    |> queue_name(queue)
+    |> Module.concat("Producer")
   end
 end
