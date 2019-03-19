@@ -15,7 +15,7 @@ defmodule Oban.MixProject do
       # Hex
       package: package(),
       description: """
-      Smooth job queue powered by PostgreSQL and GenStage
+      Smooth asynchronous job execution powered by PostgreSQL
       """,
 
       # Dialyzer
@@ -54,7 +54,6 @@ defmodule Oban.MixProject do
   defp deps do
     [
       {:ecto_sql, "~> 3.0"},
-      {:gen_stage, "~> 0.14"},
       {:jason, "~> 1.1"},
       {:postgrex, "~> 0.14"},
       {:telemetry, "~> 0.3"},

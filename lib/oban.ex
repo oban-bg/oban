@@ -58,6 +58,7 @@ defmodule Oban do
   use Supervisor
 
   alias Oban.{Config, Pruner}
+  alias Oban.Queue.Producer
   alias Oban.Queue.Supervisor, as: QueueSupervisor
 
   @type option ::
@@ -120,8 +121,7 @@ defmodule Oban do
 
   @impl Supervisor
   def init(%Config{queues: queues} = conf) do
-    children = Enum.map(queues, &queue_spec(&1, conf))
-    children = [registry_spec(conf), prune_spec(conf)] ++ children
+    children = [prune_spec(conf) | Enum.map(queues, &queue_spec(&1, conf))]
 
     Supervisor.init(children, strategy: :one_for_one)
   end
@@ -144,7 +144,9 @@ defmodule Oban do
   """
   @spec pause_queue(name :: module(), queue :: atom()) :: :ok
   def pause_queue(name \\ __MODULE__, queue) when is_atom(name) and is_atom(queue) do
-    call_registered(name, {:producer, Atom.to_string(queue)}, :pause)
+    name
+    |> producer_name(queue)
+    |> Producer.pause()
   end
 
   @doc """
@@ -162,7 +164,30 @@ defmodule Oban do
   """
   @spec resume_queue(name :: module(), queue :: atom()) :: :ok
   def resume_queue(name \\ __MODULE__, queue) when is_atom(name) and is_atom(queue) do
-    call_registered(name, {:producer, Atom.to_string(queue)}, :resume)
+    name
+    |> producer_name(queue)
+    |> Producer.resume()
+  end
+
+  @doc """
+  Scale the concurrency for a queue.
+
+  ## Example
+
+  Scale a queue up, triggering immediate execution of queued jobs:
+
+      Oban.scale_queue(:default, 50)
+
+  Scale the queue back down, allowing executing jobs to finish:
+
+      Oban.scale_queue(MyOban, :default, 5)
+  """
+  @spec scale_queue(name :: module(), queue :: atom(), scale :: pos_integer()) :: :ok
+  def scale_queue(name \\ __MODULE__, queue, scale)
+      when is_atom(queue) and is_integer(scale) and scale > 0 do
+    name
+    |> producer_name(queue)
+    |> Producer.scale(scale)
   end
 
   defp prune_spec(conf) do
@@ -172,29 +197,26 @@ defmodule Oban do
     Supervisor.child_spec({Pruner, opts}, id: name)
   end
 
-  defp registry_spec(conf) do
-    name = Module.concat([conf.name, "Registry"])
-    opts = [keys: :unique, name: name]
-
-    Supervisor.child_spec({Registry, opts}, id: name)
-  end
-
   defp queue_spec({queue, limit}, conf) do
     queue = to_string(queue)
-    name = Module.concat([conf.name, "Queue", String.capitalize(queue)])
+    name = queue_name(conf.name, queue)
     opts = [conf: conf, queue: queue, limit: limit, name: name]
 
     Supervisor.child_spec({QueueSupervisor, opts}, id: name)
   end
 
-  defp call_registered(name, key, request) do
-    registry_name = Module.concat([name, "Registry"])
+  defp queue_name(base, queue) do
+    queue =
+      queue
+      |> to_string()
+      |> String.capitalize()
 
-    case Registry.lookup(registry_name, key) do
-      [{pid, _}] -> GenServer.call(pid, request)
-      [] -> :ok
-    end
+    Module.concat([base, "Queue", queue])
+  end
 
-    :ok
+  defp producer_name(base, queue) do
+    base
+    |> queue_name(queue)
+    |> Module.concat("Producer")
   end
 end
