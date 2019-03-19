@@ -4,7 +4,7 @@ defmodule Oban.Queue.Supervisor do
   use Supervisor
 
   alias Oban.Config
-  alias Oban.Queue.{Consumer, Producer, Watchman}
+  alias Oban.Queue.{Producer, Watchman}
 
   @type option ::
           {:name, module()}
@@ -21,27 +21,22 @@ defmodule Oban.Queue.Supervisor do
 
   @impl Supervisor
   def init(conf: conf, queue: queue, limit: limit) do
+    fore_name = child_name(conf.name, queue, "Foreman")
     prod_name = child_name(conf.name, queue, "Producer")
-    cons_name = child_name(conf.name, queue, "Consumer")
 
-    prod_opts = [conf: conf, queue: queue, name: prod_name]
-
-    cons_opts = [
-      conf: conf,
-      name: cons_name,
-      subscribe_to: [{prod_name, max_demand: limit, min_demand: 1}]
-    ]
+    fore_opts = [strategy: :one_for_one, name: fore_name]
+    prod_opts = [conf: conf, foreman: fore_name, limit: limit, queue: queue, name: prod_name]
 
     watch_opts = [
-      consumer: cons_name,
+      foreman: fore_name,
       name: child_name(conf.name, queue, "Watchman"),
       producer: prod_name,
       shutdown: conf.shutdown_grace_period
     ]
 
     children = [
+      {DynamicSupervisor, fore_opts},
       {Producer, prod_opts},
-      {Consumer, cons_opts},
       {Watchman, watch_opts}
     ]
 

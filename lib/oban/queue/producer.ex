@@ -1,85 +1,108 @@
 defmodule Oban.Queue.Producer do
   @moduledoc false
 
-  use GenStage
+  use GenServer
 
   alias Oban.{Config, Query}
+  alias Oban.Queue.Executor
 
   @type option ::
           {:name, module()}
           | {:conf, Config.t()}
+          | {:foreman, GenServer.name()}
+          | {:limit, pos_integer()}
           | {:queue, binary()}
 
   defmodule State do
     @moduledoc false
 
-    @enforce_keys [:conf, :queue]
-    defstruct [:conf, :queue, demand: 0, pause_demand: 0, paused: false]
+    @enforce_keys [:conf, :foreman, :limit, :queue]
+    defstruct [:conf, :queue, :foreman, :limit, running: 0, paused: false]
   end
 
   @spec start_link([option()]) :: GenServer.on_start()
   def start_link(opts) do
     {name, opts} = Keyword.pop(opts, :name)
 
-    GenStage.start_link(__MODULE__, opts, name: name)
+    GenServer.start_link(__MODULE__, opts, name: name)
   end
 
   @spec pause(GenServer.name()) :: :ok
   def pause(producer) do
-    GenStage.call(producer, :pause)
+    GenServer.call(producer, :pause)
   end
 
   @spec resume(GenServer.name()) :: :ok
   def resume(producer) do
-    GenStage.call(producer, :resume)
+    GenServer.call(producer, :resume)
   end
 
-  @impl GenStage
-  def init(conf: conf, queue: queue) do
-    Registry.register(Module.concat([conf.name, "Registry"]), {:producer, queue}, [])
+  @spec scale(GenServer.name(), pos_integer()) :: :ok
+  def scale(producer, limit) do
+    GenServer.call(producer, {:scale, limit})
+  end
 
+  @impl GenServer
+  def init(conf: conf, foreman: foreman, limit: limit, queue: queue) do
     send(self(), :rescue_orphans)
     send(self(), :poll)
 
     {:ok, _ref} = :timer.send_interval(conf.poll_interval, :poll)
 
-    {:producer, %State{conf: conf, queue: queue}}
+    {:ok, %State{conf: conf, foreman: foreman, limit: limit, queue: queue}}
   end
 
-  @impl GenStage
+  @impl GenServer
   def handle_info(:poll, state), do: dispatch(state)
 
   def handle_info(:rescue_orphans, %State{conf: conf, queue: queue} = state) do
     Query.rescue_orphaned_jobs(conf.repo, queue)
 
-    {:noreply, [], state}
+    {:noreply, state}
   end
 
-  @impl GenStage
-  def handle_call(:pause, _from, %State{demand: demand} = state) do
-    {:reply, :ok, [], %{state | demand: 0, paused: true, pause_demand: demand}}
+  def handle_info({:DOWN, _ref, :process, _pid, _reason}, %State{running: running} = state) do
+    dispatch(%{state | running: running - 1})
   end
 
-  def handle_call(:resume, _from, %State{pause_demand: demand} = state) do
-    {:reply, :ok, [], %{state | paused: false, demand: demand, pause_demand: 0}}
+  @impl GenServer
+  def handle_call(:pause, _from, state) do
+    {:reply, :ok, %{state | paused: true}}
   end
 
-  @impl GenStage
-  def handle_demand(demand, %State{demand: buffered_demand} = state) do
-    dispatch(%{state | demand: demand + buffered_demand})
+  def handle_call(:resume, _from, state) do
+    {:reply, :ok, %{state | paused: false}}
   end
 
-  defp dispatch(%State{demand: demand, paused: paused} = state) when demand == 0 or paused do
-    {:noreply, [], state}
+  def handle_call({:scale, limit}, _from, state) do
+    {:noreply, state} = dispatch(%{state | limit: limit})
+
+    {:reply, :ok, state}
   end
 
-  defp dispatch(%State{conf: conf, demand: demand, queue: queue} = state) do
+  defp dispatch(%State{paused: true} = state) do
+    {:noreply, state}
+  end
+
+  defp dispatch(%State{limit: limit, running: running} = state) when running >= limit do
+    {:noreply, state}
+  end
+
+  defp dispatch(%State{conf: conf, foreman: foreman} = state) do
+    %State{queue: queue, limit: limit, running: running} = state
+
     {count, jobs} =
-      case Query.fetch_available_jobs(conf.repo, queue, demand) do
+      case Query.fetch_available_jobs(conf.repo, queue, limit - running) do
         {0, nil} -> {0, []}
         {count, jobs} -> {count, jobs}
       end
 
-    {:noreply, jobs, %{state | demand: demand - count}}
+    for job <- jobs do
+      {:ok, pid} = DynamicSupervisor.start_child(foreman, Executor.child_spec(job, conf))
+
+      Process.monitor(pid)
+    end
+
+    {:noreply, %{state | running: running + count}}
   end
 end

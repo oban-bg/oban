@@ -3,25 +3,23 @@ defmodule Oban.Queue.Executor do
 
   alias Oban.{Config, Job, Query}
 
-  @type option :: {:conf, Config.t()}
-
-  @spec child_spec([option]) :: Supervisor.child_spec()
-  def child_spec(opts) do
+  @spec child_spec(Job.t(), Config.t()) :: Supervisor.child_spec()
+  def child_spec(job, conf) do
     %{
       id: __MODULE__,
-      start: {__MODULE__, :start_link, [opts]},
+      start: {__MODULE__, :start_link, [job, conf]},
       type: :worker,
       restart: :temporary
     }
   end
 
-  @spec start_link([option], Job.t()) :: {:ok, pid()}
-  def start_link([conf: conf], job) do
+  @spec start_link(Job.t(), Config.t()) :: {:ok, pid()}
+  def start_link(%Job{} = job, %Config{} = conf) do
     Task.start_link(__MODULE__, :call, [job, conf])
   end
 
-  @spec call(job :: Job.t(), conf :: Config.t()) :: :ok
-  def call(%Job{} = job, %Config{repo: repo}) do
+  @doc false
+  def call(job, %Config{repo: repo}) do
     {timing, return} = :timer.tc(__MODULE__, :safe_call, [job])
 
     case return do
