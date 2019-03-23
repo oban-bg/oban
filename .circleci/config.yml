@@ -73,8 +73,4 @@ jobs:
 
       - run: dockerize -wait tcp://localhost:5432 -timeout 1m
       - run: mix ecto.migrate -r Oban.Test.Repo
-
-      - run: mix format --check-formatted
-      - run: mix credo --strict
-      - run: mix test
-      - run: mix dialyzer --halt-exit-status
+      - run: mix ci

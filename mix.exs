@@ -11,6 +11,7 @@ defmodule Oban.MixProject do
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
       deps: deps(),
+      aliases: aliases(),
 
       # Hex
       package: package(),
@@ -62,5 +63,9 @@ defmodule Oban.MixProject do
       {:dialyxir, "~> 0.5", only: [:test, :dev], runtime: false},
       {:ex_doc, "~> 0.19", only: [:dev, :test], runtime: false}
     ]
+  end
+
+  defp aliases do
+    [ci: ["format --check-formatted", "credo --strict", "test", "dialyzer --halt-exit-status"]]
   end
 end
