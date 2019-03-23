@@ -9,9 +9,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Added
 
-- [Oban] Add `pause_queue/2` and `resume_queue/2` for dynamically pausing and
-  resuming running queues. This is implemented through a registry, which other
-  features will also be built on.
+- [Oban] Add `pause_queue/2`, `resume_queue/2` and `scale_queue/3` for
+  dynamically controlling queues.
+- [Oban] Add `kill_job/2` for terminating running jobs and marking them as
+  discarded.
 - [Oban.Job] Execution errors are stored as a jsonb array for each job. Each
   error is stored, not just the most recent one. Error entries contains these
   keys:
