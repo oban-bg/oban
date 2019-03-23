@@ -29,7 +29,7 @@ defmodule Oban.Queue.Executor do
         report(timing, job, %{event: :success})
 
       {:failure, ^job, kind, error, stack} ->
-        Query.retry_job(repo, job, Exception.format(kind, error, stack))
+        Query.retry_job(repo, job, format_blamed(kind, error, stack))
 
         report(timing, job, %{event: :failure, kind: kind, error: error, stack: stack})
     end
@@ -61,6 +61,12 @@ defmodule Oban.Queue.Executor do
   end
 
   defp to_module(worker) when is_atom(worker), do: worker
+
+  defp format_blamed(kind, error, stack) do
+    {blamed, stack} = Exception.blame(kind, error, stack)
+
+    Exception.format(kind, blamed, stack)
+  end
 
   defp report(timing, job, meta) do
     meta =
