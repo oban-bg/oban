@@ -6,6 +6,8 @@ defmodule Oban.Query do
 
   alias Oban.Job
 
+  @type repo :: module()
+
   # Taking a shared lock this way will always work, even if a lock has been taken by another
   # connection.
   defmacrop take_lock(id) do
@@ -25,7 +27,7 @@ defmodule Oban.Query do
     end
   end
 
-  @spec fetch_available_jobs(module(), binary(), pos_integer()) :: {integer(), nil | [Job.t()]}
+  @spec fetch_available_jobs(repo(), binary(), pos_integer()) :: {integer(), nil | [Job.t()]}
   def fetch_available_jobs(repo, queue, demand) do
     subquery =
       Job
@@ -46,7 +48,7 @@ defmodule Oban.Query do
     )
   end
 
-  @spec rescue_orphaned_jobs(module(), binary()) :: {integer(), nil}
+  @spec rescue_orphaned_jobs(repo(), binary()) :: {integer(), nil}
   def rescue_orphaned_jobs(repo, queue) do
     Job
     |> where([j], j.state == "executing")
@@ -55,7 +57,7 @@ defmodule Oban.Query do
     |> repo.update_all(set: [state: "available"])
   end
 
-  @spec delete_truncated_jobs(module(), pos_integer()) :: {integer(), nil}
+  @spec delete_truncated_jobs(repo(), pos_integer()) :: {integer(), nil}
   def delete_truncated_jobs(repo, limit) do
     subquery =
       Job
@@ -66,7 +68,7 @@ defmodule Oban.Query do
     repo.delete_all(from(j in Job, join: x in subquery(subquery), on: j.id == x.id))
   end
 
-  @spec delete_outdated_jobs(module(), pos_integer()) :: {integer(), nil}
+  @spec delete_outdated_jobs(repo(), pos_integer()) :: {integer(), nil}
   def delete_outdated_jobs(repo, seconds) do
     outdated_at = DateTime.add(utc_now(), -seconds)
 
@@ -76,14 +78,21 @@ defmodule Oban.Query do
     |> repo.delete_all()
   end
 
-  @spec complete_job(module(), Job.t()) :: :ok
+  @spec complete_job(repo(), Job.t()) :: :ok
   def complete_job(repo, %Job{id: id}) do
     repo.update_all(select_for_update(id), set: [state: "completed", completed_at: utc_now()])
 
     :ok
   end
 
-  @spec retry_job(module(), Job.t(), binary()) :: :ok
+  @spec discard_job(repo(), Job.t()) :: :ok
+  def discard_job(repo, %Job{id: id}) do
+    repo.update_all(select_for_update(id), set: [state: "discarded", completed_at: utc_now()])
+
+    :ok
+  end
+
+  @spec retry_job(repo(), Job.t(), binary()) :: :ok
   def retry_job(repo, %Job{} = job, formatted_error) do
     %Job{attempt: attempt, id: id, max_attempts: max_attempts} = job
 

@@ -5,6 +5,7 @@ defmodule Oban.Queue.Supervisor do
 
   alias Oban.Config
   alias Oban.Queue.{Producer, Watchman}
+  alias Postgrex.Notifications
 
   @type option ::
           {:name, module()}
@@ -22,10 +23,19 @@ defmodule Oban.Queue.Supervisor do
   @impl Supervisor
   def init(conf: conf, queue: queue, limit: limit, name: name) do
     fore_name = Module.concat([name, "Foreman"])
+    note_name = Module.concat([name, "Notifier"])
     prod_name = Module.concat([name, "Producer"])
 
     fore_opts = [strategy: :one_for_one, name: fore_name]
-    prod_opts = [conf: conf, foreman: fore_name, limit: limit, queue: queue, name: prod_name]
+
+    prod_opts = [
+      conf: conf,
+      foreman: fore_name,
+      limit: limit,
+      notifier: note_name,
+      queue: queue,
+      name: prod_name
+    ]
 
     watch_opts = [
       foreman: fore_name,
@@ -36,10 +46,16 @@ defmodule Oban.Queue.Supervisor do
 
     children = [
       {DynamicSupervisor, fore_opts},
+      notifier_spec(Keyword.put(conf.repo.config(), :name, note_name)),
       {Producer, prod_opts},
       {Watchman, watch_opts}
     ]
 
     Supervisor.init(children, strategy: :rest_for_one)
+  end
+
+  # Postgrex.Notifications doesn't support `child_spec/1`, so we have to define it ourselves.
+  defp notifier_spec(opts) do
+    %{id: Notifications, start: {Notifications, :start_link, [opts]}}
   end
 end

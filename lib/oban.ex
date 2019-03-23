@@ -57,8 +57,7 @@ defmodule Oban do
 
   use Supervisor
 
-  alias Oban.{Config, Pruner}
-  alias Oban.Queue.Producer
+  alias Oban.{Config, Notifier, Pruner}
   alias Oban.Queue.Supervisor, as: QueueSupervisor
 
   @type option ::
@@ -121,7 +120,8 @@ defmodule Oban do
 
   @impl Supervisor
   def init(%Config{queues: queues} = conf) do
-    children = [prune_spec(conf) | Enum.map(queues, &queue_spec(&1, conf))]
+    children = [prune_spec(conf), notifier_spec(conf)]
+    children = children ++ Enum.map(queues, &queue_spec(&1, conf))
 
     Supervisor.init(children, strategy: :one_for_one)
   end
@@ -137,16 +137,18 @@ defmodule Oban do
   Pause the default queue:
 
       Oban.pause_queue(:default)
+      :ok
 
   Pause a queue with a custom named Oban supervisor:
 
       Oban.pause_queue(MyOban, :priority)
+      :ok
   """
   @spec pause_queue(name :: module(), queue :: atom()) :: :ok
   def pause_queue(name \\ __MODULE__, queue) when is_atom(name) and is_atom(queue) do
     name
-    |> producer_name(queue)
-    |> Producer.pause()
+    |> Module.concat("Notifier")
+    |> Notifier.pause_queue(queue)
   end
 
   @doc """
@@ -157,16 +159,18 @@ defmodule Oban do
   Resume a paused default queue:
 
       Oban.resume_queue(:default)
+      :ok
 
   Resume a paused queue with custom named Oban supervisor:
 
       Oban.resume_queue(MyOban, :priority)
+      :ok
   """
   @spec resume_queue(name :: module(), queue :: atom()) :: :ok
   def resume_queue(name \\ __MODULE__, queue) when is_atom(name) and is_atom(queue) do
     name
-    |> producer_name(queue)
-    |> Producer.resume()
+    |> Module.concat("Notifier")
+    |> Notifier.resume_queue(queue)
   end
 
   @doc """
@@ -177,17 +181,39 @@ defmodule Oban do
   Scale a queue up, triggering immediate execution of queued jobs:
 
       Oban.scale_queue(:default, 50)
+      :ok
 
   Scale the queue back down, allowing executing jobs to finish:
 
-      Oban.scale_queue(MyOban, :default, 5)
+      Oban.scale_queue(:default, 5)
+      :ok
   """
   @spec scale_queue(name :: module(), queue :: atom(), scale :: pos_integer()) :: :ok
   def scale_queue(name \\ __MODULE__, queue, scale)
       when is_atom(queue) and is_integer(scale) and scale > 0 do
     name
-    |> producer_name(queue)
-    |> Producer.scale(scale)
+    |> Module.concat("Notifier")
+    |> Notifier.scale_queue(queue, scale)
+  end
+
+  @doc """
+  Kill an actively executing job and mark it as `discarded`, ensuring that it won't be retried.
+
+  If the job happens to fail before it can be killed the state is set to `discarded`. However,
+  if it manages to complete successfully then the state will still be `completed`.
+
+  ## Example
+
+  Kill a long running job with an id of `1`:
+
+      Oban.kill_job(1)
+      :ok
+  """
+  @spec kill_job(name :: module(), job_id :: pos_integer()) :: :ok
+  def kill_job(name \\ __MODULE__, job_id) when is_integer(job_id) do
+    name
+    |> Module.concat("Notifier")
+    |> Notifier.kill_job(job_id)
   end
 
   defp prune_spec(conf) do
@@ -197,26 +223,18 @@ defmodule Oban do
     Supervisor.child_spec({Pruner, opts}, id: name)
   end
 
+  defp notifier_spec(conf) do
+    name = Module.concat([conf.name, "Notifier"])
+    opts = [conf: conf, name: name]
+
+    Supervisor.child_spec({Notifier, opts}, id: name)
+  end
+
   defp queue_spec({queue, limit}, conf) do
     queue = to_string(queue)
-    name = queue_name(conf.name, queue)
+    name = Module.concat([conf.name, "Queue", String.capitalize(queue)])
     opts = [conf: conf, queue: queue, limit: limit, name: name]
 
     Supervisor.child_spec({QueueSupervisor, opts}, id: name)
-  end
-
-  defp queue_name(base, queue) do
-    queue =
-      queue
-      |> to_string()
-      |> String.capitalize()
-
-    Module.concat([base, "Queue", queue])
-  end
-
-  defp producer_name(base, queue) do
-    base
-    |> queue_name(queue)
-    |> Module.concat("Producer")
   end
 end

@@ -18,8 +18,8 @@ defmodule Oban.Queue.Executor do
     Task.start_link(__MODULE__, :call, [job, conf])
   end
 
-  @doc false
-  def call(job, %Config{repo: repo}) do
+  @spec call(Job.t(), Config.t()) :: :ok
+  def call(%Job{} = job, %Config{repo: repo}) do
     {timing, return} = :timer.tc(__MODULE__, :safe_call, [job])
 
     case return do

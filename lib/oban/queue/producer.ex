@@ -5,6 +5,7 @@ defmodule Oban.Queue.Producer do
 
   alias Oban.{Config, Query}
   alias Oban.Queue.Executor
+  alias Postgrex.Notifications
 
   @type option ::
           {:name, module()}
@@ -16,8 +17,8 @@ defmodule Oban.Queue.Producer do
   defmodule State do
     @moduledoc false
 
-    @enforce_keys [:conf, :foreman, :limit, :queue]
-    defstruct [:conf, :queue, :foreman, :limit, running: 0, paused: false]
+    @enforce_keys [:conf, :foreman, :limit, :notifier, :queue]
+    defstruct [:conf, :queue, :foreman, :limit, :notifier, running: %{}, paused: false]
   end
 
   @spec start_link([option()]) :: GenServer.on_start()
@@ -32,16 +33,6 @@ defmodule Oban.Queue.Producer do
     GenServer.call(producer, :pause)
   end
 
-  @spec resume(GenServer.name()) :: :ok
-  def resume(producer) do
-    GenServer.call(producer, :resume)
-  end
-
-  @spec scale(GenServer.name(), pos_integer()) :: :ok
-  def scale(producer, limit) do
-    GenServer.call(producer, {:scale, limit})
-  end
-
   @impl GenServer
   def init(opts) do
     %Config{poll_interval: interval} = Keyword.fetch!(opts, :conf)
@@ -52,10 +43,12 @@ defmodule Oban.Queue.Producer do
   end
 
   @impl GenServer
-  def handle_continue(:start, %State{conf: conf, queue: queue} = state) do
-    Query.rescue_orphaned_jobs(conf.repo, queue)
-
-    dispatch(state)
+  def handle_continue(:start, state) do
+    state
+    |> rescue_orphans()
+    |> start_interval()
+    |> start_listener()
+    |> dispatch()
   end
 
   @impl GenServer
@@ -63,8 +56,35 @@ defmodule Oban.Queue.Producer do
     dispatch(state)
   end
 
-  def handle_info({:DOWN, _ref, :process, _pid, _reason}, %State{running: running} = state) do
-    dispatch(%{state | running: running - 1})
+  def handle_info({:DOWN, ref, :process, _pid, _reason}, %State{running: running} = state) do
+    dispatch(%{state | running: Map.delete(running, ref)})
+  end
+
+  def handle_info({:notification, _pid, _ref, _channel, payload}, state) do
+    %State{conf: conf, foreman: foreman, queue: queue, running: running} = state
+
+    state =
+      case Jason.decode(payload) do
+        {:ok, %{"action" => "pause", "queue" => ^queue}} ->
+          %{state | paused: true}
+
+        {:ok, %{"action" => "resume", "queue" => ^queue}} ->
+          %{state | paused: false}
+
+        {:ok, %{"action" => "scale", "queue" => ^queue, "scale" => scale}} ->
+          %{state | limit: scale}
+
+        {:ok, %{"action" => "pkill", "job_id" => kid}} ->
+          for {_ref, {job, pid}} <- running, job.id == kid do
+            with :ok <- DynamicSupervisor.terminate_child(foreman, pid) do
+              Query.discard_job(conf.repo, job)
+            end
+          end
+
+          state
+      end
+
+    dispatch(state)
   end
 
   @impl GenServer
@@ -72,39 +92,53 @@ defmodule Oban.Queue.Producer do
     {:reply, :ok, %{state | paused: true}}
   end
 
-  def handle_call(:resume, _from, state) do
-    {:reply, :ok, %{state | paused: false}}
+  # Start Handlers
+
+  defp rescue_orphans(%State{conf: conf, queue: queue} = state) do
+    Query.rescue_orphaned_jobs(conf.repo, queue)
+
+    state
   end
 
-  def handle_call({:scale, limit}, _from, state) do
-    {:noreply, state} = dispatch(%{state | limit: limit})
+  defp start_interval(%State{conf: conf} = state) do
+    {:ok, _ref} = :timer.send_interval(conf.poll_interval, :poll)
 
-    {:reply, :ok, state}
+    state
   end
+
+  defp start_listener(%State{conf: conf, notifier: notifier} = state) do
+    {:ok, _} = Notifications.listen(notifier, conf.control_channel, timeout: :infinity)
+
+    state
+  end
+
+  # Dispatching
 
   defp dispatch(%State{paused: true} = state) do
     {:noreply, state}
   end
 
-  defp dispatch(%State{limit: limit, running: running} = state) when running >= limit do
+  defp dispatch(%State{limit: limit, running: running} = state) when map_size(running) >= limit do
     {:noreply, state}
   end
 
   defp dispatch(%State{conf: conf, foreman: foreman} = state) do
     %State{queue: queue, limit: limit, running: running} = state
 
-    {count, jobs} =
-      case Query.fetch_available_jobs(conf.repo, queue, limit - running) do
-        {0, nil} -> {0, []}
-        {count, jobs} -> {count, jobs}
+    started_jobs =
+      for job <- fetch_jobs(conf.repo, queue, limit - map_size(running)), into: %{} do
+        {:ok, pid} = DynamicSupervisor.start_child(foreman, Executor.child_spec(job, conf))
+
+        {Process.monitor(pid), {job, pid}}
       end
 
-    for job <- jobs do
-      {:ok, pid} = DynamicSupervisor.start_child(foreman, Executor.child_spec(job, conf))
+    {:noreply, %{state | running: Map.merge(running, started_jobs)}}
+  end
 
-      Process.monitor(pid)
+  defp fetch_jobs(repo, queue, count) do
+    case Query.fetch_available_jobs(repo, queue, count) do
+      {0, nil} -> []
+      {_count, jobs} -> jobs
     end
-
-    {:noreply, %{state | running: running + count}}
   end
 end
