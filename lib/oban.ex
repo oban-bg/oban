@@ -84,9 +84,9 @@ defmodule Oban do
     `default` and `exports` with a combined concurrency level of 20. The concurrency setting
     specifies how many jobs _each queue_ will run concurrently.
   * `:poll_interval` - the amount of time between a queue pulling new jobs, specified in
-    milliseconds. This is directly tied to the resolution of scheduled jobs. For example, with a
-    `poll_interval` of 5_000ms scheduled jobs would be checked every 5 seconds. The default is
-    `1_000`, or 1 second.
+    milliseconds. This is directly tied to the resolution of _scheduled_ jobs. For example, with a
+    `poll_interval` of `5_000ms`, scheduled jobs are checked every 5 seconds. The default is
+    `1_000ms`.
   * `:prune` - configures job pruning behavior, see "Pruning Historic Jobs" for more information
   * `:shutdown_grace_period` - the amount of time a queue will wait for executing jobs to complete
     before hard shutdown, specified in milliseconds. The default is `15_000`, or 15 seconds.

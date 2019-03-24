@@ -4,7 +4,6 @@ defmodule Oban.Config do
   @type prune :: :disabled | {:maxlen, pos_integer()} | {:maxage, pos_integer()}
 
   @type t :: %__MODULE__{
-          control_channel: binary(),
           name: module(),
           node: binary(),
           poll_interval: pos_integer(),
@@ -15,10 +14,9 @@ defmodule Oban.Config do
         }
 
   @enforce_keys [:node, :repo]
-  defstruct control_channel: "oban_control",
-            name: Oban,
+  defstruct name: Oban,
             node: nil,
-            poll_interval: 1_000,
+            poll_interval: :timer.seconds(1),
             prune: :disabled,
             queues: [default: 10],
             repo: nil,

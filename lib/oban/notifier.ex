@@ -11,8 +11,8 @@ defmodule Oban.Notifier do
   defmodule State do
     @moduledoc false
 
-    @enforce_keys [:channel, :repo]
-    defstruct [:channel, :repo]
+    @enforce_keys [:repo]
+    defstruct [:repo]
   end
 
   @spec start_link([option]) :: GenServer.on_start()
@@ -43,15 +43,15 @@ defmodule Oban.Notifier do
   end
 
   @impl GenServer
-  def init(conf: %Config{control_channel: channel, repo: repo}) do
-    {:ok, %State{channel: channel, repo: repo}}
+  def init(conf: %Config{repo: repo}) do
+    {:ok, %State{repo: repo}}
   end
 
   @impl GenServer
-  def handle_call(message, _from, %State{channel: channel, repo: repo} = state) do
+  def handle_call(message, _from, %State{repo: repo} = state) do
     encoded = Jason.encode!(message)
 
-    {:ok, _result} = repo.query("SELECT pg_notify($1, $2)", [channel, encoded])
+    {:ok, _result} = repo.query("SELECT pg_notify('oban_signal', $1)", [encoded])
 
     {:reply, :ok, state}
   end

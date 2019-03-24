@@ -11,7 +11,7 @@ defmodule Oban.Migrations do
 
   def up do
     execute """
-    create type oban_job_state as enum ('available', 'executing', 'completed', 'discarded')
+    CREATE TYPE oban_job_state AS ENUM ('available', 'executing', 'completed', 'discarded')
     """
 
     create_if_not_exists table(:oban_jobs) do
@@ -31,11 +31,32 @@ defmodule Oban.Migrations do
 
     create index(:oban_jobs, [:state, :queue])
     create index(:oban_jobs, [:scheduled_at])
+
+    execute """
+    CREATE FUNCTION oban_jobs_notify()
+      RETURNS trigger AS $$
+    DECLARE
+    BEGIN
+      PERFORM pg_notify('oban_insert', NEW.queue);
+      RETURN NEW;
+    END;
+    $$ LANGUAGE plpgsql
+    """
+
+    execute """
+    CREATE TRIGGER notify_inserted
+    AFTER INSERT ON oban_jobs
+    FOR EACH ROW
+    EXECUTE PROCEDURE oban_jobs_notify();
+    """
   end
 
   def down do
+    execute("DROP TRIGGER notify_inserted ON oban_jobs")
+    execute("DROP FUNCTION oban_jobs_notify()")
+
     drop_if_exists table("oban_jobs")
 
-    execute("drop type if exists oban_job_state")
+    execute("DROP TYPE IF EXISTS oban_job_state")
   end
 end

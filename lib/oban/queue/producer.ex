@@ -60,7 +60,11 @@ defmodule Oban.Queue.Producer do
     dispatch(%{state | running: Map.delete(running, ref)})
   end
 
-  def handle_info({:notification, _pid, _ref, _channel, payload}, state) do
+  def handle_info({:notification, _pid, _ref, "oban_insert", queue}, %State{queue: queue} = state) do
+    dispatch(state)
+  end
+
+  def handle_info({:notification, _pid, _ref, "oban_signal", payload}, state) do
     %State{conf: conf, foreman: foreman, queue: queue, running: running} = state
 
     state =
@@ -87,6 +91,10 @@ defmodule Oban.Queue.Producer do
     dispatch(state)
   end
 
+  def handle_info(_message, state) do
+    {:noreply, state}
+  end
+
   @impl GenServer
   def handle_call(:pause, _from, state) do
     {:reply, :ok, %{state | paused: true}}
@@ -106,8 +114,9 @@ defmodule Oban.Queue.Producer do
     state
   end
 
-  defp start_listener(%State{conf: conf, notifier: notifier} = state) do
-    {:ok, _} = Notifications.listen(notifier, conf.control_channel, timeout: :infinity)
+  defp start_listener(%State{notifier: notifier} = state) do
+    {:ok, _} = Notifications.listen(notifier, "oban_signal")
+    {:ok, _} = Notifications.listen(notifier, "oban_insert")
 
     state
   end
