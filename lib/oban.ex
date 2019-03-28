@@ -120,10 +120,21 @@ defmodule Oban do
 
   @impl Supervisor
   def init(%Config{queues: queues} = conf) do
-    children = [prune_spec(conf), notifier_spec(conf)]
-    children = children ++ Enum.map(queues, &queue_spec(&1, conf))
+    children =
+      [
+        {Pruner, conf: conf, name: Pruner},
+        {Notifier, conf: conf, name: Notifier}
+      ] ++ Enum.map(queues, &queue_spec(&1, conf))
 
     Supervisor.init(children, strategy: :one_for_one)
+  end
+
+  defp queue_spec({queue, limit}, conf) do
+    queue = to_string(queue)
+    name = Module.concat([conf.name, "Queue", String.capitalize(queue)])
+    opts = [conf: conf, queue: queue, limit: limit, name: name]
+
+    Supervisor.child_spec({QueueSupervisor, opts}, id: name)
   end
 
   @doc """
@@ -138,18 +149,9 @@ defmodule Oban do
 
       Oban.pause_queue(:default)
       :ok
-
-  Pause a queue with a custom named Oban supervisor:
-
-      Oban.pause_queue(MyOban, :priority)
-      :ok
   """
-  @spec pause_queue(name :: module(), queue :: atom()) :: :ok
-  def pause_queue(name \\ __MODULE__, queue) when is_atom(name) and is_atom(queue) do
-    name
-    |> Module.concat("Notifier")
-    |> Notifier.pause_queue(queue)
-  end
+  @spec pause_queue(queue :: atom()) :: :ok
+  defdelegate pause_queue(queue), to: Notifier
 
   @doc """
   Resume executing jobs in a paused queue.
@@ -160,18 +162,9 @@ defmodule Oban do
 
       Oban.resume_queue(:default)
       :ok
-
-  Resume a paused queue with custom named Oban supervisor:
-
-      Oban.resume_queue(MyOban, :priority)
-      :ok
   """
-  @spec resume_queue(name :: module(), queue :: atom()) :: :ok
-  def resume_queue(name \\ __MODULE__, queue) when is_atom(name) and is_atom(queue) do
-    name
-    |> Module.concat("Notifier")
-    |> Notifier.resume_queue(queue)
-  end
+  @spec resume_queue(queue :: atom()) :: :ok
+  defdelegate resume_queue(queue), to: Notifier
 
   @doc """
   Scale the concurrency for a queue.
@@ -188,13 +181,8 @@ defmodule Oban do
       Oban.scale_queue(:default, 5)
       :ok
   """
-  @spec scale_queue(name :: module(), queue :: atom(), scale :: pos_integer()) :: :ok
-  def scale_queue(name \\ __MODULE__, queue, scale)
-      when is_atom(queue) and is_integer(scale) and scale > 0 do
-    name
-    |> Module.concat("Notifier")
-    |> Notifier.scale_queue(queue, scale)
-  end
+  @spec scale_queue(queue :: atom(), scale :: pos_integer()) :: :ok
+  defdelegate scale_queue(queue, scale), to: Notifier
 
   @doc """
   Kill an actively executing job and mark it as `discarded`, ensuring that it won't be retried.
@@ -209,32 +197,6 @@ defmodule Oban do
       Oban.kill_job(1)
       :ok
   """
-  @spec kill_job(name :: module(), job_id :: pos_integer()) :: :ok
-  def kill_job(name \\ __MODULE__, job_id) when is_integer(job_id) do
-    name
-    |> Module.concat("Notifier")
-    |> Notifier.kill_job(job_id)
-  end
-
-  defp prune_spec(conf) do
-    name = Module.concat([conf.name, "Pruner"])
-    opts = [conf: conf, name: name]
-
-    Supervisor.child_spec({Pruner, opts}, id: name)
-  end
-
-  defp notifier_spec(conf) do
-    name = Module.concat([conf.name, "Notifier"])
-    opts = [conf: conf, name: name]
-
-    Supervisor.child_spec({Notifier, opts}, id: name)
-  end
-
-  defp queue_spec({queue, limit}, conf) do
-    queue = to_string(queue)
-    name = Module.concat([conf.name, "Queue", String.capitalize(queue)])
-    opts = [conf: conf, queue: queue, limit: limit, name: name]
-
-    Supervisor.child_spec({QueueSupervisor, opts}, id: name)
-  end
+  @spec kill_job(job_id :: pos_integer()) :: :ok
+  defdelegate kill_job(job_id), to: Notifier
 end

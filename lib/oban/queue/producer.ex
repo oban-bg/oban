@@ -3,9 +3,8 @@ defmodule Oban.Queue.Producer do
 
   use GenServer
 
-  alias Oban.{Config, Query}
+  alias Oban.{Config, Notifier, Query}
   alias Oban.Queue.Executor
-  alias Postgrex.Notifications
 
   @type option ::
           {:name, module()}
@@ -17,8 +16,8 @@ defmodule Oban.Queue.Producer do
   defmodule State do
     @moduledoc false
 
-    @enforce_keys [:conf, :foreman, :limit, :notifier, :queue]
-    defstruct [:conf, :queue, :foreman, :limit, :notifier, running: %{}, paused: false]
+    @enforce_keys [:conf, :foreman, :limit, :queue]
+    defstruct [:conf, :queue, :foreman, :limit, running: %{}, paused: false]
   end
 
   @spec start_link([option()]) :: GenServer.on_start()
@@ -114,9 +113,9 @@ defmodule Oban.Queue.Producer do
     state
   end
 
-  defp start_listener(%State{notifier: notifier} = state) do
-    {:ok, _} = Notifications.listen(notifier, "oban_signal")
-    {:ok, _} = Notifications.listen(notifier, "oban_insert")
+  defp start_listener(state) do
+    :ok = Notifier.listen("oban_signal")
+    :ok = Notifier.listen("oban_insert")
 
     state
   end
