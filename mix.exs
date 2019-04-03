@@ -54,14 +54,14 @@ defmodule Oban.MixProject do
 
   defp deps do
     [
-      {:ecto_sql, "~> 3.0"},
+      {:ecto_sql, "~> 3.1"},
       {:jason, "~> 1.1"},
       {:postgrex, "~> 0.14"},
-      {:telemetry, "~> 0.3"},
+      {:telemetry, "~> 0.4"},
       {:propcheck, "~> 1.0", only: [:test]},
       {:credo, "~> 1.0", only: [:test, :dev], runtime: false},
       {:dialyxir, "~> 0.5", only: [:test, :dev], runtime: false},
-      {:ex_doc, "~> 0.19", only: [:dev, :test], runtime: false}
+      {:ex_doc, "~> 0.20", only: [:dev, :test], runtime: false}
     ]
   end
 

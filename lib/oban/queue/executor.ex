@@ -74,6 +74,6 @@ defmodule Oban.Queue.Executor do
       |> Map.take([:id, :args, :queue, :worker])
       |> Map.merge(meta)
 
-    :telemetry.execute([:oban, :job, :executed], timing, meta)
+    :telemetry.execute([:oban, :job, :executed], %{timing: timing}, meta)
   end
 end

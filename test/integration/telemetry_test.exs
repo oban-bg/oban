@@ -4,7 +4,7 @@ defmodule Oban.Integration.TelemetryTest do
   @oban_opts poll_interval: 10, repo: Repo, queues: [zeta: 3]
 
   defmodule Handler do
-    def handle([:oban, :job, :executed], timing, meta, pid) do
+    def handle([:oban, :job, :executed], %{timing: timing}, meta, pid) do
       send(pid, {:executed, meta[:event], timing})
     end
   end

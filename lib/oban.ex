@@ -1,5 +1,5 @@
 defmodule Oban do
-  @moduledoc """
+  @moduledoc ~S"""
   This is a stub. New documentation will be added below, but this module isn't properly
   documented.
 
@@ -53,6 +53,32 @@ defmodule Oban do
 
   Note, only jobs in a `completed` or `discarded` state will be deleted. Currently `executing`
   jobs and older jobs that are still in the `available` state will be retained.
+
+  ## Instrumentation
+
+  Oban provides integration with [Telemetry][tele], a dispatching library for metrics. It is easy
+  to report Oban metrics to any backend by attaching to `:oban` events.
+
+  For exmaple, to log out the timing for all executed jobs:
+
+    defmodule ObanLogger do
+      require Logger
+
+      def handle_event([:oban, :job, :executed], %{timing: timing}, meta, _config) do
+        Logger.info("[#{meta.queue}] #{meta.worker} #{meta.event} in #{timing}")
+      end
+    end
+
+    :telemetry.attach("oban-logger", [:oban, :job, :executed], &ObanLogger.handle_event/4, nil)
+
+  Here is a reference for metric event metadata:
+
+  | event      | metadata                                             |
+  | ---------- | ---------------------------------------------------- |
+  | `:success` | `:id, :args, :queue, :worker`                        |
+  | `:failure` | `:id, :args, :queue, :worker, :kind, :error, :stack` |
+
+  [tele]: https://hexdocs.pm/telemetry
   """
 
   use Supervisor
