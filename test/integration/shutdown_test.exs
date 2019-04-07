@@ -1,12 +1,14 @@
 defmodule Oban.Integration.ShutdownTest do
   use Oban.Case
 
-  @oban_opts poll_interval: 10, repo: Repo, queues: [alpha: 3]
+  @moduletag :integration
+
+  @oban_opts repo: Repo, queues: [alpha: 3]
 
   test "slow jobs are allowed to complete within the shutdown grace period" do
     start_supervised!({Oban, Keyword.put(@oban_opts, :shutdown_grace_period, 500)})
 
-    %Job{id: id_1} = insert_job!(ref: 1, sleep: 50)
+    %Job{id: id_1} = insert_job!(ref: 1, sleep: 10)
     %Job{id: id_2} = insert_job!(ref: 2, sleep: 4000)
 
     assert_receive {:ok, 1}

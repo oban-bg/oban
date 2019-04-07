@@ -7,7 +7,7 @@ defmodule Oban.Pruner do
 
   @type option :: {:name, module()} | {:conf, Config.t()}
 
-  @prune_multiplier 60
+  @prune_interval :timer.minutes(1)
 
   defmodule State do
     @moduledoc false
@@ -24,13 +24,14 @@ defmodule Oban.Pruner do
 
   @impl GenServer
   def init(conf: conf) do
-    send(self(), :prune)
+    {:ok, %State{conf: conf}, {:continue, :start}}
+  end
 
-    prune_interval = conf.poll_interval * @prune_multiplier
+  @impl GenServer
+  def handle_continue(:start, state) do
+    {:ok, _ref} = :timer.send_interval(@prune_interval, :prune)
 
-    {:ok, _ref} = :timer.send_interval(prune_interval, :prune)
-
-    {:ok, %State{conf: conf}}
+    handle_info(:prune, state)
   end
 
   @impl GenServer

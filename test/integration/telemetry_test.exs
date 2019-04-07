@@ -1,7 +1,9 @@
 defmodule Oban.Integration.TelemetryTest do
   use Oban.Case
 
-  @oban_opts poll_interval: 10, repo: Repo, queues: [zeta: 3]
+  @moduletag :integration
+
+  @oban_opts repo: Repo, queues: [zeta: 3]
 
   defmodule Handler do
     def handle([:oban, :job, :executed], %{timing: timing}, meta, pid) do

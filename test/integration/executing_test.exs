@@ -2,16 +2,11 @@ defmodule Oban.Integration.ExecutingTest do
   use Oban.Case
   use PropCheck
 
-  alias Ecto.Adapters.SQL.Sandbox
+  @moduletag :integration
 
-  @oban_opts poll_interval: 10,
-             repo: Repo,
-             queues: [alpha: 3, beta: 3, gamma: 3, delta: 3]
+  @oban_opts repo: Repo, queues: [alpha: 3, beta: 3, gamma: 3, delta: 3]
 
   def setup do
-    Sandbox.checkout(Repo)
-    Sandbox.mode(Repo, {:shared, self()})
-
     start_supervised!({Oban, @oban_opts})
 
     fn -> stop_supervised(Oban) end

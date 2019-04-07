@@ -3,6 +3,8 @@ defmodule Oban.Integration.PruningTest do
 
   import Ecto.Query
 
+  @moduletag :integration
+
   test "historic jobs may be pruned based on a maximum rows count" do
     %Job{id: id_1} = insert_job(state: "available")
     %Job{id: _id_} = insert_job(state: "completed")
@@ -13,7 +15,9 @@ defmodule Oban.Integration.PruningTest do
 
     start_supervised!({Oban, repo: Repo, prune: {:maxlen, 1}})
 
-    assert retained_ids() == [id_1, id_4, id_6]
+    with_backoff(fn ->
+      assert retained_ids() == [id_1, id_4, id_6]
+    end)
 
     :ok = stop_supervised(Oban)
   end
@@ -26,7 +30,9 @@ defmodule Oban.Integration.PruningTest do
 
     start_supervised!({Oban, repo: Repo, prune: {:maxage, 60 * 4}})
 
-    assert retained_ids() == [id_1, id_2]
+    with_backoff(fn ->
+      assert retained_ids() == [id_1, id_2]
+    end)
 
     :ok = stop_supervised(Oban)
   end

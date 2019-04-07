@@ -2,8 +2,12 @@ Logger.configure(level: :info)
 
 ExUnit.start()
 
+Application.put_env(:oban, Oban.Test.Repo,
+  priv: "test/support/",
+  url: System.get_env("DATABASE_URL") || "postgres://localhost:5432/oban_test"
+)
+
 Oban.Test.Repo.start_link()
-Ecto.Adapters.SQL.Sandbox.mode(Oban.Test.Repo, :manual)
 
 defmodule Oban.Integration.Worker do
   use Oban.Worker
@@ -56,7 +60,7 @@ defmodule Oban.Case do
 
   use ExUnit.CaseTemplate
 
-  alias Ecto.Adapters.SQL.Sandbox
+  alias Oban.Job
   alias Oban.Test.Repo
 
   using do
@@ -88,10 +92,12 @@ defmodule Oban.Case do
   end
 
   setup tags do
-    :ok = Sandbox.checkout(Repo)
+    # We are intentionally avoiding Sandbox mode for testing. Within Sandbox mode everything
+    # happens in a transaction, which prevents the use of LISTEN/NOTIFY messages.
+    if tags[:integration] do
+      Repo.delete_all(Job)
 
-    unless tags[:async] do
-      Sandbox.mode(Repo, {:shared, self()})
+      on_exit(fn -> Repo.delete_all(Job) end)
     end
 
     {:ok, %{}}

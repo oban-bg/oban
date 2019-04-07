@@ -4,6 +4,8 @@ defmodule Oban.Integration.SchedulingTest do
 
   alias Oban.Query
 
+  @moduletag :integration
+
   @queue "scheduled"
   @demand 10
 
