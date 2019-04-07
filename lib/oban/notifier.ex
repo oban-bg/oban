@@ -7,69 +7,85 @@ defmodule Oban.Notifier do
   alias Postgrex.Notifications
 
   @type option :: {:name, module()} | {:conf, Config.t()}
-  @type queue :: atom() | binary()
+  @type queue :: atom()
 
-  @channels ~w(oban_insert oban_signal oban_status)
+  @gossip "oban_gossip"
+  @insert "oban_insert"
+  @signal "oban_signal"
+
+  @channels [@gossip, @insert, @signal]
 
   defmodule State do
     @moduledoc false
 
-    @enforce_keys [:notifications, :repo]
-    defstruct [:notifications, :repo]
+    @enforce_keys [:repo]
+    defstruct [:repo]
   end
 
   @spec start_link([option]) :: GenServer.on_start()
   def start_link(opts) do
-    {name, opts} = Keyword.pop(opts, :name, __MODULE__)
+    name = Keyword.get(opts, :name, __MODULE__)
 
     GenServer.start_link(__MODULE__, opts, name: name)
   end
 
-  @spec listen(GenServer.server(), binary()) :: :ok
+  @spec listen(module(), binary()) :: :ok
   def listen(server \\ __MODULE__, channel) when channel in @channels do
-    GenServer.call(server, {:listen, channel})
+    server
+    |> conn_name()
+    |> Notifications.listen(channel)
+
+    :ok
   end
 
-  @spec pause_queue(GenServer.server(), queue()) :: :ok
+  @spec notify(module(), binary(), term()) :: :ok
+  def notify(server \\ __MODULE__, channel, payload) when channel in @channels do
+    GenServer.call(server, {:notify, channel, payload})
+  end
+
+  @spec pause_queue(module(), queue()) :: :ok
   def pause_queue(server \\ __MODULE__, queue) when is_atom(queue) do
-    GenServer.call(server, %{action: :pause, queue: queue})
+    notify(server, @signal, %{action: :pause, queue: queue})
   end
 
-  @spec resume_queue(GenServer.server(), queue()) :: :ok
+  @spec resume_queue(module(), queue()) :: :ok
   def resume_queue(server \\ __MODULE__, queue) when is_atom(queue) do
-    GenServer.call(server, %{action: :resume, queue: queue})
+    notify(server, @signal, %{action: :resume, queue: queue})
   end
 
-  @spec scale_queue(GenServer.server(), queue(), pos_integer()) :: :ok
+  @spec scale_queue(module(), queue(), pos_integer()) :: :ok
   def scale_queue(server \\ __MODULE__, queue, scale)
       when is_atom(queue) and is_integer(scale) and scale > 0 do
-    GenServer.call(server, %{action: :scale, queue: queue, scale: scale})
+    notify(server, @signal, %{action: :scale, queue: queue, scale: scale})
   end
 
-  @spec kill_job(GenServer.server(), pos_integer()) :: :ok
+  @spec kill_job(module(), pos_integer()) :: :ok
   def kill_job(server \\ __MODULE__, job_id) when is_integer(job_id) do
-    GenServer.call(server, %{action: :pkill, job_id: job_id})
+    notify(server, @signal, %{action: :pkill, job_id: job_id})
   end
 
   @impl GenServer
-  def init(conf: %Config{repo: repo}) do
-    {:ok, pid} = Notifications.start_link(repo.config())
-
-    {:ok, %State{notifications: pid, repo: repo}}
+  def init(conf: %Config{repo: repo}, name: name) do
+    {:ok, %State{repo: repo}, {:continue, {:start, name}}}
   end
 
   @impl GenServer
-  def handle_call({:listen, channel}, _from, %State{notifications: pid} = state) do
-    {:ok, _} = Notifications.listen(pid, channel)
+  def handle_continue({:start, name}, %State{repo: repo} = state) do
+    conn_conf = Keyword.put(repo.config(), :name, conn_name(name))
+
+    {:ok, _} = Notifications.start_link(conn_conf)
+
+    {:noreply, state}
+  end
+
+  @impl GenServer
+  def handle_call({:notify, channel, payload}, _from, %State{repo: repo} = state) do
+    encoded = Jason.encode!(payload)
+
+    {:ok, _result} = repo.query("SELECT pg_notify($1, $2)", [channel, encoded])
 
     {:reply, :ok, state}
   end
 
-  def handle_call(message, _from, %State{repo: repo} = state) do
-    encoded = Jason.encode!(message)
-
-    {:ok, _result} = repo.query("SELECT pg_notify('oban_signal', $1)", [encoded])
-
-    {:reply, :ok, state}
-  end
+  defp conn_name(name), do: Module.concat(name, "Conn")
 end

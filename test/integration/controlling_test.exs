@@ -11,11 +11,11 @@ defmodule Oban.Integration.ControllingTest do
     start_supervised!({Oban, @oban_opts})
 
     # Pause briefly so that the producer has time to subscribe to notifications.
-    Process.sleep 10
+    Process.sleep(10)
 
     Oban.pause_queue(@queue)
 
-    insert_job(ref: 1, action: "OK")
+    insert_job!(ref: 1, action: "OK")
 
     refute_receive {:ok, 1}
 
@@ -29,7 +29,7 @@ defmodule Oban.Integration.ControllingTest do
   test "individual queues can be scaled" do
     start_supervised!({Oban, Keyword.put(@oban_opts, :queues, control: 1)})
 
-    for ref <- 1..20, do: insert_job(ref: ref, sleep: 50)
+    for ref <- 1..20, do: insert_job!(ref: ref, sleep: 50)
 
     Oban.scale_queue(@queue, 20)
 
@@ -41,7 +41,7 @@ defmodule Oban.Integration.ControllingTest do
   test "executing jobs can be killed by id" do
     start_supervised!({Oban, @oban_opts})
 
-    %Job{id: job_id} = insert_job(ref: 1, sleep: 100)
+    %Job{id: job_id} = insert_job!(ref: 1, sleep: 100)
 
     assert_receive {:started, 1}
 
@@ -61,14 +61,14 @@ defmodule Oban.Integration.ControllingTest do
     # startup.
     Process.sleep(50)
 
-    insert_job(ref: 1, action: "OK")
+    insert_job!(ref: 1, action: "OK")
 
     assert_receive {:ok, 1}
 
     stop_supervised(Oban)
   end
 
-  defp insert_job(args) do
+  defp insert_job!(args) do
     args
     |> Map.new()
     |> Map.put(:bin_pid, Worker.pid_to_bin())

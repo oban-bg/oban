@@ -13,11 +13,15 @@ defmodule Oban.Queue.Producer do
           | {:limit, pos_integer()}
           | {:queue, binary()}
 
+  @gossip "oban_gossip"
+  @insert "oban_insert"
+  @signal "oban_signal"
+
   defmodule State do
     @moduledoc false
 
     @enforce_keys [:conf, :foreman, :limit, :queue]
-    defstruct [:conf, :queue, :foreman, :limit, running: %{}, paused: false]
+    defstruct [:conf, :foreman, :limit, :queue, running: %{}, paused: false]
   end
 
   @spec start_link([option()]) :: GenServer.on_start()
@@ -52,18 +56,20 @@ defmodule Oban.Queue.Producer do
 
   @impl GenServer
   def handle_info(:poll, state) do
-    dispatch(state)
+    state
+    |> gossip()
+    |> dispatch()
   end
 
   def handle_info({:DOWN, ref, :process, _pid, _reason}, %State{running: running} = state) do
     dispatch(%{state | running: Map.delete(running, ref)})
   end
 
-  def handle_info({:notification, _pid, _ref, "oban_insert", queue}, %State{queue: queue} = state) do
+  def handle_info({:notification, _, _, @insert, queue}, %State{queue: queue} = state) do
     dispatch(state)
   end
 
-  def handle_info({:notification, _pid, _ref, "oban_signal", payload}, state) do
+  def handle_info({:notification, _, _, @signal, payload}, state) do
     %State{conf: conf, foreman: foreman, queue: queue, running: running} = state
 
     state =
@@ -114,13 +120,29 @@ defmodule Oban.Queue.Producer do
   end
 
   defp start_listener(state) do
-    :ok = Notifier.listen("oban_signal")
-    :ok = Notifier.listen("oban_insert")
+    :ok = Notifier.listen(@signal)
+    :ok = Notifier.listen(@insert)
 
     state
   end
 
   # Dispatching
+
+  defp gossip(state) do
+    %State{conf: conf, limit: limit, paused: paused, queue: queue, running: running} = state
+
+    message = %{
+      count: map_size(running),
+      limit: limit,
+      node: conf.node,
+      paused: paused,
+      queue: queue
+    }
+
+    :ok = Notifier.notify(@gossip, message)
+
+    state
+  end
 
   defp dispatch(%State{paused: true} = state) do
     {:noreply, state}
