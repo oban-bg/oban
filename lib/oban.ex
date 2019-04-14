@@ -146,11 +146,13 @@ defmodule Oban do
 
   @impl Supervisor
   def init(%Config{queues: queues} = conf) do
-    children =
-      [
-        {Pruner, conf: conf, name: Pruner},
-        {Notifier, conf: conf, name: Notifier}
-      ] ++ Enum.map(queues, &queue_spec(&1, conf))
+    children = [
+      {Config, conf: conf, name: Config},
+      {Pruner, conf: conf, name: Pruner},
+      {Notifier, conf: conf, name: Notifier}
+    ]
+
+    children = children ++ Enum.map(queues, &queue_spec(&1, conf))
 
     Supervisor.init(children, strategy: :one_for_one)
   end
@@ -162,6 +164,11 @@ defmodule Oban do
 
     Supervisor.child_spec({QueueSupervisor, opts}, id: name)
   end
+
+  @doc """
+  Retreive the current config struct.
+  """
+  defdelegate config, to: Config, as: :get
 
   @doc """
   Pause a running queue, preventing it from executing any new jobs. All running jobs will remain

@@ -1,6 +1,8 @@
 defmodule Oban.Config do
   @moduledoc false
 
+  use Agent
+
   @type prune :: :disabled | {:maxlen, pos_integer()} | {:maxage, pos_integer()}
 
   @type t :: %__MODULE__{
@@ -13,6 +15,8 @@ defmodule Oban.Config do
           shutdown_grace_period: timeout()
         }
 
+  @type option :: {:name, module()} | {:conf, t()}
+
   @enforce_keys [:node, :repo]
   defstruct name: Oban,
             node: nil,
@@ -22,12 +26,22 @@ defmodule Oban.Config do
             repo: nil,
             shutdown_grace_period: 15_000
 
+  @spec start_link([option()]) :: GenServer.on_start()
+  def start_link(opts) when is_list(opts) do
+    {conf, opts} = Keyword.pop(opts, :conf)
+
+    Agent.start_link(fn -> conf end, opts)
+  end
+
   @spec new(Keyword.t()) :: t()
   def new(opts) when is_list(opts) do
     opts = Keyword.put_new(opts, :node, node_name())
 
     struct!(__MODULE__, opts)
   end
+
+  @spec get() :: t()
+  def get(name \\ __MODULE__), do: Agent.get(name, & &1)
 
   @spec node_name(%{optional(binary()) => binary()}) :: binary()
   def node_name(env \\ System.get_env()) do

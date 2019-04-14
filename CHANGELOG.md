@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   dynamically controlling queues.
 - [Oban] Add `kill_job/2` for terminating running jobs and marking them as
   discarded.
+- [Oban] Add `config/0` for retreiving the supervisors config. This is primarily
+  useful for integrating oban into external applications.
 - [Oban.Queue.Producer] Use database triggers to immediately dispatch when a job
   is inserted into the `oban_jobs` table.
 - [Oban.Job] Execution errors are stored as a jsonb array for each job. Each
