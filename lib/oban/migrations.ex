@@ -29,7 +29,8 @@ defmodule Oban.Migrations do
       add :completed_at, :utc_datetime_usec
     end
 
-    create index(:oban_jobs, [:state, :queue])
+    create index(:oban_jobs, [:queue])
+    create index(:oban_jobs, [:state])
     create index(:oban_jobs, [:scheduled_at])
 
     execute """
