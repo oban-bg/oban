@@ -3,7 +3,7 @@ defmodule Oban.Worker do
   Defines a behavior and macro to guide the creation of worker modules.
 
   Worker modules do the work of processing a job. At a minimum they must define a `perform/1`
-  function, which will be called with an `Oban.Job` struct.
+  function, which will be called with an `args` map.
 
   ## Defining Workers
 
@@ -31,7 +31,7 @@ defmodule Oban.Worker do
       |> MyApp.Workers.Business.new()
       |> MyApp.Repo.insert()
 
-  The worker's defaults may be overrided by passing options:
+  The worker's defaults may be overridden by passing options:
 
       %{vote_for: "none of the above"}
       |> MyApp.Workers.Business.new(queue: "special", max_attempts: 5)
