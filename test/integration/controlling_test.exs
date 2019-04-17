@@ -3,9 +3,7 @@ defmodule Oban.Integration.ControllingTest do
 
   @moduletag :integration
 
-  @queue :control
-
-  @oban_opts repo: Repo, queues: [{@queue, 10}]
+  @oban_opts repo: Repo, queues: [control: 10, default: 5]
 
   test "individual queues can be paused and resumed" do
     start_supervised!({Oban, @oban_opts})
@@ -13,13 +11,13 @@ defmodule Oban.Integration.ControllingTest do
     # Pause briefly so that the producer has time to subscribe to notifications.
     Process.sleep(10)
 
-    Oban.pause_queue(@queue)
+    Oban.pause_queue(:control)
 
     insert_job!(ref: 1, action: "OK")
 
     refute_receive {:ok, 1}
 
-    Oban.resume_queue(@queue)
+    Oban.resume_queue(:control)
 
     assert_receive {:ok, 1}
 
@@ -31,7 +29,7 @@ defmodule Oban.Integration.ControllingTest do
 
     for ref <- 1..20, do: insert_job!(ref: ref, sleep: 50)
 
-    Oban.scale_queue(@queue, 20)
+    Oban.scale_queue(:control, 20)
 
     assert_receive {:ok, 20}
 
@@ -72,7 +70,7 @@ defmodule Oban.Integration.ControllingTest do
     args
     |> Map.new()
     |> Map.put(:bin_pid, Worker.pid_to_bin())
-    |> Job.new(worker: Worker, queue: @queue)
+    |> Job.new(worker: Worker, queue: :control)
     |> Repo.insert!()
   end
 end

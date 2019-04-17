@@ -91,6 +91,9 @@ defmodule Oban.Queue.Producer do
           end
 
           state
+
+        {:ok, _} ->
+          state
       end
 
     dispatch(state)
