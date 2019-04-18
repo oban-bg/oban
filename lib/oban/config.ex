@@ -37,6 +37,8 @@ defmodule Oban.Config do
   def new(opts) when is_list(opts) do
     opts = Keyword.put_new(opts, :node, node_name())
 
+    Enum.each(opts, &validate_opt!/1)
+
     struct!(__MODULE__, opts)
   end
 
@@ -58,4 +60,41 @@ defmodule Oban.Config do
         |> to_string()
     end
   end
+
+  defp validate_opt!({:node, node}) do
+    unless is_binary(node) and node != "" do
+      raise ArgumentError, "expected :poll_interval to be a positive integer"
+    end
+  end
+
+  defp validate_opt!({:poll_interval, interval}) do
+    unless is_integer(interval) and interval > 0 do
+      raise ArgumentError, "expected :poll_interval to be a positive integer"
+    end
+  end
+
+  defp validate_opt!({:prune, mode}) do
+    case mode do
+      :disabled -> :ok
+      {:maxlen, len} when is_integer(len) and len > 0 -> :ok
+      {:maxage, age} when is_integer(age) and age > 0 -> :ok
+      _ -> raise ArgumentError, "unexpected :prune mode, #{inspect(mode)}"
+    end
+  end
+
+  defp validate_opt!({:queues, queues}) do
+    unless Keyword.keyword?(queues) and Enum.all?(queues, &valid_queue?/1) do
+      raise ArgumentError, "expected :queues to be a keyword list of {atom, integer} pairs"
+    end
+  end
+
+  defp validate_opt!({:shutdown_grace_period, interval}) do
+    unless is_integer(interval) and interval > 0 do
+      raise ArgumentError, "expected :shutdown_grace_period to be a positive integer"
+    end
+  end
+
+  defp validate_opt!(_opt), do: :ok
+
+  defp valid_queue?({_name, size}), do: is_integer(size) and size > 0
 end
