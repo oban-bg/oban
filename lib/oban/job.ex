@@ -44,17 +44,19 @@ defmodule Oban.Job do
     field :errors, {:array, :map}, default: []
     field :attempt, :integer, default: 0
     field :max_attempts, :integer, default: 20
-    field :inserted_at, :utc_datetime_usec
-    field :scheduled_at, :utc_datetime_usec
     field :attempted_at, :utc_datetime_usec
     field :completed_at, :utc_datetime_usec
+    field :inserted_at, :utc_datetime_usec
+    field :scheduled_at, :utc_datetime_usec
   end
 
   @permitted ~w(
     args
+    attempt
     attempted_at
     completed_at
     errors
+    inserted_at
     max_attempts
     queue
     scheduled_at
@@ -91,7 +93,7 @@ defmodule Oban.Job do
 
   Schedule a job to run in 5 seconds:
 
-      %{id: 1} |> MyApp.Worker.new(schedule_in: 5) |> MyApp.Repo.insert()
+      %{id: 1} |> MyApp.Worker.new(scheduled_in: 5) |> MyApp.Repo.insert()
   """
   @spec new(args(), [option]) :: Ecto.Changeset.t()
   def new(args, opts \\ []) when is_map(args) and is_list(opts) do
