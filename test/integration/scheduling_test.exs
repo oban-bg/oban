@@ -7,27 +7,26 @@ defmodule Oban.Integration.SchedulingTest do
   @moduletag :integration
 
   @queue "scheduled"
-  @demand 10
 
   property "jobs scheduled in the future are unavailable for execution" do
     forall seconds <- pos_integer() do
-      %Job{scheduled_at: at} = insert_job!(scheduled_in: seconds)
+      %Job{scheduled_at: at, state: state} = insert_job!(scheduled_in: seconds)
 
       assert 0 < NaiveDateTime.diff(at, NaiveDateTime.utc_now())
+      assert state == "scheduled"
 
-      {count, _} = Query.fetch_available_jobs(Repo, @queue, @demand)
-
-      assert count == 0
+      assert {0, nil} == Query.stage_scheduled_jobs(Repo, @queue)
     end
   end
 
   property "jobs scheduled in the past are available for execution" do
     forall seconds <- neg_integer() do
-      %Job{scheduled_at: at} = insert_job!(scheduled_in: seconds)
+      %Job{scheduled_at: at, state: state} = insert_job!(scheduled_in: seconds)
 
       assert 0 > NaiveDateTime.diff(at, NaiveDateTime.utc_now())
+      assert state == "scheduled"
 
-      {count, _} = Query.fetch_available_jobs(Repo, @queue, @demand)
+      {count, _} = Query.stage_scheduled_jobs(Repo, @queue)
 
       assert count > 0
     end

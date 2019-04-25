@@ -127,6 +127,7 @@ defmodule Oban.Job do
     params
     |> Map.delete(:in)
     |> Map.put(:scheduled_at, scheduled_at)
+    |> Map.put(:state, "scheduled")
   end
 
   defp coerce_scheduling(params), do: params

@@ -11,7 +11,7 @@ defmodule Oban.Migrations do
 
   def up do
     execute """
-    CREATE TYPE oban_job_state AS ENUM ('available', 'executing', 'completed', 'discarded')
+    CREATE TYPE oban_job_state AS ENUM ('available', 'scheduled', 'executing', 'retryable', 'completed', 'discarded')
     """
 
     create_if_not_exists table(:oban_jobs) do
@@ -34,26 +34,35 @@ defmodule Oban.Migrations do
     create index(:oban_jobs, [:scheduled_at])
 
     execute """
-    CREATE FUNCTION oban_jobs_notify()
-      RETURNS trigger AS $$
+    CREATE OR REPLACE FUNCTION oban_jobs_notify() RETURNS trigger AS $$
     DECLARE
+      channel text;
+      notice json;
     BEGIN
-      PERFORM pg_notify('oban_insert', NEW.queue);
-      RETURN NEW;
+      IF (TG_OP = 'INSERT') THEN
+        channel = 'oban_insert';
+        notice = json_build_object('queue', NEW.queue, 'state', NEW.state);
+      ELSE
+        channel = 'oban_update';
+        notice = json_build_object('queue', NEW.queue, 'new_state', NEW.state, 'old_state', OLD.state);
+      END IF;
+
+      PERFORM pg_notify(channel, notice::text);
+
+      RETURN NULL;
     END;
-    $$ LANGUAGE plpgsql
+    $$ LANGUAGE plpgsql;
     """
 
     execute """
-    CREATE TRIGGER notify_inserted
-    AFTER INSERT ON oban_jobs
-    FOR EACH ROW
-    EXECUTE PROCEDURE oban_jobs_notify();
+    CREATE TRIGGER oban_notify
+    AFTER INSERT OR UPDATE ON oban_jobs
+    FOR EACH ROW EXECUTE PROCEDURE oban_jobs_notify();
     """
   end
 
   def down do
-    execute("DROP TRIGGER notify_inserted ON oban_jobs")
+    execute("DROP TRIGGER oban_notify ON oban_jobs")
     execute("DROP FUNCTION oban_jobs_notify()")
 
     drop_if_exists table("oban_jobs")

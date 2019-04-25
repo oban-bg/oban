@@ -57,6 +57,7 @@ defmodule Oban.Queue.Producer do
   @impl GenServer
   def handle_info(:poll, state) do
     state
+    |> deschedule()
     |> gossip()
     |> dispatch()
   end
@@ -65,8 +66,11 @@ defmodule Oban.Queue.Producer do
     dispatch(%{state | running: Map.delete(running, ref)})
   end
 
-  def handle_info({:notification, _, _, @insert, queue}, %State{queue: queue} = state) do
-    dispatch(state)
+  def handle_info({:notification, _, _, @insert, payload}, %State{queue: queue} = state) do
+    case Jason.decode(payload) do
+      {:ok, %{"queue" => ^queue}} -> dispatch(state)
+      _ -> {:noreply, state}
+    end
   end
 
   def handle_info({:notification, _, _, @signal, payload}, state) do
@@ -123,13 +127,19 @@ defmodule Oban.Queue.Producer do
   end
 
   defp start_listener(state) do
-    :ok = Notifier.listen(@signal)
     :ok = Notifier.listen(@insert)
+    :ok = Notifier.listen(@signal)
 
     state
   end
 
   # Dispatching
+
+  defp deschedule(%State{conf: conf, queue: queue} = state) do
+    Query.stage_scheduled_jobs(conf.repo, queue)
+
+    state
+  end
 
   defp gossip(state) do
     %State{conf: conf, limit: limit, paused: paused, queue: queue, running: running} = state

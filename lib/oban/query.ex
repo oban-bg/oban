@@ -48,6 +48,15 @@ defmodule Oban.Query do
     )
   end
 
+  @spec stage_scheduled_jobs(repo(), binary()) :: {integer(), nil}
+  def stage_scheduled_jobs(repo, queue) do
+    Job
+    |> where([j], j.state in ["scheduled", "retryable"])
+    |> where([j], j.queue == ^queue)
+    |> where([j], j.scheduled_at <= ^utc_now())
+    |> repo.update_all(set: [state: "available"])
+  end
+
   @spec rescue_orphaned_jobs(repo(), binary()) :: {integer(), nil}
   def rescue_orphaned_jobs(repo, queue) do
     Job
@@ -100,7 +109,7 @@ defmodule Oban.Query do
       if attempt >= max_attempts do
         [state: "discarded", completed_at: utc_now()]
       else
-        [state: "available", completed_at: utc_now(), scheduled_at: next_attempt_at(attempt)]
+        [state: "retryable", completed_at: utc_now(), scheduled_at: next_attempt_at(attempt)]
       end
 
     repo.update_all(

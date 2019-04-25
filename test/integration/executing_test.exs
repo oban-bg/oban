@@ -76,5 +76,5 @@ defmodule Oban.Integration.ExecutingTest do
   # failed jobs will be `discarded`.
   defp action_to_state("OK", _max), do: "completed"
   defp action_to_state(_state, 1), do: "discarded"
-  defp action_to_state(_state, max) when max > 1, do: "available"
+  defp action_to_state(_state, max) when max > 1, do: "retryable"
 end
