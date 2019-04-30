@@ -3,6 +3,8 @@ defmodule Oban.Queue.Producer do
 
   use GenServer
 
+  import Oban.Notifier, only: [insert: 0, signal: 0]
+
   alias Oban.{Config, Notifier, Query}
   alias Oban.Queue.Executor
 
@@ -12,10 +14,6 @@ defmodule Oban.Queue.Producer do
           | {:foreman, GenServer.name()}
           | {:limit, pos_integer()}
           | {:queue, binary()}
-
-  @gossip "oban_gossip"
-  @insert "oban_insert"
-  @signal "oban_signal"
 
   defmodule State do
     @moduledoc false
@@ -66,14 +64,14 @@ defmodule Oban.Queue.Producer do
     dispatch(%{state | running: Map.delete(running, ref)})
   end
 
-  def handle_info({:notification, _, _, @insert, payload}, %State{queue: queue} = state) do
+  def handle_info({:notification, _, _, insert(), payload}, %State{queue: queue} = state) do
     case Jason.decode(payload) do
       {:ok, %{"queue" => ^queue}} -> dispatch(state)
       _ -> {:noreply, state}
     end
   end
 
-  def handle_info({:notification, _, _, @signal, payload}, state) do
+  def handle_info({:notification, _, _, signal(), payload}, state) do
     %State{conf: conf, foreman: foreman, queue: queue, running: running} = state
 
     state =
@@ -127,8 +125,8 @@ defmodule Oban.Queue.Producer do
   end
 
   defp start_listener(state) do
-    :ok = Notifier.listen(@insert)
-    :ok = Notifier.listen(@signal)
+    :ok = Notifier.listen(:insert)
+    :ok = Notifier.listen(:signal)
 
     state
   end
@@ -152,7 +150,7 @@ defmodule Oban.Queue.Producer do
       queue: queue
     }
 
-    :ok = Notifier.notify(@gossip, message)
+    :ok = Notifier.notify(:gossip, message)
 
     state
   end

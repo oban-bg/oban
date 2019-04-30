@@ -5,7 +5,7 @@ defmodule Oban.Integration.GossipTest do
 
   @moduletag :integration
 
-  @oban_opts node: "oban.test", poll_interval: 50, repo: Repo, queues: [alpha: 5, gamma: 8]
+  @oban_opts node: "oban.test", poll_interval: 50, repo: Repo, queues: [alpha: 5]
 
   test "queue producers broadcast runtime statistics" do
     insert_job!(ref: 1, sleep: 500, queue: "alpha")
@@ -13,7 +13,7 @@ defmodule Oban.Integration.GossipTest do
 
     start_supervised!({Oban, @oban_opts})
 
-    :ok = Notifier.listen("oban_gossip")
+    :ok = Notifier.listen(:gossip)
 
     assert_gossip(%{
       "count" => 2,
@@ -21,14 +21,6 @@ defmodule Oban.Integration.GossipTest do
       "node" => "oban.test",
       "paused" => false,
       "queue" => "alpha"
-    })
-
-    assert_gossip(%{
-      "count" => 0,
-      "limit" => 8,
-      "node" => "oban.test",
-      "paused" => false,
-      "queue" => "gamma"
     })
 
     stop_supervised(Oban)
