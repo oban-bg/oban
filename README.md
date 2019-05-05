@@ -1,26 +1,17 @@
 # Oban
 
-Logo here
-Brief description here
+Oban is a robust asynchronous job processor written in Elixir and backed by
+PostgreSQL. It is reliable, observable and loaded with [enterprise grade
+features](#Features).
 
 [![Hex Version](https://img.shields.io/hexpm/v/oban.svg)](https://hex.pm/packages/oban)
 [![Hex Docs](http://img.shields.io/badge/hex.pm-docs-green.svg?style=flat)](https://hexdocs.pm/oban)
 [![CircleCI](https://circleci.com/gh/sorentwo/oban.svg?style=svg)](https://circleci.com/gh/sorentwo/oban)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
-# Table of Contents
+## Table of Contents
 
-- Introduction
-- Features
-  - Isolated queues
-  - Scheduled jobs
-  - Telemetry integration
-  - Reliable execution/orphan rescue
-  - Consumer draining, slow jobs are allowed to finish before shutdown
-  - Historic Metrics
-  - Node Metrics
-  - Property Tested
-- Why? | Philosophy | Rationale
+- [Features](#Features)
 - [Installation](#Installation)
 - [Usage](#Usage)
   - [Configuring Queues](#Configuring-Queues)
@@ -28,7 +19,56 @@ Brief description here
   - [Enqueuing Jobs](#Enqueueing-Jobs)
 - [Testing](#Testing)
 - [Contributing](#Contributing)
-- [License](#License)
+
+## Features
+
+Oban's primary goals are **reliability**, **consistency** and **observability**.
+It is fundamentally different from other background job processing tools because
+it retains job data for historic metrics and inspection. You can leave your
+application running indefinitely without worrying about jobs being lost or
+orphaned due to crashes.
+
+Advantages over in-memory, mnesia, Redis and RabbitMQ based tools:
+
+- **Fewer Dependencies** — If you are running a web app there is a _very good_
+  chance that you're running on top of a [RDBMS][rdbms]. Running your job queue within
+  PostgreSQL minimizes system dependencies and
+- **Transactional Control** — Enqueue a job along with other database changes,
+  ensuring that everything is committed or rolled back atomically.
+- **Database Backups** — Jobs are stored inside of your primary database, which
+  means they are backed up together with the data that they relate to.
+
+Advanced features and advantages over other RDBMS based tools:
+
+- **Isolated Queues** — Jobs are stored in a single table but are executed in
+  distinct queues. Each queue runs in isolation, ensuring that a jobs in a single
+  slow queue can't back up other faster queues.
+- **Queue Control** — Queues can be paused, resumed and scaled independently at
+  runtime.
+- **Job Killing** — Jobs can be killed in the middle of execution regardless of
+  which node they are running on. This stops the job at once and flags it as
+  `discarded`.
+- **Triggered execution** — Database triggers ensure that jobs are dispatched as
+  soon as they are inserted into the database.
+- **Scheduled Jobs** — Jobs can be scheduled at any time in the future, down to
+  the second.
+- **Job Safety** — When a process crashes or the BEAM is terminated executing
+  jobs aren't lost—they are quickly recovered by other running nodes or
+  immediately when the node is restarted.
+- **Historic Metrics** — After a job is processed the row is _not_ deleted.
+  Instead, the job is retained in the database to provide metrics. This allows
+  users to inspect historic jobs and to see aggregate data at the job, queue or
+  argument level.
+- **Node Metrics** — Every queue broadcasts metrics during runtime. These are
+  used to monitor queue health across nodes.
+- **Queue Draining** — Queue shutdown is delayed so that slow jobs can finish
+  executing before shutdown.
+- **Telemetry Integration** — Job life-cycle events are emitted via
+  [Telemetry][tele] integration. This enables simple logging, error reporting
+  and health checkups without plug-ins.
+
+[rdbms]: https://en.wikipedia.org/wiki/Relational_database#RDBMS
+[tele]: https://github.com/beam-telemetry/telemetry
 
 ## Installation
 
@@ -80,9 +120,10 @@ start defining jobs!
 
 ## Usage
 
-Oban isn't an application, it is started by a supervisor that must be included in your
-application's supervision tree.  All of the configuration may be passed into the `Oban`
-supervisor, allowing you to configure Oban like the rest of your application.
+Oban isn't an application and won't be started automatically. It is started by a
+supervisor that must be included in your application's supervision tree. All of
+your configuration is passed into the `Oban` supervisor, allowing you to
+configure Oban like the rest of your application.
 
 ```elixir
 # confg/config.exs
@@ -128,9 +169,9 @@ concurrently. Here are a few caveats and guidelines:
   connections) to handle the concurrent load.
 * Only jobs in the configured queues will execute. Jobs in any other queue
   will stay in the database untouched.
-* Be careful how many concurrent jobs are called outside the BEAM. The BEAM
-  ensures that the system stays responsive under load, but those guarantees
-  don't apply when using ports or shelling out.
+* Be careful how many concurrent jobs make expensive system calls (i.e. FFMpeg,
+  ImageMagick). The BEAM ensures that the system stays responsive under load,
+  but those guarantees don't apply when using ports or shelling out commands.
 
 #### Creating Workers
 
@@ -236,7 +277,3 @@ following commands:
 * Lint with Credo (`mix credo --strict`)
 * Run all tests (`mix test`)
 * Run Dialyzer (`mix dialyzer --halt-exit-status`)
-
-## License
-
-Oban is released under the MIT license. See the [LICENSE](LICENSE.txt).
