@@ -253,7 +253,7 @@ recommendations for running tests in isolation.
   won't be dispatched.
 
   ```elixir
-  config :my_app, Oban, pool: Ecto.Adapters.SQL.Sandbox
+  config :my_app, MyApp.Repo, pool: Ecto.Adapters.SQL.Sandbox
   ```
 
 ## Contributing
