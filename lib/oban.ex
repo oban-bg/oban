@@ -1,7 +1,143 @@
 defmodule Oban do
-  @moduledoc ~S"""
-  This is a stub. New documentation will be added below, but this module isn't properly
-  documented.
+  @moduledoc """
+  Oban isn't an application and won't be started automatically. It is started by a supervisor that
+  must be included in your application's supervision tree. All of your configuration is passed
+  into the `Oban` supervisor, allowing you to configure Oban like the rest of your application.
+
+  ```elixir
+  # confg/config.exs
+  config :my_app, Oban,
+    repo: MyApp.Repo,
+    queues: [default: 10, events: 50, media: 20]
+
+  # lib/my_app/application.ex
+  defmodule MyApp.Application do
+    @moduledoc false
+
+    use Application
+
+    alias MyApp.{Endpoint, Repo}
+
+    def start(_type, _args) do
+      children = [
+        Repo,
+        Endpoint,
+        {Oban, Application.get_env(:my_app, Oban)}
+      ]
+
+      Supervisor.start_link(children, strategy: :one_for_one, name: MyApp.Supervisor)
+    end
+  end
+  ```
+
+  ### Configuring Queues
+
+  Queues are specified as a keyword list where the key is the name of the queue
+  and the value is the maximum number of concurrent jobs. The following
+  configuration would start four queues with concurrency ranging from 5 to 50:
+
+  ```elixir
+  queues: [default: 10, mailers: 20, events: 50, media: 5]
+  ```
+
+  There isn't a limit to the number of queues or how many jobs may execute
+  concurrently. Here are a few caveats and guidelines:
+
+  * Each queue will run as many jobs as possible concurrently, up to the
+    configured limit. Make sure your system has enough resources (i.e. database
+    connections) to handle the concurrent load.
+  * Only jobs in the configured queues will execute. Jobs in any other queue
+    will stay in the database untouched.
+  * Be careful how many concurrent jobs make expensive system calls (i.e. FFMpeg,
+    ImageMagick). The BEAM ensures that the system stays responsive under load,
+    but those guarantees don't apply when using ports or shelling out commands.
+
+  ### Creating Workers
+
+  Worker modules do the work of processing a job. At a minimum they must define a
+  `perform/1` function, which is called with an `args` map.
+
+  Define a worker to process jobs in the `events` queue:
+
+  ```elixir
+  defmodule MyApp.Workers.Business do
+    use Oban.Worker, queue: "events", max_attempts: 10
+
+    @impl Oban.Worker
+    def perform(%{"id" => id}) do
+      model = MyApp.Repo.get(MyApp.Business.Man, id)
+
+      IO.inspect(model)
+    end
+  end
+  ```
+
+  The return value of `perform/1` doesn't matter and is entirely ignored. If the
+  job raises an exception or throws an exit then the error will be reported and
+  the job will be retried (provided there are attempts remaining).
+
+  See `Oban.Worker` for more details.
+
+  ### Enqueueing Jobs
+
+  Jobs are simply `Ecto` strucs and are enqueued by inserting them into the
+  database. Here we insert a job into the `default` queue and specify the worker
+  by module name:
+
+  ```elixir
+  %{id: 1, user_id: 2}
+  |> Oban.Job.new(queue: :default, worker: MyApp.Worker)
+  |> MyApp.Repo.insert()
+  ```
+
+  For convenience and consistency all workers implement a `new/2` function that
+  converts an args map into a job changeset suitable for inserting into the
+  database:
+
+  ```elixir
+  %{in_the: "business", of_doing: "business"}
+  |> MyApp.Workers.Business.new()
+  |> MyApp.Repo.insert()
+  ```
+
+  The worker's defaults may be overridden by passing options:
+
+  ```elixir
+  %{vote_for: "none of the above"}
+  |> MyApp.Workers.Business.new(queue: "special", max_attempts: 5)
+  |> MyApp.Repo.insert()
+  ```
+
+  Jobs may be scheduled down to the second any time in the future:
+
+  ```elixir
+  %{id: 1}
+  |> MyApp.Workers.Business.new(schedule_in: 5)
+  |> MyApp.Repo.insert()
+  ```
+
+  See `Oban.Job.new/2` for a full list of job options.
+
+  ## Testing
+
+  Oban doesn't provide any special mechanisms for testing. However, here are a few
+  recommendations for running tests in isolation.
+
+  * Set a high `poll_interval` in your test configuration. This effectively stops
+    queues from polling and will prevent inserted jobs from executing.
+
+    ```elixir
+    config :my_app, Oban, poll_interval: :timer.minutes(30)
+    ```
+
+  * Be sure to use the Ecto Sandbox for testing. Oban makes use of database pubsub
+    events to dispatch jobs, but pubsub events never fire within a transaction.
+    Since sandbox tests run within a transaction no events will fire and jobs
+    won't be dispatched.
+
+    ```elixir
+    config :my_app, MyApp.Repo, pool: Ecto.Adapters.SQL.Sandbox
+    ```
 
   ## Error Handling
 
@@ -11,7 +147,7 @@ defmodule Oban do
   quadratic backoff, meaning the job's second attempt will be after 16s, third after 31s, fourth
   after 1m 36s, etc.
 
-  #### Error Details
+  ### Error Details
 
   Execution errors are stored as a formatted exception along with metadata about when the failure
   ocurred and which attempt caused it. Each error is stored with the following keys:
@@ -19,6 +155,9 @@ defmodule Oban do
   - `at` The utc timestamp when the error occurred at
   - `attempt` The attempt number when the error ocurred
   - `error` A formatted error message and stacktrace
+
+  See the [Instrumentation](#module-instrumentation) docs below for an example of integrating with
+  external error reporting systems.
 
   ### Limiting Retries
 
@@ -61,15 +200,32 @@ defmodule Oban do
 
   For exmaple, to log out the timing for all executed jobs:
 
-    defmodule ObanLogger do
-      require Logger
+  ```elixir
+  defmodule ObanLogger do
+    require Logger
 
-      def handle_event([:oban, :job, :executed], %{timing: timing}, meta, _config) do
-        Logger.info("[#{meta.queue}] #{meta.worker} #{meta.event} in #{timing}")
-      end
+    def handle_event([:oban, :job, :executed], %{timing: timing}, meta, _config) do
+      Logger.info("[meta.queue] meta.worker meta.event in timing")
     end
+  end
 
-    :telemetry.attach("oban-logger", [:oban, :job, :executed], &ObanLogger.handle_event/4, nil)
+  :telemetry.attach("oban-logger", [:oban, :job, :executed], &ObanLogger.handle_event/4, nil)
+  ```
+
+  Another great use of execution data is error reporting. Here is an example of
+  integrating with [Honeybadger][honey]:
+
+  ```elixir
+  defmodule ErrorReporter do
+    def handle_event([:oban, :job, :failure], _timing, %{event: :failure} = meta, _config) do
+      context = Map.take(meta, [:id, :args, :queue, :worker])
+
+      Honeybadger.notify(meta.error, context, meta.stack)
+    end
+  end
+
+  :telemetry.attach("oban-errors", [:oban, :job, :executed], &ErrorReporter.handle_event/4, nil)
+  ```
 
   Here is a reference for metric event metadata:
 
@@ -79,6 +235,7 @@ defmodule Oban do
   | `:failure` | `:id, :args, :queue, :worker, :kind, :error, :stack` |
 
   [tele]: https://hexdocs.pm/telemetry
+  [honey]: https://honeybadger.io
   """
 
   use Supervisor
