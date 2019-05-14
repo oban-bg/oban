@@ -30,6 +30,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   ensures that each queue will run the configured number of concurrent jobs. By
   default the `min_demand` is half of `max_demand`, which means a few slow jobs
   can prevent the queue from running the expected number of concurrent jobs.
+- [Oban.Job] The "Elixir" prefix is stripped from worker names before storing
+  jobs in the database. Module lookup performs the same way, but it cleans up
+  displaying the worker name as a string.
 
 ## [0.1.0] - 2019-03-10
 
