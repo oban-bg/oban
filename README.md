@@ -1,13 +1,30 @@
-# Oban
+<p align="center">
+  <a href="https://github.com/sorentwo/oban">
+    <img alt="oban" src="https://raw.githubusercontent.com/sorentwo/oban/master/logotype.png" width="435">
+  </a>
+</p>
 
-Oban is a robust asynchronous job processor written in Elixir and backed by
-PostgreSQL. It is reliable, observable and loaded with [enterprise grade
-features](#Features).
+<p align="center">
+  Robust job processing in Elixir, backed by modern PostgreSQL.
+  Reliable, <br /> observable and loaded with <a href="#Features">enterprise grade features</a>.
+</p>
 
-[![Hex Version](https://img.shields.io/hexpm/v/oban.svg)](https://hex.pm/packages/oban)
-[![Hex Docs](http://img.shields.io/badge/hex.pm-docs-green.svg?style=flat)](https://hexdocs.pm/oban)
-[![CircleCI](https://circleci.com/gh/sorentwo/oban.svg?style=svg)](https://circleci.com/gh/sorentwo/oban)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+<p align="center">
+  <a href="https://hex.pm/packages/oban">
+    <img alt="Hex Version" src="https://img.shields.io/hexpm/v/oban.svg">
+  </a>
+  <a href="https://hexdocs.pm/oban">
+    <img alt="Hex Docs" src="http://img.shields.io/badge/hex.pm-docs-green.svg?style=flat">
+  </a>
+</p>
+<p align="center">
+  <a href="https://circleci.com/gh/sorentwo/oban">
+    <img alt="CircleCI Status" src="https://circleci.com/gh/sorentwo/oban.svg?style=svg">
+  </a>
+  <a href="https://opensource.org/licenses/MIT">
+    <img alt="MIT License" src="https://img.shields.io/badge/License-MIT-blue.svg">
+  </a>
+</p>
 
 ## Table of Contents
 
