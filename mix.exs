@@ -1,12 +1,12 @@
 defmodule Oban.MixProject do
   use Mix.Project
 
-  @version "0.1.0"
+  @version "0.2.0"
 
   def project do
     [
       app: :oban,
-      version: "0.1.0",
+      version: @version,
       elixir: "~> 1.8",
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
@@ -16,7 +16,7 @@ defmodule Oban.MixProject do
       # Hex
       package: package(),
       description: """
-      Smooth asynchronous job execution powered by PostgreSQL
+      Robust job processing, backed by modern PostgreSQL.
       """,
 
       # Dialyzer
