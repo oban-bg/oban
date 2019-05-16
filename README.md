@@ -48,8 +48,8 @@ orphaned due to crashes.
 Advantages over in-memory, mnesia, Redis and RabbitMQ based tools:
 
 - **Fewer Dependencies** — If you are running a web app there is a _very good_
-  chance that you're running on top of a [RDBMS][rdbms]. Running your job queue within
-  PostgreSQL minimizes system dependencies and
+  chance that you're running on top of a [RDBMS][rdbms]. Running your job queue
+  within PostgreSQL minimizes system dependencies and simplifies data backups.
 - **Transactional Control** — Enqueue a job along with other database changes,
   ensuring that everything is committed or rolled back atomically.
 - **Database Backups** — Jobs are stored inside of your primary database, which
