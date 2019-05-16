@@ -80,7 +80,7 @@ defmodule Oban do
 
   ### Enqueueing Jobs
 
-  Jobs are simply `Ecto` strucs and are enqueued by inserting them into the
+  Jobs are simply `Ecto` structs and are enqueued by inserting them into the
   database. Here we insert a job into the `default` queue and specify the worker
   by module name:
 
