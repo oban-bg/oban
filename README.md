@@ -89,7 +89,7 @@ Advanced features and advantages over other RDBMS based tools:
 
 ## Installation
 
-Oban is published on [Hex](https://hex.pm/oban). Add it to your list of
+Oban is published on [Hex](https://hex.pm/packages/oban). Add it to your list of
 dependencies in `mix.exs`:
 
 ```elixir
@@ -131,9 +131,9 @@ mix ecto.migrate
 Next see [Usage](#Usage) for how to integrate Oban into your application and
 start defining jobs!
 
-[ecto]: https::/hex.pm/ecto
-[jason]: https::/hex.pm/jason
-[postgrex]: https::/hex.pm/postgrex
+[ecto]: https::/hex.pm/packages/ecto
+[jason]: https::/hex.pm/packages/jason
+[postgrex]: https::/hex.pm/packages/postgrex
 
 ## Usage
 
