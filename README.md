@@ -131,9 +131,9 @@ mix ecto.migrate
 Next see [Usage](#Usage) for how to integrate Oban into your application and
 start defining jobs!
 
-[ecto]: https::/hex.pm/packages/ecto
-[jason]: https::/hex.pm/packages/jason
-[postgrex]: https::/hex.pm/packages/postgrex
+[ecto]: https://hex.pm/packages/ecto
+[jason]: https://hex.pm/packages/jason
+[postgrex]: https://hex.pm/packages/postgrex
 
 ## Usage
 
