@@ -23,7 +23,7 @@ defmodule Oban.WorkerTest do
       assert job.args == %{a: 1, b: 2}
       assert job.queue == "special"
       assert job.max_attempts == 5
-      assert job.worker == "Elixir.Oban.WorkerTest.CustomWorker"
+      assert job.worker == "Oban.WorkerTest.CustomWorker"
     end
   end
 

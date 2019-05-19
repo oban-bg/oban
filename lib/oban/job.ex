@@ -116,6 +116,9 @@ defmodule Oban.Job do
       value when is_atom(value) and not is_nil(value) ->
         update_in(params, [field], &to_clean_string/1)
 
+      value when is_binary(value) ->
+        update_in(params, [field], &to_clean_string/1)
+
       _ ->
         params
     end
@@ -132,9 +135,9 @@ defmodule Oban.Job do
 
   defp coerce_scheduling(params), do: params
 
-  defp to_clean_string(atom) do
-    atom
-    |> Atom.to_string()
+  defp to_clean_string(value) do
+    value
+    |> to_string()
     |> String.trim_leading("Elixir.")
   end
 end
