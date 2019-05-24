@@ -14,7 +14,8 @@ defmodule Oban.Migrations do
     CREATE TYPE oban_job_state AS ENUM ('available', 'scheduled', 'executing', 'retryable', 'completed', 'discarded')
     """
 
-    create_if_not_exists table(:oban_jobs) do
+    create_if_not_exists table(:oban_jobs, primary_key: false) do
+      add :id, :bigserial, primary_key: true
       add :state, :oban_job_state, null: false, default: "available"
       add :queue, :text, null: false, default: "default"
       add :worker, :text, null: false
