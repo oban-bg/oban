@@ -10,9 +10,27 @@ defmodule Oban.Query do
 
   # Taking a shared lock this way will always work, even if a lock has been taken by another
   # connection.
+  #
+  # Locks use the `oid` of the `oban_jobs` table to provide a consistent and virtually unique
+  # namespace. Using two `int` values instead of a single `bigint` ensures that we only have a 1
+  # in 2^31 - 1 chance of colliding with locks from application code.
+  #
+  # Due to the switch from `bigint` to `int` we also need to wrap `bigint` values to less than the
+  # maximum integer value.
+  #
   defmacrop take_lock(id) do
     quote do
-      fragment("pg_try_advisory_lock_shared(?)", unquote(id))
+      fragment(
+        """
+        pg_try_advisory_lock_shared(
+          'oban_jobs'::regclass::oid::int,
+          (CASE WHEN ? > 2147483647 THEN mod(?, 2147483647) ELSE ? END)::int
+        )
+        """,
+        unquote(id),
+        unquote(id),
+        unquote(id)
+      )
     end
   end
 
@@ -23,7 +41,36 @@ defmodule Oban.Query do
   # when the connection closes.
   defmacrop drop_lock(id) do
     quote do
-      fragment("pg_advisory_unlock_shared(?)", unquote(id))
+      fragment(
+        """
+        pg_advisory_unlock_shared(
+          'oban_jobs'::regclass::oid::int,
+          (CASE WHEN ? > 2147483647 THEN mod(?, 2147483647) ELSE ? END)::int
+        )
+        """,
+        unquote(id),
+        unquote(id),
+        unquote(id)
+      )
+    end
+  end
+
+  defmacrop no_lock_exists(id) do
+    quote do
+      fragment(
+        """
+          NOT EXISTS (
+            SELECT 1
+            FROM pg_locks
+            WHERE locktype = 'advisory'
+            AND classid = 'oban_jobs'::regclass::oid::int
+            AND objid = (CASE WHEN ? > 2147483647 THEN mod(?, 2147483647) ELSE ? END)::int
+          )
+        """,
+        unquote(id),
+        unquote(id),
+        unquote(id)
+      )
     end
   end
 
@@ -62,7 +109,7 @@ defmodule Oban.Query do
     Job
     |> where([j], j.state == "executing")
     |> where([j], j.queue == ^queue)
-    |> where([j], j.id not in fragment("SELECT objid FROM pg_locks WHERE locktype = 'advisory'"))
+    |> where([j], no_lock_exists(j.id))
     |> repo.update_all(set: [state: "available"])
   end
 

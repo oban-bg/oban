@@ -11,6 +11,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 - [Oban.Migrations] Explicitly set `id` as a `bigserial` to avoid mistakenly
   generating a `uuid` primary key.
+- [Oban.Query] Replace use of `(bigint)` with `(int, int)` for advisory locks.
+  The first `int` acts as a namespace and is derived from the unique `oid` value
+  for the `oban_jobs` table. The `oid` is unique within a database and even
+  changes on repeat table definitions.
+
+  This change aims to prevent lock collision with application level advisory
+  lock usage and other libraries. Now there is a 1 in 2,147,483,647 chance of
+  colliding with other locks.
 
 ## [0.2.0] - 2019-05-15
 
