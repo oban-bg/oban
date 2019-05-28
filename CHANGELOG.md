@@ -16,6 +16,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   The docs have been updated to promote this mechanism, as well as noting that
   pruning must be disabled for testing.
 
+- [Oban.Testing] The new testing module provides a set of helpers to make
+  asserting and refuting enqueued jobs within tests much easier.
+
 ### Changed
 
 - [Oban.Migrations] Explicitly set `id` as a `bigserial` to avoid mistakenly

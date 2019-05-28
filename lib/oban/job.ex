@@ -111,7 +111,8 @@ defmodule Oban.Job do
     |> validate_number(:max_attempts, greater_than: 0, less_than: 50)
   end
 
-  defp coerce_field(params, field) do
+  @doc false
+  def coerce_field(params, field) do
     case Map.get(params, field) do
       value when is_atom(value) and not is_nil(value) ->
         update_in(params, [field], &to_clean_string/1)

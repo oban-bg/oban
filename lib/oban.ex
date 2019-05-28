@@ -120,8 +120,7 @@ defmodule Oban do
 
   ## Testing
 
-  Oban doesn't provide any special mechanisms for testing. However, here are some guidelines for
-  running tests:
+  As noted in the Usage section above there are some guidelines for running tests:
 
   * Disable all job dispatching by setting `queues: false` or `queues: nil` in your `test.exs`
     config. Keyword configuration is deep merged, so setting `queues: []` won't have any effect.
@@ -138,6 +137,27 @@ defmodule Oban do
     ```elixir
     config :my_app, MyApp.Repo, pool: Ecto.Adapters.SQL.Sandbox
     ```
+
+  Oban provides some helpers to facilitate testing. The helpers handle the
+  boilerplate of making assertions on which jobs are enqueued. To use the
+  `assert_enqueued/1` and `refute_enqueued/1` helpers in your tests you must
+  include them in your testing module and specify your app's Ecto repo:
+
+  ```elixir
+  use Oban.Testing, repo: MyApp.Repo
+  ```
+
+  Now you can assert or refute that jobs have been enqueued within your tests:
+
+  ```elixir
+  assert_enqueued worker: MyWorker, args: %{id: 1}
+
+  # or
+
+  refute_enqueued queue: "special", args: %{id: 2}
+  ```
+
+  See the `Oban.Testing` module for more details.
 
   ## Error Handling
 
