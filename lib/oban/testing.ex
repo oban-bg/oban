@@ -80,8 +80,8 @@ defmodule Oban.Testing do
   import ExUnit.Assertions, only: [assert: 2, refute: 2]
   import Ecto.Query, only: [limit: 2, where: 2, select: 2]
 
-  alias Oban.Job
   alias Ecto.Changeset
+  alias Oban.Job
 
   @doc false
   defmacro __using__(repo: repo) do
@@ -104,7 +104,7 @@ defmodule Oban.Testing do
   Only values for the provided arguments will be checked. For example, an assertion made on
   `worker: "MyWorker"` will match _any_ jobs for that worker, regardless of the queue or args.
   """
-  @spec assert_enqueued(repo :: module(), opts :: Enum.t()) :: any()
+  @spec assert_enqueued(repo :: module(), opts :: Enum.t()) :: true
   def assert_enqueued(repo, [_ | _] = opts) do
     assert get_job(repo, opts), "Expected a job matching #{inspect(opts)} to be enqueued"
   end
@@ -114,7 +114,7 @@ defmodule Oban.Testing do
 
   See `assert_enqueued/2` for additional details.
   """
-  @spec refute_enqueued(repo :: module(), opts :: Enum.t()) :: any()
+  @spec refute_enqueued(repo :: module(), opts :: Enum.t()) :: false
   def refute_enqueued(repo, [_ | _] = opts) do
     refute get_job(repo, opts), "Expected no jobs matching #{inspect(opts)} to be enqueued"
   end
