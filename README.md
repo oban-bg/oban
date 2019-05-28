@@ -146,6 +146,7 @@ configure Oban like the rest of your application.
 # confg/config.exs
 config :my_app, Oban,
   repo: MyApp.Repo,
+  prune: {:maxlen, 100_000},
   queues: [default: 10, events: 50, media: 20]
 
 # lib/my_app/application.ex
@@ -167,6 +168,19 @@ defmodule MyApp.Application do
   end
 end
 ```
+
+If you are running tests (which you should be) you'll need to disable pruning
+and job dispatching altogether when testing:
+
+```elixir
+# config/test.exs
+config :my_app, Oban,
+  queues: false,
+  prune: :disabled
+```
+
+Without dispatch and pruning disabled Ecto will raise constant ownership errors
+and you won't be able to run tests.
 
 #### Configuring Queues
 

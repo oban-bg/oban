@@ -120,15 +120,15 @@ defmodule Oban do
 
   ## Testing
 
-  Oban doesn't provide any special mechanisms for testing. However, here are a few
-  recommendations for running tests in isolation.
+  Oban doesn't provide any special mechanisms for testing. However, here are some guidelines for
+  running tests:
 
-  * Set a high `poll_interval` in your test configuration. This effectively stops
-    queues from polling and will prevent inserted jobs from executing.
+  * Disable all job dispatching by setting `queues: false` or `queues: nil` in your `test.exs`
+    config. Keyword configuration is deep merged, so setting `queues: []` won't have any effect.
 
-    ```elixir
-    config :my_app, Oban, poll_interval: :timer.minutes(30)
-    ```
+  * Disable pruning via `prune: :disabled`. Pruning isn't necessary in testing mode because jobs
+    created within the sandbox are rolled back at the end of the test. Additionally, the periodic
+    pruning queries will raise `DBConnection.OwnershipError` when the application boots.
 
   * Be sure to use the Ecto Sandbox for testing. Oban makes use of database pubsub
     events to dispatch jobs, but pubsub events never fire within a transaction.
@@ -266,6 +266,9 @@ defmodule Oban do
     setting. For example, setting queues to `[default: 10, exports: 5]` would start the queues
     `default` and `exports` with a combined concurrency level of 20. The concurrency setting
     specifies how many jobs _each queue_ will run concurrently.
+
+    For testing purposes `:queues` may be set to `false` or `nil`, which effectively disables all
+    job dispatching.
   * `:poll_interval` - the amount of time between a queue pulling new jobs, specified in
     milliseconds. This is directly tied to the resolution of _scheduled_ jobs. For example, with a
     `poll_interval` of `5_000ms`, scheduled jobs are checked every 5 seconds. The default is
@@ -296,7 +299,10 @@ defmodule Oban do
   """
   @spec start_link([option()]) :: Supervisor.on_start()
   def start_link(opts) when is_list(opts) do
-    conf = Config.new(opts)
+    conf =
+      opts
+      |> Keyword.put(:queues, Keyword.get(opts, :queues) || [])
+      |> Config.new()
 
     Supervisor.start_link(__MODULE__, conf, name: conf.name)
   end

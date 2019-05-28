@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## Unreleased
 
+### Added
+
+- [Oban] Allow setting `queues: false` or `queues: nil` to disable queue
+  dispatching altogether. This makes it possible to override the default
+  configuration within each environment, i.e. when testing.
+
+  The docs have been updated to promote this mechanism, as well as noting that
+  pruning must be disabled for testing.
+
 ### Changed
 
 - [Oban.Migrations] Explicitly set `id` as a `bigserial` to avoid mistakenly
