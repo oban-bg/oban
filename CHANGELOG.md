@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## [0.3.0] - 2019-05-29
+
 **Migration Required (V2)**
 
 ### Added
@@ -41,6 +43,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   This change aims to prevent lock collision with application level advisory
   lock usage and other libraries. Now there is a 1 in 2,147,483,647 chance of
   colliding with other locks.
+
+- [Oban.Job] Automatically remove leading "Elixir." namespace from stringified
+  worker name. The prefix complicates full text searching and reduces the score
+  for trigram matches.
 
 ## [0.2.0] - 2019-05-15
 
@@ -85,5 +91,6 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - [Oban] Initial release with base functionality.
 
 [Unreleased]: https://github.com/sorentwo/oban/compare/v0.2.0...HEAD
+[0.3.0]: https://github.com/sorentwo/oban/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/sorentwo/oban/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/sorentwo/oban/compare/0ac3cc8...v0.1.0
