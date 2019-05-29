@@ -122,7 +122,11 @@ defmodule MyApp.Repo.Migrations.AddObanJobsTable do
 end
 ```
 
-Finally, run the migration to create the table:
+This will run all of Oban's versioned migrations for your database. Migrations
+between versions are idempotent and will _never_ change after a release. As new
+versions are released you may need to run additional migrations.
+
+Now, run the migration to create the table:
 
 ```bash
 mix ecto.migrate

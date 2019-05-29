@@ -5,7 +5,9 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
-## Unreleased
+## [Unreleased]
+
+**Migration Required (V2)**
 
 ### Added
 
@@ -23,6 +25,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 - [Oban.Migrations] Explicitly set `id` as a `bigserial` to avoid mistakenly
   generating a `uuid` primary key.
+
+- [Oban.Migrations] Use versioned migrations that are immutable. As database
+  changes are required a new migration module is defined, but the interface of
+  `Oban.Migrations.up/0` and `Oban.Migrations.down/0` will be maintained.
+
+  From here on all releases _with_ database changes will indicate that a new
+  migration is necessary in this CHANGELOG.
+
 - [Oban.Query] Replace use of `(bigint)` with `(int, int)` for advisory locks.
   The first `int` acts as a namespace and is derived from the unique `oid` value
   for the `oban_jobs` table. The `oid` is unique within a database and even

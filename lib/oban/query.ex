@@ -16,19 +16,13 @@ defmodule Oban.Query do
   # in 2^31 - 1 chance of colliding with locks from application code.
   #
   # Due to the switch from `bigint` to `int` we also need to wrap `bigint` values to less than the
-  # maximum integer value.
+  # maximum integer value. This is handled by the immutable `oban_wrap_id` function directly in
+  # Postgres.
   #
   defmacrop take_lock(id) do
     quote do
       fragment(
-        """
-        pg_try_advisory_lock_shared(
-          'oban_jobs'::regclass::oid::int,
-          (CASE WHEN ? > 2147483647 THEN mod(?, 2147483647) ELSE ? END)::int
-        )
-        """,
-        unquote(id),
-        unquote(id),
+        "pg_try_advisory_lock_shared('oban_jobs'::regclass::oid::int, oban_wrap_id(?))",
         unquote(id)
       )
     end
@@ -42,14 +36,7 @@ defmodule Oban.Query do
   defmacrop drop_lock(id) do
     quote do
       fragment(
-        """
-        pg_advisory_unlock_shared(
-          'oban_jobs'::regclass::oid::int,
-          (CASE WHEN ? > 2147483647 THEN mod(?, 2147483647) ELSE ? END)::int
-        )
-        """,
-        unquote(id),
-        unquote(id),
+        "pg_advisory_unlock_shared('oban_jobs'::regclass::oid::int, oban_wrap_id(?))",
         unquote(id)
       )
     end
@@ -64,11 +51,9 @@ defmodule Oban.Query do
             FROM pg_locks
             WHERE locktype = 'advisory'
             AND classid = 'oban_jobs'::regclass::oid::int
-            AND objid = (CASE WHEN ? > 2147483647 THEN mod(?, 2147483647) ELSE ? END)::int
+            AND objid = oban_wrap_id(?)
           )
         """,
-        unquote(id),
-        unquote(id),
         unquote(id)
       )
     end
