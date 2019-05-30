@@ -12,7 +12,7 @@ defmodule Oban.Integration.DrainingTest do
     insert_job!(ref: 2, action: "FAIL")
     insert_job!(ref: 3, action: "OK")
 
-    assert 3 == Oban.drain_queue(:draining)
+    assert %{success: 2, failure: 1} = Oban.drain_queue(:draining)
 
     assert_received {:ok, 3}
     assert_received {:fail, 2}

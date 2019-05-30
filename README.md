@@ -330,7 +330,7 @@ defmodule MyApp.BusinessTest do
   test "we stay in the business of doing business" do
     :ok = Business.schedule_a_meeting(%{email: "monty@brewster.com"})
 
-    assert 1 == Oban.drain_queue(:mailer)
+    assert %{success: 1, failure: 0} == Oban.drain_queue(:mailer)
 
     # Now, make an assertion about the email delivery
   end

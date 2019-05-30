@@ -177,7 +177,7 @@ defmodule Oban do
     test "we stay in the business of doing business" do
       :ok = Business.schedule_a_meeting(%{email: "monty@brewster.com"})
 
-      assert 1 == Oban.drain_queue(:mailer)
+      assert %{success: 1, failure: 0} == Oban.drain_queue(:mailer)
 
       # Make an assertion about the email delivery
     end
@@ -393,9 +393,11 @@ defmodule Oban do
   ## Failures & Retries
 
   Draining a queue uses the same execution mechanism as regular job dispatch. That means that any
-  job failures or crashes will be captured and result in a retry. Failures are _not_ reported back
-  to the calling process. If you expect jobs to fail, would like to track failures, or need to
-  check for specific errors you can use one of these mechanisms:
+  job failures or crashes will be captured and result in a retry. Retries are scheduled in the
+  future with backoff and won't be retried immediately.
+
+  Exceptions are _not_ raised in to the calling process. If you expect jobs to fail, would like to
+  track failures, or need to check for specific errors you can use one of these mechanisms:
 
   * Check for side effects from job execution
   * Use telemetry events to track success and failure
@@ -403,12 +405,15 @@ defmodule Oban do
 
   ## Example
 
-  Drain a queue with three available jobs:
+  Drain a queue with three available jobs, two of which succeed and one of which fails:
 
       Oban.drain_queue(:default)
-      3
+      %{success: 2, failure: 1}
   """
-  @spec drain_queue(queue :: atom() | binary()) :: non_neg_integer()
+  @spec drain_queue(queue :: atom() | binary()) :: %{
+          success: non_neg_integer(),
+          failure: non_neg_integer()
+        }
   def drain_queue(queue) when is_atom(queue) or is_binary(queue) do
     Producer.drain(to_string(queue), config())
   end

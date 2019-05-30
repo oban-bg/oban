@@ -36,17 +36,18 @@ defmodule Oban.Queue.Producer do
 
   @unlimited 100_000_000
 
-  @spec drain(queue :: binary(), config :: Config.t()) :: non_neg_integer()
+  @spec drain(queue :: binary(), config :: Config.t()) :: %{
+          success: non_neg_integer(),
+          failure: non_neg_integer()
+        }
   def drain(queue, %Config{repo: repo} = config) when is_binary(queue) do
-    case Query.fetch_available_jobs(repo, queue, @unlimited) do
-      {0, nil} ->
-        0
+    repo
+    |> fetch_jobs(queue, @unlimited)
+    |> Enum.reduce(%{failure: 0, success: 0}, fn job, acc ->
+      result = Executor.call(job, config)
 
-      {count, jobs} ->
-        for job <- jobs, do: Executor.call(job, config)
-
-        count
-    end
+      Map.update(acc, result, 1, &(&1 + 1))
+    end)
   end
 
   @impl GenServer
