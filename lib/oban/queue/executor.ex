@@ -20,18 +20,18 @@ defmodule Oban.Queue.Executor do
 
   @spec call(Job.t(), Config.t()) :: :ok
   def call(%Job{} = job, %Config{repo: repo}) do
-    {timing, return} = :timer.tc(__MODULE__, :safe_call, [job])
+    {duration, return} = :timer.tc(__MODULE__, :safe_call, [job])
 
     case return do
       {:success, ^job} ->
         Query.complete_job(repo, job)
 
-        report(timing, job, %{event: :success})
+        report(duration, job, %{event: :success})
 
       {:failure, ^job, kind, error, stack} ->
         Query.retry_job(repo, job, format_blamed(kind, error, stack))
 
-        report(timing, job, %{event: :failure, kind: kind, error: error, stack: stack})
+        report(duration, job, %{event: :failure, kind: kind, error: error, stack: stack})
     end
 
     :ok
@@ -68,12 +68,12 @@ defmodule Oban.Queue.Executor do
     Exception.format(kind, blamed, stack)
   end
 
-  defp report(timing, job, meta) do
+  defp report(duration, job, meta) do
     meta =
       job
       |> Map.take([:id, :args, :queue, :worker])
       |> Map.merge(meta)
 
-    :telemetry.execute([:oban, :job, :executed], %{timing: timing}, meta)
+    :telemetry.execute([:oban, :job, :executed], %{duration: duration}, meta)
   end
 end

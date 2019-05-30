@@ -6,8 +6,8 @@ defmodule Oban.Integration.TelemetryTest do
   @oban_opts repo: Repo, queues: [zeta: 3]
 
   defmodule Handler do
-    def handle([:oban, :job, :executed], %{timing: timing}, meta, pid) do
-      send(pid, {:executed, meta[:event], timing})
+    def handle([:oban, :job, :executed], %{duration: duration}, meta, pid) do
+      send(pid, {:executed, meta[:event], duration})
     end
   end
 
@@ -19,11 +19,11 @@ defmodule Oban.Integration.TelemetryTest do
     insert_job!(%{ref: 1, action: "OK"})
     insert_job!(%{ref: 2, action: "FAIL"})
 
-    assert_receive {:executed, :success, success_timing}
-    assert_receive {:executed, :failure, failure_timing}
+    assert_receive {:executed, :success, success_duration}
+    assert_receive {:executed, :failure, failure_duration}
 
-    assert success_timing > 0
-    assert failure_timing > 0
+    assert success_duration > 0
+    assert failure_duration > 0
 
     :ok = stop_supervised(Oban)
   end

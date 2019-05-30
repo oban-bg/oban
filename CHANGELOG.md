@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Changed
+
+- [Oban] Telemetry events now report timing as `%{duration: duration}` instead
+  of `%{timing: timing}`. This aligns with the `telemetry` standard of using
+  `duration` for the time to execute something.
+
 ## [0.3.0] - 2019-05-29
 
 **Migration Required (V2)**

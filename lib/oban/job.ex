@@ -108,6 +108,8 @@ defmodule Oban.Job do
     %__MODULE__{}
     |> cast(params, @permitted)
     |> validate_required(@required)
+    |> validate_length(:queue, min: 1, max: 128)
+    |> validate_length(:worker, min: 1, max: 128)
     |> validate_number(:max_attempts, greater_than: 0, less_than: 50)
   end
 

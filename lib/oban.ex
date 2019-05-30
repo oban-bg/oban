@@ -1,5 +1,5 @@
 defmodule Oban do
-  @moduledoc """
+  @moduledoc ~S"""
   Oban isn't an application and won't be started automatically. It is started by a supervisor that
   must be included in your application's supervision tree. All of your configuration is passed
   into the `Oban` supervisor, allowing you to configure Oban like the rest of your application.
@@ -218,14 +218,14 @@ defmodule Oban do
   Oban provides integration with [Telemetry][tele], a dispatching library for metrics. It is easy
   to report Oban metrics to any backend by attaching to `:oban` events.
 
-  For exmaple, to log out the timing for all executed jobs:
+  For exmaple, to log out the duration for all executed jobs:
 
   ```elixir
   defmodule ObanLogger do
     require Logger
 
-    def handle_event([:oban, :job, :executed], %{timing: timing}, meta, _config) do
-      Logger.info("[meta.queue] meta.worker meta.event in timing")
+    def handle_event([:oban, :job, :executed], %{duration: duration}, meta, _config) do
+      Logger.info("[#{meta.queue}] #{meta.worker} #{meta.event} in #{duration}")
     end
   end
 
