@@ -13,6 +13,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   of `%{timing: timing}`. This aligns with the `telemetry` standard of using
   `duration` for the time to execute something.
 
+- [Oban] Add `Oban.drain_queue/1` to help with integration testing. Draining a
+  queue synchronously executes all available jobs in the queue from within the
+  calling process. This avoids any sandbox based database connection issues and
+  prevents race conditions from asynchronous processing.
+
 ## [0.3.0] - 2019-05-29
 
 **Migration Required (V2)**
