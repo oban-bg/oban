@@ -29,6 +29,7 @@
 ## Table of Contents
 
 - [Features](#Features)
+- [Requirements](#Requirements)
 - [Installation](#Installation)
 - [Usage](#Usage)
   - [Configuring Queues](#Configuring-Queues)
@@ -86,6 +87,12 @@ Advanced features and advantages over other RDBMS based tools:
 
 [rdbms]: https://en.wikipedia.org/wiki/Relational_database#RDBMS
 [tele]: https://github.com/beam-telemetry/telemetry
+
+## Requirements
+
+Oban has been developed and actively tested with Elixir 1.8+, Erlang/OTP 21.1+
+and PostgreSQL 11.0+. Running Oban currently requires Elixir 1.8+ and PostgreSQL
+9.6+.
 
 ## Installation
 
