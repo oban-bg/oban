@@ -18,7 +18,7 @@ defmodule Oban.Queue.Executor do
     Task.start_link(__MODULE__, :call, [job, conf])
   end
 
-  @spec call(Job.t(), Config.t()) :: :ok
+  @spec call(Job.t(), Config.t()) :: :success | :failure
   def call(%Job{} = job, %Config{repo: repo}) do
     {duration, return} = :timer.tc(__MODULE__, :safe_call, [job])
 
@@ -28,13 +28,15 @@ defmodule Oban.Queue.Executor do
 
         report(duration, job, %{event: :success})
 
+        :success
+
       {:failure, ^job, kind, error, stack} ->
         Query.retry_job(repo, job, format_blamed(kind, error, stack))
 
         report(duration, job, %{event: :failure, kind: kind, error: error, stack: stack})
-    end
 
-    :ok
+        :failure
+    end
   end
 
   @doc false

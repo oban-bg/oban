@@ -157,7 +157,34 @@ defmodule Oban do
   refute_enqueued queue: "special", args: %{id: 2}
   ```
 
-  See the `Oban.Testing` module for more details.
+  See the `Oban.Testing` module for more details on making assertions.
+
+  ## Integration Testing
+
+  During integration testing it may be necessary to run jobs because they do work essential for
+  the test to complete, i.e. sending an email, processing media, etc. You can execute all
+  available jobs in a particular queue by calling `Oban.drain_queue/1` directly from your tests.
+
+  For example, to process all pending jobs in the "mailer" queue while testing some business
+  logic:
+
+  ```elixir
+  defmodule MyApp.BusinessTest do
+    use MyApp.DataCase, async: true
+
+    alias MyApp.{Business, Worker}
+
+    test "we stay in the business of doing business" do
+      :ok = Business.schedule_a_meeting(%{email: "monty@brewster.com"})
+
+      assert %{success: 1, failure: 0} == Oban.drain_queue(:mailer)
+
+      # Make an assertion about the email delivery
+    end
+  end
+  ```
+
+  See `Oban.drain_queue/1` for additional details.
 
   ## Error Handling
 
@@ -172,9 +199,9 @@ defmodule Oban do
   Execution errors are stored as a formatted exception along with metadata about when the failure
   ocurred and which attempt caused it. Each error is stored with the following keys:
 
-  - `at` The utc timestamp when the error occurred at
-  - `attempt` The attempt number when the error ocurred
-  - `error` A formatted error message and stacktrace
+  * `at` The utc timestamp when the error occurred at
+  * `attempt` The attempt number when the error ocurred
+  * `error` A formatted error message and stacktrace
 
   See the [Instrumentation](#module-instrumentation) docs below for an example of integrating with
   external error reporting systems.
@@ -261,6 +288,7 @@ defmodule Oban do
   use Supervisor
 
   alias Oban.{Config, Notifier, Pruner}
+  alias Oban.Queue.Producer
   alias Oban.Queue.Supervisor, as: QueueSupervisor
 
   @type option ::
@@ -352,6 +380,43 @@ defmodule Oban do
   Retreive the current config struct.
   """
   defdelegate config, to: Config, as: :get
+
+  @doc """
+  Synchronously execute all available jobs in a queue. All execution happens within the current
+  process and it is guaranteed not to raise an error or exit.
+
+  Draining a queue from within the current process is especially useful for testing. Jobs that are
+  enqueued by a process when Ecto is in sandbox mode are only visible to that process. Calling
+  `drain_queue/1` allows you to control when the jobs are executed and to wait synchronously for
+  all jobs to complete.
+
+  ## Failures & Retries
+
+  Draining a queue uses the same execution mechanism as regular job dispatch. That means that any
+  job failures or crashes will be captured and result in a retry. Retries are scheduled in the
+  future with backoff and won't be retried immediately.
+
+  Exceptions are _not_ raised in to the calling process. If you expect jobs to fail, would like to
+  track failures, or need to check for specific errors you can use one of these mechanisms:
+
+  * Check for side effects from job execution
+  * Use telemetry events to track success and failure
+  * Check the database for jobs with errors
+
+  ## Example
+
+  Drain a queue with three available jobs, two of which succeed and one of which fails:
+
+      Oban.drain_queue(:default)
+      %{success: 2, failure: 1}
+  """
+  @spec drain_queue(queue :: atom() | binary()) :: %{
+          success: non_neg_integer(),
+          failure: non_neg_integer()
+        }
+  def drain_queue(queue) when is_atom(queue) or is_binary(queue) do
+    Producer.drain(to_string(queue), config())
+  end
 
   @doc """
   Pause a running queue, preventing it from executing any new jobs. All running jobs will remain

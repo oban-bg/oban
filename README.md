@@ -318,6 +318,34 @@ refute_enqueued queue: "special", args: %{id: 2}
 
 See the `Oban.Testing` module for more details.
 
+## Integration Testing
+
+During integration testing it may be necessary to run jobs because they do work
+essential for the test to complete, i.e. sending an email, processing media,
+etc. You can execute all available jobs in a particular queue by calling
+`Oban.drain_queue/1` directly from your tests.
+
+For example, to process all pending jobs in the "mailer" queue while testing
+some business logic:
+
+```elixir
+defmodule MyApp.BusinessTest do
+  use MyApp.DataCase, async: true
+
+  alias MyApp.{Business, Worker}
+
+  test "we stay in the business of doing business" do
+    :ok = Business.schedule_a_meeting(%{email: "monty@brewster.com"})
+
+    assert %{success: 1, failure: 0} == Oban.drain_queue(:mailer)
+
+    # Now, make an assertion about the email delivery
+  end
+end
+```
+
+See `Oban.drain_queue/1` for additional details.
+
 ## Contributing
 
 To run the Oban test suite you must have PostgreSQL 10+ running locally with a

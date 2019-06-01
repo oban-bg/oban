@@ -34,6 +34,22 @@ defmodule Oban.Queue.Producer do
     GenServer.call(producer, :pause)
   end
 
+  @unlimited 100_000_000
+
+  @spec drain(queue :: binary(), config :: Config.t()) :: %{
+          success: non_neg_integer(),
+          failure: non_neg_integer()
+        }
+  def drain(queue, %Config{repo: repo} = config) when is_binary(queue) do
+    repo
+    |> fetch_jobs(queue, @unlimited)
+    |> Enum.reduce(%{failure: 0, success: 0}, fn job, acc ->
+      result = Executor.call(job, config)
+
+      Map.update(acc, result, 1, &(&1 + 1))
+    end)
+  end
+
   @impl GenServer
   def init(opts) do
     %Config{poll_interval: interval} = Keyword.fetch!(opts, :conf)
