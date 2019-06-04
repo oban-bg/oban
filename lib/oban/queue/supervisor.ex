@@ -16,11 +16,11 @@ defmodule Oban.Queue.Supervisor do
   def start_link(opts) when is_list(opts) do
     name = Keyword.get(opts, :name, __MODULE__)
 
-    Supervisor.start_link(__MODULE__, opts, name: name)
+    Supervisor.start_link(__MODULE__, Map.new(opts), name: name)
   end
 
   @impl Supervisor
-  def init(conf: conf, queue: queue, limit: limit, name: name) do
+  def init(%{conf: conf, limit: limit, name: name, queue: queue}) do
     fore_name = Module.concat([name, "Foreman"])
     prod_name = Module.concat([name, "Producer"])
 

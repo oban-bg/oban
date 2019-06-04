@@ -19,11 +19,11 @@ defmodule Oban.Pruner do
   def start_link(opts) do
     {name, opts} = Keyword.pop(opts, :name)
 
-    GenServer.start_link(__MODULE__, opts, name: name)
+    GenServer.start_link(__MODULE__, Map.new(opts), name: name)
   end
 
   @impl GenServer
-  def init(conf: conf) do
+  def init(%{conf: conf}) do
     {:ok, %State{conf: conf}, {:continue, :start}}
   end
 

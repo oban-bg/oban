@@ -35,7 +35,7 @@ defmodule Oban.Notifier do
   def start_link(opts) do
     name = Keyword.get(opts, :name, __MODULE__)
 
-    GenServer.start_link(__MODULE__, opts, name: name)
+    GenServer.start_link(__MODULE__, Map.new(opts), name: name)
   end
 
   @spec listen(module(), channel()) :: :ok
@@ -74,7 +74,7 @@ defmodule Oban.Notifier do
   end
 
   @impl GenServer
-  def init(conf: %Config{repo: repo}, name: name) do
+  def init(%{conf: %Config{repo: repo}, name: name}) do
     {:ok, %State{repo: repo}, {:continue, {:start, name}}}
   end
 
