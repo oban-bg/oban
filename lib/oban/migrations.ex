@@ -32,7 +32,7 @@ defmodule Oban.Migrations do
       """)
 
     case result do
-      {:ok, %{rows: [[version]]}} -> String.to_integer(version)
+      {:ok, %{rows: [[version]]}} when is_binary(version) -> String.to_integer(version)
       _ -> @initial_version
     end
   end
@@ -50,7 +50,19 @@ defmodule Oban.Migrations do
 
     def up do
       execute """
-      CREATE TYPE oban_job_state AS ENUM ('available', 'scheduled', 'executing', 'retryable', 'completed', 'discarded')
+      DO $$
+      BEGIN
+        IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'oban_job_state') THEN
+          CREATE TYPE oban_job_state AS ENUM (
+            'available',
+            'scheduled',
+            'executing',
+            'retryable',
+            'completed',
+            'discarded'
+          );
+        END IF;
+      END$$;
       """
 
       create_if_not_exists table(:oban_jobs, primary_key: false) do
@@ -69,9 +81,9 @@ defmodule Oban.Migrations do
         add :completed_at, :utc_datetime_usec
       end
 
-      create index(:oban_jobs, [:queue])
-      create index(:oban_jobs, [:state])
-      create index(:oban_jobs, [:scheduled_at])
+      create_if_not_exists index(:oban_jobs, [:queue])
+      create_if_not_exists index(:oban_jobs, [:state])
+      create_if_not_exists index(:oban_jobs, [:scheduled_at])
 
       execute """
       CREATE OR REPLACE FUNCTION oban_jobs_notify() RETURNS trigger AS $$
@@ -99,6 +111,8 @@ defmodule Oban.Migrations do
       $$ LANGUAGE plpgsql;
       """
 
+      execute "DROP TRIGGER IF EXISTS oban_notify ON oban_jobs"
+
       execute """
       CREATE TRIGGER oban_notify
       AFTER INSERT OR UPDATE ON oban_jobs
@@ -109,12 +123,12 @@ defmodule Oban.Migrations do
     end
 
     def down do
-      execute("DROP TRIGGER oban_notify ON oban_jobs")
-      execute("DROP FUNCTION oban_jobs_notify()")
+      execute "DROP TRIGGER oban_notify ON oban_jobs"
+      execute "DROP FUNCTION oban_jobs_notify()"
 
       drop_if_exists table("oban_jobs")
 
-      execute("DROP TYPE IF EXISTS oban_job_state")
+      execute "DROP TYPE IF EXISTS oban_job_state"
     end
   end
 
