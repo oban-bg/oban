@@ -18,6 +18,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   calling process. This avoids any sandbox based database connection issues and
   prevents race conditions from asynchronous processing.
 
+### Fixed
+
+- [Oban.Migrations] Make partial migrations more resilient by guarding against
+  missing versions and using idempotent statements.
+
 ## [0.3.0] - 2019-05-29
 
 **Migration Required (V2)**
