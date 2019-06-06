@@ -67,6 +67,13 @@ defmodule Oban.MixProject do
   end
 
   defp aliases do
-    [ci: ["format --check-formatted", "credo --strict", "test", "dialyzer --halt-exit-status"]]
+    [
+      ci: [
+        "format --check-formatted",
+        "credo --strict",
+        "test --raise",
+        "dialyzer --halt-exit-status"
+      ]
+    ]
   end
 end
