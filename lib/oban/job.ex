@@ -19,7 +19,7 @@ defmodule Oban.Job do
           | {:args, args()}
           | {:max_attempts, pos_integer()}
           | {:scheduled_at, DateTime.t()}
-          | {:scheduled_in, pos_integer()}
+          | {:schedule_in, pos_integer()}
 
   @type t :: %__MODULE__{
           id: pos_integer(),
@@ -74,7 +74,7 @@ defmodule Oban.Job do
     * `:max_attempts` — the maximum number of times a job can be retried if there are errors during execution
     * `:queue` — a named queue to push the job into. Jobs may be pushed into any queue, regardless
       of whether jobs are currently being processed for the queue.
-    * `:scheduled_in` - the number of seconds until the job should be executed
+    * `:schedule_in` - the number of seconds until the job should be executed
     * `:scheduled_at` - a time in the future after which the job should be executed
     * `:worker` — a module to execute the job in. The module must implement the `Oban.Worker`
       behaviour.
@@ -93,7 +93,7 @@ defmodule Oban.Job do
 
   Schedule a job to run in 5 seconds:
 
-      %{id: 1} |> MyApp.Worker.new(scheduled_in: 5) |> MyApp.Repo.insert()
+      %{id: 1} |> MyApp.Worker.new(schedule_in: 5) |> MyApp.Repo.insert()
   """
   @spec new(args(), [option]) :: Ecto.Changeset.t()
   def new(args, opts \\ []) when is_map(args) and is_list(opts) do
@@ -127,7 +127,7 @@ defmodule Oban.Job do
     end
   end
 
-  defp coerce_scheduling(%{scheduled_in: in_seconds} = params) when is_integer(in_seconds) do
+  defp coerce_scheduling(%{schedule_in: in_seconds} = params) when is_integer(in_seconds) do
     scheduled_at = NaiveDateTime.add(NaiveDateTime.utc_now(), in_seconds)
 
     params

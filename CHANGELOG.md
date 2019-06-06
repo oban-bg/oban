@@ -7,16 +7,22 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Added
+
+- [Oban] Add `Oban.drain_queue/1` to help with integration testing. Draining a
+  queue synchronously executes all available jobs in the queue from within the
+  calling process. This avoids any sandbox based database connection issues and
+  prevents race conditions from asynchronous processing.
+
 ### Changed
 
 - [Oban] Telemetry events now report timing as `%{duration: duration}` instead
   of `%{timing: timing}`. This aligns with the `telemetry` standard of using
   `duration` for the time to execute something.
 
-- [Oban] Add `Oban.drain_queue/1` to help with integration testing. Draining a
-  queue synchronously executes all available jobs in the queue from within the
-  calling process. This avoids any sandbox based database connection issues and
-  prevents race conditions from asynchronous processing.
+- [Oban.Job] Rename `scheduled_in` to `schedule_in` for readability and
+  consistency. Both the `Oban` docs and README showed `schedule_in`, which reads
+  more clearly than `scheduled_in`.
 
 ### Fixed
 

@@ -10,7 +10,7 @@ defmodule Oban.Integration.SchedulingTest do
 
   property "jobs scheduled in the future are unavailable for execution" do
     forall seconds <- pos_integer() do
-      %Job{scheduled_at: at, state: state} = insert_job!(scheduled_in: seconds)
+      %Job{scheduled_at: at, state: state} = insert_job!(schedule_in: seconds)
 
       assert 0 < NaiveDateTime.diff(at, NaiveDateTime.utc_now())
       assert state == "scheduled"
@@ -21,7 +21,7 @@ defmodule Oban.Integration.SchedulingTest do
 
   property "jobs scheduled in the past are available for execution" do
     forall seconds <- neg_integer() do
-      %Job{scheduled_at: at, state: state} = insert_job!(scheduled_in: seconds)
+      %Job{scheduled_at: at, state: state} = insert_job!(schedule_in: seconds)
 
       assert 0 > NaiveDateTime.diff(at, NaiveDateTime.utc_now())
       assert state == "scheduled"
