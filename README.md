@@ -269,11 +269,11 @@ The worker's defaults may be overridden by passing options:
 |> MyApp.Repo.insert()
 ```
 
-Jobs may be scheduled down to the second any time in the future:
+Jobs may be scheduled or delayed down to the second any time in the future:
 
 ```elixir
 %{id: 1}
-|> MyApp.Workers.Business.new(schedule_in: 5)
+|> MyApp.Workers.Business.new(scheduled_in: 5)
 |> MyApp.Repo.insert()
 ```
 
