@@ -14,6 +14,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   calling process. This avoids any sandbox based database connection issues and
   prevents race conditions from asynchronous processing.
 
+- [Oban.Worker] Add `backoff/1` callback and switch to exponential backoff with
+  a base value as the default. This allows custom backoff timing for individual
+  workers.
+
 ### Changed
 
 - [Oban] Telemetry events now report timing as `%{duration: duration}` instead

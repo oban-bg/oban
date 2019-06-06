@@ -76,7 +76,8 @@ defmodule Oban do
   job raises an exception or throws an exit then the error will be reported and
   the job will be retried (provided there are attempts remaining).
 
-  See `Oban.Worker` for more details.
+  See `Oban.Worker` for more details and instructions on configuring custom
+  backoff strategies.
 
   ### Enqueueing Jobs
 

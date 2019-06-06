@@ -1,7 +1,7 @@
 defmodule Oban.Queue.Executor do
   @moduledoc false
 
-  alias Oban.{Config, Job, Query}
+  alias Oban.{Config, Job, Query, Worker}
 
   @spec child_spec(Job.t(), Config.t()) :: Supervisor.child_spec()
   def child_spec(job, conf) do
@@ -31,7 +31,7 @@ defmodule Oban.Queue.Executor do
         :success
 
       {:failure, ^job, kind, error, stack} ->
-        Query.retry_job(repo, job, format_blamed(kind, error, stack))
+        Query.retry_job(repo, job, worker_backoff(job), format_blamed(kind, error, stack))
 
         report(duration, job, %{event: :failure, kind: kind, error: error, stack: stack})
 
@@ -63,6 +63,17 @@ defmodule Oban.Queue.Executor do
   end
 
   defp to_module(worker) when is_atom(worker), do: worker
+
+  # While it is slightly wasteful, we have to convert the worker to a module again outside of
+  # `safe_call/1`. There is a possibility that the worker module can't be found at all and we
+  # need to fall back to a default implementation.
+  defp worker_backoff(%Job{attempt: attempt, worker: worker}) do
+    worker
+    |> to_module()
+    |> apply(:backoff, [attempt])
+  rescue
+    ArgumentError -> Worker.default_backoff(attempt)
+  end
 
   defp format_blamed(kind, error, stack) do
     {blamed, stack} = Exception.blame(kind, error, stack)

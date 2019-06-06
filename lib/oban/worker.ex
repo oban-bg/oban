@@ -12,7 +12,7 @@ defmodule Oban.Worker do
       defmodule MyApp.Workers.Business do
         use Oban.Worker, queue: "events", max_attempts: 10
 
-        @impl Oban.Worker
+        @impl true
         def perform(args) do
           IO.inspect(args)
         end
@@ -38,6 +38,37 @@ defmodule Oban.Worker do
       |> MyApp.Repo.insert()
 
   See `Oban.Job` for all available options.
+
+  ## Customizing Backoff
+
+  When jobs fail they may be retried again in the future using a backoff algorithm. By default
+  the backoff is exponential with a fixed padding of 15 seconds. This may be too aggressive for
+  jobs that are resource intensive or need more time between retries. To make backoff scheduling
+  flexible a worker module may define a custom backoff function.
+
+  This worker defines a backoff function that delays retries using a variant of the historic
+  Resque/Sidekiq algorithm:
+
+      defmodule MyApp.SidekiqBackoffWorker do
+        use Oban.Worker
+
+        @impl true
+        def backoff(attempt) do
+          :math.pow(attempt, 4) + 15 + :rand.uniform(30) * attempt
+        end
+
+        @impl true
+        def perform(args) do
+          :do_business
+        end
+      end
+
+  Here are some alternative backoff strategies to consider:
+
+  * **constant** — delay by a fixed number of seconds, e.g. 1→15, 2→15, 3→15
+  * **linear** — delay for the same number of seconds as the current attempt, e.g. 1→1, 2→2, 3→3
+  * **squared** — delay by attempt number squared, e.g. 1→1, 2→4, 3→9
+  * **sidekiq** — delay by a base amount plus some jitter, e.g. 1→32, 2→61, 3→135
   """
 
   alias Oban.Job
@@ -48,6 +79,11 @@ defmodule Oban.Worker do
   See `Oban.Job.new/2` for the available options.
   """
   @callback new(args :: Job.args(), opts :: [Job.option()]) :: Ecto.Changeset.t()
+
+  @doc """
+  Calculate the execution backoff, or the number of seconds to wait before retrying a failed job.
+  """
+  @callback backoff(attempt :: pos_integer()) :: pos_integer()
 
   @doc """
   The `perform/1` function is called when the job is executed.
@@ -77,11 +113,22 @@ defmodule Oban.Worker do
       end
 
       @impl Worker
+      def backoff(attempt) when is_integer(attempt) do
+        Worker.default_backoff(attempt)
+      end
+
+      @impl Worker
       def perform(args) when is_map(args) do
         :ok
       end
 
       defoverridable Worker
     end
+  end
+
+  @doc false
+  @spec default_backoff(pos_integer(), non_neg_integer()) :: pos_integer()
+  def default_backoff(attempt, base_backoff \\ 15) when is_integer(attempt) do
+    trunc(:math.pow(2, attempt) + base_backoff)
   end
 end

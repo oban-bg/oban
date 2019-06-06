@@ -11,9 +11,10 @@ defmodule Oban.WorkerTest do
     use Worker, queue: "special", max_attempts: 5
 
     @impl Worker
-    def perform(%Job{args: %{a: a, b: b}}) do
-      a + b
-    end
+    def backoff(attempt), do: attempt * attempt
+
+    @impl Worker
+    def perform(%Job{args: %{a: a, b: b}}), do: a + b
   end
 
   describe "new/2" do
@@ -24,6 +25,21 @@ defmodule Oban.WorkerTest do
       assert job.queue == "special"
       assert job.max_attempts == 5
       assert job.worker == "Oban.WorkerTest.CustomWorker"
+    end
+  end
+
+  describe "backoff/1" do
+    test "the default backoff uses an exponential algorithm with a fixed padding" do
+      assert BasicWorker.backoff(1) == 17
+      assert BasicWorker.backoff(2) == 19
+      assert BasicWorker.backoff(4) == 31
+      assert BasicWorker.backoff(5) == 47
+    end
+
+    test "the backoff can be overridden" do
+      assert CustomWorker.backoff(1) == 1
+      assert CustomWorker.backoff(2) == 4
+      assert CustomWorker.backoff(3) == 9
     end
   end
 
