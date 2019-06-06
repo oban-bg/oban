@@ -1,5 +1,5 @@
 defmodule Oban.TestingTest do
-  use Oban.Case, async: true
+  use Oban.Case
 
   use Oban.Testing, repo: Oban.Test.Repo
 
