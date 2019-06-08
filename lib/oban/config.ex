@@ -10,6 +10,7 @@ defmodule Oban.Config do
           node: binary(),
           poll_interval: pos_integer(),
           prune: prune(),
+          prune_interval: pos_integer(),
           queues: [{atom(), pos_integer()}],
           repo: module(),
           shutdown_grace_period: timeout()
@@ -22,6 +23,7 @@ defmodule Oban.Config do
             node: nil,
             poll_interval: :timer.seconds(1),
             prune: :disabled,
+            prune_interval: :timer.minutes(1),
             queues: [default: 10],
             repo: nil,
             shutdown_grace_period: 15_000
@@ -79,6 +81,12 @@ defmodule Oban.Config do
       {:maxlen, len} when is_integer(len) and len > 0 -> :ok
       {:maxage, age} when is_integer(age) and age > 0 -> :ok
       _ -> raise ArgumentError, "unexpected :prune mode, #{inspect(mode)}"
+    end
+  end
+
+  defp validate_opt!({:prune_interval, interval}) do
+    unless is_integer(interval) and interval > 0 do
+      raise ArgumentError, "expected :prune_interval to be a positive integer"
     end
   end
 

@@ -28,6 +28,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   consistency. Both the `Oban` docs and README showed `schedule_in`, which reads
   more clearly than `scheduled_in`.
 
+- [Oban.Pruner] Pruning no longer happens immediately on startup and may be
+  configured through the `:prune_interval` option. The default prune interval is
+  still one minute.
+
 ### Fixed
 
 - [Oban.Migrations] Make partial migrations more resilient by guarding against

@@ -234,12 +234,10 @@ defmodule Oban do
 
   Pruning is best-effort and performed out-of-band. This means that all limits are soft; jobs
   beyond a specified length or age may not be pruned immediately after jobs complete. Prune timing
-  is based on the configured `poll_interval`, where pruning occurs once for every 60 queue polls.
-  With the default `poll_interval` of 1 second that means pruning occurs at system startup and
-  then once every minute afterwards.
+  is based on the configured `prune_interval`, which is one minute by default.
 
-  Note, only jobs in a `completed` or `discarded` state will be deleted. Currently `executing`
-  jobs and older jobs that are still in the `available` state will be retained.
+  Only jobs in a `completed` or `discarded` state will be deleted. Currently `executing` jobs and
+  older jobs that are still in the `available` state will be retained.
 
   ## Instrumentation
 
@@ -318,11 +316,12 @@ defmodule Oban do
 
     For testing purposes `:queues` may be set to `false` or `nil`, which effectively disables all
     job dispatching.
-  * `:poll_interval` - the amount of time between a queue pulling new jobs, specified in
-    milliseconds. This is directly tied to the resolution of _scheduled_ jobs. For example, with a
-    `poll_interval` of `5_000ms`, scheduled jobs are checked every 5 seconds. The default is
-    `1_000ms`.
+  * `:poll_interval` - the number of milliseconds between polling for new jobs in a queue. This
+    is directly tied to the resolution of _scheduled_ jobs. For example, with a `poll_interval` of
+    `5_000ms`, scheduled jobs are checked every 5 seconds. The default is `1_000ms`.
   * `:prune` - configures job pruning behavior, see "Pruning Historic Jobs" for more information
+  * `:prune_interval` — the number of milliseconds between calls to prune historic jobs. The
+    default is `60_000ms`, or one minute.
   * `:shutdown_grace_period` - the amount of time a queue will wait for executing jobs to complete
     before hard shutdown, specified in milliseconds. The default is `15_000`, or 15 seconds.
 
