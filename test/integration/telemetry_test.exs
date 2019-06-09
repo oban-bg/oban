@@ -6,24 +6,44 @@ defmodule Oban.Integration.TelemetryTest do
   @oban_opts repo: Repo, queues: [zeta: 3]
 
   defmodule Handler do
-    def handle([:oban, :job, :executed], %{duration: duration}, meta, pid) do
-      send(pid, {:executed, meta[:event], duration})
+    def handle([:oban, event], %{duration: duration}, meta, pid) do
+      send(pid, {:executed, event, duration, meta})
     end
   end
 
   test "telemetry events are emitted for executed jobs" do
-    :telemetry.attach("job-handler", [:oban, :job, :executed], &Handler.handle/4, self())
+    events = [[:oban, :success], [:oban, :failure]]
+
+    :telemetry.attach_many("job-handler", events, &Handler.handle/4, self())
 
     {:ok, _} = start_supervised({Oban, @oban_opts})
 
-    insert_job!(%{ref: 1, action: "OK"})
-    insert_job!(%{ref: 2, action: "FAIL"})
+    %Job{id: succ_id} = insert_job!(%{ref: 1, action: "OK"})
+    %Job{id: fail_id} = insert_job!(%{ref: 2, action: "FAIL"})
 
-    assert_receive {:executed, :success, success_duration}
-    assert_receive {:executed, :failure, failure_duration}
+    assert_receive {:executed, :success, succ_duration, succ_meta}
+    assert_receive {:executed, :failure, fail_duration, fail_meta}
 
-    assert success_duration > 0
-    assert failure_duration > 0
+    assert succ_duration > 0
+    assert fail_duration > 0
+
+    assert %{
+             id: ^succ_id,
+             args: %{},
+             queue: "zeta",
+             worker: "Oban.Integration.Worker",
+             attempt: 1,
+             max_attempts: 20
+           } = succ_meta
+
+    assert %{
+             id: ^fail_id,
+             args: %{},
+             queue: "zeta",
+             worker: "Oban.Integration.Worker",
+             attempt: 1,
+             max_attempts: 20
+           } = fail_meta
 
     :ok = stop_supervised(Oban)
   end

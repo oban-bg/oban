@@ -26,16 +26,12 @@ defmodule Oban.Queue.Executor do
       {:success, ^job} ->
         Query.complete_job(repo, job)
 
-        report(duration, job, %{event: :success})
-
-        :success
+        report(:success, duration, job, %{})
 
       {:failure, ^job, kind, error, stack} ->
         Query.retry_job(repo, job, worker_backoff(job), format_blamed(kind, error, stack))
 
-        report(duration, job, %{event: :failure, kind: kind, error: error, stack: stack})
-
-        :failure
+        report(:failure, duration, job, %{kind: kind, error: error, stack: stack})
     end
   end
 
@@ -81,12 +77,14 @@ defmodule Oban.Queue.Executor do
     Exception.format(kind, blamed, stack)
   end
 
-  defp report(duration, job, meta) do
+  defp report(event, duration, job, meta) do
     meta =
       job
-      |> Map.take([:id, :args, :queue, :worker])
+      |> Map.take([:id, :args, :queue, :worker, :attempt, :max_attempts])
       |> Map.merge(meta)
 
-    :telemetry.execute([:oban, :job, :executed], %{duration: duration}, meta)
+    :telemetry.execute([:oban, event], %{duration: duration}, meta)
+
+    event
   end
 end

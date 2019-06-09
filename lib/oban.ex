@@ -1,5 +1,5 @@
 defmodule Oban do
-  @moduledoc ~S"""
+  @moduledoc """
   Oban isn't an application and won't be started automatically. It is started by a supervisor that
   must be included in your application's supervision tree. All of your configuration is passed
   into the `Oban` supervisor, allowing you to configure Oban like the rest of your application.
@@ -239,49 +239,15 @@ defmodule Oban do
   Only jobs in a `completed` or `discarded` state will be deleted. Currently `executing` jobs and
   older jobs that are still in the `available` state will be retained.
 
-  ## Instrumentation
+  ## Instrumentation & Logging
 
   Oban provides integration with [Telemetry][tele], a dispatching library for metrics. It is easy
   to report Oban metrics to any backend by attaching to `:oban` events.
 
-  For exmaple, to log out the duration for all executed jobs:
-
-  ```elixir
-  defmodule ObanLogger do
-    require Logger
-
-    def handle_event([:oban, :job, :executed], %{duration: duration}, meta, _config) do
-      Logger.info("[#{meta.queue}] #{meta.worker} #{meta.event} in #{duration}")
-    end
-  end
-
-  :telemetry.attach("oban-logger", [:oban, :job, :executed], &ObanLogger.handle_event/4, nil)
-  ```
-
-  Another great use of execution data is error reporting. Here is an example of
-  integrating with [Honeybadger][honey]:
-
-  ```elixir
-  defmodule ErrorReporter do
-    def handle_event([:oban, :job, :failure], _timing, %{event: :failure} = meta, _config) do
-      context = Map.take(meta, [:id, :args, :queue, :worker])
-
-      Honeybadger.notify(meta.error, context, meta.stack)
-    end
-  end
-
-  :telemetry.attach("oban-errors", [:oban, :job, :executed], &ErrorReporter.handle_event/4, nil)
-  ```
-
-  Here is a reference for metric event metadata:
-
-  | event      | metadata                                             |
-  | ---------- | ---------------------------------------------------- |
-  | `:success` | `:id, :args, :queue, :worker`                        |
-  | `:failure` | `:id, :args, :queue, :worker, :kind, :error, :stack` |
+  For instructions on using the default structured logger and information on event metadata see
+  docs for the `Oban.Telemetry` module.
 
   [tele]: https://hexdocs.pm/telemetry
-  [honey]: https://honeybadger.io
   """
 
   use Supervisor

@@ -18,11 +18,19 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   a base value as the default. This allows custom backoff timing for individual
   workers.
 
+- [Oban.Telemetry] Added a new module to wrap a default handler for structured
+  JSON logging. The log handler is attached by calling
+  `Oban.Telemetry.attach_default_logger/0` somewhere in your application code.
+
 ### Changed
 
 - [Oban] Telemetry events now report timing as `%{duration: duration}` instead
   of `%{timing: timing}`. This aligns with the `telemetry` standard of using
   `duration` for the time to execute something.
+
+- [Oban] Telemetry events are now broken into `success` and `failure` at the
+  event level, rather than being labeled in the metadata. The full event names
+  are now `[:oban, :success]` and `[:oban, :failure]`.
 
 - [Oban.Job] Rename `scheduled_in` to `schedule_in` for readability and
   consistency. Both the `Oban` docs and README showed `schedule_in`, which reads
