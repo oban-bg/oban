@@ -1,4 +1,4 @@
-Logger.configure(level: :warning)
+Logger.configure(level: :warn)
 
 ExUnit.start()
 

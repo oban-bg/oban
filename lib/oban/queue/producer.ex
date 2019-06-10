@@ -3,6 +3,8 @@ defmodule Oban.Queue.Producer do
 
   use GenServer
 
+  require Logger
+
   import Oban.Notifier, only: [insert: 0, signal: 0]
 
   alias Oban.{Config, Notifier, Query}
@@ -19,7 +21,16 @@ defmodule Oban.Queue.Producer do
     @moduledoc false
 
     @enforce_keys [:conf, :foreman, :limit, :queue]
-    defstruct [:conf, :foreman, :limit, :queue, running: %{}, paused: false]
+    defstruct [
+      :conf,
+      :foreman,
+      :limit,
+      :queue,
+      circuit: :enabled,
+      circuit_backoff: :timer.minutes(1),
+      running: %{},
+      paused: false
+    ]
   end
 
   @spec start_link([option()]) :: GenServer.on_start()
@@ -117,6 +128,10 @@ defmodule Oban.Queue.Producer do
     dispatch(state)
   end
 
+  def handle_info(:reset_circuit, state) do
+    {:noreply, %{state | circuit: :enabled}}
+  end
+
   def handle_info(_message, state) do
     {:noreply, state}
   end
@@ -132,6 +147,8 @@ defmodule Oban.Queue.Producer do
     Query.rescue_orphaned_jobs(conf.repo, queue)
 
     state
+  rescue
+    exception in [Postgrex.Error] -> trip_circuit(exception, state)
   end
 
   defp start_interval(%State{conf: conf} = state) do
@@ -149,10 +166,16 @@ defmodule Oban.Queue.Producer do
 
   # Dispatching
 
+  defp deschedule(%State{circuit: :disabled} = state) do
+    state
+  end
+
   defp deschedule(%State{conf: conf, queue: queue} = state) do
     Query.stage_scheduled_jobs(conf.repo, queue)
 
     state
+  rescue
+    exception in [Postgrex.Error] -> trip_circuit(exception, state)
   end
 
   defp gossip(state) do
@@ -175,6 +198,10 @@ defmodule Oban.Queue.Producer do
     {:noreply, state}
   end
 
+  defp dispatch(%State{circuit: :disabled} = state) do
+    {:noreply, state}
+  end
+
   defp dispatch(%State{limit: limit, running: running} = state) when map_size(running) >= limit do
     {:noreply, state}
   end
@@ -190,6 +217,8 @@ defmodule Oban.Queue.Producer do
       end
 
     {:noreply, %{state | running: Map.merge(running, started_jobs)}}
+  rescue
+    exception in [Postgrex.Error] -> {:noreply, trip_circuit(exception, state)}
   end
 
   defp fetch_jobs(repo, queue, count) do
@@ -197,5 +226,21 @@ defmodule Oban.Queue.Producer do
       {0, nil} -> []
       {_count, jobs} -> jobs
     end
+  end
+
+  # Circuit Breaker
+
+  defp trip_circuit(exception, state) do
+    Logger.error(fn ->
+      Jason.encode!(%{
+        source: "oban",
+        message: "Circuit temporarily tripped by Postgrex.Error",
+        error: Postgrex.Error.message(exception)
+      })
+    end)
+
+    Process.send_after(self(), :reset_circuit, state.circuit_backoff)
+
+    %{state | circuit: :disabled}
   end
 end

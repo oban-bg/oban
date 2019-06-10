@@ -63,6 +63,8 @@ Advanced features and advantages over other RDBMS based tools:
   slow queue can't back up other faster queues.
 - **Queue Control** — Queues can be paused, resumed and scaled independently at
   runtime.
+- **Resilient Queues** — Failing queries won't the entire supervision tree,
+  instead they trip a circuit breaker and will be retried again in the future.
 - **Job Killing** — Jobs can be killed in the middle of execution regardless of
   which node they are running on. This stops the job at once and flags it as
   `discarded`.
@@ -102,7 +104,7 @@ dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:oban, "~> 0.2"}
+    {:oban, "~> 0.3"}
   ]
 end
 ```
@@ -141,6 +143,13 @@ mix ecto.migrate
 
 Next see [Usage](#Usage) for how to integrate Oban into your application and
 start defining jobs!
+
+#### Note About Releases
+
+If you are using releases you may see Postgrex errors logged during your initial
+deploy (or any deploy requiring an Oban migration). The errors are only
+temporary. After the migration has completed each queue will start producing
+jobs normally.
 
 [ecto]: https://hex.pm/packages/ecto
 [jason]: https://hex.pm/packages/jason

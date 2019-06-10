@@ -22,6 +22,16 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   JSON logging. The log handler is attached by calling
   `Oban.Telemetry.attach_default_logger/0` somewhere in your application code.
 
+- [Oban.Queue.Producer] Guard against Postgrex errors in all producer queries
+  using a circuit breaker. Failing queries will no longer crash the producer.
+  Instead, the failure will be logged as an error and it will trip the
+  producer's circuit breaker. All subsequent queries will be skipped until the
+  breaker is enabled again approximately a minute later.
+
+  This feature simplifies the deployment process by allowing the application to
+  boot and stay up while Oban migrations are made. After migrations have
+  finished each queue producer will resume making queries.
+
 ### Changed
 
 - [Oban] Telemetry events now report timing as `%{duration: duration}` instead
