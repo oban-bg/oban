@@ -104,7 +104,7 @@ dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:oban, "~> 0.3"}
+    {:oban, "~> 0.4"}
   ]
 end
 ```

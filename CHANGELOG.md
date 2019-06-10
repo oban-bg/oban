@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## v0.4.0 — 2019-06-10
+
 ### Added
 
 - [Oban] Add `Oban.drain_queue/1` to help with integration testing. Draining a
@@ -139,6 +141,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - [Oban] Initial release with base functionality.
 
 [Unreleased]: https://github.com/sorentwo/oban/compare/v0.2.0...HEAD
+[0.4.0]: https://github.com/sorentwo/oban/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/sorentwo/oban/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/sorentwo/oban/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/sorentwo/oban/compare/0ac3cc8...v0.1.0
