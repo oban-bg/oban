@@ -7,7 +7,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
-## v0.4.0 — 2019-06-10
+### Fixed
+
+- [Oban.Testing] Only check `available` and `scheduled` jobs with the
+  `assert|refute_enqueued` testing helpers.
+
+## [0.4.0] — 2019-06-10
 
 ### Added
 

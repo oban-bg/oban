@@ -24,10 +24,14 @@ defmodule Oban.TestingTest do
     test "refuting jobs with specific properties have been enqueued" do
       insert_job!(%{id: 1}, worker: Ping, queue: :alpha)
       insert_job!(%{id: 2}, worker: Pong, queue: :gamma)
+      insert_job!(%{id: 3}, worker: Pong, queue: :gamma, state: "completed")
+      insert_job!(%{id: 4}, worker: Pong, queue: :gamma, state: "discarded")
       insert_job!(%{message: "hello"}, worker: Pong, queue: :gamma)
 
       refute_enqueued worker: Pongo
       refute_enqueued worker: Ping, args: %{id: 2}
+      refute_enqueued worker: Pong, args: %{id: 3}
+      refute_enqueued worker: Pong, args: %{id: 4}
       refute_enqueued worker: Ping, queue: :gamma
       refute_enqueued worker: Pong, queue: :gamma, args: %{message: "helo"}
     end

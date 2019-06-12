@@ -78,7 +78,7 @@ defmodule Oban.Testing do
   """
 
   import ExUnit.Assertions, only: [assert: 2, refute: 2]
-  import Ecto.Query, only: [limit: 2, where: 2, select: 2]
+  import Ecto.Query, only: [limit: 2, select: 2, where: 2, where: 3]
 
   alias Ecto.Changeset
   alias Oban.Job
@@ -121,6 +121,7 @@ defmodule Oban.Testing do
 
   defp get_job(repo, opts) do
     Job
+    |> where([j], j.state in ["available", "scheduled"])
     |> where(^normalize_opts(opts))
     |> limit(1)
     |> select([:id])
