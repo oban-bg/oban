@@ -6,6 +6,7 @@ defmodule Oban.Job do
   asynchronous execution. Jobs can be inserted along with other application data as part of a
   transaction, which guarantees that jobs will only be triggered from a successful transaction.
   """
+  @moduledoc since: "0.1.0"
 
   use Ecto.Schema
 

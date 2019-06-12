@@ -55,6 +55,7 @@ defmodule Oban.Telemetry do
 
   [honey]: https://honeybadger.io
   """
+  @moduledoc since: "0.4.0"
 
   require Logger
 
@@ -74,6 +75,7 @@ defmodule Oban.Telemetry do
 
       :ok = Oban.Telemetry.attach_default_logger()
   """
+  @doc since: "0.4.0"
   @spec attach_default_logger() :: :ok | {:error, :already_exists}
   def attach_default_logger do
     events = [[:oban, :success], [:oban, :failure]]

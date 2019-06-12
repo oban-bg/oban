@@ -249,6 +249,7 @@ defmodule Oban do
 
   [tele]: https://hexdocs.pm/telemetry
   """
+  @moduledoc since: "0.1.0"
 
   use Supervisor
 
@@ -311,6 +312,7 @@ defmodule Oban do
   * In a Heroku environment the system environment's `DYNO` value is used
   * Otherwise, the system hostname is used
   """
+  @doc since: "0.1.0"
   @spec start_link([option()]) :: Supervisor.on_start()
   def start_link(opts) when is_list(opts) do
     conf =
@@ -345,6 +347,7 @@ defmodule Oban do
   @doc """
   Retreive the current config struct.
   """
+  @doc since: "0.2.0"
   defdelegate config, to: Config, as: :get
 
   @doc """
@@ -376,6 +379,7 @@ defmodule Oban do
       Oban.drain_queue(:default)
       %{success: 2, failure: 1}
   """
+  @doc since: "0.4.0"
   @spec drain_queue(queue :: atom() | binary()) :: %{
           success: non_neg_integer(),
           failure: non_neg_integer()
@@ -397,6 +401,7 @@ defmodule Oban do
       Oban.pause_queue(:default)
       :ok
   """
+  @doc since: "0.2.0"
   @spec pause_queue(queue :: atom()) :: :ok
   defdelegate pause_queue(queue), to: Notifier
 
@@ -410,6 +415,7 @@ defmodule Oban do
       Oban.resume_queue(:default)
       :ok
   """
+  @doc since: "0.2.0"
   @spec resume_queue(queue :: atom()) :: :ok
   defdelegate resume_queue(queue), to: Notifier
 
@@ -428,6 +434,7 @@ defmodule Oban do
       Oban.scale_queue(:default, 5)
       :ok
   """
+  @doc since: "0.2.0"
   @spec scale_queue(queue :: atom(), scale :: pos_integer()) :: :ok
   defdelegate scale_queue(queue, scale), to: Notifier
 
@@ -444,6 +451,7 @@ defmodule Oban do
       Oban.kill_job(1)
       :ok
   """
+  @doc since: "0.2.0"
   @spec kill_job(job_id :: pos_integer()) :: :ok
   defdelegate kill_job(job_id), to: Notifier
 end

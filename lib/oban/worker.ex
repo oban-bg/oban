@@ -70,6 +70,7 @@ defmodule Oban.Worker do
   * **squared** — delay by attempt number squared, e.g. 1→1, 2→4, 3→9
   * **sidekiq** — delay by a base amount plus some jitter, e.g. 1→32, 2→61, 3→135
   """
+  @moduledoc since: "0.1.0"
 
   alias Oban.Job
 

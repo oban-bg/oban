@@ -76,6 +76,7 @@ defmodule Oban.Testing do
   end
   ```
   """
+  @moduledoc since: "0.3.0"
 
   import ExUnit.Assertions, only: [assert: 2, refute: 2]
   import Ecto.Query, only: [limit: 2, select: 2, where: 2, where: 3]
@@ -104,6 +105,7 @@ defmodule Oban.Testing do
   Only values for the provided arguments will be checked. For example, an assertion made on
   `worker: "MyWorker"` will match _any_ jobs for that worker, regardless of the queue or args.
   """
+  @doc since: "0.3.0"
   @spec assert_enqueued(repo :: module(), opts :: Enum.t()) :: true
   def assert_enqueued(repo, [_ | _] = opts) do
     assert get_job(repo, opts), "Expected a job matching #{inspect(opts)} to be enqueued"
@@ -114,6 +116,7 @@ defmodule Oban.Testing do
 
   See `assert_enqueued/2` for additional details.
   """
+  @doc since: "0.3.0"
   @spec refute_enqueued(repo :: module(), opts :: Enum.t()) :: false
   def refute_enqueued(repo, [_ | _] = opts) do
     refute get_job(repo, opts), "Expected no jobs matching #{inspect(opts)} to be enqueued"
