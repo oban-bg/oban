@@ -1,5 +1,5 @@
 defmodule Oban.Telemetry do
-  @moduledoc ~S"""
+  @moduledoc """
   Telemetry integration for event metrics, logging and error reporting.
 
   Oban currently emits an event when a job has exeucted: `[:oban, :success]` if the job
@@ -29,7 +29,7 @@ defmodule Oban.Telemetry do
     require Logger
 
     def handle_event([:oban, :failure], %{duration: duration}, meta, nil) do
-      Logger.warning("[#{meta.queue}] #{meta.worker} failed in #{duration}")
+      Logger.warning("[#\{meta.queue}] #\{meta.worker} failed in #\{duration}")
     end
   end
 
