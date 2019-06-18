@@ -67,7 +67,7 @@ defmodule Oban.Integration.ExecutingTest do
   end
 
   def action do
-    oneof(~w(OK FAIL EXIT))
+    oneof(~w(OK FAIL ERROR EXIT))
   end
 
   # Helpers

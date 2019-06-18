@@ -2,8 +2,8 @@ defmodule Oban.Telemetry do
   @moduledoc """
   Telemetry integration for event metrics, logging and error reporting.
 
-  Oban currently emits an event when a job has exeucted: `[:oban, :success]` if the job
-  succeeded or `[:oban, :failure]` if there was an error or the process crashed.
+  Oban currently emits an event when a job has exeucted: `[:oban, :success]` if the job succeeded
+  or `[:oban, :failure]` if there was an error or the process crashed.
 
   All job events share the same details about the job that was executed. In addition, failed jobs
   provide the error type, the error itself, and the stacktrace. The following chart shows which
@@ -13,6 +13,16 @@ defmodule Oban.Telemetry do
   | ---------- | ---------------------------------------------------------------------------- |
   | `:success` | `:id, :args, :queue, :worker, :attempt, :max_attempt`                        |
   | `:failure` | `:id, :args, :queue, :worker, :attempt, :max_attempt, :kind, :error, :stack` |
+
+  For `:failure` events the metadata will include details about what caused the failure. The
+  `:kind` value is determined by how an error occurred. Here are the possible kinds:
+
+  * `:error` — from an `{:error, error}` return value. Some Erlang functions may also throw an
+    `:error` tuple, which will be reported as `:error`.
+  * `:exception` — from a rescued exception
+  * `:exit` — from a caught process exit
+  * `:throw` — from a caught value, this doesn't necessarily mean that an error occurred and the
+    error value is unpredictable
 
   ## Default Logger
 

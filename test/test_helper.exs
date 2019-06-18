@@ -20,6 +20,11 @@ defmodule Oban.Integration.Worker do
 
         raise RuntimeError, "FAILED"
 
+      "ERROR" ->
+        send(pid, {:error, ref})
+
+        {:error, "ERROR"}
+
       "EXIT" ->
         send(pid, {:exit, ref})
 
