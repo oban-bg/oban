@@ -81,19 +81,9 @@ defmodule Oban do
 
   ### Enqueueing Jobs
 
-  Jobs are simply `Ecto` structs and are enqueued by inserting them into the
-  database. Here we insert a job into the `default` queue and specify the worker
-  by module name:
-
-  ```elixir
-  %{id: 1, user_id: 2}
-  |> Oban.Job.new(queue: :default, worker: MyApp.Worker)
-  |> MyApp.Repo.insert()
-  ```
-
-  For convenience and consistency all workers implement a `new/2` function that
-  converts an args map into a job changeset suitable for inserting into the
-  database:
+  Jobs are simply Ecto structs and are enqueued by inserting them into the
+  database. For convenience and consistency all workers provide a `new/2`
+  function that converts an args map into a job changeset suitable for insertion:
 
   ```elixir
   %{in_the: "business", of_doing: "business"}
@@ -109,11 +99,21 @@ defmodule Oban do
   |> MyApp.Repo.insert()
   ```
 
-  Jobs may be scheduled down to the second any time in the future:
+  Jobs may also be scheduled down to the second any time in the future:
 
   ```elixir
   %{id: 1}
   |> MyApp.Workers.Business.new(schedule_in: 5)
+  |> MyApp.Repo.insert()
+  ```
+
+  Occasionally you may need to insert a job for a worker that exists in another
+  application. In that case you can use `Oban.Job.new/2` to build the changeset
+  manually:
+
+  ```elixir
+  %{id: 1, user_id: 2}
+  |> Oban.Job.new(queue: :default, worker: OtherApp.Worker)
   |> MyApp.Repo.insert()
   ```
 
