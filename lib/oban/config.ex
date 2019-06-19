@@ -11,6 +11,7 @@ defmodule Oban.Config do
           poll_interval: pos_integer(),
           prune: prune(),
           prune_interval: pos_integer(),
+          prune_limit: pos_integer(),
           queues: [{atom(), pos_integer()}],
           repo: module(),
           shutdown_grace_period: timeout()
@@ -24,6 +25,7 @@ defmodule Oban.Config do
             poll_interval: :timer.seconds(1),
             prune: :disabled,
             prune_interval: :timer.minutes(1),
+            prune_limit: 5_000,
             queues: [default: 10],
             repo: nil,
             shutdown_grace_period: 15_000
@@ -86,6 +88,12 @@ defmodule Oban.Config do
 
   defp validate_opt!({:prune_interval, interval}) do
     unless is_integer(interval) and interval > 0 do
+      raise ArgumentError, "expected :prune_interval to be a positive integer"
+    end
+  end
+
+  defp validate_opt!({:prune_limit, limit}) do
+    unless is_integer(limit) and limit > 0 do
       raise ArgumentError, "expected :prune_interval to be a positive integer"
     end
   end

@@ -98,25 +98,30 @@ defmodule Oban.Query do
     |> repo.update_all(set: [state: "available"])
   end
 
-  @spec delete_truncated_jobs(repo(), pos_integer()) :: {integer(), nil}
-  def delete_truncated_jobs(repo, limit) do
+  @spec delete_truncated_jobs(repo(), pos_integer(), pos_integer()) :: {integer(), nil}
+  def delete_truncated_jobs(repo, length, limit) do
     subquery =
       Job
       |> where([j], j.state in ["completed", "discarded"])
-      |> offset(^limit)
+      |> offset(^length)
+      |> limit(^limit)
       |> order_by(desc: :id)
 
     repo.delete_all(from(j in Job, join: x in subquery(subquery), on: j.id == x.id))
   end
 
-  @spec delete_outdated_jobs(repo(), pos_integer()) :: {integer(), nil}
-  def delete_outdated_jobs(repo, seconds) do
+  @spec delete_outdated_jobs(repo(), pos_integer(), pos_integer()) :: {integer(), nil}
+  def delete_outdated_jobs(repo, seconds, limit) do
     outdated_at = DateTime.add(utc_now(), -seconds)
 
-    Job
-    |> where([j], j.state == "completed" and j.completed_at < ^outdated_at)
-    |> or_where([j], j.state == "discarded" and j.attempted_at < ^outdated_at)
-    |> repo.delete_all()
+    subquery =
+      Job
+      |> where([j], j.state == "completed" and j.completed_at < ^outdated_at)
+      |> or_where([j], j.state == "discarded" and j.attempted_at < ^outdated_at)
+      |> limit(^limit)
+      |> order_by(desc: :id)
+
+    repo.delete_all(from(j in Job, join: x in subquery(subquery), on: j.id == x.id))
   end
 
   @spec complete_job(repo(), Job.t()) :: :ok

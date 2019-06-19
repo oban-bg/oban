@@ -34,10 +34,10 @@ defmodule Oban.Pruner do
         :ok
 
       {:maxlen, length} ->
-        Query.delete_truncated_jobs(conf.repo, length)
+        Query.delete_truncated_jobs(conf.repo, length, conf.prune_limit)
 
       {:maxage, seconds} ->
-        Query.delete_outdated_jobs(conf.repo, seconds)
+        Query.delete_outdated_jobs(conf.repo, seconds, conf.prune_limit)
     end
 
     {:noreply, state}

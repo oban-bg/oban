@@ -46,13 +46,22 @@ defmodule Oban.ConfigTest do
       assert %Config{} = Config.new(repo: Fake, prune: {:maxage, 10})
     end
 
-    test ":prune_interval is validated as an integer" do
+    test ":prune_interval is validated as a positive integer" do
       assert_raise ArgumentError, fn -> Config.new(repo: Fake, prune_interval: -1) end
       assert_raise ArgumentError, fn -> Config.new(repo: Fake, prune_interval: 0) end
       assert_raise ArgumentError, fn -> Config.new(repo: Fake, prune_interval: "5") end
       assert_raise ArgumentError, fn -> Config.new(repo: Fake, prune_interval: 1.0) end
 
       assert %Config{} = Config.new(repo: Fake, prune_interval: 500)
+    end
+
+    test ":prune_limit is validated as a positive integer" do
+      assert_raise ArgumentError, fn -> Config.new(repo: Fake, prune_limit: -1) end
+      assert_raise ArgumentError, fn -> Config.new(repo: Fake, prune_limit: 0) end
+      assert_raise ArgumentError, fn -> Config.new(repo: Fake, prune_limit: "5") end
+      assert_raise ArgumentError, fn -> Config.new(repo: Fake, prune_limit: 1.0) end
+
+      assert %Config{} = Config.new(repo: Fake, prune_limit: 5_000)
     end
 
     test ":queues are validated as atom, integer pairs" do
