@@ -262,6 +262,8 @@ defmodule Oban do
           | {:node, binary()}
           | {:poll_interval, pos_integer()}
           | {:prune, :disabled | {:maxlen, pos_integer()} | {:maxage, pos_integer()}}
+          | {:prune_interval, pos_integer()}
+          | {:prune_limit, pos_integer()}
           | {:queues, [{atom(), pos_integer()}]}
           | {:repo, module()}
           | {:shutdown_grace_period, timeout()}
@@ -289,6 +291,8 @@ defmodule Oban do
   * `:prune` - configures job pruning behavior, see "Pruning Historic Jobs" for more information
   * `:prune_interval` — the number of milliseconds between calls to prune historic jobs. The
     default is `60_000ms`, or one minute.
+  * `:prune_limit` – the maximum number of jobs that will be pruned at each prune interval. The
+    default is `5_000`.
   * `:shutdown_grace_period` - the amount of time a queue will wait for executing jobs to complete
     before hard shutdown, specified in milliseconds. The default is `15_000`, or 15 seconds.
 

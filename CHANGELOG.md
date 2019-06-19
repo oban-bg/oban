@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Added
+
+- [Oban.Pruner] Added `prune_limit` option to constrain the number of rows 
+  deleted on each prune iteration. This prevents locking the database when
+  there are a large number of jobs to delete.
+
 ### Fixed
 
 - [Oban.Testing] Only check `available` and `scheduled` jobs with the
