@@ -2,7 +2,8 @@
 [
   import_deps: [
     :ecto,
-    :ecto_sql
+    :ecto_sql,
+    :stream_data
   ],
   inputs: ["{mix,.formatter}.exs", "{config,lib,test}/**/*.{ex,exs}"],
   export: [

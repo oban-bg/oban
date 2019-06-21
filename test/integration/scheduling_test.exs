@@ -1,6 +1,5 @@
 defmodule Oban.Integration.SchedulingTest do
   use Oban.Case, async: true
-  use PropCheck
 
   alias Oban.{Config, Query}
 
@@ -9,7 +8,7 @@ defmodule Oban.Integration.SchedulingTest do
   @queue "scheduled"
 
   property "jobs scheduled in the future are unavailable for execution" do
-    forall seconds <- pos_integer() do
+    check all seconds <- positive_integer(), max_runs: 20 do
       %Job{scheduled_at: at, state: state} = insert_job!(schedule_in: seconds)
 
       assert 0 < NaiveDateTime.diff(at, NaiveDateTime.utc_now())
@@ -20,8 +19,8 @@ defmodule Oban.Integration.SchedulingTest do
   end
 
   property "jobs scheduled in the past are available for execution" do
-    forall seconds <- neg_integer() do
-      %Job{scheduled_at: at, state: state} = insert_job!(schedule_in: seconds)
+    check all seconds <- positive_integer(), max_runs: 20 do
+      %Job{scheduled_at: at, state: state} = insert_job!(schedule_in: -1 * seconds)
 
       assert 0 > NaiveDateTime.diff(at, NaiveDateTime.utc_now())
       assert state == "scheduled"
