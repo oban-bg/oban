@@ -178,6 +178,10 @@ defmodule Oban.Queue.Producer do
     exception in [Postgrex.Error] -> trip_circuit(exception, state)
   end
 
+  defp gossip(%State{circuit: :disabled} = state) do
+    state
+  end
+
   defp gossip(state) do
     %State{conf: conf, limit: limit, paused: paused, queue: queue, running: running} = state
 
@@ -189,9 +193,11 @@ defmodule Oban.Queue.Producer do
       queue: queue
     }
 
-    :ok = Notifier.notify(:gossip, message)
+    :ok = Query.notify(conf.repo, Notifier.gossip(), Jason.encode!(message))
 
     state
+  rescue
+    exception in [Postgrex.Error] -> trip_circuit(exception, state)
   end
 
   defp dispatch(%State{paused: true} = state) do

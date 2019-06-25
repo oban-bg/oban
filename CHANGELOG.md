@@ -22,6 +22,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   Any exits triggered within `terminate/2` are caught and ignored. This safely
   handles situations where the producer exits before the watchman does.
 
+- [Oban.Queue.Producer] Use circuit breaker protection for gossip events and
+  call queries directly from the producer process. This prevents pushing all
+  queries through the `Notifier`, and ensures more granular control over gossip
+  errors.
+
 ## [0.4.0] — 2019-06-10
 
 ### Added

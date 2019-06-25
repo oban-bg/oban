@@ -156,6 +156,13 @@ defmodule Oban.Query do
     )
   end
 
+  @spec notify(repo(), binary(), binary()) :: :ok
+  def notify(repo, channel, payload) when is_binary(channel) and is_binary(payload) do
+    repo.query("SELECT pg_notify($1, $2)", [channel, payload])
+
+    :ok
+  end
+
   # Helpers
 
   defp next_attempt_at(backoff), do: NaiveDateTime.add(utc_now(), backoff, :second)

@@ -3,7 +3,7 @@ defmodule Oban.Notifier do
 
   use GenServer
 
-  alias Oban.Config
+  alias Oban.{Config, Query}
   alias Postgrex.Notifications
 
   @type option :: {:name, module()} | {:conf, Config.t()}
@@ -89,9 +89,7 @@ defmodule Oban.Notifier do
 
   @impl GenServer
   def handle_call({:notify, channel, payload}, _from, %State{repo: repo} = state) do
-    encoded = Jason.encode!(payload)
-
-    {:ok, _result} = repo.query("SELECT pg_notify($1, $2)", [channel, encoded], log: false)
+    :ok = Query.notify(repo, channel, Jason.encode!(payload))
 
     {:reply, :ok, state}
   end
