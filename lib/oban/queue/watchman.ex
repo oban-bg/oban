@@ -28,11 +28,11 @@ defmodule Oban.Queue.Watchman do
   def start_link(opts) do
     {name, opts} = Keyword.pop(opts, :name)
 
-    GenServer.start_link(__MODULE__, opts, name: name)
+    GenServer.start_link(__MODULE__, Map.new(opts), name: name)
   end
 
   @impl GenServer
-  def init(foreman: foreman, producer: producer) do
+  def init(%{foreman: foreman, producer: producer}) do
     Process.flag(:trap_exit, true)
 
     {:ok, %State{foreman: foreman, producer: producer}}
@@ -40,8 +40,12 @@ defmodule Oban.Queue.Watchman do
 
   @impl GenServer
   def terminate(_reason, %State{foreman: foreman, producer: producer}) do
-    :ok = Producer.pause(producer)
-    :ok = wait_for_executing(foreman)
+    try do
+      :ok = Producer.pause(producer)
+      :ok = wait_for_executing(foreman)
+    catch
+      :exit, _reason -> :ok
+    end
 
     :ok
   end

@@ -9,14 +9,18 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Added
 
-- [Oban.Pruner] Added `prune_limit` option to constrain the number of rows 
-  deleted on each prune iteration. This prevents locking the database when
-  there are a large number of jobs to delete.
+- [Oban.Pruner] Added `prune_limit` option to constrain the number of rows
+  deleted on each prune iteration. This prevents locking the database when there
+  are a large number of jobs to delete.
 
 ### Fixed
 
 - [Oban.Testing] Only check `available` and `scheduled` jobs with the
   `assert|refute_enqueued` testing helpers.
+
+- [Oban.Queue.Watchman] Catch process exits when attempting graceful shutdown.
+  Any exits triggered within `terminate/2` are caught and ignored. This safely
+  handles situations where the producer exits before the watchman does.
 
 ## [0.4.0] — 2019-06-10
 
