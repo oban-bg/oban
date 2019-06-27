@@ -13,6 +13,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   deleted on each prune iteration. This prevents locking the database when there
   are a large number of jobs to delete.
 
+### Changed
+
+- [Oban.Worker] Treat `{:error, reason}` tuples returned from `perform/1` as a
+  failure. The `:kind` value reported in telemetry events is now differentiated,
+  where a rescued exception has the kind `:exception`, and an error tuple has
+  the kind `:error`.
+
 ### Fixed
 
 - [Oban.Testing] Only check `available` and `scheduled` jobs with the

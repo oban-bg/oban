@@ -18,9 +18,32 @@ defmodule Oban.Worker do
         end
       end
 
-  The `perform/1` function will always receive the jobs `args` map. In this example the worker
-  will simply inspect any arguments that are provided. Note that the return value isn't important.
-  If `perform/1` returns without raising an exception the job is considered complete.
+  The `perform/1` function will always receive a job's `args` map. In this example the worker will
+  simply inspect any arguments that are provided. A job is considered complete if `perform/1`
+  returns a non-error value, and it doesn't raise an exception or have an unhandled exit.
+
+  Any of these return values or error events will fail the job:
+
+  * return `{:error, error}`
+  * return `:error`
+  * an unhandled exception
+  * an unhandled exit or throw
+
+  As an example of error tuple handling, this worker may return an error tuple when the value is
+  less than one:
+
+      defmodule MyApp.Workers.ErrorExample do
+        use Oban.Worker
+
+        @impl true
+        def perform(%{value: value}) do
+          if value > 1 do
+            :ok
+          else
+            {:error, "invalid value given: " <> inspect(value)"}
+          end
+        end
+      end
 
   ## Enqueuing Jobs
 

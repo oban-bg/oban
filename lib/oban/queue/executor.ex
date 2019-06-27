@@ -40,11 +40,18 @@ defmodule Oban.Queue.Executor do
     worker
     |> to_module()
     |> apply(:perform, [args])
+    |> case do
+      {:error, error} ->
+        {:current_stacktrace, stacktrace} = Process.info(self(), :current_stacktrace)
 
-    {:success, job}
+        {:failure, job, :error, error, stacktrace}
+
+      _ ->
+        {:success, job}
+    end
   rescue
     exception ->
-      {:failure, job, :error, exception, __STACKTRACE__}
+      {:failure, job, :exception, exception, __STACKTRACE__}
   catch
     kind, value ->
       {:failure, job, kind, value, __STACKTRACE__}
@@ -70,6 +77,8 @@ defmodule Oban.Queue.Executor do
   rescue
     ArgumentError -> Worker.default_backoff(attempt)
   end
+
+  defp format_blamed(:exception, error, stack), do: format_blamed(:error, error, stack)
 
   defp format_blamed(kind, error, stack) do
     {blamed, stack} = Exception.blame(kind, error, stack)

@@ -244,9 +244,10 @@ defmodule MyApp.Workers.Business do
 end
 ```
 
-The return value of `perform/1` doesn't matter and is entirely ignored. If the
-job raises an exception or throws an exit then the error will be reported and
-the job will be retried (provided there are attempts remaining).
+The value returned from `perform/1` is ignored, unless it returns an `{:error,
+reason}` tuple. With an error return or when perform has an uncaught exception
+or throw then the error will be reported and the job will be retried (provided
+there are attempts remaining).
 
 #### Enqueueing Jobs
 

@@ -32,9 +32,9 @@ defmodule Oban do
 
   ### Configuring Queues
 
-  Queues are specified as a keyword list where the key is the name of the queue
-  and the value is the maximum number of concurrent jobs. The following
-  configuration would start four queues with concurrency ranging from 5 to 50:
+  Queues are specified as a keyword list where the key is the name of the queue and the value is
+  the maximum number of concurrent jobs. The following configuration would start four queues with
+  concurrency ranging from 5 to 50:
 
   ```elixir
   queues: [default: 10, mailers: 20, events: 50, media: 5]
@@ -43,19 +43,19 @@ defmodule Oban do
   There isn't a limit to the number of queues or how many jobs may execute
   concurrently. Here are a few caveats and guidelines:
 
-  * Each queue will run as many jobs as possible concurrently, up to the
-    configured limit. Make sure your system has enough resources (i.e. database
-    connections) to handle the concurrent load.
-  * Only jobs in the configured queues will execute. Jobs in any other queue
-    will stay in the database untouched.
-  * Be careful how many concurrent jobs make expensive system calls (i.e. FFMpeg,
-    ImageMagick). The BEAM ensures that the system stays responsive under load,
-    but those guarantees don't apply when using ports or shelling out commands.
+  * Each queue will run as many jobs as possible concurrently, up to the configured limit. Make
+    sure your system has enough resources (i.e. database connections) to handle the concurrent
+    load.
+  * Only jobs in the configured queues will execute. Jobs in any other queue will stay in the
+    database untouched.
+  * Be careful how many concurrent jobs make expensive system calls (i.e. FFMpeg, ImageMagick).
+    The BEAM ensures that the system stays responsive under load, but those guarantees don't apply
+    when using ports or shelling out commands.
 
   ### Creating Workers
 
-  Worker modules do the work of processing a job. At a minimum they must define a
-  `perform/1` function, which is called with an `args` map.
+  Worker modules do the work of processing a job. At a minimum they must define a `perform/1`
+  function, which is called with an `args` map.
 
   Define a worker to process jobs in the `events` queue:
 
@@ -72,18 +72,18 @@ defmodule Oban do
   end
   ```
 
-  The return value of `perform/1` doesn't matter and is entirely ignored. If the
-  job raises an exception or throws an exit then the error will be reported and
-  the job will be retried (provided there are attempts remaining).
+  The value returned from `perform/1` is ignored, unless it an `{:error, reason}` tuple. With an
+  error return or when perform has an uncaught exception or throw then the error will be reported
+  and the job will be retried (provided there are attempts remaining).
 
-  See `Oban.Worker` for more details and instructions on configuring custom
-  backoff strategies.
+  See `Oban.Worker` for more details on failure conditions and `Oban.Telemetry` for details on job
+  reporting.
 
   ### Enqueueing Jobs
 
-  Jobs are simply Ecto structs and are enqueued by inserting them into the
-  database. For convenience and consistency all workers provide a `new/2`
-  function that converts an args map into a job changeset suitable for insertion:
+  Jobs are simply Ecto structs and are enqueued by inserting them into the database. For
+  convenience and consistency all workers provide a `new/2` function that converts an args map
+  into a job changeset suitable for insertion:
 
   ```elixir
   %{in_the: "business", of_doing: "business"}
@@ -189,11 +189,14 @@ defmodule Oban do
 
   ## Error Handling
 
-  When a job raises an error or exits during execution the details are recorded within the
-  `errors` array on the job. Provided the number of execution attempts is below the configured
-  `max_attempts`, the job will automatically be retried in the future. The retry delay has a
-  quadratic backoff, meaning the job's second attempt will be after 16s, third after 31s, fourth
-  after 1m 36s, etc.
+  When a job returns an error value, raises an error or exits during execution the details are
+  recorded within the `errors` array on the job. When the number of execution attempts is below
+  the configured `max_attempts` limit, the job will automatically be retried in the future.
+
+  The retry delay has an exponential backoff, meaning the job's second attempt will be after 16s,
+  third after 31s, fourth after 1m 36s, etc.
+
+  See the `Oban.Worker` documentation on "Customizing Backoff" for alternative backoff strategies.
 
   ### Error Details
 
