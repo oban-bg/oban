@@ -7,11 +7,17 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Added
+
+- [Oban.Query] Added `:verbose` option to control general query logging. This
+  allows `debug` query activity within Oban to be silenced during testing and
+  development.
+
 ## [0.5.0] — 2019-06-27
 
 ### Added
 
-- [Oban.Pruner] Added `prune_limit` option to constrain the number of rows
+- [Oban.Pruner] Added `:prune_limit` option to constrain the number of rows
   deleted on each prune iteration. This prevents locking the database when there
   are a large number of jobs to delete.
 

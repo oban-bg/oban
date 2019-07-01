@@ -2,7 +2,7 @@ defmodule Oban.Integration.SchedulingTest do
   use Oban.Case, async: true
   use PropCheck
 
-  alias Oban.Query
+  alias Oban.{Config, Query}
 
   @moduletag :integration
 
@@ -15,7 +15,7 @@ defmodule Oban.Integration.SchedulingTest do
       assert 0 < NaiveDateTime.diff(at, NaiveDateTime.utc_now())
       assert state == "scheduled"
 
-      assert {0, nil} == Query.stage_scheduled_jobs(Repo, @queue)
+      assert {0, nil} == Query.stage_scheduled_jobs(Config.new(repo: Repo), @queue)
     end
   end
 
@@ -26,7 +26,7 @@ defmodule Oban.Integration.SchedulingTest do
       assert 0 > NaiveDateTime.diff(at, NaiveDateTime.utc_now())
       assert state == "scheduled"
 
-      {count, _} = Query.stage_scheduled_jobs(Repo, @queue)
+      {count, _} = Query.stage_scheduled_jobs(Config.new(repo: Repo), @queue)
 
       assert count > 0
     end

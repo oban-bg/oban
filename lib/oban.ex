@@ -270,6 +270,7 @@ defmodule Oban do
           | {:queues, [{atom(), pos_integer()}]}
           | {:repo, module()}
           | {:shutdown_grace_period, timeout()}
+          | {:verbose, boolean()}
 
   @doc """
   Starts an `Oban` supervision tree linked to the current process.
@@ -298,6 +299,8 @@ defmodule Oban do
     default is `5_000`.
   * `:shutdown_grace_period` - the amount of time a queue will wait for executing jobs to complete
     before hard shutdown, specified in milliseconds. The default is `15_000`, or 15 seconds.
+  * `:verbose` — determines whether queries will be logged or not, does not supersede the repo's
+    configured log level. Defaults to `true`, where all queries will be logged.
 
   Note that any options passed to `start_link` will override options set through the `using` macro.
 

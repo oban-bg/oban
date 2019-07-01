@@ -4,9 +4,7 @@ defmodule Oban.Query do
   import Ecto.Query
   import DateTime, only: [utc_now: 0]
 
-  alias Oban.Job
-
-  @type repo :: module()
+  alias Oban.{Config, Job}
 
   # Taking a shared lock this way will always work, even if a lock has been taken by another
   # connection.
@@ -59,8 +57,8 @@ defmodule Oban.Query do
     end
   end
 
-  @spec fetch_available_jobs(repo(), binary(), pos_integer()) :: {integer(), nil | [Job.t()]}
-  def fetch_available_jobs(repo, queue, demand) do
+  @spec fetch_available_jobs(Config.t(), binary(), pos_integer()) :: {integer(), nil | [Job.t()]}
+  def fetch_available_jobs(%Config{repo: repo, verbose: verbose}, queue, demand) do
     subquery =
       Job
       |> where([j], j.state == "available")
@@ -73,33 +71,34 @@ defmodule Oban.Query do
 
     query = from(j in Job, join: x in subquery(subquery), on: j.id == x.id, select: j)
 
-    repo.update_all(
-      query,
+    updates = [
       set: [state: "executing", attempted_at: utc_now()],
       inc: [attempt: 1]
-    )
+    ]
+
+    repo.update_all(query, updates, log: verbose)
   end
 
-  @spec stage_scheduled_jobs(repo(), binary()) :: {integer(), nil}
-  def stage_scheduled_jobs(repo, queue) do
+  @spec stage_scheduled_jobs(Config.t(), binary()) :: {integer(), nil}
+  def stage_scheduled_jobs(%Config{repo: repo, verbose: verbose}, queue) do
     Job
     |> where([j], j.state in ["scheduled", "retryable"])
     |> where([j], j.queue == ^queue)
     |> where([j], j.scheduled_at <= ^utc_now())
-    |> repo.update_all(set: [state: "available"])
+    |> repo.update_all([set: [state: "available"]], log: verbose)
   end
 
-  @spec rescue_orphaned_jobs(repo(), binary()) :: {integer(), nil}
-  def rescue_orphaned_jobs(repo, queue) do
+  @spec rescue_orphaned_jobs(Config.t(), binary()) :: {integer(), nil}
+  def rescue_orphaned_jobs(%Config{repo: repo, verbose: verbose}, queue) do
     Job
     |> where([j], j.state == "executing")
     |> where([j], j.queue == ^queue)
     |> where([j], no_lock_exists(j.id))
-    |> repo.update_all(set: [state: "available"])
+    |> repo.update_all([set: [state: "available"]], log: verbose)
   end
 
-  @spec delete_truncated_jobs(repo(), pos_integer(), pos_integer()) :: {integer(), nil}
-  def delete_truncated_jobs(repo, length, limit) do
+  @spec delete_truncated_jobs(Config.t(), pos_integer(), pos_integer()) :: {integer(), nil}
+  def delete_truncated_jobs(%Config{repo: repo, verbose: verbose}, length, limit) do
     subquery =
       Job
       |> where([j], j.state in ["completed", "discarded"])
@@ -107,11 +106,13 @@ defmodule Oban.Query do
       |> limit(^limit)
       |> order_by(desc: :id)
 
-    repo.delete_all(from(j in Job, join: x in subquery(subquery), on: j.id == x.id))
+    query = from(j in Job, join: x in subquery(subquery), on: j.id == x.id)
+
+    repo.delete_all(query, log: verbose)
   end
 
-  @spec delete_outdated_jobs(repo(), pos_integer(), pos_integer()) :: {integer(), nil}
-  def delete_outdated_jobs(repo, seconds, limit) do
+  @spec delete_outdated_jobs(Config.t(), pos_integer(), pos_integer()) :: {integer(), nil}
+  def delete_outdated_jobs(%Config{repo: repo, verbose: verbose}, seconds, limit) do
     outdated_at = DateTime.add(utc_now(), -seconds)
 
     subquery =
@@ -121,44 +122,56 @@ defmodule Oban.Query do
       |> limit(^limit)
       |> order_by(desc: :id)
 
-    repo.delete_all(from(j in Job, join: x in subquery(subquery), on: j.id == x.id))
+    query = from(j in Job, join: x in subquery(subquery), on: j.id == x.id)
+
+    repo.delete_all(query, log: verbose)
   end
 
-  @spec complete_job(repo(), Job.t()) :: :ok
-  def complete_job(repo, %Job{id: id}) do
-    repo.update_all(select_for_update(id), set: [state: "completed", completed_at: utc_now()])
+  @spec complete_job(Config.t(), Job.t()) :: :ok
+  def complete_job(%Config{repo: repo, verbose: verbose}, %Job{id: id}) do
+    repo.update_all(
+      select_for_update(id),
+      [set: [state: "completed", completed_at: utc_now()]],
+      log: verbose
+    )
 
     :ok
   end
 
-  @spec discard_job(repo(), Job.t()) :: :ok
-  def discard_job(repo, %Job{id: id}) do
-    repo.update_all(select_for_update(id), set: [state: "discarded", completed_at: utc_now()])
+  @spec discard_job(Config.t(), Job.t()) :: :ok
+  def discard_job(%Config{repo: repo, verbose: verbose}, %Job{id: id}) do
+    repo.update_all(
+      select_for_update(id),
+      [set: [state: "discarded", completed_at: utc_now()]],
+      log: verbose
+    )
 
     :ok
   end
 
-  @spec retry_job(repo(), Job.t(), pos_integer(), binary()) :: :ok
-  def retry_job(repo, %Job{} = job, backoff, formatted_error) do
+  @spec retry_job(Config.t(), Job.t(), pos_integer(), binary()) :: :ok
+  def retry_job(%Config{repo: repo, verbose: verbose}, %Job{} = job, backoff, formatted_error) do
     %Job{attempt: attempt, id: id, max_attempts: max_attempts} = job
 
-    updates =
+    set =
       if attempt >= max_attempts do
         [state: "discarded", completed_at: utc_now()]
       else
         [state: "retryable", completed_at: utc_now(), scheduled_at: next_attempt_at(backoff)]
       end
 
-    repo.update_all(
-      select_for_update(id),
-      set: updates,
+    updates = [
+      set: set,
       push: [errors: %{attempt: attempt, at: utc_now(), error: formatted_error}]
-    )
+    ]
+
+    repo.update_all(select_for_update(id), updates, log: verbose)
   end
 
-  @spec notify(repo(), binary(), binary()) :: :ok
-  def notify(repo, channel, payload) when is_binary(channel) and is_binary(payload) do
-    repo.query("SELECT pg_notify($1, $2)", [channel, payload])
+  @spec notify(Config.t(), binary(), binary()) :: :ok
+  def notify(%Config{repo: repo, verbose: verbose}, channel, payload)
+      when is_binary(channel) and is_binary(payload) do
+    repo.query("SELECT pg_notify($1, $2)", [channel, payload], log: verbose)
 
     :ok
   end

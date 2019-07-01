@@ -22,8 +22,8 @@ defmodule Oban.Notifier do
   defmodule State do
     @moduledoc false
 
-    @enforce_keys [:repo]
-    defstruct [:repo]
+    @enforce_keys [:conf]
+    defstruct [:conf]
   end
 
   defmacro gossip, do: @mappings[:gossip]
@@ -74,13 +74,13 @@ defmodule Oban.Notifier do
   end
 
   @impl GenServer
-  def init(%{conf: %Config{repo: repo}, name: name}) do
-    {:ok, %State{repo: repo}, {:continue, {:start, name}}}
+  def init(%{conf: conf, name: name}) do
+    {:ok, %State{conf: conf}, {:continue, {:start, name}}}
   end
 
   @impl GenServer
-  def handle_continue({:start, name}, %State{repo: repo} = state) do
-    conn_conf = Keyword.put(repo.config(), :name, conn_name(name))
+  def handle_continue({:start, name}, %State{conf: conf} = state) do
+    conn_conf = Keyword.put(conf.repo.config(), :name, conn_name(name))
 
     {:ok, _} = Notifications.start_link(conn_conf)
 
@@ -88,8 +88,8 @@ defmodule Oban.Notifier do
   end
 
   @impl GenServer
-  def handle_call({:notify, channel, payload}, _from, %State{repo: repo} = state) do
-    :ok = Query.notify(repo, channel, Jason.encode!(payload))
+  def handle_call({:notify, channel, payload}, _from, %State{conf: conf} = state) do
+    :ok = Query.notify(conf, channel, Jason.encode!(payload))
 
     {:reply, :ok, state}
   end

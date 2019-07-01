@@ -14,7 +14,8 @@ defmodule Oban.Config do
           prune_limit: pos_integer(),
           queues: [{atom(), pos_integer()}],
           repo: module(),
-          shutdown_grace_period: timeout()
+          shutdown_grace_period: timeout(),
+          verbose: boolean()
         }
 
   @type option :: {:name, module()} | {:conf, t()}
@@ -28,7 +29,8 @@ defmodule Oban.Config do
             prune_limit: 5_000,
             queues: [default: 10],
             repo: nil,
-            shutdown_grace_period: 15_000
+            shutdown_grace_period: :timer.seconds(15),
+            verbose: true
 
   @spec start_link([option()]) :: GenServer.on_start()
   def start_link(opts) when is_list(opts) do
@@ -107,6 +109,12 @@ defmodule Oban.Config do
   defp validate_opt!({:shutdown_grace_period, interval}) do
     unless is_integer(interval) and interval > 0 do
       raise ArgumentError, "expected :shutdown_grace_period to be a positive integer"
+    end
+  end
+
+  defp validate_opt!({:verbose, verbose}) do
+    unless is_boolean(verbose) do
+      raise ArgumentError, "expected :verbose to be a boolean"
     end
   end
 

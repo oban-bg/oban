@@ -81,6 +81,14 @@ defmodule Oban.ConfigTest do
 
       assert %Config{} = Config.new(repo: Fake, shutdown_grace_period: 10)
     end
+
+    test ":verbose is validated as a boolean" do
+      assert_raise ArgumentError, fn -> Config.new(repo: Fake, verbose: 1) end
+      assert_raise ArgumentError, fn -> Config.new(repo: Fake, verbose: "false") end
+      assert_raise ArgumentError, fn -> Config.new(repo: Fake, verbose: nil) end
+
+      assert %Config{} = Config.new(repo: Fake, verbose: true)
+    end
   end
 
   describe "node_name/1" do

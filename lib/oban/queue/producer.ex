@@ -51,11 +51,11 @@ defmodule Oban.Queue.Producer do
           success: non_neg_integer(),
           failure: non_neg_integer()
         }
-  def drain(queue, %Config{repo: repo} = config) when is_binary(queue) do
-    repo
+  def drain(queue, %Config{} = conf) when is_binary(queue) do
+    conf
     |> fetch_jobs(queue, @unlimited)
     |> Enum.reduce(%{failure: 0, success: 0}, fn job, acc ->
-      result = Executor.call(job, config)
+      result = Executor.call(job, conf)
 
       Map.update(acc, result, 1, &(&1 + 1))
     end)
@@ -115,7 +115,7 @@ defmodule Oban.Queue.Producer do
         {:ok, %{"action" => "pkill", "job_id" => kid}} ->
           for {_ref, {job, pid}} <- running, job.id == kid do
             with :ok <- DynamicSupervisor.terminate_child(foreman, pid) do
-              Query.discard_job(conf.repo, job)
+              Query.discard_job(conf, job)
             end
           end
 
@@ -144,7 +144,7 @@ defmodule Oban.Queue.Producer do
   # Start Handlers
 
   defp rescue_orphans(%State{conf: conf, queue: queue} = state) do
-    Query.rescue_orphaned_jobs(conf.repo, queue)
+    Query.rescue_orphaned_jobs(conf, queue)
 
     state
   rescue
@@ -171,7 +171,7 @@ defmodule Oban.Queue.Producer do
   end
 
   defp deschedule(%State{conf: conf, queue: queue} = state) do
-    Query.stage_scheduled_jobs(conf.repo, queue)
+    Query.stage_scheduled_jobs(conf, queue)
 
     state
   rescue
@@ -193,7 +193,7 @@ defmodule Oban.Queue.Producer do
       queue: queue
     }
 
-    :ok = Query.notify(conf.repo, Notifier.gossip(), Jason.encode!(message))
+    :ok = Query.notify(conf, Notifier.gossip(), Jason.encode!(message))
 
     state
   rescue
@@ -216,7 +216,7 @@ defmodule Oban.Queue.Producer do
     %State{queue: queue, limit: limit, running: running} = state
 
     started_jobs =
-      for job <- fetch_jobs(conf.repo, queue, limit - map_size(running)), into: %{} do
+      for job <- fetch_jobs(conf, queue, limit - map_size(running)), into: %{} do
         {:ok, pid} = DynamicSupervisor.start_child(foreman, Executor.child_spec(job, conf))
 
         {Process.monitor(pid), {job, pid}}
@@ -227,8 +227,8 @@ defmodule Oban.Queue.Producer do
     exception in [Postgrex.Error] -> {:noreply, trip_circuit(exception, state)}
   end
 
-  defp fetch_jobs(repo, queue, count) do
-    case Query.fetch_available_jobs(repo, queue, count) do
+  defp fetch_jobs(conf, queue, count) do
+    case Query.fetch_available_jobs(conf, queue, count) do
       {0, nil} -> []
       {_count, jobs} -> jobs
     end

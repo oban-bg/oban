@@ -19,17 +19,17 @@ defmodule Oban.Queue.Executor do
   end
 
   @spec call(Job.t(), Config.t()) :: :success | :failure
-  def call(%Job{} = job, %Config{repo: repo}) do
+  def call(%Job{} = job, %Config{} = conf) do
     {duration, return} = :timer.tc(__MODULE__, :safe_call, [job])
 
     case return do
       {:success, ^job} ->
-        Query.complete_job(repo, job)
+        Query.complete_job(conf, job)
 
         report(:success, duration, job, %{})
 
       {:failure, ^job, kind, error, stack} ->
-        Query.retry_job(repo, job, worker_backoff(job), format_blamed(kind, error, stack))
+        Query.retry_job(conf, job, worker_backoff(job), format_blamed(kind, error, stack))
 
         report(:failure, duration, job, %{kind: kind, error: error, stack: stack})
     end
