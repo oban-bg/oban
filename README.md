@@ -292,9 +292,9 @@ manually:
 
 Although Oban keeps all jobs in the database for durability and observability, it's not a great thing if the table grows indefinitely. Job pruning helps us by deleting old records from the `oban_jobs` table. It has 3 modes:
 
-* disabled - No jobs are deleted
-* Limit-based - Keeps the latest N jobs records. Example: `{:maxlen, 100_000}`
-* Time-based - Keeps the latest records for the last N seconds. Example for 7 days: `{:maxage, 60 * 60 * 24 * 7}`
+* Disabled - No jobs are deleted. Example: `:disabled`
+* Limit-based - Keeps the latest N records. Example: `{:maxlen, 100_000}`
+* Time-based - Keeps records for the last N seconds. Example for 7 days: `{:maxage, 60 * 60 * 24 * 7}`
 
 Important: pruning is only applied to jobs that are completed or discarded (has reached the maximum number of retries or has been manually killed). It'll never delete a new job, a scheduled job or a job that failed and will be retried.
 
