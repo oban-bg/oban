@@ -35,7 +35,7 @@
   - [Configuring Queues](#Configuring-Queues)
   - [Creating Workers](#Creating-Workers)
   - [Enqueuing Jobs](#Enqueueing-Jobs)
-  - [Prunning](#Prunning)
+  - [Pruning](#Pruning)
 - [Testing](#Testing)
 - [Contributing](#Contributing)
 
@@ -288,7 +288,7 @@ manually:
 |> MyApp.Repo.insert()
 ```
 
-#### Prunning
+#### Pruning
 
 Although Oban keeps all jobs in the database for durability and observability, it's not a great thing if the table grows indefinitely. Job pruning helps us by deleting old records from the `oban_jobs` table. It has 3 modes:
 
