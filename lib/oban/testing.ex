@@ -11,9 +11,9 @@ defmodule Oban.Testing do
 
       use Oban.Testing, repo: MyApp.Repo
 
-  That will define two helper functions, `assert_enqueued/1` and `refute_enqueued/1`. The
-  functions can then be used to make assertions on the jobs that have been inserted in the
-  database while testing.
+  That will define three helper functions, `assert_enqueued/1`, `refute_enqueued/1` and
+  `all_enqueued/1`. The functions can then be used to make assertions on the jobs that have been
+  inserted in the database while testing.
 
   ```elixir
   assert_enqueued worker: MyWorker, args: %{id: 1}
@@ -21,7 +21,15 @@ defmodule Oban.Testing do
   # or
 
   refute_enqueued queue: "special", args: %{id: 2}
+
+  # or
+
+  assert [%{args: %{"id" => 1}}] = all_enqueued(worker: MyWorker)
   ```
+
+  Note that the final example, using `all_enqueued/1`, returns a raw list of matching jobs and
+  does not make an assertion by itself. This makes it possible to test using pattern matching at
+  the expense of being more verbose.
 
   ## Example
 
@@ -54,8 +62,7 @@ defmodule Oban.Testing do
 
   ## Adding to Case Templates
 
-  To include `assert_enqueued/1` and `refute_enqueued/1` in all of your tests you can add it to
-  your case templates:
+  To include helpers in all of your tests you can add it to your case template:
 
   ```elixir
   defmodule MyApp.DataCase do
@@ -79,7 +86,7 @@ defmodule Oban.Testing do
   @moduledoc since: "0.3.0"
 
   import ExUnit.Assertions, only: [assert: 2, refute: 2]
-  import Ecto.Query, only: [limit: 2, select: 2, where: 2, where: 3]
+  import Ecto.Query, only: [limit: 2, order_by: 2, select: 2, where: 2, where: 3]
 
   alias Ecto.Changeset
   alias Oban.Job
@@ -89,14 +96,43 @@ defmodule Oban.Testing do
     quote do
       alias Oban.Testing
 
-      def assert_enqueued(args) do
-        Testing.assert_enqueued(unquote(repo), args)
+      def all_enqueued(opts) do
+        Testing.all_enqueued(unquote(repo), opts)
       end
 
-      def refute_enqueued(args) do
-        Testing.refute_enqueued(unquote(repo), args)
+      def assert_enqueued(opts) do
+        Testing.assert_enqueued(unquote(repo), opts)
+      end
+
+      def refute_enqueued(opts) do
+        Testing.refute_enqueued(unquote(repo), opts)
       end
     end
+  end
+
+  @doc """
+  Retrieve all currently enqueued jobs matching a set of options.
+
+  Only jobs matching all of the provided arguments will be returned. Additionally, jobs are
+  returned in descending order where the most recently enqueued job will be listed first.
+
+  ## Examples
+
+  Assert based on only _some_ of a job's args:
+
+      assert [%{args: %{"id" => 1}}] = all_enqueued(worker: MyWorker)
+
+  Assert that exactly one job was inserted for a queue:
+
+      assert [%Oban.Job{}] = all_enqueued(queue: :alpha)
+  """
+  @doc since: "0.6.0"
+  @spec all_enqueued(repo :: module(), opts :: Keyword.t()) :: [Job.t()]
+  def all_enqueued(repo, [_ | _] = opts) do
+    opts
+    |> base_query()
+    |> order_by(desc: :id)
+    |> repo.all()
   end
 
   @doc """
@@ -106,7 +142,7 @@ defmodule Oban.Testing do
   `worker: "MyWorker"` will match _any_ jobs for that worker, regardless of the queue or args.
   """
   @doc since: "0.3.0"
-  @spec assert_enqueued(repo :: module(), opts :: Enum.t()) :: true
+  @spec assert_enqueued(repo :: module(), opts :: Keyword.t()) :: true
   def assert_enqueued(repo, [_ | _] = opts) do
     assert get_job(repo, opts), "Expected a job matching #{inspect(opts)} to be enqueued"
   end
@@ -117,18 +153,23 @@ defmodule Oban.Testing do
   See `assert_enqueued/2` for additional details.
   """
   @doc since: "0.3.0"
-  @spec refute_enqueued(repo :: module(), opts :: Enum.t()) :: false
+  @spec refute_enqueued(repo :: module(), opts :: Keyword.t()) :: false
   def refute_enqueued(repo, [_ | _] = opts) do
     refute get_job(repo, opts), "Expected no jobs matching #{inspect(opts)} to be enqueued"
   end
 
   defp get_job(repo, opts) do
-    Job
-    |> where([j], j.state in ["available", "scheduled"])
-    |> where(^normalize_opts(opts))
+    opts
+    |> base_query()
     |> limit(1)
     |> select([:id])
     |> repo.one()
+  end
+
+  defp base_query(opts) do
+    Job
+    |> where([j], j.state in ["available", "scheduled"])
+    |> where(^normalize_opts(opts))
   end
 
   defp normalize_opts(opts) do

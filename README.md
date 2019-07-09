@@ -327,7 +327,8 @@ include them in your testing module and specify your app's Ecto repo:
 use Oban.Testing, repo: MyApp.Repo
 ```
 
-Now you can assert or refute that jobs have been enqueued within your tests:
+Now you can assert, refute or list jobs that have been enqueued within your
+tests:
 
 ```elixir
 assert_enqueued worker: MyWorker, args: %{id: 1}
@@ -335,6 +336,10 @@ assert_enqueued worker: MyWorker, args: %{id: 1}
 # or
 
 refute_enqueued queue: "special", args: %{id: 2}
+
+# or
+
+assert [%{args: %{"id" => 1}}] = all_enqueued worker: MyWorker
 ```
 
 See the `Oban.Testing` module for more details.

@@ -13,6 +13,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   allows `debug` query activity within Oban to be silenced during testing and
   development.
 
+- [Oban.Testing] Added `all_enqueued/1` helper for testing. The helper returns
+  a list of jobs matching the provided criteria. This makes it possible to test
+  using pattern matching, which is more flexible than a literal match within the
+  database.
+
 ## [0.5.0] — 2019-06-27
 
 ### Added

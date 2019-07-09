@@ -3,6 +3,19 @@ defmodule Oban.TestingTest do
 
   use Oban.Testing, repo: Oban.Test.Repo
 
+  @moduletag :integration
+
+  describe "all_enqueued/1" do
+    test "retrieving a filtered list of enqueued jobs" do
+      insert_job!(%{id: 1, ref: "a"}, worker: Ping, queue: :alpha)
+      insert_job!(%{id: 2, ref: "b"}, worker: Ping, queue: :alpha)
+      insert_job!(%{id: 3, ref: "c"}, worker: Pong, queue: :gamma)
+
+      assert [%{args: %{"id" => 2}} | _] = all_enqueued(worker: Ping)
+      assert [%Oban.Job{}] = all_enqueued(worker: Pong, queue: :gamma)
+    end
+  end
+
   describe "assert_enqueued/1" do
     test "checking for jobs with matching properties" do
       insert_job!(%{id: 1}, worker: Ping, queue: :alpha)
