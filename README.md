@@ -64,7 +64,7 @@ Advanced features and advantages over other RDBMS based tools:
   slow queue can't back up other faster queues.
 - **Queue Control** — Queues can be paused, resumed and scaled independently at
   runtime.
-- **Resilient Queues** — Failing queries won't the entire supervision tree,
+- **Resilient Queues** — Failing queries won't crash the entire supervision tree,
   instead they trip a circuit breaker and will be retried again in the future.
 - **Job Killing** — Jobs can be killed in the middle of execution regardless of
   which node they are running on. This stops the job at once and flags it as
