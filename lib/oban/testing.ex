@@ -146,7 +146,7 @@ defmodule Oban.Testing do
   def assert_enqueued(repo, [_ | _] = opts) do
     assert get_job(repo, opts),
            "Expected a job matching #{inspect(opts)} to be enqueued. Found: #{
-             inspect(available_jobs(repo))
+             inspect(available_jobs(repo, opts))
            }"
   end
 
@@ -169,11 +169,11 @@ defmodule Oban.Testing do
     |> repo.one()
   end
 
-  defp available_jobs(repo) do
+  defp available_jobs(repo, opts) do
     base_query([])
-    |> select([:worker, :args])
+    |> select(^Keyword.keys(opts))
     |> repo.all()
-    |> Enum.map(&Map.take(&1, [:worker, :args]))
+    |> Enum.map(&Map.take(&1, Keyword.keys(opts)))
   end
 
   defp base_query(opts) do
