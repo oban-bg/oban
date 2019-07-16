@@ -170,10 +170,12 @@ defmodule Oban.Testing do
   end
 
   defp available_jobs(repo, opts) do
+    fields = Keyword.keys(opts)
+
     base_query([])
-    |> select(^Keyword.keys(opts))
+    |> select(^fields)
     |> repo.all()
-    |> Enum.map(&Map.take(&1, Keyword.keys(opts)))
+    |> Enum.map(&Map.take(&1, fields))
   end
 
   defp base_query(opts) do
