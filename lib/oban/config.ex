@@ -67,6 +67,12 @@ defmodule Oban.Config do
     end
   end
 
+  defp validate_opt!({:name, name}) do
+    unless is_atom(name) do
+      raise ArgumentError, "expected :name to be a module or atom"
+    end
+  end
+
   defp validate_opt!({:node, node}) do
     unless is_binary(node) and node != "" do
       raise ArgumentError, "expected :poll_interval to be a positive integer"
@@ -106,6 +112,12 @@ defmodule Oban.Config do
     end
   end
 
+  defp validate_opt!({:repo, repo}) do
+    unless Code.ensure_compiled?(repo) and function_exported?(repo, :__adapter__, 0) do
+      raise ArgumentError, "expected :repo to be an Ecto.Repo"
+    end
+  end
+
   defp validate_opt!({:shutdown_grace_period, interval}) do
     unless is_integer(interval) and interval > 0 do
       raise ArgumentError, "expected :shutdown_grace_period to be a positive integer"
@@ -118,7 +130,9 @@ defmodule Oban.Config do
     end
   end
 
-  defp validate_opt!(_opt), do: :ok
+  defp validate_opt!(option) do
+    raise ArgumentError, "unknown option provided #{inspect(option)}"
+  end
 
   defp valid_queue?({_name, size}), do: is_integer(size) and size > 0
 end

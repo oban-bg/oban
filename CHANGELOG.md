@@ -18,6 +18,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   using pattern matching, which is more flexible than a literal match within the
   database.
 
+### Changed
+
+- [Oban.Config] All passed options are validated. Any unknown options will raise
+  an `ArgumentError` and halt startup. This prevents misconfiguration through
+  typos and passing unsupported options.
+
 ## [0.5.0] — 2019-06-27
 
 ### Added
