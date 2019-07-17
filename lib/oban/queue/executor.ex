@@ -36,10 +36,10 @@ defmodule Oban.Queue.Executor do
   end
 
   @doc false
-  def safe_call(%Job{args: args, worker: worker} = job) do
+  def safe_call(%Job{worker: worker} = job) do
     worker
     |> to_module()
-    |> apply(:perform, [args])
+    |> apply(:perform, [job])
     |> case do
       {:error, error} ->
         {:current_stacktrace, stacktrace} = Process.info(self(), :current_stacktrace)

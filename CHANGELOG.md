@@ -24,6 +24,17 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   an `ArgumentError` and halt startup. This prevents misconfiguration through
   typos and passing unsupported options.
 
+- [Oban.Worker] The `perform/1` function now receives an `Oban.Job` struct as
+  the sole argument, calling `perform/1` again with only the `args` map if no
+  clause catches the struct. This allows workers to use any attribute of the job
+  to customize behaviour, e.g. the number of attempts or when a job was inserted
+  into the database.
+
+  The implementation is entirely backward compatible, provided workers are
+  defined with the `use` macro. Workers that implement the `Oban.Worker`
+  behaviour manually will need to change the signature of `perform/1` to accept
+  a job struct.
+
 ## [0.5.0] — 2019-06-27
 
 ### Added

@@ -14,12 +14,16 @@ defmodule Oban.WorkerTest do
     def backoff(attempt), do: attempt * attempt
 
     @impl Worker
-    def perform(%Job{args: %{a: a, b: b}}), do: a + b
+    def perform(%{attempt: attempt}) when attempt > 1, do: attempt
+    def perform(%{a: a, b: b}), do: a + b
   end
 
   describe "new/2" do
     test "building a job through the worker presets options" do
-      job = build_job(%{a: 1, b: 2})
+      job =
+        %{a: 1, b: 2}
+        |> CustomWorker.new()
+        |> Ecto.Changeset.apply_changes()
 
       assert job.args == %{a: 1, b: 2}
       assert job.queue == "special"
@@ -45,19 +49,17 @@ defmodule Oban.WorkerTest do
 
   describe "perform/1" do
     test "a default implementation is provided" do
-      assert :ok = BasicWorker.perform(build_job(%{}))
+      assert :ok = BasicWorker.perform(%{})
+      assert :ok = BasicWorker.perform(%Job{args: %{}})
     end
 
     test "the implementation may be overridden" do
-      job = build_job(%{a: 2, b: 3})
-
-      assert 5 == CustomWorker.perform(job)
+      assert 5 == CustomWorker.perform(%{a: 2, b: 3})
     end
-  end
 
-  defp build_job(args) do
-    args
-    |> CustomWorker.new()
-    |> Ecto.Changeset.apply_changes()
+    test "arguments from the complete job struct are extracted" do
+      assert 5 == CustomWorker.perform(%Job{args: %{a: 2, b: 3}})
+      assert 4 == CustomWorker.perform(%Job{attempt: 4, args: %{a: 2, b: 3}})
+    end
   end
 end
