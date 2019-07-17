@@ -52,10 +52,11 @@ defmodule Oban do
     The BEAM ensures that the system stays responsive under load, but those guarantees don't apply
     when using ports or shelling out commands.
 
-  ### Creating Workers
+  ### Defining Workers
 
   Worker modules do the work of processing a job. At a minimum they must define a `perform/1`
-  function, which is called with an `args` map.
+  function, which is called first with the full `Oban.Job` struct, and subsequently with the
+  `args` map if no clause matches.
 
   Define a worker to process jobs in the `events` queue:
 
@@ -63,7 +64,6 @@ defmodule Oban do
   defmodule MyApp.Workers.Business do
     use Oban.Worker, queue: "events", max_attempts: 10
 
-    @impl Oban.Worker
     def perform(%{"id" => id}) do
       model = MyApp.Repo.get(MyApp.Business.Man, id)
 

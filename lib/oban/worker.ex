@@ -13,14 +13,22 @@ defmodule Oban.Worker do
         use Oban.Worker, queue: "events", max_attempts: 10
 
         @impl true
+        def perform(%Oban.Job{attempt: attempt}) when attempt > 3 do
+          IO.inspect(attempt)
+        end
+
         def perform(args) do
           IO.inspect(args)
         end
       end
 
-  The `perform/1` function will always receive a job's `args` map. In this example the worker will
-  simply inspect any arguments that are provided. A job is considered complete if `perform/1`
-  returns a non-error value, and it doesn't raise an exception or have an unhandled exit.
+  The `perform/1` function receives an `Oban.Job` struct as the sole argument. If no clause
+  matches on `%Oban.Job{}` then the `args` are extracted and `perform/1` is called again with the
+  args. This allows workers to change the behavior of `perform/1` based on attributes of the Job,
+  e.g. the number of attempts or when it was inserted.
+
+  A job is considered complete if `perform/1` returns a non-error value, and it doesn't raise an
+  exception or have an unhandled exit.
 
   Any of these return values or error events will fail the job:
 
@@ -118,13 +126,23 @@ defmodule Oban.Worker do
   considered a success. If the job raises an exception it is a failure and the job may be
   scheduled for a retry.
   """
-  @callback perform(args :: map()) :: term()
+  @callback perform(job_or_args :: Job.t() | Job.args()) :: term()
+
+  @doc false
+  defmacro __before_compile__(_env) do
+    quote do
+      @impl true
+      def perform(%Job{args: args}), do: perform(args)
+      def perform(args) when is_map(args), do: :ok
+    end
+  end
 
   @doc false
   defmacro __using__(opts) do
     quote location: :keep do
       alias Oban.{Job, Worker}
 
+      @before_compile Worker
       @behaviour Worker
 
       @opts unquote(opts)
@@ -139,11 +157,6 @@ defmodule Oban.Worker do
       @impl Worker
       def backoff(attempt) when is_integer(attempt) do
         Worker.default_backoff(attempt)
-      end
-
-      @impl Worker
-      def perform(args) when is_map(args) do
-        :ok
       end
 
       defoverridable Worker
