@@ -59,7 +59,7 @@ defmodule Oban.MixProject do
       {:jason, "~> 1.1"},
       {:postgrex, "~> 0.14"},
       {:telemetry, "~> 0.4"},
-      {:stream_data, "~> 0.4", only: [:test]},
+      {:stream_data, "~> 0.4", only: [:test, :dev]},
       {:credo, "~> 1.0", only: [:test, :dev], runtime: false},
       {:dialyxir, "~> 0.5", only: [:test, :dev], runtime: false},
       {:ex_doc, "~> 0.20", only: [:test, :dev], runtime: false}
