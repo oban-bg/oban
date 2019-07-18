@@ -37,6 +37,7 @@
   - [Enqueuing Jobs](#Enqueueing-Jobs)
   - [Pruning](#Pruning)
 - [Testing](#Testing)
+- [Troubleshooting](#Troubleshooting)
 - [Contributing](#Contributing)
 
 ## Features
@@ -371,6 +372,24 @@ end
 ```
 
 See `Oban.drain_queue/1` for additional details.
+
+## Troubleshooting
+
+### Heroku
+
+If your app crashes on launch, be sure to confirm you are running the correct 
+version of Elixir and Erlang ([view requirements](#Requirements)). If using the 
+*hashnuke/elixir* buildpack, you can update the `elixir_buildpack.config` file 
+in your application's root directory to something like: 
+```
+# Elixir version
+elixir_version=1.9.0
+
+# Erlang version
+erlang_version=22.0.3
+```
+
+Available Erlang versions are available [here](https://github.com/HashNuke/heroku-buildpack-elixir-otp-builds/blob/master/otp-versions).
 
 ## Contributing
 
