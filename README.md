@@ -94,7 +94,7 @@ Advanced features and advantages over other RDBMS based tools:
 ## Requirements
 
 Oban has been developed and actively tested with Elixir 1.8+, Erlang/OTP 21.1+
-and PostgreSQL 11.0+. Running Oban currently requires Elixir 1.8+ and PostgreSQL
+and PostgreSQL 11.0+. Running Oban currently requires Elixir 1.8+, Erlang 21+, and PostgreSQL
 9.6+.
 
 ## Installation
