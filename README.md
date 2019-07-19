@@ -271,6 +271,14 @@ The worker's defaults may be overridden by passing options:
 |> MyApp.Repo.insert()
 ```
 
+Jobs may be scheduled at a specific datetime in the future:
+
+```elixir
+%{id: 1}
+|> MyApp.Workers.Business.new(scheduled_at: ~U[2020-12-25 19:00:56.0Z])
+|> MyApp.Repo.insert()
+```
+
 Jobs may also be scheduled down to the second any time in the future:
 
 ```elixir
