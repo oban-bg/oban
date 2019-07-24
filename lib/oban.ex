@@ -346,11 +346,11 @@ defmodule Oban do
   end
 
   @impl Supervisor
-  def init(%Config{queues: queues} = conf) do
+  def init(%Config{name: name, queues: queues} = conf) do
     children = [
-      {Config, conf: conf, name: Config},
-      {Pruner, conf: conf, name: Pruner},
-      {Notifier, conf: conf, name: Notifier}
+      {Config, conf: conf, name: child_name(name, "Config")},
+      {Pruner, conf: conf, name: child_name(name, "Pruner")},
+      {Notifier, conf: conf, name: child_name(name, "Notifier")}
     ]
 
     children = children ++ Enum.map(queues, &queue_spec(&1, conf))
@@ -358,19 +358,16 @@ defmodule Oban do
     Supervisor.init(children, strategy: :one_for_one)
   end
 
-  defp queue_spec({queue, limit}, conf) do
-    queue = to_string(queue)
-    name = Module.concat([conf.name, "Queue", String.capitalize(queue)])
-    opts = [conf: conf, queue: queue, limit: limit, name: name]
-
-    Supervisor.child_spec({QueueSupervisor, opts}, id: name)
-  end
-
   @doc """
-  Retreive the current config struct.
+  Retreive the config struct for a named Oban supervision tree.
   """
   @doc since: "0.2.0"
-  defdelegate config, to: Config, as: :get
+  @spec config(name :: atom()) :: Config.t()
+  def config(name \\ __MODULE__) when is_atom(name) do
+    name
+    |> child_name("Config")
+    |> Config.get()
+  end
 
   @doc """
   Synchronously execute all available jobs in a queue. All execution happens within the current
@@ -402,12 +399,13 @@ defmodule Oban do
       %{success: 2, failure: 1}
   """
   @doc since: "0.4.0"
-  @spec drain_queue(queue :: atom() | binary()) :: %{
+  @spec drain_queue(name :: atom(), queue :: atom() | binary()) :: %{
           success: non_neg_integer(),
           failure: non_neg_integer()
         }
-  def drain_queue(queue) when is_atom(queue) or is_binary(queue) do
-    Producer.drain(to_string(queue), config())
+  def drain_queue(name \\ __MODULE__, queue)
+      when is_atom(name) and (is_atom(queue) or is_binary(queue)) do
+    Producer.drain(to_string(queue), config(name))
   end
 
   @doc """
@@ -424,8 +422,12 @@ defmodule Oban do
       :ok
   """
   @doc since: "0.2.0"
-  @spec pause_queue(queue :: atom()) :: :ok
-  defdelegate pause_queue(queue), to: Notifier
+  @spec pause_queue(name :: atom(), queue :: atom()) :: :ok
+  def pause_queue(name \\ __MODULE__, queue) when is_atom(queue) do
+    name
+    |> child_name("Notifier")
+    |> Notifier.pause_queue(queue)
+  end
 
   @doc """
   Resume executing jobs in a paused queue.
@@ -438,8 +440,12 @@ defmodule Oban do
       :ok
   """
   @doc since: "0.2.0"
-  @spec resume_queue(queue :: atom()) :: :ok
-  defdelegate resume_queue(queue), to: Notifier
+  @spec resume_queue(name :: atom(), queue :: atom()) :: :ok
+  def resume_queue(name \\ __MODULE__, queue) when is_atom(queue) do
+    name
+    |> child_name("Notifier")
+    |> Notifier.resume_queue(queue)
+  end
 
   @doc """
   Scale the concurrency for a queue.
@@ -457,8 +463,13 @@ defmodule Oban do
       :ok
   """
   @doc since: "0.2.0"
-  @spec scale_queue(queue :: atom(), scale :: pos_integer()) :: :ok
-  defdelegate scale_queue(queue, scale), to: Notifier
+  @spec scale_queue(name :: atom(), queue :: atom(), scale :: pos_integer()) :: :ok
+  def scale_queue(name \\ __MODULE__, queue, scale)
+      when is_atom(queue) and is_integer(scale) and scale > 0 do
+    name
+    |> child_name("Notifier")
+    |> Notifier.scale_queue(queue, scale)
+  end
 
   @doc """
   Kill an actively executing job and mark it as `discarded`, ensuring that it won't be retried.
@@ -474,6 +485,20 @@ defmodule Oban do
       :ok
   """
   @doc since: "0.2.0"
-  @spec kill_job(job_id :: pos_integer()) :: :ok
-  defdelegate kill_job(job_id), to: Notifier
+  @spec kill_job(name :: atom(), job_id :: pos_integer()) :: :ok
+  def kill_job(name \\ __MODULE__, job_id) when is_integer(job_id) do
+    name
+    |> child_name("Notifier")
+    |> Notifier.kill_job(job_id)
+  end
+
+  defp queue_spec({queue, limit}, conf) do
+    queue = to_string(queue)
+    name = Module.concat([conf.name, "Queue", String.capitalize(queue)])
+    opts = [conf: conf, queue: queue, limit: limit, name: name]
+
+    Supervisor.child_spec({QueueSupervisor, opts}, id: name)
+  end
+
+  defp child_name(name, child), do: Module.concat(name, child)
 end

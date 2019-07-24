@@ -39,7 +39,7 @@ defmodule Oban.Notifier do
   end
 
   @spec listen(module(), channel()) :: :ok
-  def listen(server \\ __MODULE__, channel) when channel in @channels do
+  def listen(server, channel) when channel in @channels do
     server
     |> conn_name()
     |> Notifications.listen(@mappings[channel])
@@ -48,28 +48,28 @@ defmodule Oban.Notifier do
   end
 
   @spec notify(module(), channel(), term()) :: :ok
-  def notify(server \\ __MODULE__, channel, payload) when channel in @channels do
+  def notify(server, channel, payload) when channel in @channels do
     GenServer.call(server, {:notify, @mappings[channel], payload})
   end
 
   @spec pause_queue(module(), queue()) :: :ok
-  def pause_queue(server \\ __MODULE__, queue) when is_atom(queue) do
+  def pause_queue(server, queue) when is_atom(queue) do
     notify(server, :signal, %{action: :pause, queue: queue})
   end
 
   @spec resume_queue(module(), queue()) :: :ok
-  def resume_queue(server \\ __MODULE__, queue) when is_atom(queue) do
+  def resume_queue(server, queue) when is_atom(queue) do
     notify(server, :signal, %{action: :resume, queue: queue})
   end
 
   @spec scale_queue(module(), queue(), pos_integer()) :: :ok
-  def scale_queue(server \\ __MODULE__, queue, scale)
+  def scale_queue(server, queue, scale)
       when is_atom(queue) and is_integer(scale) and scale > 0 do
     notify(server, :signal, %{action: :scale, queue: queue, scale: scale})
   end
 
   @spec kill_job(module(), pos_integer()) :: :ok
-  def kill_job(server \\ __MODULE__, job_id) when is_integer(job_id) do
+  def kill_job(server, job_id) when is_integer(job_id) do
     notify(server, :signal, %{action: :pkill, job_id: job_id})
   end
 

@@ -6,7 +6,7 @@ defmodule Oban.Config do
   @type prune :: :disabled | {:maxlen, pos_integer()} | {:maxage, pos_integer()}
 
   @type t :: %__MODULE__{
-          name: module(),
+          name: atom(),
           node: binary(),
           poll_interval: pos_integer(),
           prune: prune(),
@@ -48,8 +48,8 @@ defmodule Oban.Config do
     struct!(__MODULE__, opts)
   end
 
-  @spec get() :: t()
-  def get(name \\ __MODULE__), do: Agent.get(name, & &1)
+  @spec get(atom()) :: t()
+  def get(name), do: Agent.get(name, & &1)
 
   @spec node_name(%{optional(binary()) => binary()}) :: binary()
   def node_name(env \\ System.get_env()) do

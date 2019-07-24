@@ -35,6 +35,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   behaviour manually will need to change the signature of `perform/1` to accept
   a job struct.
 
+- [Oban] Child process names are generated from the top level supervisor's name,
+  i.e. setting the name to "MyOban" on `start_link/1` will set the notifier's
+  name to `MyOban.Notifier`. This improves isolation and allows multiple
+  supervisors to be ran on the same node.
+
 ## [0.5.0] — 2019-06-27
 
 ### Added

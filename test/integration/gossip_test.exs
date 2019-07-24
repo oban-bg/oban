@@ -15,7 +15,7 @@ defmodule Oban.Integration.GossipTest do
 
     start_supervised!({Oban, @oban_opts})
 
-    :ok = Notifier.listen(:gossip)
+    :ok = Notifier.listen(Oban.Notifier, :gossip)
 
     assert_gossip(%{
       "count" => 2,
@@ -37,7 +37,7 @@ defmodule Oban.Integration.GossipTest do
       capture_log(fn ->
         start_supervised!({Oban, @oban_opts})
 
-        :ok = Notifier.listen(:gossip)
+        :ok = Notifier.listen(Oban.Notifier, :gossip)
 
         stop_supervised(Oban)
       end)
