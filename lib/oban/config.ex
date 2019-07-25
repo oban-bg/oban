@@ -75,7 +75,7 @@ defmodule Oban.Config do
 
   defp validate_opt!({:node, node}) do
     unless is_binary(node) and node != "" do
-      raise ArgumentError, "expected :poll_interval to be a positive integer"
+      raise ArgumentError, "expected :node to be a non-empty binary"
     end
   end
 
