@@ -40,6 +40,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   name to `MyOban.Notifier`. This improves isolation and allows multiple
   supervisors to be ran on the same node.
 
+### Fixed
+
+- [Oban.Producer] Remove duplicate polling timers. As part of a botched merge
+  conflict resolution two timers were started for each producer.
+
 ## [0.5.0] — 2019-06-27
 
 ### Added

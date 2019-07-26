@@ -63,10 +63,6 @@ defmodule Oban.Queue.Producer do
 
   @impl GenServer
   def init(opts) do
-    %Config{poll_interval: interval} = Keyword.fetch!(opts, :conf)
-
-    {:ok, _ref} = :timer.send_interval(interval, :poll)
-
     {:ok, struct!(State, opts), {:continue, :start}}
   end
 
