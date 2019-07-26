@@ -28,6 +28,7 @@ defmodule Oban.Queue.Producer do
       :queue,
       circuit: :enabled,
       circuit_backoff: :timer.minutes(1),
+      poll_ref: nil,
       running: %{},
       paused: false
     ]
@@ -63,6 +64,8 @@ defmodule Oban.Queue.Producer do
 
   @impl GenServer
   def init(opts) do
+    Process.flag(:trap_exit, true)
+
     {:ok, struct!(State, opts), {:continue, :start}}
   end
 
@@ -70,9 +73,18 @@ defmodule Oban.Queue.Producer do
   def handle_continue(:start, state) do
     state
     |> rescue_orphans()
-    |> start_interval()
     |> start_listener()
+    |> send_after()
     |> dispatch()
+  end
+
+  @impl GenServer
+  def terminate(_reason, %State{poll_ref: poll_ref}) do
+    # There is a good chance that a message will be received after the process has terminated.
+    # While this doesn't cause any problems, it does cause an unwanted crash report.
+    if not is_nil(poll_ref), do: Process.cancel_timer(poll_ref)
+
+    :ok
   end
 
   @impl GenServer
@@ -80,6 +92,7 @@ defmodule Oban.Queue.Producer do
     state
     |> deschedule()
     |> gossip()
+    |> send_after()
     |> dispatch()
   end
 
@@ -147,12 +160,6 @@ defmodule Oban.Queue.Producer do
     exception in [Postgrex.Error] -> trip_circuit(exception, state)
   end
 
-  defp start_interval(%State{conf: conf} = state) do
-    {:ok, _ref} = :timer.send_interval(conf.poll_interval, :poll)
-
-    state
-  end
-
   defp start_listener(%State{conf: conf} = state) do
     notifier = Module.concat(conf.name, "Notifier")
 
@@ -160,6 +167,12 @@ defmodule Oban.Queue.Producer do
     :ok = Notifier.listen(notifier, :signal)
 
     state
+  end
+
+  defp send_after(%State{conf: conf} = state) do
+    poll_ref = Process.send_after(self(), :poll, conf.poll_interval)
+
+    %{state | poll_ref: poll_ref}
   end
 
   # Dispatching

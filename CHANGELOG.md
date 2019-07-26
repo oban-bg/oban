@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Changed
+
+- [Oban.Producer] Use `send_after/3` instead of `:timer.send_interval/2` to
+  maintain scheduled dispatch. This mechanism is more accurate under system
+  load and it prevents `:poll` messages from backing up for each producer.
+
 ## [0.6.0] — 2019-07-26
 
 ### Added

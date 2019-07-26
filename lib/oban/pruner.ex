@@ -22,7 +22,7 @@ defmodule Oban.Pruner do
 
   @impl GenServer
   def init(%{conf: conf}) do
-    {:ok, _ref} = :timer.send_interval(conf.prune_interval, :prune)
+    send_after(conf.prune_interval)
 
     {:ok, %State{conf: conf}}
   end
@@ -40,6 +40,12 @@ defmodule Oban.Pruner do
         Query.delete_outdated_jobs(conf, seconds, conf.prune_limit)
     end
 
+    send_after(conf.prune_interval)
+
     {:noreply, state}
+  end
+
+  defp send_after(interval) do
+    Process.send_after(self(), :prune, interval)
   end
 end
