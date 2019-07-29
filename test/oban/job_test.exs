@@ -1,0 +1,44 @@
+defmodule Oban.JobTest do
+  use Oban.Case, async: true
+
+  describe "new/2" do
+    test "scheduling a job for the future using :schedule_in" do
+      changeset = Job.new(%{}, worker: Fake, schedule_in: 10)
+
+      assert changeset.changes[:state] == "scheduled"
+      assert changeset.changes[:scheduled_at]
+    end
+
+    test ":schedule_in does not accept other types of values" do
+      assert Job.new(%{}, worker: Fake, schedule_in: true).errors[:schedule_in]
+      assert Job.new(%{}, worker: Fake, schedule_in: "10").errors[:schedule_in]
+      assert Job.new(%{}, worker: Fake, schedule_in: 0.12).errors[:schedule_in]
+    end
+
+    test "marking a job as unique by setting the period provides defaults" do
+      changeset = Job.new(%{}, worker: Fake, unique: [period: 60])
+
+      assert changeset.changes[:unique] == %{
+               fields: [:args, :queue, :worker],
+               period: 60,
+               states: [:available, :scheduled]
+             }
+    end
+
+    test "overriding unique defaults" do
+      changeset = Job.new(%{}, worker: Fake, unique: [fields: [:worker], states: [:available]])
+
+      assert changeset.changes[:unique] == %{
+               fields: [:worker],
+               period: 60,
+               states: [:available]
+             }
+    end
+
+    test ":unique does not accept other types of values or options" do
+      assert Job.new(%{}, worker: Fake, unique: true).errors[:unique]
+      assert Job.new(%{}, worker: Fake, unique: []).errors[:unique]
+      assert Job.new(%{}, worker: Fake, unique: [special: :value]).errors[:unique]
+    end
+  end
+end
