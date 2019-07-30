@@ -76,7 +76,6 @@ defmodule Oban.Job do
     scheduled_at
     state
     worker
-    unique
   )a
 
   @required ~w(worker args)a
@@ -165,7 +164,7 @@ defmodule Oban.Job do
   defp put_scheduling(changeset, value) do
     case value do
       in_seconds when is_integer(in_seconds) ->
-        scheduled_at = NaiveDateTime.add(NaiveDateTime.utc_now(), in_seconds)
+        scheduled_at = DateTime.add(DateTime.utc_now(), in_seconds)
 
         changeset
         |> put_change(:scheduled_at, scheduled_at)

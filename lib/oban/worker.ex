@@ -7,10 +7,11 @@ defmodule Oban.Worker do
 
   ## Defining Workers
 
-  Define a worker to process jobs in the `events` queue:
+  Define a worker to process jobs in the `events` queue, retrying at most 10 times if a job fails,
+  and ensuring that duplicate jobs aren't enqueued within a 30 second period:
 
       defmodule MyApp.Workers.Business do
-        use Oban.Worker, queue: "events", max_attempts: 10
+        use Oban.Worker, queue: "events", max_attempts: 10, unique: [period: 30]
 
         @impl true
         def perform(%Oban.Job{attempt: attempt}) when attempt > 3 do
@@ -48,7 +49,7 @@ defmodule Oban.Worker do
           if value > 1 do
             :ok
           else
-            {:error, "invalid value given: " <> inspect(value)"}
+            {:error, "invalid value given: " <> inspect(value)}
           end
         end
       end
@@ -60,13 +61,21 @@ defmodule Oban.Worker do
 
       %{in_the: "business", of_doing: "business"}
       |> MyApp.Workers.Business.new()
-      |> MyApp.Repo.insert()
+      |> Oban.insert()
 
   The worker's defaults may be overridden by passing options:
 
       %{vote_for: "none of the above"}
       |> MyApp.Workers.Business.new(queue: "special", max_attempts: 5)
-      |> MyApp.Repo.insert()
+      |> Oban.insert()
+
+  Uniqueness options may also be overridden by passing options:
+
+      %{expensive: "business"}
+      |> MyApp.Workers.Business.new(unique: [period: 120, fields: [:worker]])
+      |> Oban.insert()
+
+  Note that `unique` options aren't merged, they are overridden entirely.
 
   See `Oban.Job` for all available options.
 
@@ -146,7 +155,7 @@ defmodule Oban.Worker do
       @behaviour Worker
 
       @opts unquote(opts)
-            |> Keyword.take([:queue, :max_attempts])
+            |> Keyword.take([:queue, :max_attempts, :unique])
             |> Keyword.put(:worker, to_string(__MODULE__))
 
       @impl Worker

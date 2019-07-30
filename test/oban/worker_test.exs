@@ -8,7 +8,7 @@ defmodule Oban.WorkerTest do
   end
 
   defmodule CustomWorker do
-    use Worker, queue: "special", max_attempts: 5
+    use Worker, queue: "special", max_attempts: 5, unique: [period: 60]
 
     @impl Worker
     def backoff(attempt), do: attempt * attempt
@@ -29,6 +29,7 @@ defmodule Oban.WorkerTest do
       assert job.queue == "special"
       assert job.max_attempts == 5
       assert job.worker == "Oban.WorkerTest.CustomWorker"
+      assert job.unique.period == 60
     end
   end
 

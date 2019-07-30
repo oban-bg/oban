@@ -268,7 +268,7 @@ defmodule Oban do
 
   use Supervisor
 
-  alias Oban.{Config, Notifier, Pruner}
+  alias Oban.{Config, Job, Notifier, Pruner, Query}
   alias Oban.Queue.Producer
   alias Oban.Queue.Supervisor, as: QueueSupervisor
 
@@ -367,6 +367,15 @@ defmodule Oban do
     name
     |> child_name("Config")
     |> Config.get()
+  end
+
+  @doc since: "0.7.0"
+  @spec insert(name :: atom(), changeset :: Ecto.Changeset.t()) ::
+          {:ok, Job.t()} | {:error, Ecto.Changeset.t()}
+  def insert(name \\ __MODULE__, changeset) when is_atom(name) do
+    name
+    |> config()
+    |> Query.fetch_or_insert_job(changeset)
   end
 
   @doc """
