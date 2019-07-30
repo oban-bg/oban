@@ -68,9 +68,7 @@ defmodule Oban.Integration.ControllingTest do
 
   defp insert_job!(args) do
     args
-    |> Map.new()
-    |> Map.put(:bin_pid, Worker.pid_to_bin())
-    |> Job.new(worker: Worker, queue: :control)
-    |> Repo.insert!()
+    |> Worker.new(queue: :control)
+    |> Oban.insert!()
   end
 end

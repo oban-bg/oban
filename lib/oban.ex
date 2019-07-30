@@ -268,6 +268,7 @@ defmodule Oban do
 
   use Supervisor
 
+  alias Ecto.Changeset
   alias Oban.{Config, Job, Notifier, Pruner, Query}
   alias Oban.Queue.Producer
   alias Oban.Queue.Supervisor, as: QueueSupervisor
@@ -370,12 +371,23 @@ defmodule Oban do
   end
 
   @doc since: "0.7.0"
-  @spec insert(name :: atom(), changeset :: Ecto.Changeset.t()) ::
-          {:ok, Job.t()} | {:error, Ecto.Changeset.t()}
-  def insert(name \\ __MODULE__, changeset) when is_atom(name) do
+  @spec insert(name :: atom(), changeset :: Changeset.t(Job.t())) ::
+          {:ok, Job.t()} | {:error, Changeset.t()}
+  def insert(name \\ __MODULE__, %Changeset{} = changeset) when is_atom(name) do
     name
     |> config()
     |> Query.fetch_or_insert_job(changeset)
+  end
+
+  @spec insert!(name :: atom(), changeset :: Changeset.t(Job.t())) :: Job.t()
+  def insert!(name \\ __MODULE__, %Changeset{} = changeset) when is_atom(name) do
+    case insert(name, changeset) do
+      {:ok, job} ->
+        job
+
+      {:error, changeset} ->
+        raise Ecto.InvalidChangesetError, action: :insert, changeset: changeset
+    end
   end
 
   @doc """

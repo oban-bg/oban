@@ -13,7 +13,7 @@ defmodule Oban.Integration.ExecutingTest do
 
   property "jobs in running queues are executed" do
     check all jobs <- list_of(job()), max_runs: 20 do
-      jobs = Enum.map(jobs, &Repo.insert!/1)
+      jobs = Enum.map(jobs, &Oban.insert!/1)
 
       for job <- jobs do
         %{args: %{ref: ref, action: action}, id: id, max_attempts: max} = job
@@ -42,7 +42,7 @@ defmodule Oban.Integration.ExecutingTest do
             action <- member_of(~w(OK FAIL ERROR EXIT)),
             ref <- integer(),
             max_attempts <- integer(1..20) do
-      args = %{ref: ref, bin_pid: Worker.pid_to_bin(), action: action}
+      args = %{ref: ref, action: action}
       opts = [queue: queue, max_attempts: max_attempts]
 
       Worker.new(args, opts)

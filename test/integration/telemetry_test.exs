@@ -68,7 +68,6 @@ defmodule Oban.Integration.TelemetryTest do
 
   defp insert_job!(args) do
     args
-    |> Map.put(:bin_pid, Worker.pid_to_bin())
     |> Worker.new(queue: "zeta")
     |> Repo.insert!()
   end

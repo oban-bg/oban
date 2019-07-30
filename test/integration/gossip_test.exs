@@ -56,9 +56,7 @@ defmodule Oban.Integration.GossipTest do
 
   defp insert_job!(args) do
     args
-    |> Map.new()
-    |> Map.put(:bin_pid, Worker.pid_to_bin())
-    |> Job.new(worker: Worker, queue: args[:queue])
+    |> Worker.new(queue: args[:queue])
     |> Repo.insert!()
   end
 end
