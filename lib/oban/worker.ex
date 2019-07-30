@@ -159,7 +159,7 @@ defmodule Oban.Worker do
             |> Keyword.put(:worker, to_string(__MODULE__))
 
       @impl Worker
-      def new(args, opts \\ []) when is_map(args) do
+      def new(args, opts \\ []) when is_map(args) and is_list(opts) do
         Job.new(args, Keyword.merge(@opts, opts))
       end
 

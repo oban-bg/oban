@@ -4,7 +4,7 @@ defmodule Oban.Query do
   import Ecto.Query
   import DateTime, only: [utc_now: 0]
 
-  alias Ecto.Changeset
+  alias Ecto.{Changeset, Multi}
   alias Oban.{Config, Job}
 
   # Taking a shared lock this way will always work, even if a lock has been taken by another
@@ -86,6 +86,13 @@ defmodule Oban.Query do
       %Job{} = job -> {:ok, job}
       nil -> repo.insert(changeset, on_conflict: :nothing)
     end
+  end
+
+  @spec fetch_or_insert_job(Config.t(), Multi.t(), atom(), Changeset.t()) :: Multi.t()
+  def fetch_or_insert_job(config, multi, name, changeset) do
+    Multi.run(multi, name, fn repo, _changes ->
+      fetch_or_insert_job(%{config | repo: repo}, changeset)
+    end)
   end
 
   @spec stage_scheduled_jobs(Config.t(), binary()) :: {integer(), nil}
@@ -199,12 +206,13 @@ defmodule Oban.Query do
     %{fields: fields, period: period, states: states} = unique
 
     since = DateTime.add(utc_now(), period * -1, :second)
-    dynamic = for field <- fields, do: {field, Map.get(changes, field)}
+    fields = for field <- fields, do: {field, Map.get(changes, field)}
+    states = for state <- states, do: to_string(state)
 
     Job
-    |> where([j], j.state in ^Enum.map(states, &to_string/1))
+    |> where([j], j.state in ^states)
     |> where([j], j.inserted_at > ^since)
-    |> where(^dynamic)
+    |> where(^fields)
     |> order_by(desc: :id)
     |> limit(1)
     |> repo.one()
