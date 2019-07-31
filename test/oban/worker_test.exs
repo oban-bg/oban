@@ -8,7 +8,10 @@ defmodule Oban.WorkerTest do
   end
 
   defmodule CustomWorker do
-    use Worker, queue: "special", max_attempts: 5, unique: [period: 60]
+    use Worker,
+      queue: "special",
+      max_attempts: 5,
+      unique: [fields: [:queue, :worker], period: 60, states: [:scheduled]]
 
     @impl Worker
     def backoff(attempt), do: attempt * attempt
@@ -61,6 +64,40 @@ defmodule Oban.WorkerTest do
     test "arguments from the complete job struct are extracted" do
       assert 5 == CustomWorker.perform(%Job{args: %{a: 2, b: 3}})
       assert 4 == CustomWorker.perform(%Job{attempt: 4, args: %{a: 2, b: 3}})
+    end
+  end
+
+  describe "validating __using__ macro options" do
+    assert_raise ArgumentError, fn ->
+      defmodule(BrokenModule, do: use(Oban.Worker, state: "youcantsetthis"))
+    end
+
+    assert_raise ArgumentError, fn ->
+      defmodule(BrokenModule, do: use(Oban.Worker, queue: 1234))
+    end
+
+    assert_raise ArgumentError, fn ->
+      defmodule(BrokenModule, do: use(Oban.Worker, max_attempts: 0))
+    end
+
+    assert_raise ArgumentError, fn ->
+      defmodule(BrokenModule, do: use(Oban.Worker, unique: 0))
+    end
+
+    assert_raise ArgumentError, fn ->
+      defmodule(BrokenModule, do: use(Oban.Worker, unique: [unknown: []]))
+    end
+
+    assert_raise ArgumentError, fn ->
+      defmodule(BrokenModule, do: use(Oban.Worker, unique: [fields: [:unknown]]))
+    end
+
+    assert_raise ArgumentError, fn ->
+      defmodule(BrokenModule, do: use(Oban.Worker, unique: [period: 0]))
+    end
+
+    assert_raise ArgumentError, fn ->
+      defmodule(BrokenModule, do: use(Oban.Worker, unique: [states: [:unknown]]))
     end
   end
 end

@@ -148,15 +148,15 @@ defmodule Oban.Worker do
 
   @doc false
   defmacro __using__(opts) do
+    Enum.each(opts, &validate_opt!/1)
+
     quote location: :keep do
       alias Oban.{Job, Worker}
 
       @before_compile Worker
       @behaviour Worker
 
-      @opts unquote(opts)
-            |> Keyword.take([:queue, :max_attempts, :unique])
-            |> Keyword.put(:worker, to_string(__MODULE__))
+      @opts Keyword.put(unquote(opts), :worker, to_string(__MODULE__))
 
       @impl Worker
       def new(args, opts \\ []) when is_map(args) and is_list(opts) do
@@ -176,5 +176,27 @@ defmodule Oban.Worker do
   @spec default_backoff(pos_integer(), non_neg_integer()) :: pos_integer()
   def default_backoff(attempt, base_backoff \\ 15) when is_integer(attempt) do
     trunc(:math.pow(2, attempt) + base_backoff)
+  end
+
+  defp validate_opt!({:max_attempts, max_attempts}) do
+    unless is_integer(max_attempts) and max_attempts > 1 do
+      raise ArgumentError, "expected :max_attempts to be an integer greater than 1"
+    end
+  end
+
+  defp validate_opt!({:queue, queue}) do
+    unless is_atom(queue) or is_binary(queue) do
+      raise ArgumentError, "expected :queue to be an atom or a binary"
+    end
+  end
+
+  defp validate_opt!({:unique, unique}) do
+    unless is_list(unique) and Enum.all?(unique, &Job.valid_unique_opt?/1) do
+      raise ArgumentError, "unexpected unique options: #{inspect(unique)}"
+    end
+  end
+
+  defp validate_opt!(option) do
+    raise ArgumentError, "unknown option provided #{inspect(option)}"
   end
 end

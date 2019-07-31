@@ -80,10 +80,6 @@ defmodule Oban.Job do
 
   @required ~w(worker args)a
 
-  @default_unique_fields ~w(args queue worker)a
-  @default_unique_period 60
-  @default_unique_states ~w(available scheduled)a
-
   @doc """
   Construct a new job changeset ready for insertion into the database.
 
@@ -161,6 +157,17 @@ defmodule Oban.Job do
     end
   end
 
+  @unique_fields ~w(args queue worker)a
+  @unique_period 60
+  @unique_states ~w(available scheduled executing retryable completed)a
+
+  @doc false
+  @spec valid_unique_opt?({:fields | :period | :states, [atom()] | integer()}) :: boolean()
+  def valid_unique_opt?({:fields, [_ | _] = fields}), do: fields -- @unique_fields == []
+  def valid_unique_opt?({:period, period}), do: is_integer(period) and period > 0
+  def valid_unique_opt?({:states, [_ | _] = states}), do: states -- @unique_states == []
+  def valid_unique_opt?(_option), do: false
+
   defp put_scheduling(changeset, value) do
     case value do
       in_seconds when is_integer(in_seconds) ->
@@ -180,15 +187,21 @@ defmodule Oban.Job do
 
   defp put_uniqueness(changeset, value) do
     case value do
-      [{key, _val} | _] = opts when key in [:fields, :period, :states] ->
+      [_ | _] = opts ->
         unique =
           opts
-          |> Keyword.put_new(:fields, @default_unique_fields)
-          |> Keyword.put_new(:period, @default_unique_period)
-          |> Keyword.put_new(:states, @default_unique_states)
+          |> Keyword.put_new(:fields, @unique_fields)
+          |> Keyword.put_new(:period, @unique_period)
+          |> Keyword.put_new(:states, @unique_states)
           |> Map.new()
 
-        put_change(changeset, :unique, unique)
+        case validate_unique_opts(unique) do
+          :ok ->
+            put_change(changeset, :unique, unique)
+
+          {:error, field, value} ->
+            add_error(changeset, :unique, "invalid unique option for #{field}, #{inspect(value)}")
+        end
 
       nil ->
         changeset
@@ -196,6 +209,16 @@ defmodule Oban.Job do
       _ ->
         add_error(changeset, :unique, "invalid unique options")
     end
+  end
+
+  defp validate_unique_opts(unique) do
+    Enum.reduce_while(unique, :ok, fn {key, val}, _acc ->
+      if valid_unique_opt?({key, val}) do
+        {:cont, :ok}
+      else
+        {:halt, {:error, key, val}}
+      end
+    end)
   end
 
   defp to_clean_string(value) do

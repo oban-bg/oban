@@ -1,7 +1,7 @@
 defmodule Oban.JobTest do
   use Oban.Case, async: true
 
-  describe "new/2" do
+  describe "scheduling with new/2" do
     test "scheduling a job for the future using :schedule_in" do
       changeset = Job.new(%{}, worker: Fake, schedule_in: 10)
 
@@ -14,14 +14,16 @@ defmodule Oban.JobTest do
       assert Job.new(%{}, worker: Fake, schedule_in: "10").errors[:schedule_in]
       assert Job.new(%{}, worker: Fake, schedule_in: 0.12).errors[:schedule_in]
     end
+  end
 
+  describe "unique constraints with new/2" do
     test "marking a job as unique by setting the period provides defaults" do
       changeset = Job.new(%{}, worker: Fake, unique: [period: 60])
 
       assert changeset.changes[:unique] == %{
                fields: [:args, :queue, :worker],
                period: 60,
-               states: [:available, :scheduled]
+               states: [:available, :scheduled, :executing, :retryable, :completed]
              }
     end
 
@@ -39,6 +41,9 @@ defmodule Oban.JobTest do
       assert Job.new(%{}, worker: Fake, unique: true).errors[:unique]
       assert Job.new(%{}, worker: Fake, unique: []).errors[:unique]
       assert Job.new(%{}, worker: Fake, unique: [special: :value]).errors[:unique]
+      assert Job.new(%{}, worker: Fake, unique: [fields: [:bogus]]).errors[:unique]
+      assert Job.new(%{}, worker: Fake, unique: [period: :infinity]).errors[:unique]
+      assert Job.new(%{}, worker: Fake, unique: [states: [:random]]).errors[:unique]
     end
   end
 end
