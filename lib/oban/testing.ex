@@ -40,7 +40,7 @@ defmodule Oban.Testing do
     def work(args) do
       args
       |> Oban.Job.new(worker: MyApp.Worker, queue: :special)
-      |> MyApp.Repo.insert!()
+      |> Oban.insert!()
     end
   end
   ```

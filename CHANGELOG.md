@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Added
+
+- [Oban] Added `insert/2`, `insert!/2` and `insert/4` as a convenient and more
+  powerful way to insert jobs. Features such as unique jobs and the upcoming
+  prefix support only work with `insert`.
+
+- [Oban.Worker] Compile time validation of all passed options. Catch typos and
+  other invalid options when a worker is compiled rather than when a job is
+  inserted for the first time.
+
+- [Oban.Worker] Unique job support through the `unique` option. Set a unique
+  period, and optionally `fields` and `states`, to enforce uniqueness within a
+  window of time. For example, to make a job unique by args, queue and worker
+  for 2 minutes:
+
+  ```
+  use Oban.Worker, unique: [period: 120, fields: [:args, :queue, :worker]]
+  ```
+
+  Note, unique support relies on the use of `Oban.insert/2,4`.
+
 ### Changed
 
 - [Oban.Producer] Use `send_after/3` instead of `:timer.send_interval/2` to

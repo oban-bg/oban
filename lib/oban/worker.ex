@@ -79,6 +79,51 @@ defmodule Oban.Worker do
 
   See `Oban.Job` for all available options.
 
+  ## Unique Jobs
+
+  The unique jobs feature lets you specify constraints to prevent enqueuing duplicate jobs.
+  Uniquness is based on a combination of `args`, `queue`, `worker`, `state` and insertion time. It
+  is configured at the worker or job level using the following options:
+
+  * `:period` — The number of seconds until a job is no longer considered duplicate. You should
+    always specify a period.
+  * `:fields` — The fields to compare when evaluating uniqueness. The available fields are
+    `:args`, `:queue` and `:worker`, by default all three are used.
+  * `:states` — The job states that will be checked for duplicates. The available states are
+    `:available`, `:scheduled`, `:executing`, `:retryable` and `:completed`. By default all states
+    are checked, which prevents _any_ duplicates, even if the previous job has been completed.
+
+  For example, configure a worker to be unique across all fields and states for 60 seconds:
+
+  ```elixir
+  use Oban.Worker, unique: [period: 60]
+  ```
+
+  Configure the worker to be unique only by `:worker` and `:queue`:
+
+  ```elixir
+  use Oban.Worker, unique: [fields: [:queue, :worker], period: 60]
+  ```
+
+  Or, configure a worker to be unique until it has executed:
+
+  ```elixir
+  use Oban.Worker, unique: [period: 300, states: [:available, :scheduled, :executing]]
+  ```
+
+  ### Stronger Guarantees
+
+  Oban's unique job support is built on a client side read/write cycle. That makes it subject to
+  duplicate writes if two transactions are started simultaneously. If you _absolutely must_ ensure
+  that a duplicate job isn't inserted then you will have to make use of unique constraints within
+  the database. `Oban.insert/2,4` will handle unique constraints safely through upsert support.
+
+  ### Performance Note
+
+  If your application makes heavy use of unique jobs you may want to add indexes on the `args` and
+  `inserted_at` columns of the `oban_jobs` table. The other columns considered for uniqueness are
+  already covered by indexes.
+
   ## Customizing Backoff
 
   When jobs fail they may be retried again in the future using a backoff algorithm. By default

@@ -101,7 +101,7 @@ defmodule Oban.Job do
 
       %{id: 1, user_id: 2}
       |> Oban.Job.new(queue: :default, worker: MyApp.Worker)
-      |> MyApp.Repo.insert()
+      |> Oban.insert()
 
   Generate a pre-configured job for `MyApp.Worker` and push it:
 
