@@ -252,6 +252,14 @@ reason}` tuple. With an error return or when perform has an uncaught exception
 or throw then the error will be reported and the job will be retried (provided
 there are attempts remaining).
 
+The `Business` worker can also be configured to prevent duplicates for a period
+of time through the `:unique` option. Here we'll configure it to be unique for
+60 seconds:
+
+```elixir
+use Oban.Worker, queue: "events", max_attempts: 10, unique: [period: 60]
+```
+
 #### Enqueueing Jobs
 
 Jobs are simply Ecto structs and are enqueued by inserting them into the
@@ -327,7 +335,10 @@ Although Oban keeps all jobs in the database for durability and observability, i
 * Limit-based - Keeps the latest N records. Example: `{:maxlen, 100_000}`
 * Time-based - Keeps records for the last N seconds. Example for 7 days: `{:maxage, 60 * 60 * 24 * 7}`
 
-Important: pruning is only applied to jobs that are completed or discarded (has reached the maximum number of retries or has been manually killed). It'll never delete a new job, a scheduled job or a job that failed and will be retried.
+**Important**: Pruning is only applied to jobs that are completed or discarded
+(has reached the maximum number of retries or has been manually killed). It'll
+never delete a new job, a scheduled job or a job that failed and will be
+retried.
 
 ## Testing
 
