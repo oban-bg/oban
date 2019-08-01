@@ -72,6 +72,9 @@ Advanced features and advantages over other RDBMS based tools:
   `discarded`.
 - **Triggered execution** — Database triggers ensure that jobs are dispatched as
   soon as they are inserted into the database.
+- **Unique Jobs** — Duplicate work can be avoided through unique job controls.
+  Uniqueness can be enforced at the argument, queue and worker level for any
+  period of time.
 - **Scheduled Jobs** — Jobs can be scheduled at any time in the future, down to
   the second.
 - **Job Safety** — When a process crashes or the BEAM is terminated executing
@@ -146,16 +149,16 @@ mix ecto.migrate
 Next see [Usage](#Usage) for how to integrate Oban into your application and
 start defining jobs!
 
+[ecto]: https://hex.pm/packages/ecto
+[jason]: https://hex.pm/packages/jason
+[postgrex]: https://hex.pm/packages/postgrex
+
 #### Note About Releases
 
 If you are using releases you may see Postgrex errors logged during your initial
 deploy (or any deploy requiring an Oban migration). The errors are only
 temporary. After the migration has completed each queue will start producing
 jobs normally.
-
-[ecto]: https://hex.pm/packages/ecto
-[jason]: https://hex.pm/packages/jason
-[postgrex]: https://hex.pm/packages/postgrex
 
 ## Usage
 
@@ -191,14 +194,12 @@ defmodule MyApp.Application do
 end
 ```
 
-If you are running tests (which you should be) you'll need to disable pruning
+If you are running tests (which you should be) you'll want to disable pruning
 and job dispatching altogether when testing:
 
 ```elixir
 # config/test.exs
-config :my_app, Oban,
-  queues: false,
-  prune: :disabled
+config :my_app, Oban, queues: false, prune: :disabled
 ```
 
 Without dispatch and pruning disabled Ecto will raise constant ownership errors
@@ -226,7 +227,7 @@ concurrently. Here are a few caveats and guidelines:
   ImageMagick). The BEAM ensures that the system stays responsive under load,
   but those guarantees don't apply when using ports or shelling out commands.
 
-#### Creating Workers
+#### Defining Workers
 
 Worker modules do the work of processing a job. At a minimum they must define a
 `perform/1` function, which is called with an `args` map.
@@ -234,7 +235,7 @@ Worker modules do the work of processing a job. At a minimum they must define a
 Define a worker to process jobs in the `events` queue:
 
 ```elixir
-defmodule MyApp.Workers.Business do
+defmodule MyApp.Business do
   use Oban.Worker, queue: "events", max_attempts: 10
 
   @impl Oban.Worker
@@ -251,6 +252,14 @@ reason}` tuple. With an error return or when perform has an uncaught exception
 or throw then the error will be reported and the job will be retried (provided
 there are attempts remaining).
 
+The `Business` worker can also be configured to prevent duplicates for a period
+of time through the `:unique` option. Here we'll configure it to be unique for
+60 seconds:
+
+```elixir
+use Oban.Worker, queue: "events", max_attempts: 10, unique: [period: 60]
+```
+
 #### Enqueueing Jobs
 
 Jobs are simply Ecto structs and are enqueued by inserting them into the
@@ -259,32 +268,49 @@ function that converts an args map into a job changeset suitable for insertion:
 
 ```elixir
 %{in_the: "business", of_doing: "business"}
-|> MyApp.Workers.Business.new()
-|> MyApp.Repo.insert()
+|> MyApp.Business.new()
+|> Oban.insert()
 ```
 
 The worker's defaults may be overridden by passing options:
 
 ```elixir
 %{vote_for: "none of the above"}
-|> MyApp.Workers.Business.new(queue: "special", max_attempts: 5)
-|> MyApp.Repo.insert()
+|> MyApp.Business.new(queue: "special", max_attempts: 5)
+|> Oban.insert()
 ```
 
 Jobs may be scheduled at a specific datetime in the future:
 
 ```elixir
 %{id: 1}
-|> MyApp.Workers.Business.new(scheduled_at: ~U[2020-12-25 19:00:56.0Z])
-|> MyApp.Repo.insert()
+|> MyApp.Business.new(scheduled_at: ~U[2020-12-25 19:00:56.0Z])
+|> Oban.insert()
 ```
 
 Jobs may also be scheduled down to the second any time in the future:
 
 ```elixir
 %{id: 1}
-|> MyApp.Workers.Business.new(schedule_in: 5)
-|> MyApp.Repo.insert()
+|> MyApp.Business.new(schedule_in: 5)
+|> Oban.insert()
+```
+
+Unique jobs can be configured in the worker, or when the job is built:
+
+```elixir
+%{email: "brewster@example.com"}
+|> MyApp.Mailer.new(unique: [period: 300, fields: [:queue, :worker])
+|> Oban.insert()
+```
+
+Multiple jobs can be inserted in a single transaction:
+
+```elixir
+Ecto.Multi.new()
+|> Oban.insert(:b_job, MyApp.Business.new(%{id: 1}))
+|> Oban.insert(:m_job, MyApp.Mailer.new(%{email: "brewser@example.com"}))
+|> Repo.transaction()
 ```
 
 Occasionally you may need to insert a job for a worker that exists in another
@@ -294,8 +320,12 @@ manually:
 ```elixir
 %{id: 1, user_id: 2}
 |> Oban.Job.new(queue: :default, worker: OtherApp.Worker)
-|> MyApp.Repo.insert()
+|> Oban.insert()
 ```
+
+`Oban.insert/2,4` is the preferred way of inserting jobs as it provides some of
+Oban's advanced features (i.e., unique jobs). However, you can use your
+application's `Repo.insert/2` function if necessary.
 
 #### Pruning
 
@@ -305,7 +335,10 @@ Although Oban keeps all jobs in the database for durability and observability, i
 * Limit-based - Keeps the latest N records. Example: `{:maxlen, 100_000}`
 * Time-based - Keeps records for the last N seconds. Example for 7 days: `{:maxage, 60 * 60 * 24 * 7}`
 
-Important: pruning is only applied to jobs that are completed or discarded (has reached the maximum number of retries or has been manually killed). It'll never delete a new job, a scheduled job or a job that failed and will be retried.
+**Important**: Pruning is only applied to jobs that are completed or discarded
+(has reached the maximum number of retries or has been manually killed). It'll
+never delete a new job, a scheduled job or a job that failed and will be
+retried.
 
 ## Testing
 
@@ -385,10 +418,11 @@ See `Oban.drain_queue/1` for additional details.
 
 ### Heroku
 
-If your app crashes on launch, be sure to confirm you are running the correct 
-version of Elixir and Erlang ([view requirements](#Requirements)). If using the 
-*hashnuke/elixir* buildpack, you can update the `elixir_buildpack.config` file 
-in your application's root directory to something like: 
+If your app crashes on launch, be sure to confirm you are running the correct
+version of Elixir and Erlang ([view requirements](#Requirements)). If using the
+*hashnuke/elixir* buildpack, you can update the `elixir_buildpack.config` file
+in your application's root directory to something like:
+
 ```
 # Elixir version
 elixir_version=1.9.0

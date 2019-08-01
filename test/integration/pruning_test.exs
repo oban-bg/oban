@@ -5,13 +5,17 @@ defmodule Oban.Integration.PruningTest do
 
   @moduletag :integration
 
+  defmodule FakeWorker do
+    use Oban.Worker, queue: :default
+  end
+
   test "historic jobs may be pruned based on a maximum rows count" do
-    %Job{id: id_1} = insert_job(state: "available")
-    %Job{id: _id_} = insert_job(state: "completed")
-    %Job{id: _id_} = insert_job(state: "discarded")
-    %Job{id: id_4} = insert_job(state: "executing")
-    %Job{id: _id_} = insert_job(state: "completed")
-    %Job{id: id_6} = insert_job(state: "completed")
+    %Job{id: id_1} = insert_job!(state: "available")
+    %Job{id: _id_} = insert_job!(state: "completed")
+    %Job{id: _id_} = insert_job!(state: "discarded")
+    %Job{id: id_4} = insert_job!(state: "executing")
+    %Job{id: _id_} = insert_job!(state: "completed")
+    %Job{id: id_6} = insert_job!(state: "completed")
 
     start_supervised!({Oban, repo: Repo, prune: {:maxlen, 1}, prune_interval: 10})
 
@@ -23,10 +27,10 @@ defmodule Oban.Integration.PruningTest do
   end
 
   test "historic jobs may be be pruned based on a maximum age in seconds" do
-    %Job{id: _id_} = insert_job(state: "completed", completed_at: minutes_ago(6))
-    %Job{id: _id_} = insert_job(state: "completed", completed_at: minutes_ago(5))
-    %Job{id: id_1} = insert_job(state: "completed", completed_at: minutes_ago(3))
-    %Job{id: id_2} = insert_job(state: "completed", completed_at: minutes_ago(1))
+    %Job{id: _id_} = insert_job!(state: "completed", completed_at: minutes_ago(6))
+    %Job{id: _id_} = insert_job!(state: "completed", completed_at: minutes_ago(5))
+    %Job{id: id_1} = insert_job!(state: "completed", completed_at: minutes_ago(3))
+    %Job{id: id_2} = insert_job!(state: "completed", completed_at: minutes_ago(1))
 
     start_supervised!({Oban, repo: Repo, prune: {:maxage, 60 * 4}, prune_interval: 10})
 
@@ -37,11 +41,9 @@ defmodule Oban.Integration.PruningTest do
     :ok = stop_supervised(Oban)
   end
 
-  defp insert_job(opts) do
-    opts = Keyword.merge(opts, worker: FakeWorker, queue: "default")
-
+  defp insert_job!(opts) do
     %{}
-    |> Job.new(opts)
+    |> FakeWorker.new(opts)
     |> Repo.insert!()
   end
 

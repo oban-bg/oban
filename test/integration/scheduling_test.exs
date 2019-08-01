@@ -7,35 +7,27 @@ defmodule Oban.Integration.SchedulingTest do
 
   @queue "scheduled"
 
-  property "jobs scheduled in the future are unavailable for execution" do
-    check all seconds <- positive_integer(), max_runs: 20 do
-      %Job{scheduled_at: at, state: state} = insert_job!(schedule_in: seconds)
-
-      assert 0 < NaiveDateTime.diff(at, NaiveDateTime.utc_now())
-      assert state == "scheduled"
-
-      assert {0, nil} == Query.stage_scheduled_jobs(Config.new(repo: Repo), @queue)
-    end
+  defmodule FakeWorker do
+    use Oban.Worker, queue: :scheduled
   end
 
-  property "jobs scheduled in the past are available for execution" do
-    check all seconds <- positive_integer(), max_runs: 20 do
-      %Job{scheduled_at: at, state: state} = insert_job!(schedule_in: -1 * seconds)
+  test "jobs scheduled in the future are unavailable for execution" do
+    %Job{scheduled_at: at, state: "scheduled"} = insert_job!(schedule_in: 10)
 
-      assert 0 > NaiveDateTime.diff(at, NaiveDateTime.utc_now())
-      assert state == "scheduled"
+    assert 0 < DateTime.diff(at, DateTime.utc_now())
+    assert {0, nil} == Query.stage_scheduled_jobs(Config.new(repo: Repo), @queue)
+  end
 
-      {count, _} = Query.stage_scheduled_jobs(Config.new(repo: Repo), @queue)
+  test "jobs scheduled in the past are available for execution" do
+    %Job{scheduled_at: at, state: "scheduled"} = insert_job!(schedule_in: -10)
 
-      assert count > 0
-    end
+    assert 0 > DateTime.diff(at, DateTime.utc_now())
+    assert {1, nil} = Query.stage_scheduled_jobs(Config.new(repo: Repo), @queue)
   end
 
   defp insert_job!(opts) do
-    opts = Keyword.merge(opts, worker: FakeWorker, queue: @queue)
-
     %{}
-    |> Job.new(opts)
+    |> FakeWorker.new(opts)
     |> Repo.insert!()
   end
 end

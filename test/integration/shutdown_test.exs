@@ -48,8 +48,6 @@ defmodule Oban.Integration.ShutdownTest do
 
   defp insert_job!(args) do
     args
-    |> Map.new()
-    |> Map.put(:bin_pid, Worker.pid_to_bin())
     |> Worker.new(queue: "alpha")
     |> Repo.insert!()
   end

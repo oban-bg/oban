@@ -14,6 +14,16 @@ defmodule Oban.Job do
 
   @type args :: map()
   @type errors :: [%{at: DateTime.t(), attempt: pos_integer(), error: binary()}]
+
+  @type unique_field :: [:args | :queue | :worker]
+
+  @type unique_state :: [:available | :scheduled | :executing | :retryable | :completed]
+
+  @type unique_option ::
+          {:fields, [unique_field()]}
+          | {:period, pos_integer()}
+          | {:states, [unique_state()]}
+
   @type option ::
           {:queue, atom() | binary()}
           | {:worker, atom() | binary()}
@@ -21,6 +31,7 @@ defmodule Oban.Job do
           | {:max_attempts, pos_integer()}
           | {:scheduled_at, DateTime.t()}
           | {:schedule_in, pos_integer()}
+          | {:unique, [unique_option()]}
 
   @type t :: %__MODULE__{
           id: pos_integer(),
@@ -34,7 +45,8 @@ defmodule Oban.Job do
           inserted_at: DateTime.t(),
           scheduled_at: DateTime.t(),
           attempted_at: DateTime.t(),
-          completed_at: DateTime.t()
+          completed_at: DateTime.t(),
+          unique: %{fields: [unique_field()], period: pos_integer(), states: [unique_state()]}
         }
 
   schema "oban_jobs" do
@@ -49,6 +61,7 @@ defmodule Oban.Job do
     field :completed_at, :utc_datetime_usec
     field :inserted_at, :utc_datetime_usec
     field :scheduled_at, :utc_datetime_usec
+    field :unique, :map, virtual: true
   end
 
   @permitted ~w(
@@ -79,6 +92,8 @@ defmodule Oban.Job do
     * `:scheduled_at` - a time in the future after which the job should be executed
     * `:worker` — a module to execute the job in. The module must implement the `Oban.Worker`
       behaviour.
+    * `:unique` — a keyword list of options specifying how uniquness will be calculated. The
+      options define which fields will be used, for how long, and for which states.
 
   ## Examples
 
@@ -86,15 +101,28 @@ defmodule Oban.Job do
 
       %{id: 1, user_id: 2}
       |> Oban.Job.new(queue: :default, worker: MyApp.Worker)
-      |> MyApp.Repo.insert()
+      |> Oban.insert()
 
   Generate a pre-configured job for `MyApp.Worker` and push it:
 
-      %{id: 1, user_id: 2} |> MyApp.Worker.new() |> MyApp.Repo.insert()
+      %{id: 1, user_id: 2} |> MyApp.Worker.new() |> Oban.insert()
 
   Schedule a job to run in 5 seconds:
 
-      %{id: 1} |> MyApp.Worker.new(schedule_in: 5) |> MyApp.Repo.insert()
+      %{id: 1} |> MyApp.Worker.new(schedule_in: 5) |> Oban.insert()
+
+  Insert a job, ensuring that it is unique within the past minute:
+
+      %{id: 1} |> MyApp.Worker.new(unique: [period: 60]) |> Oban.insert()
+
+  Insert a unique job based only on the worker field, and within multiple states:
+
+      fields = [:worker]
+      states = [:available, :scheduled, :executing, :retryable, :completed]
+
+      %{id: 1}
+      |> MyApp.Worker.new(unique: [fields: fields, period: 60, states: states])
+      |> Oban.insert()
   """
   @spec new(args(), [option]) :: Ecto.Changeset.t()
   def new(args, opts \\ []) when is_map(args) and is_list(opts) do
@@ -104,11 +132,12 @@ defmodule Oban.Job do
       |> Map.new()
       |> coerce_field(:queue)
       |> coerce_field(:worker)
-      |> coerce_scheduling()
 
     %__MODULE__{}
     |> cast(params, @permitted)
     |> validate_required(@required)
+    |> put_scheduling(params[:schedule_in])
+    |> put_uniqueness(params[:unique])
     |> validate_length(:queue, min: 1, max: 128)
     |> validate_length(:worker, min: 1, max: 128)
     |> validate_number(:max_attempts, greater_than: 0, less_than: 50)
@@ -128,16 +157,69 @@ defmodule Oban.Job do
     end
   end
 
-  defp coerce_scheduling(%{schedule_in: in_seconds} = params) when is_integer(in_seconds) do
-    scheduled_at = NaiveDateTime.add(NaiveDateTime.utc_now(), in_seconds)
+  @unique_fields ~w(args queue worker)a
+  @unique_period 60
+  @unique_states ~w(available scheduled executing retryable completed)a
 
-    params
-    |> Map.delete(:in)
-    |> Map.put(:scheduled_at, scheduled_at)
-    |> Map.put(:state, "scheduled")
+  @doc false
+  @spec valid_unique_opt?({:fields | :period | :states, [atom()] | integer()}) :: boolean()
+  def valid_unique_opt?({:fields, [_ | _] = fields}), do: fields -- @unique_fields == []
+  def valid_unique_opt?({:period, period}), do: is_integer(period) and period > 0
+  def valid_unique_opt?({:states, [_ | _] = states}), do: states -- @unique_states == []
+  def valid_unique_opt?(_option), do: false
+
+  defp put_scheduling(changeset, value) do
+    case value do
+      in_seconds when is_integer(in_seconds) ->
+        scheduled_at = DateTime.add(DateTime.utc_now(), in_seconds)
+
+        changeset
+        |> put_change(:scheduled_at, scheduled_at)
+        |> put_change(:state, "scheduled")
+
+      nil ->
+        changeset
+
+      _ ->
+        add_error(changeset, :schedule_in, "invalid value")
+    end
   end
 
-  defp coerce_scheduling(params), do: params
+  defp put_uniqueness(changeset, value) do
+    case value do
+      [_ | _] = opts ->
+        unique =
+          opts
+          |> Keyword.put_new(:fields, @unique_fields)
+          |> Keyword.put_new(:period, @unique_period)
+          |> Keyword.put_new(:states, @unique_states)
+          |> Map.new()
+
+        case validate_unique_opts(unique) do
+          :ok ->
+            put_change(changeset, :unique, unique)
+
+          {:error, field, value} ->
+            add_error(changeset, :unique, "invalid unique option for #{field}, #{inspect(value)}")
+        end
+
+      nil ->
+        changeset
+
+      _ ->
+        add_error(changeset, :unique, "invalid unique options")
+    end
+  end
+
+  defp validate_unique_opts(unique) do
+    Enum.reduce_while(unique, :ok, fn {key, val}, _acc ->
+      if valid_unique_opt?({key, val}) do
+        {:cont, :ok}
+      else
+        {:halt, {:error, key, val}}
+      end
+    end)
+  end
 
   defp to_clean_string(value) do
     value

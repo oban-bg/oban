@@ -4,6 +4,7 @@ defmodule Oban.Query do
   import Ecto.Query
   import DateTime, only: [utc_now: 0]
 
+  alias Ecto.{Changeset, Multi}
   alias Oban.{Config, Job}
 
   # Taking a shared lock this way will always work, even if a lock has been taken by another
@@ -77,6 +78,21 @@ defmodule Oban.Query do
     ]
 
     repo.update_all(query, updates, log: verbose)
+  end
+
+  @spec fetch_or_insert_job(Config.t(), Changeset.t()) :: {:ok, Job.t()} | {:error, Changeset.t()}
+  def fetch_or_insert_job(%Config{repo: repo}, changeset) do
+    case get_unique_job(repo, changeset) do
+      %Job{} = job -> {:ok, job}
+      nil -> repo.insert(changeset, on_conflict: :nothing)
+    end
+  end
+
+  @spec fetch_or_insert_job(Config.t(), Multi.t(), atom(), Changeset.t()) :: Multi.t()
+  def fetch_or_insert_job(config, multi, name, changeset) do
+    Multi.run(multi, name, fn repo, _changes ->
+      fetch_or_insert_job(%{config | repo: repo}, changeset)
+    end)
   end
 
   @spec stage_scheduled_jobs(Config.t(), binary()) :: {integer(), nil}
@@ -178,11 +194,29 @@ defmodule Oban.Query do
 
   # Helpers
 
-  defp next_attempt_at(backoff), do: NaiveDateTime.add(utc_now(), backoff, :second)
+  defp next_attempt_at(backoff), do: DateTime.add(utc_now(), backoff, :second)
 
   defp select_for_update(id) do
     Job
     |> where(id: ^id)
     |> select(%{lock: drop_lock(^id)})
   end
+
+  defp get_unique_job(repo, %{changes: %{unique: unique} = changes}) when is_map(unique) do
+    %{fields: fields, period: period, states: states} = unique
+
+    since = DateTime.add(utc_now(), period * -1, :second)
+    fields = for field <- fields, do: {field, Map.get(changes, field)}
+    states = for state <- states, do: to_string(state)
+
+    Job
+    |> where([j], j.state in ^states)
+    |> where([j], j.inserted_at > ^since)
+    |> where(^fields)
+    |> order_by(desc: :id)
+    |> limit(1)
+    |> repo.one()
+  end
+
+  defp get_unique_job(_repo, _changeset), do: nil
 end

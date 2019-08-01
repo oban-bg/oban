@@ -7,10 +7,11 @@ defmodule Oban.Worker do
 
   ## Defining Workers
 
-  Define a worker to process jobs in the `events` queue:
+  Define a worker to process jobs in the `events` queue, retrying at most 10 times if a job fails,
+  and ensuring that duplicate jobs aren't enqueued within a 30 second period:
 
       defmodule MyApp.Workers.Business do
-        use Oban.Worker, queue: "events", max_attempts: 10
+        use Oban.Worker, queue: "events", max_attempts: 10, unique: [period: 30]
 
         @impl true
         def perform(%Oban.Job{attempt: attempt}) when attempt > 3 do
@@ -48,7 +49,7 @@ defmodule Oban.Worker do
           if value > 1 do
             :ok
           else
-            {:error, "invalid value given: " <> inspect(value)"}
+            {:error, "invalid value given: " <> inspect(value)}
           end
         end
       end
@@ -60,15 +61,68 @@ defmodule Oban.Worker do
 
       %{in_the: "business", of_doing: "business"}
       |> MyApp.Workers.Business.new()
-      |> MyApp.Repo.insert()
+      |> Oban.insert()
 
   The worker's defaults may be overridden by passing options:
 
       %{vote_for: "none of the above"}
       |> MyApp.Workers.Business.new(queue: "special", max_attempts: 5)
-      |> MyApp.Repo.insert()
+      |> Oban.insert()
+
+  Uniqueness options may also be overridden by passing options:
+
+      %{expensive: "business"}
+      |> MyApp.Workers.Business.new(unique: [period: 120, fields: [:worker]])
+      |> Oban.insert()
+
+  Note that `unique` options aren't merged, they are overridden entirely.
 
   See `Oban.Job` for all available options.
+
+  ## Unique Jobs
+
+  The unique jobs feature lets you specify constraints to prevent enqueuing duplicate jobs.
+  Uniquness is based on a combination of `args`, `queue`, `worker`, `state` and insertion time. It
+  is configured at the worker or job level using the following options:
+
+  * `:period` — The number of seconds until a job is no longer considered duplicate. You should
+    always specify a period.
+  * `:fields` — The fields to compare when evaluating uniqueness. The available fields are
+    `:args`, `:queue` and `:worker`, by default all three are used.
+  * `:states` — The job states that will be checked for duplicates. The available states are
+    `:available`, `:scheduled`, `:executing`, `:retryable` and `:completed`. By default all states
+    are checked, which prevents _any_ duplicates, even if the previous job has been completed.
+
+  For example, configure a worker to be unique across all fields and states for 60 seconds:
+
+  ```elixir
+  use Oban.Worker, unique: [period: 60]
+  ```
+
+  Configure the worker to be unique only by `:worker` and `:queue`:
+
+  ```elixir
+  use Oban.Worker, unique: [fields: [:queue, :worker], period: 60]
+  ```
+
+  Or, configure a worker to be unique until it has executed:
+
+  ```elixir
+  use Oban.Worker, unique: [period: 300, states: [:available, :scheduled, :executing]]
+  ```
+
+  ### Stronger Guarantees
+
+  Oban's unique job support is built on a client side read/write cycle. That makes it subject to
+  duplicate writes if two transactions are started simultaneously. If you _absolutely must_ ensure
+  that a duplicate job isn't inserted then you will have to make use of unique constraints within
+  the database. `Oban.insert/2,4` will handle unique constraints safely through upsert support.
+
+  ### Performance Note
+
+  If your application makes heavy use of unique jobs you may want to add indexes on the `args` and
+  `inserted_at` columns of the `oban_jobs` table. The other columns considered for uniqueness are
+  already covered by indexes.
 
   ## Customizing Backoff
 
@@ -139,18 +193,18 @@ defmodule Oban.Worker do
 
   @doc false
   defmacro __using__(opts) do
+    Enum.each(opts, &validate_opt!/1)
+
     quote location: :keep do
       alias Oban.{Job, Worker}
 
       @before_compile Worker
       @behaviour Worker
 
-      @opts unquote(opts)
-            |> Keyword.take([:queue, :max_attempts])
-            |> Keyword.put(:worker, to_string(__MODULE__))
+      @opts Keyword.put(unquote(opts), :worker, to_string(__MODULE__))
 
       @impl Worker
-      def new(args, opts \\ []) when is_map(args) do
+      def new(args, opts \\ []) when is_map(args) and is_list(opts) do
         Job.new(args, Keyword.merge(@opts, opts))
       end
 
@@ -167,5 +221,27 @@ defmodule Oban.Worker do
   @spec default_backoff(pos_integer(), non_neg_integer()) :: pos_integer()
   def default_backoff(attempt, base_backoff \\ 15) when is_integer(attempt) do
     trunc(:math.pow(2, attempt) + base_backoff)
+  end
+
+  defp validate_opt!({:max_attempts, max_attempts}) do
+    unless is_integer(max_attempts) and max_attempts > 1 do
+      raise ArgumentError, "expected :max_attempts to be an integer greater than 1"
+    end
+  end
+
+  defp validate_opt!({:queue, queue}) do
+    unless is_atom(queue) or is_binary(queue) do
+      raise ArgumentError, "expected :queue to be an atom or a binary"
+    end
+  end
+
+  defp validate_opt!({:unique, unique}) do
+    unless is_list(unique) and Enum.all?(unique, &Job.valid_unique_opt?/1) do
+      raise ArgumentError, "unexpected unique options: #{inspect(unique)}"
+    end
+  end
+
+  defp validate_opt!(option) do
+    raise ArgumentError, "unknown option provided #{inspect(option)}"
   end
 end

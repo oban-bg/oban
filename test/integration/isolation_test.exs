@@ -17,9 +17,7 @@ defmodule Oban.Integration.IsolationTest do
 
   defp insert_job!(args) do
     args
-    |> Map.new()
-    |> Map.put(:bin_pid, Worker.pid_to_bin())
-    |> Job.new(worker: Worker, queue: :alpha)
+    |> Worker.new(queue: :alpha)
     |> Repo.insert!()
   end
 end

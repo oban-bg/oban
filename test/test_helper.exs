@@ -8,6 +8,16 @@ defmodule Oban.Integration.Worker do
   use Oban.Worker
 
   @impl Worker
+  def new(args, opts) do
+    opts = Keyword.merge(@opts, opts)
+
+    args
+    |> Map.new()
+    |> Map.put(:bin_pid, pid_to_bin())
+    |> Job.new(opts)
+  end
+
+  @impl Worker
   def perform(%{"ref" => ref, "action" => action, "bin_pid" => bin_pid}) do
     pid = bin_to_pid(bin_pid)
 

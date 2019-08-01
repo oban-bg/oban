@@ -23,9 +23,7 @@ defmodule Oban.Integration.DrainingTest do
 
   defp insert_job!(args) do
     args
-    |> Map.new()
-    |> Map.put(:bin_pid, Worker.pid_to_bin())
-    |> Job.new(worker: Worker, queue: :draining)
-    |> Repo.insert!()
+    |> Worker.new(queue: :draining)
+    |> Oban.insert!()
   end
 end

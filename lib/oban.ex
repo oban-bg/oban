@@ -61,7 +61,7 @@ defmodule Oban do
   Define a worker to process jobs in the `events` queue:
 
   ```elixir
-  defmodule MyApp.Workers.Business do
+  defmodule MyApp.Business do
     use Oban.Worker, queue: "events", max_attempts: 10
 
     def perform(%{"id" => id}) do
@@ -87,32 +87,49 @@ defmodule Oban do
 
   ```elixir
   %{in_the: "business", of_doing: "business"}
-  |> MyApp.Workers.Business.new()
-  |> MyApp.Repo.insert()
+  |> MyApp.Business.new()
+  |> Oban.insert()
   ```
 
   The worker's defaults may be overridden by passing options:
 
   ```elixir
   %{vote_for: "none of the above"}
-  |> MyApp.Workers.Business.new(queue: "special", max_attempts: 5)
-  |> MyApp.Repo.insert()
+  |> MyApp.Business.new(queue: "special", max_attempts: 5)
+  |> Oban.insert()
   ```
 
   Jobs may be scheduled at a specific datetime in the future:
 
   ```elixir
   %{id: 1}
-  |> MyApp.Workers.Business.new(scheduled_at: ~U[2020-12-25 19:00:56.0Z])
-  |> MyApp.Repo.insert()
+  |> MyApp.Business.new(scheduled_at: ~U[2020-12-25 19:00:56.0Z])
+  |> Oban.insert()
   ```
 
   Jobs may also be scheduled down to the second any time in the future:
 
   ```elixir
   %{id: 1}
-  |> MyApp.Workers.Business.new(schedule_in: 5)
-  |> MyApp.Repo.insert()
+  |> MyApp.Business.new(schedule_in: 5)
+  |> Oban.insert()
+  ```
+
+  Unique jobs can be configured in the worker, or when the job is built:
+
+  ```elixir
+  %{email: "brewster@example.com"}
+  |> MyApp.Mailer.new(unique: [period: 300, fields: [:queue, :worker])
+  |> Oban.insert()
+  ```
+
+  Multiple jobs can be inserted in a single transaction:
+
+  ```elixir
+  Ecto.Multi.new()
+  |> Oban.insert(:b_job, MyApp.Business.new(%{id: 1}))
+  |> Oban.insert(:m_job, MyApp.Mailer.new(%{email: "brewser@example.com"}))
+  |> Repo.transaction()
   ```
 
   Occasionally you may need to insert a job for a worker that exists in another
@@ -122,10 +139,59 @@ defmodule Oban do
   ```elixir
   %{id: 1, user_id: 2}
   |> Oban.Job.new(queue: :default, worker: OtherApp.Worker)
-  |> MyApp.Repo.insert()
+  |> Oban.insert()
   ```
 
+  `Oban.insert/2,4` is the preferred way of inserting jobs as it provides some of
+  Oban's advanced features (i.e., unique jobs). However, you can use your
+  application's `Repo.insert/2` function if necessary.
+
   See `Oban.Job.new/2` for a full list of job options.
+
+  ## Unique Jobs
+
+  The unique jobs feature lets you specify constraints to prevent enqueuing duplicate jobs.
+  Uniquness is based on a combination of `args`, `queue`, `worker`, `state` and insertion time. It
+  is configured at the worker or job level using the following options:
+
+  * `:period` — The number of seconds until a job is no longer considered duplicate. You should
+    always specify a period.
+  * `:fields` — The fields to compare when evaluating uniqueness. The available fields are
+    `:args`, `:queue` and `:worker`, by default all three are used.
+  * `:states` — The job states that will be checked for duplicates. The available states are
+    `:available`, `:scheduled`, `:executing`, `:retryable` and `:completed`. By default all states
+    are checked, which prevents _any_ duplicates, even if the previous job has been completed.
+
+  For example, configure a worker to be unique across all fields and states for 60 seconds:
+
+  ```elixir
+  use Oban.Worker, unique: [period: 60]
+  ```
+
+  Configure the worker to be unique only by `:worker` and `:queue`:
+
+  ```elixir
+  use Oban.Worker, unique: [fields: [:queue, :worker], period: 60]
+  ```
+
+  Or, configure a worker to be unique until it has executed:
+
+  ```elixir
+  use Oban.Worker, unique: [period: 300, states: [:available, :scheduled, :executing]]
+  ```
+
+  ### Stronger Guarantees
+
+  Oban's unique job support is built on a client side read/write cycle. That makes it subject to
+  duplicate writes if two transactions are started simultaneously. If you _absolutely must_ ensure
+  that a duplicate job isn't inserted then you will have to make use of unique constraints within
+  the database. `Oban.insert/2,4` will handle unique constraints safely through upsert support.
+
+  ### Performance Note
+
+  If your application makes heavy use of unique jobs you may want to add indexes on the `args` and
+  `inserted_at` columns of the `oban_jobs` table. The other columns considered for uniqueness are
+  already covered by indexes.
 
   ## Testing
 
@@ -138,19 +204,18 @@ defmodule Oban do
     created within the sandbox are rolled back at the end of the test. Additionally, the periodic
     pruning queries will raise `DBConnection.OwnershipError` when the application boots.
 
-  * Be sure to use the Ecto Sandbox for testing. Oban makes use of database pubsub
-    events to dispatch jobs, but pubsub events never fire within a transaction.
-    Since sandbox tests run within a transaction no events will fire and jobs
-    won't be dispatched.
+  * Be sure to use the Ecto Sandbox for testing. Oban makes use of database pubsub events to
+  dispatch jobs, but pubsub events never fire within a transaction.  Since sandbox tests run
+  within a transaction no events will fire and jobs won't be dispatched.
 
     ```elixir
     config :my_app, MyApp.Repo, pool: Ecto.Adapters.SQL.Sandbox
     ```
 
-  Oban provides some helpers to facilitate testing. The helpers handle the
-  boilerplate of making assertions on which jobs are enqueued. To use the
-  `assert_enqueued/1` and `refute_enqueued/1` helpers in your tests you must
-  include them in your testing module and specify your app's Ecto repo:
+  Oban provides some helpers to facilitate testing. The helpers handle the boilerplate of making
+  assertions on which jobs are enqueued. To use the `assert_enqueued/1` and `refute_enqueued/1`
+  helpers in your tests you must include them in your testing module and specify your app's Ecto
+  repo:
 
   ```elixir
   use Oban.Testing, repo: MyApp.Repo
@@ -268,7 +333,8 @@ defmodule Oban do
 
   use Supervisor
 
-  alias Oban.{Config, Notifier, Pruner}
+  alias Ecto.{Changeset, Multi}
+  alias Oban.{Config, Job, Notifier, Pruner, Query}
   alias Oban.Queue.Producer
   alias Oban.Queue.Supervisor, as: QueueSupervisor
 
@@ -367,6 +433,77 @@ defmodule Oban do
     name
     |> child_name("Config")
     |> Config.get()
+  end
+
+  @doc """
+  Insert a new job into the database for execution.
+
+  This and the other `insert` variants are the recommended way to enqueue jobs because they
+  support features like unique jobs.
+
+  ## Example
+
+  Insert a single job:
+
+      {:ok, job} = Oban.insert(MyApp.Worker.new(%{id: 1}))
+
+  Insert a job while ensuring that it is unique within the past 30 seconds:
+
+      {:ok, job} = Oban.insert(MyApp.Worker.new(%{id: 1}, unique: [period: 30]))
+  """
+  @doc since: "0.7.0"
+  @spec insert(name :: atom(), changeset :: Changeset.t(Job.t())) ::
+          {:ok, Job.t()} | {:error, Changeset.t()}
+  def insert(name \\ __MODULE__, %Changeset{} = changeset) when is_atom(name) do
+    name
+    |> config()
+    |> Query.fetch_or_insert_job(changeset)
+  end
+
+  @doc """
+  Insert a job insert operation into an `Ecto.Multi`.
+
+  Like `insert/2`, this variant is recommended over `Ecto.Multi.insert` beause it supports all of
+  Oban's features, i.e. unique jobs.
+
+  ## Example
+
+      Ecto.Multi.new()
+      |> Oban.insert(:job_1, MyApp.Worker.new(%{id: 1}))
+      |> Oban.insert(:job_2, MyApp.Worker.new(%{id: 2}))
+      |> MyApp.Repo.transaction()
+  """
+  @doc since: "0.7.0"
+  @spec insert(
+          name :: atom(),
+          multi :: Multi.t(),
+          multi_name :: atom(),
+          changeset :: Changeset.t(Job.t())
+        ) :: Multi.t()
+  def insert(name \\ __MODULE__, %Multi{} = multi, multi_name, %Changeset{} = changeset)
+      when is_atom(name) and is_atom(multi_name) do
+    name
+    |> config()
+    |> Query.fetch_or_insert_job(multi, multi_name, changeset)
+  end
+
+  @doc """
+  Similar to `insert/2`, but raises an `Ecto.InvalidChangesetError` if the job can't be inserted.
+
+  ## Example
+
+      job = Oban.insert!(MyApp.Worker.new(%{id: 1}))
+  """
+  @doc since: "0.7.0"
+  @spec insert!(name :: atom(), changeset :: Changeset.t(Job.t())) :: Job.t()
+  def insert!(name \\ __MODULE__, %Changeset{} = changeset) when is_atom(name) do
+    case insert(name, changeset) do
+      {:ok, job} ->
+        job
+
+      {:error, changeset} ->
+        raise Ecto.InvalidChangesetError, action: :insert, changeset: changeset
+    end
   end
 
   @doc """
