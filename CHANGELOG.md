@@ -22,17 +22,41 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   window of time. For example, to make a job unique by args, queue and worker
   for 2 minutes:
 
-  ```
-  use Oban.Worker, unique: [period: 120, fields: [:args, :queue, :worker]]
-  ```
+  `use Oban.Worker, unique: [period: 120, fields: [:args, :queue, :worker]]`
 
   Note, unique support relies on the use of `Oban.insert/2,4`.
 
 ### Changed
 
+- [Oban.Worker] Remove the `perform/1` callback in favor of `perform/2`. The new
+  `perform/2` function receives the job's args, followed by the complete job
+  struct. This new function signature makes it clear that the args are always
+  available, and the job struct is also there when it is needed. A default
+  `perform/2` function _is not_ generated automatically by the `use` macro and
+  _must_ be defined manually.
+
+  This is a breaking change and all worker modules will need to be updated.
+  Thankfully, due to the behaviour change, warnings will be emitted when you
+  compile after the upgrade.
+
+  If your perform functions weren't matching on the `Oban.Job` struct then
+  you can migrate your workers by adding a second `_job` argument:
+
+  `def perform(%{"some" => args}, _job)`
+
+  If you were making use of `Oban.Job` metadata in `perform/1` then you can move
+  the job matching to the second argument:
+
+  `def perform(_args, %{attempt: attempt})`
+
+  See [the issue that suggested this change][i45] for more details and
+  discussion.
+
 - [Oban.Producer] Use `send_after/3` instead of `:timer.send_interval/2` to
   maintain scheduled dispatch. This mechanism is more accurate under system
   load and it prevents `:poll` messages from backing up for each producer.
+
+[i45]: https://github.com/sorentwo/oban/issues/45
 
 ## [0.6.0] — 2019-07-26
 

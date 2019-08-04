@@ -9,6 +9,9 @@ defmodule Oban.Integration.SchedulingTest do
 
   defmodule FakeWorker do
     use Oban.Worker, queue: :scheduled
+
+    @impl Worker
+    def perform(_args, _job), do: :ok
   end
 
   test "jobs scheduled in the future are unavailable for execution" do

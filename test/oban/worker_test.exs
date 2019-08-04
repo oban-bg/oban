@@ -5,6 +5,9 @@ defmodule Oban.WorkerTest do
 
   defmodule BasicWorker do
     use Worker
+
+    @impl Worker
+    def perform(_args, _job), do: :ok
   end
 
   defmodule CustomWorker do
@@ -17,8 +20,8 @@ defmodule Oban.WorkerTest do
     def backoff(attempt), do: attempt * attempt
 
     @impl Worker
-    def perform(%{attempt: attempt}) when attempt > 1, do: attempt
-    def perform(%{a: a, b: b}), do: a + b
+    def perform(_args, %{attempt: attempt}) when attempt > 1, do: attempt
+    def perform(%{"a" => a, "b" => b}, _job), do: a + b
   end
 
   describe "new/2" do
@@ -51,19 +54,12 @@ defmodule Oban.WorkerTest do
     end
   end
 
-  describe "perform/1" do
-    test "a default implementation is provided" do
-      assert :ok = BasicWorker.perform(%{})
-      assert :ok = BasicWorker.perform(%Job{args: %{}})
-    end
-
-    test "the implementation may be overridden" do
-      assert 5 == CustomWorker.perform(%{a: 2, b: 3})
-    end
-
+  describe "perform/2" do
     test "arguments from the complete job struct are extracted" do
-      assert 5 == CustomWorker.perform(%Job{args: %{a: 2, b: 3}})
-      assert 4 == CustomWorker.perform(%Job{attempt: 4, args: %{a: 2, b: 3}})
+      args = %{"a" => 2, "b" => 3}
+
+      assert 5 == CustomWorker.perform(args, %Job{args: args})
+      assert 4 == CustomWorker.perform(args, %Job{attempt: 4, args: args})
     end
   end
 

@@ -54,7 +54,7 @@ defmodule Oban do
 
   ### Defining Workers
 
-  Worker modules do the work of processing a job. At a minimum they must define a `perform/1`
+  Worker modules do the work of processing a job. At a minimum they must define a `perform/2`
   function, which is called first with the full `Oban.Job` struct, and subsequently with the
   `args` map if no clause matches.
 
@@ -64,7 +64,8 @@ defmodule Oban do
   defmodule MyApp.Business do
     use Oban.Worker, queue: "events", max_attempts: 10
 
-    def perform(%{"id" => id}) do
+    @impl Worker
+    def perform(%{"id" => id}, _job) do
       model = MyApp.Repo.get(MyApp.Business.Man, id)
 
       IO.inspect(model)
@@ -72,7 +73,7 @@ defmodule Oban do
   end
   ```
 
-  The value returned from `perform/1` is ignored, unless it an `{:error, reason}` tuple. With an
+  The value returned from `perform/2` is ignored, unless it an `{:error, reason}` tuple. With an
   error return or when perform has an uncaught exception or throw then the error will be reported
   and the job will be retried (provided there are attempts remaining).
 

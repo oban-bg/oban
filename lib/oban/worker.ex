@@ -2,8 +2,8 @@ defmodule Oban.Worker do
   @moduledoc """
   Defines a behavior and macro to guide the creation of worker modules.
 
-  Worker modules do the work of processing a job. At a minimum they must define a `perform/1`
-  function, which will be called with an `args` map.
+  Worker modules do the work of processing a job. At a minimum they must define a `perform/2`
+  function, which will be called with an `args` map and the job struct.
 
   ## Defining Workers
 
@@ -13,22 +13,21 @@ defmodule Oban.Worker do
       defmodule MyApp.Workers.Business do
         use Oban.Worker, queue: "events", max_attempts: 10, unique: [period: 30]
 
-        @impl true
-        def perform(%Oban.Job{attempt: attempt}) when attempt > 3 do
+        @impl Worker
+        def perform(_args, %Oban.Job{attempt: attempt}) when attempt > 3 do
           IO.inspect(attempt)
         end
 
-        def perform(args) do
+        def perform(args, _job) do
           IO.inspect(args)
         end
       end
 
-  The `perform/1` function receives an `Oban.Job` struct as the sole argument. If no clause
-  matches on `%Oban.Job{}` then the `args` are extracted and `perform/1` is called again with the
-  args. This allows workers to change the behavior of `perform/1` based on attributes of the Job,
-  e.g. the number of attempts or when it was inserted.
+  The `perform/2` function receives an args map and an `Oban.Job` struct as arguments.  This
+  allows workers to change the behavior of `perform/2` based on attributes of the Job, e.g. the
+  number of attempts or when it was inserted.
 
-  A job is considered complete if `perform/1` returns a non-error value, and it doesn't raise an
+  A job is considered complete if `perform/2` returns a non-error value, and it doesn't raise an
   exception or have an unhandled exit.
 
   Any of these return values or error events will fail the job:
@@ -44,8 +43,8 @@ defmodule Oban.Worker do
       defmodule MyApp.Workers.ErrorExample do
         use Oban.Worker
 
-        @impl true
-        def perform(%{value: value}) do
+        @impl Worker
+        def perform(%{"value" => value}, _job) do
           if value > 1 do
             :ok
           else
@@ -137,13 +136,13 @@ defmodule Oban.Worker do
       defmodule MyApp.SidekiqBackoffWorker do
         use Oban.Worker
 
-        @impl true
+        @impl Worker
         def backoff(attempt) do
           :math.pow(attempt, 4) + 15 + :rand.uniform(30) * attempt
         end
 
-        @impl true
-        def perform(args) do
+        @impl Worker
+        def perform(_args, _job) do
           :do_business
         end
       end
@@ -172,24 +171,13 @@ defmodule Oban.Worker do
   @callback backoff(attempt :: pos_integer()) :: pos_integer()
 
   @doc """
-  The `perform/1` function is called when the job is executed.
+  The `perform/2` function is called when the job is executed.
 
-  The function is passed a job's args, which is always a map with string keys.
-
-  The return value is not important. If the function executes without raising an exception it is
-  considered a success. If the job raises an exception it is a failure and the job may be
-  scheduled for a retry.
+  The value returned from `perform/2` is ignored, unless it returns an `{:error, reason}` tuple.
+  With an error return or when perform has an uncaught exception or throw then the error will be
+  reported and the job will be retried (provided there are attempts remaining).
   """
-  @callback perform(job_or_args :: Job.t() | Job.args()) :: term()
-
-  @doc false
-  defmacro __before_compile__(_env) do
-    quote do
-      @impl true
-      def perform(%Job{args: args}), do: perform(args)
-      def perform(args) when is_map(args), do: :ok
-    end
-  end
+  @callback perform(args :: Job.args(), job :: Job.t()) :: term()
 
   @doc false
   defmacro __using__(opts) do
@@ -198,7 +186,6 @@ defmodule Oban.Worker do
     quote location: :keep do
       alias Oban.{Job, Worker}
 
-      @before_compile Worker
       @behaviour Worker
 
       @opts Keyword.put(unquote(opts), :worker, to_string(__MODULE__))

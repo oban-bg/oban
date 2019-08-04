@@ -230,7 +230,7 @@ concurrently. Here are a few caveats and guidelines:
 #### Defining Workers
 
 Worker modules do the work of processing a job. At a minimum they must define a
-`perform/1` function, which is called with an `args` map.
+`perform/2` function, which is called with an `args` map and the job struct.
 
 Define a worker to process jobs in the `events` queue:
 
@@ -239,7 +239,7 @@ defmodule MyApp.Business do
   use Oban.Worker, queue: "events", max_attempts: 10
 
   @impl Oban.Worker
-  def perform(%{"id" => id}) do
+  def perform(%{"id" => id}, _job) do
     model = MyApp.Repo.get(MyApp.Business.Man, id)
 
     IO.inspect(model)
@@ -247,7 +247,7 @@ defmodule MyApp.Business do
 end
 ```
 
-The value returned from `perform/1` is ignored, unless it returns an `{:error,
+The value returned from `perform/2` is ignored, unless it returns an `{:error,
 reason}` tuple. With an error return or when perform has an uncaught exception
 or throw then the error will be reported and the job will be retried (provided
 there are attempts remaining).
