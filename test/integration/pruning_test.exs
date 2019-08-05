@@ -7,6 +7,9 @@ defmodule Oban.Integration.PruningTest do
 
   defmodule FakeWorker do
     use Oban.Worker, queue: :default
+
+    @impl Worker
+    def perform(_args, _job), do: :ok
   end
 
   test "historic jobs may be pruned based on a maximum rows count" do

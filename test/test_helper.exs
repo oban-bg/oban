@@ -18,7 +18,7 @@ defmodule Oban.Integration.Worker do
   end
 
   @impl Worker
-  def perform(%{"ref" => ref, "action" => action, "bin_pid" => bin_pid}) do
+  def perform(%{"ref" => ref, "action" => action, "bin_pid" => bin_pid}, _job) do
     pid = bin_to_pid(bin_pid)
 
     case action do
@@ -42,7 +42,7 @@ defmodule Oban.Integration.Worker do
     end
   end
 
-  def perform(%{"ref" => ref, "sleep" => sleep, "bin_pid" => bin_pid}) do
+  def perform(%{"ref" => ref, "sleep" => sleep, "bin_pid" => bin_pid}, _job) do
     pid = bin_to_pid(bin_pid)
 
     send(pid, {:started, ref})
