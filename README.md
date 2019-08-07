@@ -168,7 +168,7 @@ your configuration is passed into the `Oban` supervisor, allowing you to
 configure Oban like the rest of your application.
 
 ```elixir
-# confg/config.exs
+# config/config.exs
 config :my_app, Oban,
   repo: MyApp.Repo,
   prune: {:maxlen, 100_000},
