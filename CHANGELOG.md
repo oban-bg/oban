@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## [0.7.0] — 2019-08-8
+
 ### Added
 
 - [Oban] Added `insert/2`, `insert!/2` and `insert/4` as a convenient and more
@@ -270,7 +272,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 - [Oban] Initial release with base functionality.
 
-[Unreleased]: https://github.com/sorentwo/oban/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/sorentwo/oban/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/sorentwo/oban/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/sorentwo/oban/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/sorentwo/oban/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/sorentwo/oban/compare/v0.3.0...v0.4.0
