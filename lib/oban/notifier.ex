@@ -10,14 +10,14 @@ defmodule Oban.Notifier do
   @type channel :: :gossip | :insert | :signal | :update
   @type queue :: atom()
 
-  @channels [:gossip, :insert, :signal, :update]
-
   @mappings %{
     gossip: "oban_gossip",
     insert: "oban_insert",
     signal: "oban_signal",
     update: "oban_update"
   }
+
+  @channels Map.keys(@mappings)
 
   defmodule State do
     @moduledoc false
@@ -38,11 +38,11 @@ defmodule Oban.Notifier do
     GenServer.start_link(__MODULE__, Map.new(opts), name: name)
   end
 
-  @spec listen(module(), channel()) :: :ok
-  def listen(server, channel) when channel in @channels do
+  @spec listen(module(), binary(), channel()) :: :ok
+  def listen(server, prefix, channel) when is_binary(prefix) and channel in @channels do
     server
     |> conn_name()
-    |> Notifications.listen(@mappings[channel])
+    |> Notifications.listen("#{prefix}.#{@mappings[channel]}")
 
     :ok
   end
@@ -89,6 +89,7 @@ defmodule Oban.Notifier do
 
   @impl GenServer
   def handle_call({:notify, channel, payload}, _from, %State{conf: conf} = state) do
+    # Unlike `listen` the schema namespacing takes place in the Query module.
     :ok = Query.notify(conf, channel, Jason.encode!(payload))
 
     {:reply, :ok, state}

@@ -100,41 +100,10 @@ defmodule Oban.Queue.Producer do
     dispatch(%{state | running: Map.delete(running, ref)})
   end
 
-  def handle_info({:notification, _, _, insert(), payload}, %State{queue: queue} = state) do
-    case Jason.decode(payload) do
-      {:ok, %{"queue" => ^queue}} -> dispatch(state)
-      _ -> {:noreply, state}
-    end
-  end
+  def handle_info({:notification, _, _, prefixed_channel, payload}, state) do
+    [_prefix, channel] = String.split(prefixed_channel, ".")
 
-  def handle_info({:notification, _, _, signal(), payload}, state) do
-    %State{conf: conf, foreman: foreman, queue: queue, running: running} = state
-
-    state =
-      case Jason.decode(payload) do
-        {:ok, %{"action" => "pause", "queue" => ^queue}} ->
-          %{state | paused: true}
-
-        {:ok, %{"action" => "resume", "queue" => ^queue}} ->
-          %{state | paused: false}
-
-        {:ok, %{"action" => "scale", "queue" => ^queue, "scale" => scale}} ->
-          %{state | limit: scale}
-
-        {:ok, %{"action" => "pkill", "job_id" => kid}} ->
-          for {_ref, {job, pid}} <- running, job.id == kid do
-            with :ok <- DynamicSupervisor.terminate_child(foreman, pid) do
-              Query.discard_job(conf, job)
-            end
-          end
-
-          state
-
-        {:ok, _} ->
-          state
-      end
-
-    dispatch(state)
+    handle_notification(channel, payload, state)
   end
 
   def handle_info(:reset_circuit, state) do
@@ -163,8 +132,8 @@ defmodule Oban.Queue.Producer do
   defp start_listener(%State{conf: conf} = state) do
     notifier = Module.concat(conf.name, "Notifier")
 
-    :ok = Notifier.listen(notifier, :insert)
-    :ok = Notifier.listen(notifier, :signal)
+    :ok = Notifier.listen(notifier, conf.prefix, :insert)
+    :ok = Notifier.listen(notifier, conf.prefix, :signal)
 
     state
   end
@@ -173,6 +142,45 @@ defmodule Oban.Queue.Producer do
     poll_ref = Process.send_after(self(), :poll, conf.poll_interval)
 
     %{state | poll_ref: poll_ref}
+  end
+
+  # Notifications
+
+  defp handle_notification(insert(), payload, %State{queue: queue} = state) do
+    case Jason.decode(payload) do
+      {:ok, %{"queue" => ^queue}} -> dispatch(state)
+      _ -> {:noreply, state}
+    end
+  end
+
+  defp handle_notification(signal(), payload, state) do
+    %State{conf: conf, foreman: foreman, queue: queue, running: running} = state
+
+    state =
+      case Jason.decode(payload) do
+        {:ok, %{"action" => "pause", "queue" => ^queue}} ->
+          %{state | paused: true}
+
+        {:ok, %{"action" => "resume", "queue" => ^queue}} ->
+          %{state | paused: false}
+
+        {:ok, %{"action" => "scale", "queue" => ^queue, "scale" => scale}} ->
+          %{state | limit: scale}
+
+        {:ok, %{"action" => "pkill", "job_id" => kid}} ->
+          for {_ref, {job, pid}} <- running, job.id == kid do
+            with :ok <- DynamicSupervisor.terminate_child(foreman, pid) do
+              Query.discard_job(conf, job)
+            end
+          end
+
+          state
+
+        {:ok, _} ->
+          state
+      end
+
+    dispatch(state)
   end
 
   # Dispatching

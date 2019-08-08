@@ -39,6 +39,14 @@ defmodule Oban.ConfigTest do
       assert %Config{} = Config.new(repo: Repo, poll_interval: 10)
     end
 
+    test ":prefix is validated as a binary" do
+      assert_raise ArgumentError, fn -> Config.new(repo: Repo, prefix: :private) end
+      assert_raise ArgumentError, fn -> Config.new(repo: Repo, prefix: " private schema ") end
+      assert_raise ArgumentError, fn -> Config.new(repo: Repo, prefix: "") end
+
+      assert %Config{} = Config.new(repo: Repo, prefix: "private")
+    end
+
     test ":prune is validated as disabled or a max* option" do
       assert_raise ArgumentError, fn -> Config.new(repo: Repo, prune: :unknown) end
       assert_raise ArgumentError, fn -> Config.new(repo: Repo, prune: 5) end

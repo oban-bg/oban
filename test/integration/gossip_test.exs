@@ -15,7 +15,7 @@ defmodule Oban.Integration.GossipTest do
 
     start_supervised!({Oban, @oban_opts})
 
-    :ok = Notifier.listen(Oban.Notifier, :gossip)
+    :ok = Notifier.listen(Oban.Notifier, "public", :gossip)
 
     assert_gossip(%{
       "count" => 2,
@@ -28,7 +28,7 @@ defmodule Oban.Integration.GossipTest do
     stop_supervised(Oban)
   end
 
-  test "broadcasts are not logged when :verbose mode is disabled" do
+  test "broadcasts are silenced when :verbose mode is disabled" do
     insert_job!(ref: 1, sleep: 500, queue: "alpha")
 
     Logger.configure(level: :debug)
@@ -37,7 +37,7 @@ defmodule Oban.Integration.GossipTest do
       capture_log(fn ->
         start_supervised!({Oban, @oban_opts})
 
-        :ok = Notifier.listen(Oban.Notifier, :gossip)
+        :ok = Notifier.listen(Oban.Notifier, "public", :gossip)
 
         stop_supervised(Oban)
       end)
@@ -49,7 +49,7 @@ defmodule Oban.Integration.GossipTest do
   end
 
   defp assert_gossip(message) do
-    assert_receive {:notification, _, _, "oban_gossip", payload}
+    assert_receive {:notification, _, _, "public.oban_gossip", payload}
     assert {:ok, decoded} = Jason.decode(payload)
     assert message == decoded
   end

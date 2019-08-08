@@ -9,6 +9,7 @@ defmodule Oban.Config do
           name: atom(),
           node: binary(),
           poll_interval: pos_integer(),
+          prefix: binary(),
           prune: prune(),
           prune_interval: pos_integer(),
           prune_limit: pos_integer(),
@@ -24,6 +25,7 @@ defmodule Oban.Config do
   defstruct name: Oban,
             node: nil,
             poll_interval: :timer.seconds(1),
+            prefix: "public",
             prune: :disabled,
             prune_interval: :timer.minutes(1),
             prune_limit: 5_000,
@@ -82,6 +84,12 @@ defmodule Oban.Config do
   defp validate_opt!({:poll_interval, interval}) do
     unless is_integer(interval) and interval > 0 do
       raise ArgumentError, "expected :poll_interval to be a positive integer"
+    end
+  end
+
+  defp validate_opt!({:prefix, prefix}) do
+    unless is_binary(prefix) and Regex.match?(~r/^[a-z0-9_]+$/i, prefix) do
+      raise ArgumentError, "expected :prefix to be a binary with alphanumeric characters"
     end
   end
 
