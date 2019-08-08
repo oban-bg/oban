@@ -13,6 +13,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   powerful way to insert jobs. Features such as unique jobs and the upcoming
   prefix support only work with `insert`.
 
+- [Oban] Add `prefix` support. This allows entirely isolated job queues within
+  the same database.
+
 - [Oban.Worker] Compile time validation of all passed options. Catch typos and
   other invalid options when a worker is compiled rather than when a job is
   inserted for the first time.
@@ -55,6 +58,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - [Oban.Producer] Use `send_after/3` instead of `:timer.send_interval/2` to
   maintain scheduled dispatch. This mechanism is more accurate under system
   load and it prevents `:poll` messages from backing up for each producer.
+
+- [Oban.Migration] Accept a keyword list with `:prefix` and `:version` as
+  options rather than a single version string. When a prefix is supplied the
+  migration will create all tables, indexes, functions and triggers within that
+  namespace. For example, to create the jobs table within a "private" prefix:
+
+  `Oban.Migrate.up(prefix: "private")`
 
 [i45]: https://github.com/sorentwo/oban/issues/45
 

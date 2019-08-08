@@ -238,7 +238,7 @@ defmodule Oban do
 
   See the `Oban.Testing` module for more details on making assertions.
 
-  ## Integration Testing
+  ### Integration Testing
 
   During integration testing it may be necessary to run jobs because they do work essential for
   the test to complete, i.e. sending an email, processing media, etc. You can execute all
@@ -329,6 +329,66 @@ defmodule Oban do
   docs for the `Oban.Telemetry` module.
 
   [tele]: https://hexdocs.pm/telemetry
+
+  ## Prefix Support
+
+  Oban supports namespacing through PostgreSQL schemas, also called "prefixes" in Ecto. With
+  prefixes your jobs table can reside outside of your primary schema (usually public) and you can
+  have multiple separate job tables.
+
+  To use a prefix you first have to specify it within your migration:
+
+  ```elixir
+  defmodule MyApp.Repo.Migrations.AddPrefixedObanJobsTable do
+    use Ecto.Migration
+
+    def up do
+      Oban.Migrations.up(prefix: "private")
+    end
+
+    def down do
+      Oban.Migrations.down(prefix: "private")
+    end
+  end
+  ```
+
+  The migration will create the "private" schema and all tables, functions and triggers within
+  that schema. With the database migrated you'll then specify the prefix in your configuration:
+
+  ```elixir
+  config :my_app, Oban,
+    prefix: "private",
+    repo: MyApp.Repo,
+    queues: [default: 10]
+  ```
+
+  Now all jobs are inserted and executed using the `private.oban_jobs` table. Note that
+  `Oban.insert/2,4` will write jobs in the `private.oban_jobs` table, you'll need to specify a
+  prefix manually if you insert jobs directly through a repo.
+
+  ### Isolation
+
+  Not only is the `oban_jobs` table isolated within the schema, but all notification events are
+  also isolated. That means that insert/update events will only dispatch new jobs for their
+  prefix. You can run multiple Oban instances with different prefixes on the same system and have
+  them entirely isolated, provided you give each supervisor a distinct id.
+
+  Here we configure our application to start three Oban supervisors using the "public", "special"
+  and "private" prefixes, respectively:
+
+  ```elixir
+  def start(_type, _args) do
+    children = [
+      Repo,
+      Endpoint,
+      {Oban, name: ObanA, repo: Repo, id: ObanA},
+      {Oban, name: ObanB, repo: Repo, prefix: "special", id: ObanB},
+      {Oban, name: ObanC, repo: Repo, prefix: "private", id: ObanC}
+    ]
+
+    Supervisor.start_link(children, strategy: :one_for_one, name: MyApp.Supervisor)
+  end
+  ```
   """
   @moduledoc since: "0.1.0"
 
@@ -343,6 +403,7 @@ defmodule Oban do
           {:name, module()}
           | {:node, binary()}
           | {:poll_interval, pos_integer()}
+          | {:prefix, binary()}
           | {:prune, :disabled | {:maxlen, pos_integer()} | {:maxage, pos_integer()}}
           | {:prune_interval, pos_integer()}
           | {:prune_limit, pos_integer()}
@@ -368,6 +429,9 @@ defmodule Oban do
 
     For testing purposes `:queues` may be set to `false` or `nil`, which effectively disables all
     job dispatching.
+  * `:prefix` — the query prefix, or schema, to use for inserting and executing jobs. An
+    `oban_jobs` table must exist within the prefix. See the "Prefix Support" section in the module
+    documentation for more details.
   * `:poll_interval` - the number of milliseconds between polling for new jobs in a queue. This
     is directly tied to the resolution of _scheduled_ jobs. For example, with a `poll_interval` of
     `5_000ms`, scheduled jobs are checked every 5 seconds. The default is `1_000ms`.

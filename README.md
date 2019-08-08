@@ -386,7 +386,7 @@ assert [%{args: %{"id" => 1}}] = all_enqueued worker: MyWorker
 
 See the `Oban.Testing` module for more details.
 
-## Integration Testing
+### Integration Testing
 
 During integration testing it may be necessary to run jobs because they do work
 essential for the test to complete, i.e. sending an email, processing media,
