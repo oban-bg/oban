@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Fixed
+
+- [Oban.Query] Release advisory locks in batches rather than individually after
+  a job finishes execution. By tracking unlockable jobs and repeatedly
+  attempting to unlock them for each connection we ensure that eventually all
+  advisory locks are released.
+
+  The previous unlocking system leaked advisory locks at a rate proportional to
+  the number of connections in the db pool. The more connections, the more locks
+  that wouldn't release. With a default value of 64 for `max_locks_per_transaction`
+  the database would raise "ERROR:  53200: out of shared memory" after it hit a
+  threshold (11,937 exactly, in my testing).
+
 ## [0.7.0] — 2019-08-8
 
 ### Added

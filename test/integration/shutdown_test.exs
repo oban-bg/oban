@@ -19,10 +19,9 @@ defmodule Oban.Integration.ShutdownTest do
     assert Repo.get(Job, id_2).state == "executing"
   end
 
-  # Orphaned jobs were started but never managed to finish. This is likely
-  # because the job couldn't complete within the shutdown grace period.
-  # Regardless, we want to start the job again and give it another chance to
-  # finish.
+  # Orphaned jobs were started but never managed to finish. This is likely because the job
+  # couldn't complete within the shutdown grace period. Regardless, we want to start the job
+  # again and give it another chance to finish.
   test "orphaned jobs are transitioned back to an available state" do
     start_supervised({Oban, Keyword.put(@oban_opts, :shutdown_grace_period, 50)})
 

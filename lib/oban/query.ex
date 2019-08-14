@@ -24,17 +24,6 @@ defmodule Oban.Query do
     end
   end
 
-  # Dropping a lock uses the same format as taking a lock. Only the session that originally took
-  # the lock can drop it, but we can't guarantee that the connection used to complete a job was
-  # the same connection that fetched the job. Therefore, not all locks will be released
-  # immediately after a job is finished. That's ok, as the locks are guaranteed to be released
-  # when the connection closes.
-  defmacrop drop_lock(ns, id) do
-    quote do
-      fragment("pg_advisory_unlock_shared(?, oban_wrap_id(?))", unquote(ns), unquote(id))
-    end
-  end
-
   defmacrop no_lock_exists(ns, id) do
     quote do
       fragment(
@@ -96,6 +85,25 @@ defmodule Oban.Query do
     end)
   end
 
+  # Only the session that originally took the lock can drop it, but we can't guarantee that the
+  # current connection is the same connection that started a job. Therefore, some locks may not
+  # be released by the current connection. Unlocking in batches ensures that all locks have a
+  # chance of being released _eventually_.
+  @unlock_query """
+  SELECT u.id
+  FROM (
+    SELECT x AS id, pg_advisory_unlock_shared($1::int, x) AS unlocked
+    FROM unnest($2::int[]) AS a(x)
+  ) AS u WHERE u.unlocked = true
+  """
+  @spec unlock_jobs(Config.t(), [integer()]) :: [integer()]
+  def unlock_jobs(%Config{prefix: prefix, repo: repo, verbose: verbose}, unlockable) do
+    case repo.query!(@unlock_query, [to_ns(prefix), unlockable], log: verbose) do
+      %{rows: [rows]} -> rows
+      _ -> []
+    end
+  end
+
   @spec stage_scheduled_jobs(Config.t(), binary()) :: {integer(), nil}
   def stage_scheduled_jobs(%Config{prefix: prefix, repo: repo, verbose: verbose}, queue) do
     Job
@@ -147,7 +155,7 @@ defmodule Oban.Query do
   @spec complete_job(Config.t(), Job.t()) :: :ok
   def complete_job(%Config{prefix: prefix, repo: repo, verbose: verbose}, %Job{id: id}) do
     repo.update_all(
-      select_for_update(prefix, id),
+      where(Job, id: ^id),
       [set: [state: "completed", completed_at: utc_now()]],
       log: verbose,
       prefix: prefix
@@ -159,7 +167,7 @@ defmodule Oban.Query do
   @spec discard_job(Config.t(), Job.t()) :: :ok
   def discard_job(%Config{prefix: prefix, repo: repo, verbose: verbose}, %Job{id: id}) do
     repo.update_all(
-      select_for_update(prefix, id),
+      where(Job, id: ^id),
       [set: [state: "discarded", completed_at: utc_now()]],
       log: verbose,
       prefix: prefix
@@ -185,7 +193,7 @@ defmodule Oban.Query do
     ]
 
     repo.update_all(
-      select_for_update(config.prefix, id),
+      where(Job, id: ^id),
       updates,
       log: config.verbose,
       prefix: config.prefix
@@ -200,17 +208,12 @@ defmodule Oban.Query do
     :ok
   end
 
+  @spec to_ns(value :: binary()) :: pos_integer()
+  def to_ns(value \\ "public"), do: :erlang.phash2(value)
+
   # Helpers
 
-  defp to_ns(value), do: :erlang.phash2(value)
-
   defp next_attempt_at(backoff), do: DateTime.add(utc_now(), backoff, :second)
-
-  defp select_for_update(prefix, id) do
-    Job
-    |> where(id: ^id)
-    |> select(%{lock: drop_lock(^to_ns(prefix), ^id)})
-  end
 
   defp get_unique_job(repo, prefix, %{changes: %{unique: unique} = changes})
        when is_map(unique) do

@@ -28,9 +28,10 @@ defmodule Oban.Queue.Producer do
       :queue,
       circuit: :enabled,
       circuit_backoff: :timer.minutes(1),
+      paused: false,
       poll_ref: nil,
       running: %{},
-      paused: false
+      unlockable: []
     ]
   end
 
@@ -88,16 +89,23 @@ defmodule Oban.Queue.Producer do
   end
 
   @impl GenServer
-  def handle_info(:poll, state) do
-    state
-    |> deschedule()
-    |> gossip()
-    |> send_after()
-    |> dispatch()
+  def handle_info(:poll, %State{conf: conf} = state) do
+    conf.repo.checkout(fn ->
+      state
+      |> unlock()
+      |> deschedule()
+      |> gossip()
+      |> send_after()
+      |> dispatch()
+    end)
   end
 
-  def handle_info({:DOWN, ref, :process, _pid, _reason}, %State{running: running} = state) do
-    dispatch(%{state | running: Map.delete(running, ref)})
+  def handle_info({:DOWN, ref, :process, _pid, _reason}, state) do
+    %State{running: running, unlockable: unlockable} = state
+
+    {:ok, {%_{id: id}, _pid}} = Map.fetch(running, ref)
+
+    dispatch(%{state | running: Map.delete(running, ref), unlockable: [id | unlockable]})
   end
 
   def handle_info({:notification, _, _, prefixed_channel, payload}, state) do
@@ -184,6 +192,26 @@ defmodule Oban.Queue.Producer do
   end
 
   # Dispatching
+
+  # Jobs are locked when they are executed, but the lock isn't released immediately. Only the db
+  # connection that took the lock can release it, so we track the id of all jobs that are finished
+  # executing and try to unlock them all together. Any successful unlocks are removed from the
+  # unlockable list.
+  def unlock(%State{circuit: :disabled} = state) do
+    state
+  end
+
+  def unlock(%State{unlockable: []} = state) do
+    state
+  end
+
+  def unlock(%State{conf: conf, unlockable: unlockable} = state) do
+    unlocked = Query.unlock_jobs(conf, unlockable)
+
+    %{state | unlockable: unlockable -- unlocked}
+  rescue
+    exception in [Postgrex.Error] -> trip_circuit(exception, state)
+  end
 
   defp deschedule(%State{circuit: :disabled} = state) do
     state
