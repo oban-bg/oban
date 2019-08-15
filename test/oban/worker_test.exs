@@ -13,7 +13,7 @@ defmodule Oban.WorkerTest do
   defmodule CustomWorker do
     use Worker,
       queue: "special",
-      max_attempts: 5,
+      max_attempts: 1,
       unique: [fields: [:queue, :worker], period: 60, states: [:scheduled]]
 
     @impl Worker
@@ -33,7 +33,7 @@ defmodule Oban.WorkerTest do
 
       assert job.args == %{a: 1, b: 2}
       assert job.queue == "special"
-      assert job.max_attempts == 5
+      assert job.max_attempts == 1
       assert job.worker == "Oban.WorkerTest.CustomWorker"
       assert job.unique.period == 60
     end

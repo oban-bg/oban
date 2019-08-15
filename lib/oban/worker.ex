@@ -211,8 +211,8 @@ defmodule Oban.Worker do
   end
 
   defp validate_opt!({:max_attempts, max_attempts}) do
-    unless is_integer(max_attempts) and max_attempts > 1 do
-      raise ArgumentError, "expected :max_attempts to be an integer greater than 1"
+    unless is_integer(max_attempts) and max_attempts > 0 do
+      raise ArgumentError, "expected :max_attempts to be an integer greater than 0"
     end
   end
 

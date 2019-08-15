@@ -20,6 +20,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   the database would raise "ERROR:  53200: out of shared memory" after it hit a
   threshold (11,937 exactly, in my testing).
 
+- [Oban.Worker] Allow `max_attempts` to be 1 or more. This used to be possible
+  and was broken unintentionally by compile time validations.
+
 ## [0.7.0] — 2019-08-8
 
 ### Added
