@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## [0.7.1] — 2019-08-15
+
 ### Fixed
 
 - [Oban.Query] Release advisory locks in batches rather than individually after
@@ -23,7 +25,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - [Oban.Worker] Allow `max_attempts` to be 1 or more. This used to be possible
   and was broken unintentionally by compile time validations.
 
-## [0.7.0] — 2019-08-8
+## [0.7.0] — 2019-08-08
 
 ### Added
 
@@ -288,7 +290,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 - [Oban] Initial release with base functionality.
 
-[Unreleased]: https://github.com/sorentwo/oban/compare/v0.7.0...HEAD
+[Unreleased]: https://github.com/sorentwo/oban/compare/v0.7.1...HEAD
+[0.7.1]: https://github.com/sorentwo/oban/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/sorentwo/oban/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/sorentwo/oban/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/sorentwo/oban/compare/v0.4.0...v0.5.0
