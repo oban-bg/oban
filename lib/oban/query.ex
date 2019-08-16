@@ -48,7 +48,6 @@ defmodule Oban.Query do
       Job
       |> where([j], j.state == "available")
       |> where([j], j.queue == ^queue)
-      |> where([j], j.scheduled_at <= ^utc_now())
       |> lock("FOR UPDATE SKIP LOCKED")
       |> limit(^demand)
       |> order_by([j], asc: j.scheduled_at, asc: j.id)
