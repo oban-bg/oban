@@ -71,11 +71,18 @@ defmodule Oban.Queue.Executor do
   # `safe_call/1`. There is a possibility that the worker module can't be found at all and we
   # need to fall back to a default implementation.
   defp worker_backoff(%Job{attempt: attempt, worker: worker}) do
-    worker
-    |> to_module()
-    |> apply(:backoff, [attempt])
-  rescue
-    ArgumentError -> Worker.default_backoff(attempt)
+    module =
+      try do
+        to_module(worker)
+      rescue
+        ArgumentError -> nil
+      end
+
+    if function_exported?(module, :backoff, 1) do
+      module.backoff(attempt)
+    else
+      Worker.default_backoff(attempt)
+    end
   end
 
   defp format_blamed(:exception, error, stack), do: format_blamed(:error, error, stack)
