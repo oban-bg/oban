@@ -696,7 +696,7 @@ defmodule Oban do
 
   defp queue_spec({queue, limit}, conf) do
     queue = to_string(queue)
-    name = Module.concat([conf.name, "Queue", String.capitalize(queue)])
+    name = Module.concat([conf.name, "Queue", Macro.camelize(queue)])
     opts = [conf: conf, queue: queue, limit: limit, name: name]
 
     Supervisor.child_spec({QueueSupervisor, opts}, id: name)
