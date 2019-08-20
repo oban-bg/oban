@@ -6,6 +6,6 @@ defmodule Oban.Test.Repo.Migrations.AddPrefixedObanJobsTable do
   end
 
   def down do
-    Oban.Migrations.down(prefix: "private")
+    Oban.Migrations.down(prefix: "private", version: 1)
   end
 end
