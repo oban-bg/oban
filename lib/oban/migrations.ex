@@ -140,10 +140,10 @@ defmodule Oban.Migrations do
     end
 
     def down(prefix) do
-      execute "DROP TRIGGER IF EXISTS #{prefix}.oban_notify ON oban_jobs"
+      execute "DROP TRIGGER IF EXISTS oban_notify ON #{prefix}.oban_jobs"
       execute "DROP FUNCTION #{prefix}.oban_jobs_notify()"
 
-      drop_if_exists table("#{prefix}.oban_jobs")
+      drop_if_exists table(:oban_jobs, prefix: prefix)
 
       execute "DROP TYPE IF EXISTS #{prefix}.oban_job_state"
     end
