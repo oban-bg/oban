@@ -70,7 +70,7 @@ defmodule Oban.Case do
 
   use ExUnit.CaseTemplate
 
-  alias Oban.Job
+  alias Oban.{Beat, Job}
   alias Oban.Test.Repo
 
   using do
@@ -107,9 +107,10 @@ defmodule Oban.Case do
     # We are intentionally avoiding Sandbox mode for testing. Within Sandbox mode everything
     # happens in a transaction, which prevents the use of LISTEN/NOTIFY messages.
     if tags[:integration] do
+      Repo.delete_all(Beat)
       Repo.delete_all(Job)
 
-      on_exit(fn -> Repo.delete_all(Job) end)
+      on_exit(fn -> Repo.delete_all(Beat) end)
     end
 
     {:ok, %{}}

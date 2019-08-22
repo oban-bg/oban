@@ -5,45 +5,12 @@ defmodule Oban.Query do
   import DateTime, only: [utc_now: 0]
 
   alias Ecto.{Changeset, Multi}
-  alias Oban.{Config, Job}
-
-  # Taking a shared lock this way will always work, even if a lock has been taken by another
-  # connection.
-  #
-  # Locks use the `oid` of the `oban_jobs` table to provide a consistent and virtually unique
-  # namespace. Using two `int` values instead of a single `bigint` ensures that we only have a 1
-  # in 2^31 - 1 chance of colliding with locks from application code.
-  #
-  # Due to the switch from `bigint` to `int` we also need to wrap `bigint` values to less than the
-  # maximum integer value. This is handled by the immutable `oban_wrap_id` function directly in
-  # Postgres.
-  #
-  defmacrop take_lock(ns, id) do
-    quote do
-      fragment("pg_try_advisory_lock_shared(?, oban_wrap_id(?))", unquote(ns), unquote(id))
-    end
-  end
-
-  defmacrop no_lock_exists(ns, id) do
-    quote do
-      fragment(
-        """
-          NOT EXISTS (
-            SELECT 1
-            FROM pg_locks
-            WHERE locktype = 'advisory'
-              AND classid = ?
-              AND objid = oban_wrap_id(?)
-          )
-        """,
-        unquote(ns),
-        unquote(id)
-      )
-    end
-  end
+  alias Oban.{Beat, Config, Job}
 
   @spec fetch_available_jobs(Config.t(), binary(), pos_integer()) :: {integer(), nil | [Job.t()]}
-  def fetch_available_jobs(%Config{prefix: prefix, repo: repo, verbose: verbose}, queue, demand) do
+  def fetch_available_jobs(%Config{} = conf, queue, demand) do
+    %Config{node: node, prefix: prefix, repo: repo, verbose: verbose} = conf
+
     subquery =
       Job
       |> where([j], j.state == "available")
@@ -51,7 +18,7 @@ defmodule Oban.Query do
       |> lock("FOR UPDATE SKIP LOCKED")
       |> limit(^demand)
       |> order_by([j], asc: j.scheduled_at, asc: j.id)
-      |> select([j], %{id: j.id, lock: take_lock(^to_ns(prefix), j.id)})
+      |> select([:id])
 
     query =
       from(
@@ -62,7 +29,7 @@ defmodule Oban.Query do
       )
 
     updates = [
-      set: [state: "executing", attempted_at: utc_now()],
+      set: [state: "executing", attempted_at: utc_now(), attempted_by: node],
       inc: [attempt: 1]
     ]
 
@@ -84,25 +51,6 @@ defmodule Oban.Query do
     end)
   end
 
-  # Only the session that originally took the lock can drop it, but we can't guarantee that the
-  # current connection is the same connection that started a job. Therefore, some locks may not
-  # be released by the current connection. Unlocking in batches ensures that all locks have a
-  # chance of being released _eventually_.
-  @unlock_query """
-  SELECT u.id
-  FROM (
-    SELECT x AS id, pg_advisory_unlock_shared($1::int, x) AS unlocked
-    FROM unnest($2::int[]) AS a(x)
-  ) AS u WHERE u.unlocked = true
-  """
-  @spec unlock_jobs(Config.t(), [integer()]) :: [integer()]
-  def unlock_jobs(%Config{prefix: prefix, repo: repo, verbose: verbose}, unlockable) do
-    case repo.query!(@unlock_query, [to_ns(prefix), unlockable], log: verbose) do
-      %{rows: [rows]} -> rows
-      _ -> []
-    end
-  end
-
   @spec stage_scheduled_jobs(Config.t(), binary()) :: {integer(), nil}
   def stage_scheduled_jobs(%Config{prefix: prefix, repo: repo, verbose: verbose}, queue) do
     Job
@@ -112,12 +60,19 @@ defmodule Oban.Query do
     |> repo.update_all([set: [state: "available"]], log: verbose, prefix: prefix)
   end
 
+  @spec insert_beat(Config.t(), map()) :: {:ok, Beat.t()} | {:error, Changeset.t()}
+  def insert_beat(%Config{prefix: prefix, repo: repo}, params) do
+    params
+    |> Beat.new()
+    |> repo.insert(prefix: prefix)
+  end
+
+  # TODO: UPDATE THIS
   @spec rescue_orphaned_jobs(Config.t(), binary()) :: {integer(), nil}
   def rescue_orphaned_jobs(%Config{prefix: prefix, repo: repo, verbose: verbose}, queue) do
     Job
     |> where([j], j.state == "executing")
     |> where([j], j.queue == ^queue)
-    |> where([j], no_lock_exists(^to_ns(prefix), j.id))
     |> repo.update_all([set: [state: "available"]], log: verbose, prefix: prefix)
   end
 

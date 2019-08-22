@@ -26,12 +26,12 @@ defmodule Oban.Queue.Producer do
       :foreman,
       :limit,
       :queue,
+      :poll_ref,
+      :started_at,
       circuit: :enabled,
       circuit_backoff: :timer.minutes(1),
       paused: false,
-      poll_ref: nil,
-      running: %{},
-      unlockable: []
+      running: %{}
     ]
   end
 
@@ -67,6 +67,8 @@ defmodule Oban.Queue.Producer do
   def init(opts) do
     Process.flag(:trap_exit, true)
 
+    opts = Keyword.put(opts, :started_at, DateTime.utc_now())
+
     {:ok, struct!(State, opts), {:continue, :start}}
   end
 
@@ -92,20 +94,15 @@ defmodule Oban.Queue.Producer do
   def handle_info(:poll, %State{conf: conf} = state) do
     conf.repo.checkout(fn ->
       state
-      |> unlock()
       |> deschedule()
-      |> gossip()
+      |> pulse()
       |> send_after()
       |> dispatch()
     end)
   end
 
-  def handle_info({:DOWN, ref, :process, _pid, _reason}, state) do
-    %State{running: running, unlockable: unlockable} = state
-
-    {:ok, {%_{id: id}, _pid}} = Map.fetch(running, ref)
-
-    dispatch(%{state | running: Map.delete(running, ref), unlockable: [id | unlockable]})
+  def handle_info({:DOWN, ref, :process, _pid, _reason}, %State{running: running} = state) do
+    dispatch(%{state | running: Map.delete(running, ref)})
   end
 
   def handle_info({:notification, _, _, prefixed_channel, payload}, state) do
@@ -193,26 +190,6 @@ defmodule Oban.Queue.Producer do
 
   # Dispatching
 
-  # Jobs are locked when they are executed, but the lock isn't released immediately. Only the db
-  # connection that took the lock can release it, so we track the id of all jobs that are finished
-  # executing and try to unlock them all together. Any successful unlocks are removed from the
-  # unlockable list.
-  def unlock(%State{circuit: :disabled} = state) do
-    state
-  end
-
-  def unlock(%State{unlockable: []} = state) do
-    state
-  end
-
-  def unlock(%State{conf: conf, unlockable: unlockable} = state) do
-    unlocked = Query.unlock_jobs(conf, unlockable)
-
-    %{state | unlockable: unlockable -- unlocked}
-  rescue
-    exception in [Postgrex.Error] -> trip_circuit(exception, state)
-  end
-
   defp deschedule(%State{circuit: :disabled} = state) do
     state
   end
@@ -225,22 +202,23 @@ defmodule Oban.Queue.Producer do
     exception in [Postgrex.Error] -> trip_circuit(exception, state)
   end
 
-  defp gossip(%State{circuit: :disabled} = state) do
+  defp pulse(%State{circuit: :disabled} = state) do
     state
   end
 
-  defp gossip(state) do
-    %State{conf: conf, limit: limit, paused: paused, queue: queue, running: running} = state
+  defp pulse(state) do
+    %State{conf: conf, queue: queue, limit: limit, paused: paused, started_at: started_at} = state
 
-    message = %{
-      count: map_size(running),
-      limit: limit,
+    args = %{
       node: conf.node,
+      queue: queue,
+      limit: limit,
       paused: paused,
-      queue: queue
+      running: running_job_ids(state),
+      started_at: started_at
     }
 
-    :ok = Query.notify(conf, Notifier.gossip(), Jason.encode!(message))
+    Query.insert_beat(conf, args)
 
     state
   rescue
@@ -295,5 +273,9 @@ defmodule Oban.Queue.Producer do
     Process.send_after(self(), :reset_circuit, state.circuit_backoff)
 
     %{state | circuit: :disabled}
+  end
+
+  defp running_job_ids(%State{running: running}) do
+    for {_ref, {%_{id: id}, _pid}} <- running, do: id
   end
 end

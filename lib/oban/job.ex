@@ -25,13 +25,14 @@ defmodule Oban.Job do
           | {:states, [unique_state()]}
 
   @type option ::
-          {:queue, atom() | binary()}
-          | {:worker, atom() | binary()}
-          | {:args, args()}
+          {:args, args()}
+          | {:attempted_by, binary()}
           | {:max_attempts, pos_integer()}
-          | {:scheduled_at, DateTime.t()}
+          | {:queue, atom() | binary()}
           | {:schedule_in, pos_integer()}
+          | {:scheduled_at, DateTime.t()}
           | {:unique, [unique_option()]}
+          | {:worker, atom() | binary()}
 
   @type t :: %__MODULE__{
           id: pos_integer(),
@@ -41,6 +42,7 @@ defmodule Oban.Job do
           args: args(),
           errors: errors(),
           attempt: non_neg_integer(),
+          attempted_by: binary(),
           max_attempts: pos_integer(),
           inserted_at: DateTime.t(),
           scheduled_at: DateTime.t(),
@@ -56,6 +58,7 @@ defmodule Oban.Job do
     field :args, :map
     field :errors, {:array, :map}, default: []
     field :attempt, :integer, default: 0
+    field :attempted_by, :string
     field :max_attempts, :integer, default: 20
     field :attempted_at, :utc_datetime_usec
     field :completed_at, :utc_datetime_usec
@@ -67,6 +70,7 @@ defmodule Oban.Job do
   @permitted ~w(
     args
     attempt
+    attempted_by
     attempted_at
     completed_at
     errors
