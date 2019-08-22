@@ -78,7 +78,7 @@ defmodule Oban.Case do
       use ExUnitProperties
 
       alias Oban.Integration.Worker
-      alias Oban.Job
+      alias Oban.{Beat, Job}
       alias Repo
 
       def with_backoff(opts \\ [], fun) do

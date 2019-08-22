@@ -106,6 +106,15 @@ defmodule Oban.Query do
     repo.delete_all(query, log: verbose, prefix: prefix)
   end
 
+  @spec delete_outdated_beats(Config.t(), pos_integer()) :: {integer(), nil}
+  def delete_outdated_beats(%Config{prefix: prefix, repo: repo, verbose: verbose}, seconds) do
+    outdated_at = DateTime.add(utc_now(), -seconds)
+
+    Beat
+    |> where([b], b.inserted_at < ^outdated_at)
+    |> repo.delete_all(log: verbose, prefix: prefix)
+  end
+
   @spec complete_job(Config.t(), Job.t()) :: :ok
   def complete_job(%Config{prefix: prefix, repo: repo, verbose: verbose}, %Job{id: id}) do
     repo.update_all(

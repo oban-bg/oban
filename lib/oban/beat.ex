@@ -26,12 +26,13 @@ defmodule Oban.Beat do
     field :started_at, :utc_datetime_usec
   end
 
+  @permitted ~w(node queue limit paused running inserted_at started_at)a
   @required ~w(node queue limit paused running started_at)a
 
   @spec new(map()) :: Ecto.Changeset.t()
   def new(params) when is_map(params) do
     %__MODULE__{}
-    |> cast(params, @required)
+    |> cast(params, @permitted)
     |> validate_required(@required)
     |> validate_length(:node, min: 1, max: 128)
     |> validate_length(:queue, min: 1, max: 128)

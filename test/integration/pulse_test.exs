@@ -9,7 +9,7 @@ defmodule Oban.Integration.PulseTest do
 
   @oban_opts node: "oban.test", poll_interval: 50, repo: Repo, queues: [alpha: 5, gamma: 3]
 
-  test "queue producers record runtime information" do
+  test "queue producers record runtime information in beat records" do
     %Job{id: jid1} = insert_job!(ref: 1, sleep: 500, queue: :alpha)
     %Job{id: jid2} = insert_job!(ref: 2, sleep: 500, queue: :alpha)
     %Job{id: jid3} = insert_job!(ref: 3, sleep: 500, queue: :gamma)
