@@ -88,6 +88,15 @@ defmodule Oban.ConfigTest do
       assert %Config{} = Config.new(repo: Repo, queues: [default: 1])
     end
 
+    test ":rescue_interval is validated as an integer" do
+      assert_raise ArgumentError, fn -> Config.new(repo: Repo, rescue_interval: -1) end
+      assert_raise ArgumentError, fn -> Config.new(repo: Repo, rescue_interval: 0) end
+      assert_raise ArgumentError, fn -> Config.new(repo: Repo, rescue_interval: "5") end
+      assert_raise ArgumentError, fn -> Config.new(repo: Repo, rescue_interval: 1.0) end
+
+      assert %Config{} = Config.new(repo: Repo, rescue_interval: 10)
+    end
+
     test ":shutdown_grace_period is validated as an integer" do
       assert_raise ArgumentError, fn -> Config.new(repo: Repo, shutdown_grace_period: -1) end
       assert_raise ArgumentError, fn -> Config.new(repo: Repo, shutdown_grace_period: 0) end

@@ -7,14 +7,14 @@ defmodule Oban.Integration.RescuingTest do
 
   @oban_opts repo: Repo, queues: [alpha: 2, gamma: 2, delta: 2]
 
-  test "orphaned jobs are transitioned back to an available state" do
-    node = "web.1"
-    nonce = "a1b2c3d4"
+  @node "web.1"
+  @nonce "a1b2c3d4"
 
+  test "orphaned jobs are transitioned back to an available state on startup" do
     insert_job!([ref: 1, action: "OK"], queue: "alpha")
-    insert_job!([ref: 2, action: "OK"], queue: "alpha", attempted_by: [node, "alpha", nonce])
-    insert_job!([ref: 3, action: "OK"], queue: "gamma", attempted_by: [node, "gamma", nonce])
-    insert_job!([ref: 4, action: "OK"], queue: "delta", attempted_by: [node, "delta", nonce])
+    insert_job!([ref: 2, action: "OK"], queue: "alpha", attempted_by: [@node, "alpha", @nonce])
+    insert_job!([ref: 3, action: "OK"], queue: "gamma", attempted_by: [@node, "gamma", @nonce])
+    insert_job!([ref: 4, action: "OK"], queue: "delta", attempted_by: [@node, "delta", @nonce])
 
     start_supervised({Oban, @oban_opts})
 
@@ -22,6 +22,24 @@ defmodule Oban.Integration.RescuingTest do
     assert_receive {:ok, 2}
     assert_receive {:ok, 3}
     assert_receive {:ok, 4}
+
+    :ok = stop_supervised(Oban)
+  end
+
+  test "orphaned jobs are transitioned back to an available state periodically" do
+    start_supervised({Oban, Keyword.put(@oban_opts, :rescue_interval, 10)})
+
+    # We need to give the producers time to start up before the job is inserted. Otherwise we are
+    # only testing that rescue happens on startup, not periodically afterwards.
+    Process.sleep(50)
+
+    insert_job!([ref: 1, action: "OK"], queue: "alpha", attempted_by: [@node, "alpha", @nonce])
+    insert_job!([ref: 2, action: "OK"], queue: "gamma", attempted_by: [@node, "gamma", @nonce])
+    insert_job!([ref: 3, action: "OK"], queue: "delta", attempted_by: [@node, "delta", @nonce])
+
+    assert_receive {:ok, 1}
+    assert_receive {:ok, 2}
+    assert_receive {:ok, 3}
 
     :ok = stop_supervised(Oban)
   end

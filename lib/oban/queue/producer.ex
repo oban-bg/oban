@@ -28,6 +28,7 @@ defmodule Oban.Queue.Producer do
       :nonce,
       :queue,
       :poll_ref,
+      :rescue_ref,
       :started_at,
       circuit: :enabled,
       circuit_backoff: :timer.seconds(30),
@@ -81,15 +82,17 @@ defmodule Oban.Queue.Producer do
     state
     |> rescue_orphans()
     |> start_listener()
-    |> send_after()
+    |> send_poll_after()
+    |> send_rescue_after()
     |> dispatch()
   end
 
   @impl GenServer
-  def terminate(_reason, %State{poll_ref: poll_ref}) do
+  def terminate(_reason, %State{poll_ref: poll_ref, rescue_ref: rescue_ref}) do
     # There is a good chance that a message will be received after the process has terminated.
     # While this doesn't cause any problems, it does cause an unwanted crash report.
     if not is_nil(poll_ref), do: Process.cancel_timer(poll_ref)
+    if not is_nil(rescue_ref), do: Process.cancel_timer(rescue_ref)
 
     :ok
   end
@@ -100,7 +103,16 @@ defmodule Oban.Queue.Producer do
       state
       |> deschedule()
       |> pulse()
-      |> send_after()
+      |> send_poll_after()
+      |> dispatch()
+    end)
+  end
+
+  def handle_info(:rescue, %State{conf: conf} = state) do
+    conf.repo.checkout(fn ->
+      state
+      |> rescue_orphans()
+      |> send_rescue_after()
       |> dispatch()
     end)
   end
@@ -154,10 +166,16 @@ defmodule Oban.Queue.Producer do
     state
   end
 
-  defp send_after(%State{conf: conf} = state) do
-    poll_ref = Process.send_after(self(), :poll, conf.poll_interval)
+  defp send_poll_after(%State{conf: conf} = state) do
+    ref = Process.send_after(self(), :poll, conf.poll_interval)
 
-    %{state | poll_ref: poll_ref}
+    %{state | poll_ref: ref}
+  end
+
+  defp send_rescue_after(%State{conf: conf} = state) do
+    ref = Process.send_after(self(), :rescue, conf.rescue_interval)
+
+    %{state | rescue_ref: ref}
   end
 
   # Notifications
