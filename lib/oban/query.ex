@@ -7,8 +7,9 @@ defmodule Oban.Query do
   alias Ecto.{Changeset, Multi}
   alias Oban.{Beat, Config, Job}
 
-  @spec fetch_available_jobs(Config.t(), binary(), pos_integer()) :: {integer(), nil | [Job.t()]}
-  def fetch_available_jobs(%Config{} = conf, queue, demand) do
+  @spec fetch_available_jobs(Config.t(), binary(), binary(), pos_integer()) ::
+          {integer(), nil | [Job.t()]}
+  def fetch_available_jobs(%Config{} = conf, queue, nonce, demand) do
     %Config{node: node, prefix: prefix, repo: repo, verbose: verbose} = conf
 
     subquery =
@@ -20,20 +21,15 @@ defmodule Oban.Query do
       |> order_by([j], asc: j.scheduled_at, asc: j.id)
       |> select([:id])
 
-    query =
-      from(
-        j in Job,
-        join: x in subquery(subquery, prefix: prefix),
-        on: j.id == x.id,
-        select: j
-      )
-
     updates = [
-      set: [state: "executing", attempted_at: utc_now(), attempted_by: node],
+      set: [state: "executing", attempted_at: utc_now(), attempted_by: [node, queue, nonce]],
       inc: [attempt: 1]
     ]
 
-    repo.update_all(query, updates, log: verbose, prefix: prefix)
+    Job
+    |> join(:inner, [j], x in subquery(subquery, prefix: prefix), on: j.id == x.id)
+    |> select([j, _], j)
+    |> repo.update_all(updates, log: verbose, prefix: prefix)
   end
 
   @spec fetch_or_insert_job(Config.t(), Changeset.t()) :: {:ok, Job.t()} | {:error, Changeset.t()}
@@ -67,12 +63,25 @@ defmodule Oban.Query do
     |> repo.insert(prefix: prefix)
   end
 
-  # TODO: UPDATE THIS
+  @doc """
+  Finds all executing jobs within a queue which were attempted by a producer that hasn't had a
+  pulse recently.
+  """
   @spec rescue_orphaned_jobs(Config.t(), binary()) :: {integer(), nil}
   def rescue_orphaned_jobs(%Config{prefix: prefix, repo: repo, verbose: verbose}, queue) do
+    orphaned_at = DateTime.add(utc_now(), -60)
+
+    subquery =
+      Job
+      |> where([j], j.state == "executing" and j.queue == ^queue)
+      |> join(:left, [j], b in Beat,
+        on: j.attempted_by == [b.node, b.queue, b.nonce] and b.inserted_at > ^orphaned_at
+      )
+      |> where([_, b], is_nil(b.node))
+      |> select([:id])
+
     Job
-    |> where([j], j.state == "executing")
-    |> where([j], j.queue == ^queue)
+    |> join(:inner, [j], x in subquery(subquery, prefix: prefix), on: j.id == x.id)
     |> repo.update_all([set: [state: "available"]], log: verbose, prefix: prefix)
   end
 
@@ -85,9 +94,9 @@ defmodule Oban.Query do
       |> limit(^limit)
       |> order_by(desc: :id)
 
-    query = from(j in Job, join: x in subquery(subquery, prefix: prefix), on: j.id == x.id)
-
-    repo.delete_all(query, log: verbose, prefix: prefix)
+    Job
+    |> join(:inner, [j], x in subquery(subquery, prefix: prefix), on: j.id == x.id)
+    |> repo.delete_all(log: verbose, prefix: prefix)
   end
 
   @spec delete_outdated_jobs(Config.t(), pos_integer(), pos_integer()) :: {integer(), nil}
@@ -101,9 +110,9 @@ defmodule Oban.Query do
       |> limit(^limit)
       |> order_by(desc: :id)
 
-    query = from(j in Job, join: x in subquery(subquery, prefix: prefix), on: j.id == x.id)
-
-    repo.delete_all(query, log: verbose, prefix: prefix)
+    Job
+    |> join(:inner, [j], x in subquery(subquery, prefix: prefix), on: j.id == x.id)
+    |> repo.delete_all(log: verbose, prefix: prefix)
   end
 
   @spec delete_outdated_beats(Config.t(), pos_integer()) :: {integer(), nil}

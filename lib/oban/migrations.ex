@@ -214,12 +214,13 @@ defmodule Oban.Migrations do
 
     def up(prefix) do
       alter table(:oban_jobs, prefix: prefix) do
-        add :attempted_by, :text
+        add :attempted_by, {:array, :text}
       end
 
       create_if_not_exists table(:oban_beats, primary_key: false, prefix: prefix) do
         add :node, :text, null: false
         add :queue, :text, null: false
+        add :nonce, :text, null: false
         add :limit, :integer, null: false
         add :paused, :boolean, null: false, default: false
         add :running, {:array, :integer}, null: false, default: []

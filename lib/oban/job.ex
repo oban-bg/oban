@@ -26,7 +26,6 @@ defmodule Oban.Job do
 
   @type option ::
           {:args, args()}
-          | {:attempted_by, binary()}
           | {:max_attempts, pos_integer()}
           | {:queue, atom() | binary()}
           | {:schedule_in, pos_integer()}
@@ -42,7 +41,7 @@ defmodule Oban.Job do
           args: args(),
           errors: errors(),
           attempt: non_neg_integer(),
-          attempted_by: binary(),
+          attempted_by: [binary()],
           max_attempts: pos_integer(),
           inserted_at: DateTime.t(),
           scheduled_at: DateTime.t(),
@@ -58,7 +57,7 @@ defmodule Oban.Job do
     field :args, :map
     field :errors, {:array, :map}, default: []
     field :attempt, :integer, default: 0
-    field :attempted_by, :string
+    field :attempted_by, {:array, :string}
     field :max_attempts, :integer, default: 20
     field :attempted_at, :utc_datetime_usec
     field :completed_at, :utc_datetime_usec

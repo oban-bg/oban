@@ -20,16 +20,17 @@ defmodule Oban.Queue.Producer do
   defmodule State do
     @moduledoc false
 
-    @enforce_keys [:conf, :foreman, :limit, :queue]
+    @enforce_keys [:conf, :foreman, :limit, :nonce, :queue]
     defstruct [
       :conf,
       :foreman,
       :limit,
+      :nonce,
       :queue,
       :poll_ref,
       :started_at,
       circuit: :enabled,
-      circuit_backoff: :timer.minutes(1),
+      circuit_backoff: :timer.seconds(30),
       paused: false,
       running: %{}
     ]
@@ -55,7 +56,7 @@ defmodule Oban.Queue.Producer do
         }
   def drain(queue, %Config{} = conf) when is_binary(queue) do
     conf
-    |> fetch_jobs(queue, @unlimited)
+    |> fetch_jobs(queue, nonce(), @unlimited)
     |> Enum.reduce(%{failure: 0, success: 0}, fn job, acc ->
       result = Executor.call(job, conf)
 
@@ -67,7 +68,10 @@ defmodule Oban.Queue.Producer do
   def init(opts) do
     Process.flag(:trap_exit, true)
 
-    opts = Keyword.put(opts, :started_at, DateTime.utc_now())
+    opts =
+      opts
+      |> Keyword.put(:nonce, nonce())
+      |> Keyword.put(:started_at, DateTime.utc_now())
 
     {:ok, struct!(State, opts), {:continue, :start}}
   end
@@ -125,6 +129,13 @@ defmodule Oban.Queue.Producer do
   end
 
   # Start Handlers
+
+  defp nonce(size \\ 8) when size > 0 do
+    size
+    |> :crypto.strong_rand_bytes()
+    |> Base.hex_encode32(case: :lower)
+    |> String.slice(0..(size - 1))
+  end
 
   defp rescue_orphans(%State{conf: conf, queue: queue} = state) do
     Query.rescue_orphaned_jobs(conf, queue)
@@ -206,17 +217,12 @@ defmodule Oban.Queue.Producer do
     state
   end
 
-  defp pulse(state) do
-    %State{conf: conf, queue: queue, limit: limit, paused: paused, started_at: started_at} = state
-
-    args = %{
-      node: conf.node,
-      queue: queue,
-      limit: limit,
-      paused: paused,
-      running: running_job_ids(state),
-      started_at: started_at
-    }
+  defp pulse(%State{conf: conf} = state) do
+    args =
+      state
+      |> Map.take([:limit, :nonce, :paused, :queue, :started_at])
+      |> Map.put(:node, conf.node)
+      |> Map.put(:running, running_job_ids(state))
 
     Query.insert_beat(conf, args)
 
@@ -238,10 +244,10 @@ defmodule Oban.Queue.Producer do
   end
 
   defp dispatch(%State{conf: conf, foreman: foreman} = state) do
-    %State{queue: queue, limit: limit, running: running} = state
+    %State{limit: limit, nonce: nonce, queue: queue, running: running} = state
 
     started_jobs =
-      for job <- fetch_jobs(conf, queue, limit - map_size(running)), into: %{} do
+      for job <- fetch_jobs(conf, queue, nonce, limit - map_size(running)), into: %{} do
         {:ok, pid} = DynamicSupervisor.start_child(foreman, Executor.child_spec(job, conf))
 
         {Process.monitor(pid), {job, pid}}
@@ -252,11 +258,15 @@ defmodule Oban.Queue.Producer do
     exception in [Postgrex.Error] -> {:noreply, trip_circuit(exception, state)}
   end
 
-  defp fetch_jobs(conf, queue, count) do
-    case Query.fetch_available_jobs(conf, queue, count) do
+  defp fetch_jobs(conf, queue, nonce, count) do
+    case Query.fetch_available_jobs(conf, queue, nonce, count) do
       {0, nil} -> []
       {_count, jobs} -> jobs
     end
+  end
+
+  defp running_job_ids(%State{running: running}) do
+    for {_ref, {%_{id: id}, _pid}} <- running, do: id
   end
 
   # Circuit Breaker
@@ -273,9 +283,5 @@ defmodule Oban.Queue.Producer do
     Process.send_after(self(), :reset_circuit, state.circuit_backoff)
 
     %{state | circuit: :disabled}
-  end
-
-  defp running_job_ids(%State{running: running}) do
-    for {_ref, {%_{id: id}, _pid}} <- running, do: id
   end
 end

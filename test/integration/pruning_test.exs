@@ -69,6 +69,7 @@ defmodule Oban.Integration.PruningTest do
 
   @fake_beat_opts %{
     node: "fake.beat",
+    nonce: "a1b2c3def4",
     queue: "alpha",
     limit: 1,
     started_at: DateTime.utc_now()
@@ -94,6 +95,6 @@ defmodule Oban.Integration.PruningTest do
   end
 
   defp minutes_ago(minutes) do
-    DateTime.add(DateTime.utc_now(), minutes * 60 * -1)
+    DateTime.add(DateTime.utc_now(), minutes * -60)
   end
 end

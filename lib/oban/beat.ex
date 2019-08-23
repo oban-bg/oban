@@ -19,6 +19,7 @@ defmodule Oban.Beat do
   schema "oban_beats" do
     field :node, :string
     field :queue, :string
+    field :nonce, :string
     field :limit, :integer
     field :paused, :boolean, default: false
     field :running, {:array, :integer}, default: []
@@ -26,8 +27,8 @@ defmodule Oban.Beat do
     field :started_at, :utc_datetime_usec
   end
 
-  @permitted ~w(node queue limit paused running inserted_at started_at)a
-  @required ~w(node queue limit paused running started_at)a
+  @permitted ~w(node queue nonce limit paused running inserted_at started_at)a
+  @required ~w(node queue nonce limit paused running started_at)a
 
   @spec new(map()) :: Ecto.Changeset.t()
   def new(params) when is_map(params) do
@@ -35,6 +36,7 @@ defmodule Oban.Beat do
     |> cast(params, @permitted)
     |> validate_required(@required)
     |> validate_length(:node, min: 1, max: 128)
+    |> validate_length(:nonce, min: 1, max: 16)
     |> validate_length(:queue, min: 1, max: 128)
     |> validate_number(:limit, greater_than: 0)
   end

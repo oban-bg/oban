@@ -7,8 +7,6 @@ defmodule Oban.Pruner do
 
   @type option :: {:name, module()} | {:conf, Config.t()}
 
-  @beats_maxage_seconds 60 * 60
-
   defmodule State do
     @moduledoc false
 
@@ -40,9 +38,11 @@ defmodule Oban.Pruner do
     {:noreply, state}
   end
 
-  # Pruning beats needs to respect when `prune` is disabled, but it ignores the length and age
+  # Pruning beats needs to respect prune being `:disabled`, but it ignores the length and age
   # configuration. Each queue generates one beat a second, 3,600 beat records per hour even when
   # the queue is idle.
+  @beats_maxage_seconds 60 * 60
+
   defp prune_beats(%Config{prune: prune} = conf) do
     case prune do
       :disabled ->
