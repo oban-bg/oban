@@ -9,7 +9,7 @@ defmodule Oban.Integration.Worker do
 
   @impl Worker
   def new(args, opts) do
-    opts = Keyword.merge(@opts, opts)
+    opts = Keyword.merge(__opts__(), opts)
 
     args
     |> Map.new()

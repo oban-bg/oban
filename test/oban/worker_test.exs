@@ -11,9 +11,13 @@ defmodule Oban.WorkerTest do
   end
 
   defmodule CustomWorker do
+    # Using a module attribute to ensure that module attributes and other non-primitive values can
+    # be used when compiling a worker.
+    @max_attempts 1
+
     use Worker,
       queue: "special",
-      max_attempts: 1,
+      max_attempts: @max_attempts,
       unique: [fields: [:queue, :worker], period: 60, states: [:scheduled]]
 
     @impl Worker
@@ -63,37 +67,69 @@ defmodule Oban.WorkerTest do
     end
   end
 
-  describe "validating __using__ macro options" do
+  test "validating __using__ macro options" do
     assert_raise ArgumentError, fn ->
-      defmodule(BrokenModule, do: use(Oban.Worker, state: "youcantsetthis"))
+      defmodule BrokenModuleA do
+        use Oban.Worker, state: "youcantsetthis"
+
+        def perform(_, _), do: :ok
+      end
     end
 
     assert_raise ArgumentError, fn ->
-      defmodule(BrokenModule, do: use(Oban.Worker, queue: 1234))
+      defmodule BrokenModuleB do
+        use Oban.Worker, queue: 1234
+
+        def perform(_, _), do: :ok
+      end
     end
 
     assert_raise ArgumentError, fn ->
-      defmodule(BrokenModule, do: use(Oban.Worker, max_attempts: 0))
+      defmodule BrokenModuleC do
+        use Oban.Worker, max_attempts: 0
+
+        def perform(_, _), do: :ok
+      end
     end
 
     assert_raise ArgumentError, fn ->
-      defmodule(BrokenModule, do: use(Oban.Worker, unique: 0))
+      defmodule BrokenModuleD do
+        use Oban.Worker, unique: 0
+
+        def perform(_, _), do: :ok
+      end
     end
 
     assert_raise ArgumentError, fn ->
-      defmodule(BrokenModule, do: use(Oban.Worker, unique: [unknown: []]))
+      defmodule BrokenModuleE do
+        use Oban.Worker, unique: [unknown: []]
+
+        def perform(_, _), do: :ok
+      end
     end
 
     assert_raise ArgumentError, fn ->
-      defmodule(BrokenModule, do: use(Oban.Worker, unique: [fields: [:unknown]]))
+      defmodule BrokenModuleF do
+        use Oban.Worker, unique: [fields: [:unknown]]
+
+        def perform(_, _), do: :ok
+      end
     end
 
     assert_raise ArgumentError, fn ->
-      defmodule(BrokenModule, do: use(Oban.Worker, unique: [period: 0]))
+      defmodule BrokenModuleG do
+        use Oban.Worker, unique: [period: 0]
+
+        def perform(_, _), do: :ok
+      end
     end
 
     assert_raise ArgumentError, fn ->
-      defmodule(BrokenModule, do: use(Oban.Worker, unique: [states: [:unknown]]))
+      defmodule BrokenModuleH do
+        use Oban.Worker, unique: [states: [:unknown]]
+
+        def perform(_, _), do: :ok
+      end
     end
   end
 end

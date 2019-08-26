@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Fixed
+
+- [Oban.Worker] Validate worker options after the module is compiled. This
+  allows dynamic configuration of compile time settings via module attributes,
+  functions, `Application.get_env/3`, etc.
+
 ## [0.7.1] — 2019-08-15
 
 ### Fixed

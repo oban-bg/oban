@@ -181,18 +181,20 @@ defmodule Oban.Worker do
 
   @doc false
   defmacro __using__(opts) do
-    Enum.each(opts, &validate_opt!/1)
-
     quote location: :keep do
       alias Oban.{Job, Worker}
 
+      @after_compile Worker
       @behaviour Worker
 
-      @opts Keyword.put(unquote(opts), :worker, to_string(__MODULE__))
+      @doc false
+      def __opts__ do
+        Keyword.put(unquote(opts), :worker, to_string(__MODULE__))
+      end
 
       @impl Worker
       def new(args, opts \\ []) when is_map(args) and is_list(opts) do
-        Job.new(args, Keyword.merge(@opts, opts))
+        Job.new(args, Keyword.merge(__opts__(), opts))
       end
 
       @impl Worker
@@ -205,6 +207,11 @@ defmodule Oban.Worker do
   end
 
   @doc false
+  defmacro __after_compile__(%{module: module}, _) do
+    Enum.each(module.__opts__(), &validate_opt!/1)
+  end
+
+  @doc false
   @spec default_backoff(pos_integer(), non_neg_integer()) :: pos_integer()
   def default_backoff(attempt, base_backoff \\ 15) when is_integer(attempt) do
     trunc(:math.pow(2, attempt) + base_backoff)
@@ -212,19 +219,25 @@ defmodule Oban.Worker do
 
   defp validate_opt!({:max_attempts, max_attempts}) do
     unless is_integer(max_attempts) and max_attempts > 0 do
-      raise ArgumentError, "expected :max_attempts to be an integer greater than 0"
+      raise ArgumentError, "expected :max_attempts to be a positive integer"
     end
   end
 
   defp validate_opt!({:queue, queue}) do
     unless is_atom(queue) or is_binary(queue) do
-      raise ArgumentError, "expected :queue to be an atom or a binary"
+      raise ArgumentError, "expected :queue to be an atom or a binary, got: #{inspect(queue)}"
     end
   end
 
   defp validate_opt!({:unique, unique}) do
     unless is_list(unique) and Enum.all?(unique, &Job.valid_unique_opt?/1) do
       raise ArgumentError, "unexpected unique options: #{inspect(unique)}"
+    end
+  end
+
+  defp validate_opt!({:worker, worker}) do
+    unless is_binary(worker) do
+      raise ArgumentError, "expected :worker to be a binary, got: #{inspect(worker)}"
     end
   end
 
