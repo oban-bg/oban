@@ -124,15 +124,22 @@ add the `oban_jobs` table to your database:
 mix ecto.gen.migration add_oban_jobs_table
 ```
 
-Open the generated migration in your editor and delegate the `up` and `down`
-functions to `Oban.Migrations`:
+Open the generated migration in your editor and call the `up` and `down`
+functions on `Oban.Migrations`:
 
 ```elixir
 defmodule MyApp.Repo.Migrations.AddObanJobsTable do
   use Ecto.Migration
 
-  defdelegate up, to: Oban.Migrations
-  defdelegate down, to: Oban.Migrations
+  def up do
+    Oban.Migrations.up()
+  end
+
+  # We specify `version: 1` in `down`, ensuring that we'll roll all the way back down if
+  # necessary, regardless of which version we've migrated `up` to.
+  def down do
+    Oban.Migrations.down(version: 1)
+  end
 end
 ```
 
