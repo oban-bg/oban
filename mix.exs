@@ -31,7 +31,7 @@ defmodule Oban.MixProject do
         main: "Oban",
         source_ref: "v#{@version}",
         source_url: "https://github.com/sorentwo/oban",
-        extras: ["README.md", "CHANGELOG.md"]
+        extras: ["README.md", "CHANGELOG.md": [filename: "CHANGELOG.md", title: "CHANGELOG"]]
       ]
     ]
   end

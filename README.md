@@ -84,8 +84,9 @@ Advanced features and advantages over other RDBMS based tools:
   Instead, the job is retained in the database to provide metrics. This allows
   users to inspect historic jobs and to see aggregate data at the job, queue or
   argument level.
-- **Node Metrics** — Every queue broadcasts metrics during runtime. These are
-  used to monitor queue health across nodes.
+- **Node Metrics** — Every queue records metrics to the database during runtime.
+  These are used to monitor queue health across nodes and may be used for
+  analytics.
 - **Queue Draining** — Queue shutdown is delayed so that slow jobs can finish
   executing before shutdown.
 - **Telemetry Integration** — Job life-cycle events are emitted via
@@ -336,7 +337,9 @@ application's `Repo.insert/2` function if necessary.
 
 #### Pruning
 
-Although Oban keeps all jobs in the database for durability and observability, it's not a great thing if the table grows indefinitely. Job pruning helps us by deleting old records from the `oban_jobs` table. It has 3 modes:
+Although Oban keeps all jobs in the database for durability and observability,
+it's not a great thing if the table grows indefinitely. Job pruning helps us by
+deleting old records from the `oban_jobs` tables. It has 3 modes:
 
 * Disabled - No jobs are deleted. Example: `:disabled`
 * Limit-based - Keeps the latest N records. Example: `{:maxlen, 100_000}`

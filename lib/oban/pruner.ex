@@ -17,11 +17,11 @@ defmodule Oban.Pruner do
   def start_link(opts) do
     {name, opts} = Keyword.pop(opts, :name)
 
-    GenServer.start_link(__MODULE__, Map.new(opts), name: name)
+    GenServer.start_link(__MODULE__, opts[:conf], name: name)
   end
 
   @impl GenServer
-  def init(%{conf: conf}) do
+  def init(%Config{} = conf) do
     send_after(conf.prune_interval)
 
     {:ok, %State{conf: conf}}
@@ -29,20 +29,45 @@ defmodule Oban.Pruner do
 
   @impl GenServer
   def handle_info(:prune, %State{conf: conf} = state) do
-    case conf.prune do
-      :disabled ->
-        :ok
-
-      {:maxlen, length} ->
-        Query.delete_truncated_jobs(conf, length, conf.prune_limit)
-
-      {:maxage, seconds} ->
-        Query.delete_outdated_jobs(conf, seconds, conf.prune_limit)
-    end
+    conf
+    |> prune_beats()
+    |> prune_jobs()
 
     send_after(conf.prune_interval)
 
     {:noreply, state}
+  end
+
+  # Pruning beats needs to respect prune being `:disabled`, but it ignores the length and age
+  # configuration. Each queue generates one beat a second, 3,600 beat records per hour even when
+  # the queue is idle.
+  @beats_maxage_seconds 60 * 60
+
+  defp prune_beats(%Config{prune: prune} = conf) do
+    case prune do
+      :disabled ->
+        :ok
+
+      {_method, _setting} ->
+        Query.delete_outdated_beats(conf, @beats_maxage_seconds)
+    end
+
+    conf
+  end
+
+  defp prune_jobs(%Config{prune: prune, prune_limit: prune_limit} = conf) do
+    case prune do
+      :disabled ->
+        :ok
+
+      {:maxlen, length} ->
+        Query.delete_truncated_jobs(conf, length, prune_limit)
+
+      {:maxage, seconds} ->
+        Query.delete_outdated_jobs(conf, seconds, prune_limit)
+    end
+
+    conf
   end
 
   defp send_after(interval) do

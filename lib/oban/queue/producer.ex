@@ -20,18 +20,20 @@ defmodule Oban.Queue.Producer do
   defmodule State do
     @moduledoc false
 
-    @enforce_keys [:conf, :foreman, :limit, :queue]
+    @enforce_keys [:conf, :foreman, :limit, :nonce, :queue]
     defstruct [
       :conf,
       :foreman,
       :limit,
+      :nonce,
       :queue,
+      :poll_ref,
+      :rescue_ref,
+      :started_at,
       circuit: :enabled,
-      circuit_backoff: :timer.minutes(1),
+      circuit_backoff: :timer.seconds(30),
       paused: false,
-      poll_ref: nil,
-      running: %{},
-      unlockable: []
+      running: %{}
     ]
   end
 
@@ -55,7 +57,7 @@ defmodule Oban.Queue.Producer do
         }
   def drain(queue, %Config{} = conf) when is_binary(queue) do
     conf
-    |> fetch_jobs(queue, @unlimited)
+    |> fetch_jobs(queue, nonce(), @unlimited)
     |> Enum.reduce(%{failure: 0, success: 0}, fn job, acc ->
       result = Executor.call(job, conf)
 
@@ -67,6 +69,11 @@ defmodule Oban.Queue.Producer do
   def init(opts) do
     Process.flag(:trap_exit, true)
 
+    opts =
+      opts
+      |> Keyword.put(:nonce, nonce())
+      |> Keyword.put(:started_at, DateTime.utc_now())
+
     {:ok, struct!(State, opts), {:continue, :start}}
   end
 
@@ -75,15 +82,17 @@ defmodule Oban.Queue.Producer do
     state
     |> rescue_orphans()
     |> start_listener()
-    |> send_after()
+    |> send_poll_after()
+    |> send_rescue_after()
     |> dispatch()
   end
 
   @impl GenServer
-  def terminate(_reason, %State{poll_ref: poll_ref}) do
+  def terminate(_reason, %State{poll_ref: poll_ref, rescue_ref: rescue_ref}) do
     # There is a good chance that a message will be received after the process has terminated.
     # While this doesn't cause any problems, it does cause an unwanted crash report.
     if not is_nil(poll_ref), do: Process.cancel_timer(poll_ref)
+    if not is_nil(rescue_ref), do: Process.cancel_timer(rescue_ref)
 
     :ok
   end
@@ -92,20 +101,24 @@ defmodule Oban.Queue.Producer do
   def handle_info(:poll, %State{conf: conf} = state) do
     conf.repo.checkout(fn ->
       state
-      |> unlock()
       |> deschedule()
-      |> gossip()
-      |> send_after()
+      |> pulse()
+      |> send_poll_after()
       |> dispatch()
     end)
   end
 
-  def handle_info({:DOWN, ref, :process, _pid, _reason}, state) do
-    %State{running: running, unlockable: unlockable} = state
+  def handle_info(:rescue, %State{conf: conf} = state) do
+    conf.repo.checkout(fn ->
+      state
+      |> rescue_orphans()
+      |> send_rescue_after()
+      |> dispatch()
+    end)
+  end
 
-    {:ok, {%_{id: id}, _pid}} = Map.fetch(running, ref)
-
-    dispatch(%{state | running: Map.delete(running, ref), unlockable: [id | unlockable]})
+  def handle_info({:DOWN, ref, :process, _pid, _reason}, %State{running: running} = state) do
+    dispatch(%{state | running: Map.delete(running, ref)})
   end
 
   def handle_info({:notification, _, _, prefixed_channel, payload}, state) do
@@ -129,6 +142,13 @@ defmodule Oban.Queue.Producer do
 
   # Start Handlers
 
+  defp nonce(size \\ 8) when size > 0 do
+    size
+    |> :crypto.strong_rand_bytes()
+    |> Base.hex_encode32(case: :lower)
+    |> String.slice(0..(size - 1))
+  end
+
   defp rescue_orphans(%State{conf: conf, queue: queue} = state) do
     Query.rescue_orphaned_jobs(conf, queue)
 
@@ -146,10 +166,16 @@ defmodule Oban.Queue.Producer do
     state
   end
 
-  defp send_after(%State{conf: conf} = state) do
-    poll_ref = Process.send_after(self(), :poll, conf.poll_interval)
+  defp send_poll_after(%State{conf: conf} = state) do
+    ref = Process.send_after(self(), :poll, conf.poll_interval)
 
-    %{state | poll_ref: poll_ref}
+    %{state | poll_ref: ref}
+  end
+
+  defp send_rescue_after(%State{conf: conf} = state) do
+    ref = Process.send_after(self(), :rescue, conf.rescue_interval)
+
+    %{state | rescue_ref: ref}
   end
 
   # Notifications
@@ -193,26 +219,6 @@ defmodule Oban.Queue.Producer do
 
   # Dispatching
 
-  # Jobs are locked when they are executed, but the lock isn't released immediately. Only the db
-  # connection that took the lock can release it, so we track the id of all jobs that are finished
-  # executing and try to unlock them all together. Any successful unlocks are removed from the
-  # unlockable list.
-  def unlock(%State{circuit: :disabled} = state) do
-    state
-  end
-
-  def unlock(%State{unlockable: []} = state) do
-    state
-  end
-
-  def unlock(%State{conf: conf, unlockable: unlockable} = state) do
-    unlocked = Query.unlock_jobs(conf, unlockable)
-
-    %{state | unlockable: unlockable -- unlocked}
-  rescue
-    exception in [Postgrex.Error] -> trip_circuit(exception, state)
-  end
-
   defp deschedule(%State{circuit: :disabled} = state) do
     state
   end
@@ -225,22 +231,18 @@ defmodule Oban.Queue.Producer do
     exception in [Postgrex.Error] -> trip_circuit(exception, state)
   end
 
-  defp gossip(%State{circuit: :disabled} = state) do
+  defp pulse(%State{circuit: :disabled} = state) do
     state
   end
 
-  defp gossip(state) do
-    %State{conf: conf, limit: limit, paused: paused, queue: queue, running: running} = state
+  defp pulse(%State{conf: conf} = state) do
+    args =
+      state
+      |> Map.take([:limit, :nonce, :paused, :queue, :started_at])
+      |> Map.put(:node, conf.node)
+      |> Map.put(:running, running_job_ids(state))
 
-    message = %{
-      count: map_size(running),
-      limit: limit,
-      node: conf.node,
-      paused: paused,
-      queue: queue
-    }
-
-    :ok = Query.notify(conf, Notifier.gossip(), Jason.encode!(message))
+    Query.insert_beat(conf, args)
 
     state
   rescue
@@ -260,10 +262,10 @@ defmodule Oban.Queue.Producer do
   end
 
   defp dispatch(%State{conf: conf, foreman: foreman} = state) do
-    %State{queue: queue, limit: limit, running: running} = state
+    %State{limit: limit, nonce: nonce, queue: queue, running: running} = state
 
     started_jobs =
-      for job <- fetch_jobs(conf, queue, limit - map_size(running)), into: %{} do
+      for job <- fetch_jobs(conf, queue, nonce, limit - map_size(running)), into: %{} do
         {:ok, pid} = DynamicSupervisor.start_child(foreman, Executor.child_spec(job, conf))
 
         {Process.monitor(pid), {job, pid}}
@@ -274,11 +276,15 @@ defmodule Oban.Queue.Producer do
     exception in [Postgrex.Error] -> {:noreply, trip_circuit(exception, state)}
   end
 
-  defp fetch_jobs(conf, queue, count) do
-    case Query.fetch_available_jobs(conf, queue, count) do
+  defp fetch_jobs(conf, queue, nonce, count) do
+    case Query.fetch_available_jobs(conf, queue, nonce, count) do
       {0, nil} -> []
       {_count, jobs} -> jobs
     end
+  end
+
+  defp running_job_ids(%State{running: running}) do
+    for {_ref, {%_{id: id}, _pid}} <- running, do: id
   end
 
   # Circuit Breaker

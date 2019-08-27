@@ -44,9 +44,42 @@ defmodule Oban.Integration.PruningTest do
     :ok = stop_supervised(Oban)
   end
 
+  test "historic beats are pruned beyond a fixed age" do
+    insert_beat!(inserted_at: minutes_ago(1))
+    insert_beat!(inserted_at: minutes_ago(59))
+    insert_beat!(inserted_at: minutes_ago(60))
+    insert_beat!(inserted_at: minutes_ago(70))
+    insert_beat!(inserted_at: minutes_ago(120))
+
+    # The `prune` value must not be :disabled, but the value doesn't matter
+    start_supervised!({Oban, repo: Repo, prune: {:maxage, 60 * 4}, prune_interval: 10})
+
+    with_backoff(fn ->
+      assert retained_beat_count() == 2
+    end)
+
+    :ok = stop_supervised(Oban)
+  end
+
   defp insert_job!(opts) do
     %{}
     |> FakeWorker.new(opts)
+    |> Repo.insert!()
+  end
+
+  @fake_beat_opts %{
+    node: "fake.beat",
+    nonce: "a1b2c3def4",
+    queue: "alpha",
+    limit: 1,
+    started_at: DateTime.utc_now()
+  }
+
+  defp insert_beat!(opts) do
+    opts
+    |> Map.new()
+    |> Map.merge(@fake_beat_opts)
+    |> Beat.new()
     |> Repo.insert!()
   end
 
@@ -57,7 +90,11 @@ defmodule Oban.Integration.PruningTest do
     |> Repo.all()
   end
 
+  defp retained_beat_count do
+    Repo.one(from b in Beat, select: count())
+  end
+
   defp minutes_ago(minutes) do
-    DateTime.add(DateTime.utc_now(), minutes * 60 * -1)
+    DateTime.add(DateTime.utc_now(), minutes * -60)
   end
 end

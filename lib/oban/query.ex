@@ -5,45 +5,13 @@ defmodule Oban.Query do
   import DateTime, only: [utc_now: 0]
 
   alias Ecto.{Changeset, Multi}
-  alias Oban.{Config, Job}
+  alias Oban.{Beat, Config, Job}
 
-  # Taking a shared lock this way will always work, even if a lock has been taken by another
-  # connection.
-  #
-  # Locks use the `oid` of the `oban_jobs` table to provide a consistent and virtually unique
-  # namespace. Using two `int` values instead of a single `bigint` ensures that we only have a 1
-  # in 2^31 - 1 chance of colliding with locks from application code.
-  #
-  # Due to the switch from `bigint` to `int` we also need to wrap `bigint` values to less than the
-  # maximum integer value. This is handled by the immutable `oban_wrap_id` function directly in
-  # Postgres.
-  #
-  defmacrop take_lock(ns, id) do
-    quote do
-      fragment("pg_try_advisory_lock_shared(?, oban_wrap_id(?))", unquote(ns), unquote(id))
-    end
-  end
+  @spec fetch_available_jobs(Config.t(), binary(), binary(), pos_integer()) ::
+          {integer(), nil | [Job.t()]}
+  def fetch_available_jobs(%Config{} = conf, queue, nonce, demand) do
+    %Config{node: node, prefix: prefix, repo: repo, verbose: verbose} = conf
 
-  defmacrop no_lock_exists(ns, id) do
-    quote do
-      fragment(
-        """
-          NOT EXISTS (
-            SELECT 1
-            FROM pg_locks
-            WHERE locktype = 'advisory'
-              AND classid = ?
-              AND objid = oban_wrap_id(?)
-          )
-        """,
-        unquote(ns),
-        unquote(id)
-      )
-    end
-  end
-
-  @spec fetch_available_jobs(Config.t(), binary(), pos_integer()) :: {integer(), nil | [Job.t()]}
-  def fetch_available_jobs(%Config{prefix: prefix, repo: repo, verbose: verbose}, queue, demand) do
     subquery =
       Job
       |> where([j], j.state == "available")
@@ -51,22 +19,17 @@ defmodule Oban.Query do
       |> lock("FOR UPDATE SKIP LOCKED")
       |> limit(^demand)
       |> order_by([j], asc: j.scheduled_at, asc: j.id)
-      |> select([j], %{id: j.id, lock: take_lock(^to_ns(prefix), j.id)})
-
-    query =
-      from(
-        j in Job,
-        join: x in subquery(subquery, prefix: prefix),
-        on: j.id == x.id,
-        select: j
-      )
+      |> select([:id])
 
     updates = [
-      set: [state: "executing", attempted_at: utc_now()],
+      set: [state: "executing", attempted_at: utc_now(), attempted_by: [node, queue, nonce]],
       inc: [attempt: 1]
     ]
 
-    repo.update_all(query, updates, log: verbose, prefix: prefix)
+    Job
+    |> join(:inner, [j], x in subquery(subquery, prefix: prefix), on: j.id == x.id)
+    |> select([j, _], j)
+    |> repo.update_all(updates, log: verbose, prefix: prefix)
   end
 
   @spec fetch_or_insert_job(Config.t(), Changeset.t()) :: {:ok, Job.t()} | {:error, Changeset.t()}
@@ -84,25 +47,6 @@ defmodule Oban.Query do
     end)
   end
 
-  # Only the session that originally took the lock can drop it, but we can't guarantee that the
-  # current connection is the same connection that started a job. Therefore, some locks may not
-  # be released by the current connection. Unlocking in batches ensures that all locks have a
-  # chance of being released _eventually_.
-  @unlock_query """
-  SELECT u.id
-  FROM (
-    SELECT x AS id, pg_advisory_unlock_shared($1::int, x) AS unlocked
-    FROM unnest($2::int[]) AS a(x)
-  ) AS u WHERE u.unlocked = true
-  """
-  @spec unlock_jobs(Config.t(), [integer()]) :: [integer()]
-  def unlock_jobs(%Config{prefix: prefix, repo: repo, verbose: verbose}, unlockable) do
-    case repo.query!(@unlock_query, [to_ns(prefix), unlockable], log: verbose) do
-      %{rows: [rows]} -> rows
-      _ -> []
-    end
-  end
-
   @spec stage_scheduled_jobs(Config.t(), binary()) :: {integer(), nil}
   def stage_scheduled_jobs(%Config{prefix: prefix, repo: repo, verbose: verbose}, queue) do
     Job
@@ -112,12 +56,34 @@ defmodule Oban.Query do
     |> repo.update_all([set: [state: "available"]], log: verbose, prefix: prefix)
   end
 
+  @spec insert_beat(Config.t(), map()) :: {:ok, Beat.t()} | {:error, Changeset.t()}
+  def insert_beat(%Config{prefix: prefix, repo: repo, verbose: verbose}, params) do
+    params
+    |> Beat.new()
+    |> repo.insert(log: verbose, prefix: prefix)
+  end
+
+  @doc """
+  Finds all executing jobs within a queue which were attempted by a producer that hasn't had a
+  pulse recently.
+  """
   @spec rescue_orphaned_jobs(Config.t(), binary()) :: {integer(), nil}
-  def rescue_orphaned_jobs(%Config{prefix: prefix, repo: repo, verbose: verbose}, queue) do
+  def rescue_orphaned_jobs(%Config{} = conf, queue) do
+    %Config{prefix: prefix, repo: repo, rescue_after: seconds, verbose: verbose} = conf
+
+    orphaned_at = DateTime.add(utc_now(), -seconds)
+
+    subquery =
+      Job
+      |> where([j], j.state == "executing" and j.queue == ^queue)
+      |> join(:left, [j], b in Beat,
+        on: j.attempted_by == [b.node, b.queue, b.nonce] and b.inserted_at > ^orphaned_at
+      )
+      |> where([_, b], is_nil(b.node))
+      |> select([:id])
+
     Job
-    |> where([j], j.state == "executing")
-    |> where([j], j.queue == ^queue)
-    |> where([j], no_lock_exists(^to_ns(prefix), j.id))
+    |> join(:inner, [j], x in subquery(subquery, prefix: prefix), on: j.id == x.id)
     |> repo.update_all([set: [state: "available"]], log: verbose, prefix: prefix)
   end
 
@@ -130,9 +96,9 @@ defmodule Oban.Query do
       |> limit(^limit)
       |> order_by(desc: :id)
 
-    query = from(j in Job, join: x in subquery(subquery, prefix: prefix), on: j.id == x.id)
-
-    repo.delete_all(query, log: verbose, prefix: prefix)
+    Job
+    |> join(:inner, [j], x in subquery(subquery, prefix: prefix), on: j.id == x.id)
+    |> repo.delete_all(log: verbose, prefix: prefix)
   end
 
   @spec delete_outdated_jobs(Config.t(), pos_integer(), pos_integer()) :: {integer(), nil}
@@ -146,9 +112,18 @@ defmodule Oban.Query do
       |> limit(^limit)
       |> order_by(desc: :id)
 
-    query = from(j in Job, join: x in subquery(subquery, prefix: prefix), on: j.id == x.id)
+    Job
+    |> join(:inner, [j], x in subquery(subquery, prefix: prefix), on: j.id == x.id)
+    |> repo.delete_all(log: verbose, prefix: prefix)
+  end
 
-    repo.delete_all(query, log: verbose, prefix: prefix)
+  @spec delete_outdated_beats(Config.t(), pos_integer()) :: {integer(), nil}
+  def delete_outdated_beats(%Config{prefix: prefix, repo: repo, verbose: verbose}, seconds) do
+    outdated_at = DateTime.add(utc_now(), -seconds)
+
+    Beat
+    |> where([b], b.inserted_at < ^outdated_at)
+    |> repo.delete_all(log: verbose, prefix: prefix)
   end
 
   @spec complete_job(Config.t(), Job.t()) :: :ok

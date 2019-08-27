@@ -4,7 +4,7 @@ defmodule Oban.Migrations do
   use Ecto.Migration
 
   @initial_version 1
-  @current_version 2
+  @current_version 4
 
   @default_opts %{prefix: "public", version: @current_version}
 
@@ -50,16 +50,22 @@ defmodule Oban.Migrations do
     end
   end
 
+  defmodule Macros do
+    @moduledoc false
+
+    defmacro now do
+      quote do
+        fragment("timezone('UTC', now())")
+      end
+    end
+  end
+
   defmodule V1 do
     @moduledoc false
 
     use Ecto.Migration
 
-    defmacrop now do
-      quote do
-        fragment("timezone('UTC', now())")
-      end
-    end
+    import Oban.Migrations.Macros
 
     def up(prefix) do
       execute "CREATE SCHEMA IF NOT EXISTS #{prefix}"
@@ -196,6 +202,72 @@ defmodule Oban.Migrations do
       execute("DROP FUNCTION #{prefix}.oban_wrap_id(value bigint)")
 
       execute "COMMENT ON TABLE #{prefix}.oban_jobs IS '1'"
+    end
+  end
+
+  defmodule V3 do
+    @moduledoc false
+
+    use Ecto.Migration
+
+    import Oban.Migrations.Macros
+
+    def up(prefix) do
+      alter table(:oban_jobs, prefix: prefix) do
+        add :attempted_by, {:array, :text}
+      end
+
+      create_if_not_exists table(:oban_beats, primary_key: false, prefix: prefix) do
+        add :node, :text, null: false
+        add :queue, :text, null: false
+        add :nonce, :text, null: false
+        add :limit, :integer, null: false
+        add :paused, :boolean, null: false, default: false
+        add :running, {:array, :integer}, null: false, default: []
+
+        add :inserted_at, :utc_datetime_usec, null: false, default: now()
+        add :started_at, :utc_datetime_usec, null: false
+      end
+
+      create_if_not_exists index(:oban_beats, [:inserted_at], prefix: prefix)
+
+      execute "COMMENT ON TABLE #{prefix}.oban_jobs IS '3'"
+    end
+
+    def down(prefix) do
+      alter table(:oban_jobs, prefix: prefix) do
+        remove :attempted_by
+      end
+
+      drop_if_exists table(:oban_beats, prefix: prefix)
+
+      execute "COMMENT ON TABLE #{prefix}.oban_jobs IS '2'"
+    end
+  end
+
+  defmodule V4 do
+    @moduledoc false
+
+    # Dropping the `oban_wrap_id` function is isolated to allow progressive rollout.
+
+    use Ecto.Migration
+
+    def up(prefix) do
+      execute("DROP FUNCTION IF EXISTS #{prefix}.oban_wrap_id(value bigint)")
+
+      execute "COMMENT ON TABLE #{prefix}.oban_jobs IS '4'"
+    end
+
+    def down(prefix) do
+      execute """
+      CREATE OR REPLACE FUNCTION #{prefix}.oban_wrap_id(value bigint) RETURNS int AS $$
+      BEGIN
+        RETURN (CASE WHEN value > 2147483647 THEN mod(value, 2147483647) ELSE value END)::int;
+      END;
+      $$ LANGUAGE plpgsql IMMUTABLE;
+      """
+
+      execute "COMMENT ON TABLE #{prefix}.oban_jobs IS '3'"
     end
   end
 end

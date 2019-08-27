@@ -1,8 +1,6 @@
 defmodule Oban.Integration.ExecutingTest do
   use Oban.Case
 
-  alias Oban.Query
-
   @moduletag :integration
 
   @oban_opts repo: Repo, queues: [alpha: 3, beta: 3, gamma: 3, delta: 3], poll_interval: 20
@@ -39,23 +37,6 @@ defmodule Oban.Integration.ExecutingTest do
     end
   end
 
-  test "advisory locks are released after jobs have executed" do
-    # Test order is random and most tests don't release their locks.
-    initial_count = advisory_lock_count()
-
-    insert_job!(ref: 1, action: "OK")
-    insert_job!(ref: 2, action: "OK")
-    insert_job!(ref: 3, action: "OK")
-
-    assert_receive {:ok, 1}
-    assert_receive {:ok, 2}
-    assert_receive {:ok, 3}
-
-    with_backoff(fn ->
-      assert advisory_lock_count() == initial_count
-    end)
-  end
-
   defp job do
     gen all queue <- member_of(~w(alpha beta gamma delta)),
             action <- member_of(~w(OK FAIL ERROR EXIT)),
@@ -73,19 +54,4 @@ defmodule Oban.Integration.ExecutingTest do
   defp action_to_state("OK", _max), do: "completed"
   defp action_to_state(_state, 1), do: "discarded"
   defp action_to_state(_state, max) when max > 1, do: "retryable"
-
-  defp insert_job!(args) do
-    args
-    |> Worker.new(queue: :alpha)
-    |> Oban.insert!()
-  end
-
-  @advisory_query """
-  SELECT count(*) FROM pg_locks WHERE locktype = 'advisory' AND classid = #{Query.to_ns()}
-  """
-  defp advisory_lock_count do
-    {:ok, %{rows: [[count]]}} = Repo.query(@advisory_query)
-
-    count
-  end
 end
