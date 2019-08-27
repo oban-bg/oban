@@ -7,11 +7,67 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+**Migration Required (V4)**
+
+This release **requires** a migration to V3, with an optional migration to V4.
+V3 adds a new column to jobs and creates the `oban_beats` table, while V4 drops
+a function used by the old advisory locking system.
+
+For a smooth zero-downtime upgrade, migrate to V3 first and then V4 in a separate
+release. The following sample migration will only upgrade to V3:
+
+```elixir
+defmodule MyApp.Repo.Migrations.AddObanBeatsTable do
+  use Ecto.Migration
+
+  def up do
+    Oban.Migrations.up(version: 3)
+  end
+
+  def down do
+    Oban.Migrations.down(version: 2)
+  end
+end
+```
+
+### Added
+
+- [Oban.Job] Add an `attempted_by` column used to track the node, queue and
+  producer nonce that attempted to execute a job.
+
+- [Oban.Beat] Add a new `oban_beats` table, used by producers to publish "pulse"
+  information including the node, queue, running jobs and other information
+  previously published by gossip notifications.
+
+  Beat records older than one hour are pruned automatically. Beat pruning
+  respects the `:disabled` setting, but it ignores length and age configuration.
+  The goal is to prevent bloating the table with useless historic
+  information—each queue generates one beat a second, 3,600 beat records per
+  hour even when the queue is idle.
+
+### Changed
+
+- [Oban.Executor] Don't swallow an `ArgumentError` when raised by a worker's
+  `backoff` function.
+
+- [Oban.Notifier] Remove `gossip` notifications entirely, superseded by pulse
+  activity written to `oban_beats`.
+
+- [Oban.Query] Remove all use of advisory locks!
+
+- [Oban.Producer] Periodically attempt to rescue orphans, not just at startup.
+  By default a rescue is attempted once a minute and it checks for any executing
+  jobs belonging to a producer that hasn't had a pulse for more than a minute.
+
 ### Fixed
 
 - [Oban.Worker] Validate worker options after the module is compiled. This
   allows dynamic configuration of compile time settings via module attributes,
   functions, `Application.get_env/3`, etc.
+
+- [Oban.Query] Remove `scheduled_at` check from job fetching query. This could
+  prevent available jobs from dispatching when the database's time differed from
+  the system time.
 
 ## [0.7.1] — 2019-08-15
 
