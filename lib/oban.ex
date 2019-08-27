@@ -440,6 +440,10 @@ defmodule Oban do
     default is `60_000ms`, or one minute.
   * `:prune_limit` – the maximum number of jobs that will be pruned at each prune interval. The
     default is `5_000`.
+  * `:rescue_after` — the number of seconds after an executing job without any pulse activity may
+    be rescued. This value _must_ be greater than the `poll_interval`. The default is `60s`.
+  * `:rescue_interval` — the number of milliseconds between calls to rescue orphaned jobs, the
+    default is `60_000ms`, or one minute.
   * `:shutdown_grace_period` - the amount of time a queue will wait for executing jobs to complete
     before hard shutdown, specified in milliseconds. The default is `15_000`, or 15 seconds.
   * `:verbose` — determines whether queries will be logged or not, does not supersede the repo's

@@ -15,6 +15,7 @@ defmodule Oban.Config do
           prune_limit: pos_integer(),
           queues: [{atom(), pos_integer()}],
           repo: module(),
+          rescue_after: pos_integer(),
           rescue_interval: pos_integer(),
           shutdown_grace_period: timeout(),
           verbose: boolean()
@@ -32,6 +33,7 @@ defmodule Oban.Config do
             prune_limit: 5_000,
             queues: [default: 10],
             repo: nil,
+            rescue_after: 60,
             rescue_interval: :timer.minutes(1),
             shutdown_grace_period: :timer.seconds(15),
             verbose: true
@@ -125,6 +127,12 @@ defmodule Oban.Config do
   defp validate_opt!({:repo, repo}) do
     unless Code.ensure_compiled?(repo) and function_exported?(repo, :__adapter__, 0) do
       raise ArgumentError, "expected :repo to be an Ecto.Repo"
+    end
+  end
+
+  defp validate_opt!({:rescue_after, interval}) do
+    unless is_integer(interval) and interval > 0 do
+      raise ArgumentError, "expected :rescue_after to be a positive integer"
     end
   end
 

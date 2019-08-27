@@ -57,10 +57,10 @@ defmodule Oban.Query do
   end
 
   @spec insert_beat(Config.t(), map()) :: {:ok, Beat.t()} | {:error, Changeset.t()}
-  def insert_beat(%Config{prefix: prefix, repo: repo}, params) do
+  def insert_beat(%Config{prefix: prefix, repo: repo, verbose: verbose}, params) do
     params
     |> Beat.new()
-    |> repo.insert(prefix: prefix)
+    |> repo.insert(log: verbose, prefix: prefix)
   end
 
   @doc """
@@ -68,8 +68,10 @@ defmodule Oban.Query do
   pulse recently.
   """
   @spec rescue_orphaned_jobs(Config.t(), binary()) :: {integer(), nil}
-  def rescue_orphaned_jobs(%Config{prefix: prefix, repo: repo, verbose: verbose}, queue) do
-    orphaned_at = DateTime.add(utc_now(), -60)
+  def rescue_orphaned_jobs(%Config{} = conf, queue) do
+    %Config{prefix: prefix, repo: repo, rescue_after: seconds, verbose: verbose} = conf
+
+    orphaned_at = DateTime.add(utc_now(), -seconds)
 
     subquery =
       Job
