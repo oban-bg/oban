@@ -51,7 +51,7 @@ defmodule Oban.Telemetry do
 
   ```elixir
   defmodule ErrorReporter do
-    def handle_event([:oban, :failure], _timing, %{attempt: attempt}, nil) do
+    def handle_event([:oban, :failure], _timing, %{attempt: attempt} = meta, nil) do
       if attempt >= 3 do
         context = Map.take(meta, [:id, :args, :queue, :worker])
 
