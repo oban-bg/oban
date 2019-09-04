@@ -3,27 +3,24 @@ defmodule Oban.Migrations do
 
   use Ecto.Migration
 
-  @initial_version 0
+  @initial_version 1
   @current_version 4
-
-  @default_opts %{prefix: "public", version: @current_version}
+  @default_prefix "public"
 
   def up(opts \\ []) when is_list(opts) do
-    opts
-    |> merge_defaults(inc: 1)
-    |> change(:up)
+    prefix = Keyword.get(opts, :prefix, @default_prefix)
+    version = Keyword.get(opts, :version, @current_version)
+    range = (get_initial(prefix) + 1)..version
+
+    change(prefix, range, :up)
   end
 
   def down(opts \\ []) when is_list(opts) do
-    opts
-    |> merge_defaults(inc: 0)
-    |> change(:down)
-  end
+    prefix = Keyword.get(opts, :prefix, @default_prefix)
+    version = Keyword.get(opts, :version, @initial_version)
+    range = get_initial(prefix)..version
 
-  defp merge_defaults(opts, inc: inc) do
-    opts = Map.merge(@default_opts, Map.new(opts))
-
-    Map.put(opts, :range, (get_initial(opts.prefix) + inc)..opts.version)
+    change(prefix, range, :down)
   end
 
   defp get_initial(prefix) do
@@ -38,11 +35,11 @@ defmodule Oban.Migrations do
 
     case repo().query(query) do
       {:ok, %{rows: [[version]]}} when is_binary(version) -> String.to_integer(version)
-      _ -> @initial_version
+      _ -> 0
     end
   end
 
-  defp change(%{prefix: prefix, range: range}, direction) do
+  defp change(prefix, range, direction) do
     for index <- range do
       [__MODULE__, "V#{index}"]
       |> Module.safe_concat()

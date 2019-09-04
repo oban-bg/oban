@@ -23,9 +23,21 @@ defmodule Oban.Integration.MigratingTest do
     end
   end
 
+  defmodule DefaultMigration do
+    use Ecto.Migration
+
+    def up do
+      Oban.Migrations.up(prefix: "migrating")
+    end
+
+    def down do
+      Oban.Migrations.down(prefix: "migrating")
+    end
+  end
+
   @base_version 20_300_000_000_000
 
-  test "migrating up and down between versions" do
+  test "migrating up and down between specific versions" do
     for up <- 1..4 do
       Application.put_env(:oban, :up_version, up)
 
@@ -35,20 +47,33 @@ defmodule Oban.Integration.MigratingTest do
     assert table_exists?("oban_jobs")
     assert table_exists?("oban_beats")
 
-    for down <- 3..1 do
-      Application.put_env(:oban, :down_version, down)
+    Application.put_env(:oban, :down_version, 2)
+    assert :ok = Ecto.Migrator.down(Repo, @base_version + 2, StepMigration)
 
-      # Migrations happen in reverse, we need to invert the migration number
-      version = @base_version + 4 - down
+    assert table_exists?("oban_jobs")
+    refute table_exists?("oban_beats")
 
-      assert :ok = Ecto.Migrator.down(Repo, version, StepMigration)
-    end
+    Application.put_env(:oban, :down_version, 1)
+    assert :ok = Ecto.Migrator.down(Repo, @base_version + 1, StepMigration)
 
     refute table_exists?("oban_jobs")
     refute table_exists?("oban_beats")
   after
-    Repo.query("DELETE FROM schema_migrations WHERE version > #{@base_version}")
-    Repo.query("DROP SCHEMA IF EXISTS migrating CASCADE")
+    clear_migrated()
+  end
+
+  test "migrating up and down between default versions" do
+    assert :ok = Ecto.Migrator.up(Repo, @base_version, DefaultMigration)
+
+    assert table_exists?("oban_jobs")
+    assert table_exists?("oban_beats")
+
+    assert :ok = Ecto.Migrator.down(Repo, @base_version, DefaultMigration)
+
+    refute table_exists?("oban_jobs")
+    refute table_exists?("oban_beats")
+  after
+    clear_migrated()
   end
 
   defp table_exists?(table) do
@@ -64,5 +89,10 @@ defmodule Oban.Integration.MigratingTest do
     {:ok, %{rows: [[bool]]}} = Repo.query(query)
 
     bool
+  end
+
+  defp clear_migrated do
+    Repo.query("DELETE FROM schema_migrations WHERE version >= #{@base_version}")
+    Repo.query("DROP SCHEMA IF EXISTS migrating CASCADE")
   end
 end
