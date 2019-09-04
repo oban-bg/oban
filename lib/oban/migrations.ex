@@ -3,40 +3,40 @@ defmodule Oban.Migrations do
 
   use Ecto.Migration
 
-  @initial_version 1
+  @initial_version 0
   @current_version 4
 
   @default_opts %{prefix: "public", version: @current_version}
 
   def up(opts \\ []) when is_list(opts) do
     opts
-    |> merge_defaults()
+    |> merge_defaults(inc: 1)
     |> change(:up)
   end
 
   def down(opts \\ []) when is_list(opts) do
     opts
-    |> merge_defaults()
+    |> merge_defaults(inc: 0)
     |> change(:down)
   end
 
-  defp merge_defaults(opts) do
+  defp merge_defaults(opts, inc: inc) do
     opts = Map.merge(@default_opts, Map.new(opts))
 
-    Map.put(opts, :range, get_current(opts.prefix)..opts.version)
+    Map.put(opts, :range, (get_initial(opts.prefix) + inc)..opts.version)
   end
 
-  defp get_current(prefix) do
-    result =
-      repo().query("""
-      SELECT description
-      FROM pg_class
-      LEFT JOIN pg_description ON pg_description.objoid = pg_class.oid
-      LEFT JOIN pg_namespace ON pg_namespace.oid = pg_class.relnamespace
-      WHERE pg_class.relname = 'oban_jobs' AND pg_namespace.nspname = '#{prefix}'
-      """)
+  defp get_initial(prefix) do
+    query = """
+    SELECT description
+    FROM pg_class
+    LEFT JOIN pg_description ON pg_description.objoid = pg_class.oid
+    LEFT JOIN pg_namespace ON pg_namespace.oid = pg_class.relnamespace
+    WHERE pg_class.relname = 'oban_jobs'
+    AND pg_namespace.nspname = '#{prefix}'
+    """
 
-    case result do
+    case repo().query(query) do
       {:ok, %{rows: [[version]]}} when is_binary(version) -> String.to_integer(version)
       _ -> @initial_version
     end

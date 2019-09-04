@@ -69,6 +69,9 @@ end
   prevent available jobs from dispatching when the database's time differed from
   the system time.
 
+- [Oban.Migrations] Fix off-by-one error when detecting the version to migrate
+  up from.
+
 ## [0.7.1] — 2019-08-15
 
 ### Fixed
