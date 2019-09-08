@@ -7,10 +7,11 @@ defmodule Oban.Notifier do
   alias Postgrex.Notifications
 
   @type option :: {:name, module()} | {:conf, Config.t()}
-  @type channel :: :insert | :signal | :update
+  @type channel :: :gossip | :insert | :signal | :update
   @type queue :: atom()
 
   @mappings %{
+    gossip: "oban_gossip",
     insert: "oban_insert",
     signal: "oban_signal",
     update: "oban_update"
@@ -25,6 +26,7 @@ defmodule Oban.Notifier do
     defstruct [:conf]
   end
 
+  defmacro gossip, do: @mappings[:gossip]
   defmacro insert, do: @mappings[:insert]
   defmacro signal, do: @mappings[:signal]
   defmacro update, do: @mappings[:update]
