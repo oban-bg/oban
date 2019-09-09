@@ -12,6 +12,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - [Oban.Notifier] Restore the `gossip` macro and allow `oban_gossip` channel for
   notifications.
 
+### Fixed
+
+- [Oban.Migrations] Prevent invalid `up` and `down` ranges when repeatedly
+  migrating without specifying a version. This issue was seen when running all
+  of the `up` migrations on a database from scratch, as there would be multiple
+  oban migrations that simply delegated to `up` and `down`.
+
 ## [0.8.0] — 2019-09-06
 
 **Migration Required (V4)**

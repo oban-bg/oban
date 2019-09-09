@@ -10,7 +10,7 @@ defmodule Oban.Migrations do
   def up(opts \\ []) when is_list(opts) do
     prefix = Keyword.get(opts, :prefix, @default_prefix)
     version = Keyword.get(opts, :version, @current_version)
-    range = (get_initial(prefix) + 1)..version
+    range = min(get_initial(prefix) + 1, @current_version)..version
 
     change(prefix, range, :up)
   end
@@ -18,7 +18,7 @@ defmodule Oban.Migrations do
   def down(opts \\ []) when is_list(opts) do
     prefix = Keyword.get(opts, :prefix, @default_prefix)
     version = Keyword.get(opts, :version, @initial_version)
-    range = get_initial(prefix)..version
+    range = max(get_initial(prefix), @initial_version)..version
 
     change(prefix, range, :down)
   end
@@ -144,7 +144,7 @@ defmodule Oban.Migrations do
 
     def down(prefix) do
       execute "DROP TRIGGER IF EXISTS oban_notify ON #{prefix}.oban_jobs"
-      execute "DROP FUNCTION #{prefix}.oban_jobs_notify()"
+      execute "DROP FUNCTION IF EXISTS #{prefix}.oban_jobs_notify()"
 
       drop_if_exists table(:oban_jobs, prefix: prefix)
 
@@ -196,7 +196,7 @@ defmodule Oban.Migrations do
       drop_if_exists index(:oban_jobs, [:scheduled_at], prefix: prefix)
       create index(:oban_jobs, [:scheduled_at], prefix: prefix)
 
-      execute("DROP FUNCTION #{prefix}.oban_wrap_id(value bigint)")
+      execute("DROP FUNCTION IF EXISTS #{prefix}.oban_wrap_id(value bigint)")
 
       execute "COMMENT ON TABLE #{prefix}.oban_jobs IS '1'"
     end

@@ -68,10 +68,16 @@ defmodule Oban.Integration.MigratingTest do
     assert table_exists?("oban_jobs")
     assert table_exists?("oban_beats")
 
-    assert :ok = Ecto.Migrator.down(Repo, @base_version, DefaultMigration)
+    # Migrating once more to replicate multiple migrations that don't specify a version.
+    assert :ok = Ecto.Migrator.up(Repo, @base_version + 1, DefaultMigration)
+
+    assert :ok = Ecto.Migrator.down(Repo, @base_version + 1, DefaultMigration)
 
     refute table_exists?("oban_jobs")
     refute table_exists?("oban_beats")
+
+    # Migrating once more to replicate multiple migrations that don't specify a version.
+    assert :ok = Ecto.Migrator.down(Repo, @base_version, DefaultMigration)
   after
     clear_migrated()
   end
