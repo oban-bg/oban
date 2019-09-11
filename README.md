@@ -33,7 +33,7 @@
 - [Installation](#Installation)
 - [Usage](#Usage)
   - [Configuring Queues](#Configuring-Queues)
-  - [Creating Workers](#Creating-Workers)
+  - [Defining Workers](#Defining-Workers)
   - [Enqueuing Jobs](#Enqueueing-Jobs)
   - [Pruning](#Pruning)
 - [Testing](#Testing)
