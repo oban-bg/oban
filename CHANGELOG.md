@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## [0.8.1] — 2019-09-11
+
 ### Changed
 
 - [Oban.Notifier] Restore the `gossip` macro and allow `oban_gossip` channel for
@@ -369,7 +371,8 @@ end
 
 - [Oban] Initial release with base functionality.
 
-[Unreleased]: https://github.com/sorentwo/oban/compare/v0.8.0...HEAD
+[Unreleased]: https://github.com/sorentwo/oban/compare/v0.8.1...HEAD
+[0.8.1]: https://github.com/sorentwo/oban/compare/v0.8.0...v0.8.1
 [0.8.0]: https://github.com/sorentwo/oban/compare/v0.7.1...v0.8.0
 [0.7.1]: https://github.com/sorentwo/oban/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/sorentwo/oban/compare/v0.6.0...v0.7.0
