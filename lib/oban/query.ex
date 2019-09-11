@@ -182,9 +182,6 @@ defmodule Oban.Query do
     :ok
   end
 
-  @spec to_ns(value :: binary()) :: pos_integer()
-  def to_ns(value \\ "public"), do: :erlang.phash2(value)
-
   # Helpers
 
   defp next_attempt_at(backoff), do: DateTime.add(utc_now(), backoff, :second)
