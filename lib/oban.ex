@@ -381,9 +381,9 @@ defmodule Oban do
     children = [
       Repo,
       Endpoint,
-      {Oban, name: ObanA, repo: Repo, id: ObanA},
-      {Oban, name: ObanB, repo: Repo, prefix: "special", id: ObanB},
-      {Oban, name: ObanC, repo: Repo, prefix: "private", id: ObanC}
+      Supervisor.child_spec({Oban, name: ObanA, repo: Repo}, id: ObanA),
+      Supervisor.child_spec({Oban, name: ObanB, repo: Repo, prefix: "special"}, id: ObanB),
+      Supervisor.child_spec({Oban, name: ObanC, repo: Repo, prefix: "private"}, id: ObanC)
     ]
 
     Supervisor.start_link(children, strategy: :one_for_one, name: MyApp.Supervisor)
