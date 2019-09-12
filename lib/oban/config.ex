@@ -31,7 +31,7 @@ defmodule Oban.Config do
             prune: :disabled,
             prune_interval: :timer.minutes(1),
             prune_limit: 5_000,
-            queues: [default: 10],
+            queues: [],
             repo: nil,
             rescue_after: 60,
             rescue_interval: :timer.minutes(1),
@@ -47,7 +47,10 @@ defmodule Oban.Config do
 
   @spec new(Keyword.t()) :: t()
   def new(opts) when is_list(opts) do
-    opts = Keyword.put_new(opts, :node, node_name())
+    opts =
+      opts
+      |> Keyword.put_new(:node, node_name())
+      |> Keyword.put(:queues, Keyword.get(opts, :queues) || [])
 
     Enum.each(opts, &validate_opt!/1)
 

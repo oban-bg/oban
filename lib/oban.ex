@@ -472,10 +472,7 @@ defmodule Oban do
   @doc since: "0.1.0"
   @spec start_link([option()]) :: Supervisor.on_start()
   def start_link(opts) when is_list(opts) do
-    conf =
-      opts
-      |> Keyword.put(:queues, Keyword.get(opts, :queues) || [])
-      |> Config.new()
+    conf = Config.new(opts)
 
     Supervisor.start_link(__MODULE__, conf, name: conf.name)
   end

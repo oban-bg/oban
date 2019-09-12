@@ -86,6 +86,7 @@ defmodule Oban.ConfigTest do
       assert_raise ArgumentError, fn -> Config.new(repo: Repo, queues: [default: 3.5]) end
 
       assert %Config{} = Config.new(repo: Repo, queues: [default: 1])
+      assert %Config{queues: []} = Config.new(repo: Repo, queues: false)
     end
 
     test ":rescue_after is validated as an integer" do
