@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Changed
+
+- [Oban.Config] Remove the default queue value of `[default: 10]`, which was
+  overriden by `Oban.start_link/1` anyhow.
+
+- [Oban.Telemetry] Allow the log level to be customized when attaching the
+  default logger. The default level is `:info`, the same as it was before.
+
 ## [0.8.1] — 2019-09-11
 
 ### Changed

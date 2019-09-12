@@ -1,6 +1,10 @@
 defmodule Oban.Integration.TelemetryTest do
   use Oban.Case
 
+  import ExUnit.CaptureLog
+
+  alias Oban.Telemetry
+
   @moduletag :integration
 
   @oban_opts repo: Repo, queues: [zeta: 3]
@@ -16,7 +20,7 @@ defmodule Oban.Integration.TelemetryTest do
 
     :telemetry.attach_many("job-handler", events, &Handler.handle/4, self())
 
-    {:ok, _} = start_supervised({Oban, @oban_opts})
+    start_supervised!({Oban, @oban_opts})
 
     %Job{id: success_id} = insert_job!(%{ref: 1, action: "OK"})
     %Job{id: exception_id} = insert_job!(%{ref: 2, action: "FAIL"})
@@ -64,6 +68,28 @@ defmodule Oban.Integration.TelemetryTest do
            } = error_meta
 
     :ok = stop_supervised(Oban)
+  end
+
+  test "the default handler logs detailed event information" do
+    start_supervised!({Oban, @oban_opts})
+
+    :ok = Telemetry.attach_default_logger(:warn)
+
+    logged =
+      capture_log(fn ->
+        insert_job!(%{ref: 1, action: "OK"})
+
+        assert_receive {:ok, 1}
+
+        Process.sleep(10)
+      end)
+
+    assert logged =~ ~s("source":"oban")
+    assert logged =~ ~s("event":"success")
+    assert logged =~ ~s("args":)
+    assert logged =~ ~s("worker":"Oban.Integration.Worker")
+    assert logged =~ ~s("queue":"zeta")
+    assert logged =~ ~s("duration":)
   end
 
   defp insert_job!(args) do

@@ -83,21 +83,27 @@ defmodule Oban.Telemetry do
 
   ## Examples
 
+  Attach a logger at the default `:info` level:
+
       :ok = Oban.Telemetry.attach_default_logger()
+
+  Attach a logger at the `:debug` level:
+
+      :ok = Oban.Telemetry.attach_default_logger(:debug)
   """
   @doc since: "0.4.0"
   @spec attach_default_logger() :: :ok | {:error, :already_exists}
-  def attach_default_logger do
+  def attach_default_logger(level \\ :info) do
     events = [[:oban, :success], [:oban, :failure]]
 
-    :telemetry.attach_many("oban-default-logger", events, &handle_event/4, :no_config)
+    :telemetry.attach_many("oban-default-logger", events, &handle_event/4, level)
   end
 
   @doc false
-  @spec handle_event([atom()], map(), map(), :no_config) :: :ok
-  def handle_event([:oban, event], measurement, meta, :no_config)
+  @spec handle_event([atom()], map(), map(), Logger.level()) :: :ok
+  def handle_event([:oban, event], measurement, meta, level)
       when event in [:success, :failure] do
-    Logger.info(fn ->
+    Logger.log(level, fn ->
       Jason.encode!(%{
         source: "oban",
         event: event,
