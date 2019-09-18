@@ -90,6 +90,8 @@ defmodule Oban.Integration.TelemetryTest do
     assert logged =~ ~s("worker":"Oban.Integration.Worker")
     assert logged =~ ~s("queue":"zeta")
     assert logged =~ ~s("duration":)
+  after
+    :telemetry.detach("oban-default-logger")
   end
 
   defp insert_job!(args) do
