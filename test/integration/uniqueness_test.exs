@@ -23,7 +23,7 @@ defmodule Oban.Integration.UniquenessTest do
   end
 
   property "preventing the same job from being enqueued multiple times" do
-    check all args <- map_of(arg_key(), arg_val()), max_runs: 20 do
+    check all args <- arg_map(), max_runs: 20 do
       assert insert_job!(args).id == insert_job!(args).id
     end
   end
@@ -82,6 +82,11 @@ defmodule Oban.Integration.UniquenessTest do
     assert count_jobs() == 2
   end
 
+  test "inserting multiple unique jobs in a single call" do
+    # is there a property for this?
+  end
+
+  def arg_map, do: map_of(arg_key(), arg_val())
   def arg_key, do: one_of([integer(), string(:ascii)])
   def arg_val, do: one_of([integer(), string(:ascii), list_of(integer())])
 

@@ -507,6 +507,8 @@ defmodule Oban do
   This and the other `insert` variants are the recommended way to enqueue jobs because they
   support features like unique jobs.
 
+  See the section on "Unique Jobs" for more details.
+
   ## Example
 
   Insert a single job:
@@ -527,10 +529,12 @@ defmodule Oban do
   end
 
   @doc """
-  Insert a job insert operation into an `Ecto.Multi`.
+  Put a job insert operation into an `Ecto.Multi`.
 
   Like `insert/2`, this variant is recommended over `Ecto.Multi.insert` beause it supports all of
   Oban's features, i.e. unique jobs.
+
+  See the section on "Unique Jobs" for more details.
 
   ## Example
 
@@ -570,6 +574,57 @@ defmodule Oban do
       {:error, changeset} ->
         raise Ecto.InvalidChangesetError, action: :insert, changeset: changeset
     end
+  end
+
+  @doc """
+  Insert multiple jobs into the database for execution.
+
+  Insertion respects `prefix` and `verbose` settings, but it *does not use* per-job unique
+  configuration. You must use `insert/2,4` or `insert!/2` for per-job unique support.
+
+  There are a few important differences between this function and `Ecto.Repo.insert_all/3`:
+
+  1. This function always returns a list rather than a tuple of `{count, records}`
+  2. This function requires a list of changesets rather than a list of maps or keyword lists
+
+  ## Example
+
+      1..100
+      |> Enum.map(&MyApp.Worker.new(%{id: &1}))
+      |> Oban.insert_all()
+  """
+  @doc since: "0.9.0"
+  @spec insert_all(name :: atom(), jobs :: [Changeset.t(Job.t())]) :: [Job.t()]
+  def insert_all(name \\ __MODULE__, changesets) when is_atom(name) and is_list(changesets) do
+    name
+    |> config()
+    |> Query.insert_all_jobs(changesets)
+  end
+
+  @doc """
+  Put an `insert_all` operation into an `Ecto.Multi`.
+
+  This function supports the same features and has the same caveats as `insert_all/2`.
+
+  ## Example
+
+      changesets = Enum.map(0..100, MyApp.Worker.new(%{id: &1}))
+
+      Ecto.Multi.new()
+      |> Oban.insert_all(:jobs, changesets)
+      |> MyApp.Repo.transaction()
+  """
+  @doc since: "0.9.0"
+  @spec insert_all(
+          name :: atom(),
+          multi :: Multi.t(),
+          multi_name :: atom(),
+          changeset :: [Changeset.t(Job.t())]
+        ) :: Multi.t()
+  def insert_all(name \\ __MODULE__, %Multi{} = multi, multi_name, changesets) when is_list(changesets) do
+    name
+    |> config()
+    |> Query.insert_all_jobs(multi, multi_name, changesets)
   end
 
   @doc """

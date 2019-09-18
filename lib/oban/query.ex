@@ -47,6 +47,26 @@ defmodule Oban.Query do
     end)
   end
 
+  @spec insert_all_jobs(Config.t(), [Changeset.t(Job.t())]) :: [Job.t()]
+  def insert_all_jobs(%Config{} = conf, changesets) when is_list(changesets) do
+    %Config{prefix: prefix, repo: repo, verbose: verbose} = conf
+
+    entries = Enum.map(changesets, &Job.to_map/1)
+    opts = [log: verbose, on_conflict: :nothing, prefix: prefix, returning: true]
+
+    case repo.insert_all(Job, entries, opts) do
+      {0, _} -> []
+      {_count, jobs} -> jobs
+    end
+  end
+
+  @spec insert_all_jobs(Config.t(), Multi.t(), atom(), [Changeset.t()]) :: Multi.t()
+  def insert_all_jobs(config, multi, name, changesets) when is_list(changesets) do
+    Multi.run(multi, name, fn repo, _changes ->
+      {:ok, insert_all_jobs(%{config | repo: repo}, changesets)}
+    end)
+  end
+
   @spec stage_scheduled_jobs(Config.t(), binary()) :: {integer(), nil}
   def stage_scheduled_jobs(%Config{prefix: prefix, repo: repo, verbose: verbose}, queue) do
     Job

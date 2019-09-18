@@ -127,6 +127,7 @@ defmodule Oban.Job do
       |> MyApp.Worker.new(unique: [fields: fields, period: 60, states: states])
       |> Oban.insert()
   """
+  @doc since: "0.1.0"
   @spec new(args(), [option]) :: Ecto.Changeset.t()
   def new(args, opts \\ []) when is_map(args) and is_list(opts) do
     params =
@@ -145,6 +146,28 @@ defmodule Oban.Job do
     |> validate_length(:queue, min: 1, max: 128)
     |> validate_length(:worker, min: 1, max: 128)
     |> validate_number(:max_attempts, greater_than: 0, less_than: 50)
+  end
+
+  @doc """
+  Convert a Job changeset into a map suitable for database insertion.
+
+  ## Examples
+
+  Convert a worker generated changeset into a plain map:
+
+      %{id: 123}
+      |> MyApp.Worker.new()
+      |> Oban.Job.to_map()
+  """
+  @doc since: "0.9.0"
+  @spec to_map(Ecto.Changeset.t(t())) :: map()
+  def to_map(%Ecto.Changeset{} = changeset) do
+    changeset
+    |> apply_changes()
+    |> Map.from_struct()
+    |> Map.take([:args, :queue, :state, :worker, :scheduled_at])
+    |> Enum.reject(fn {_, val} -> is_nil(val) end)
+    |> Map.new()
   end
 
   @doc false

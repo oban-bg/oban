@@ -11,7 +11,7 @@ defmodule Oban.Integration.ExecutingTest do
     :ok
   end
 
-  property "jobs in running queues are executed" do
+  property "individual jobs inserted into running queues are executed" do
     check all jobs <- list_of(job()), max_runs: 20 do
       jobs = Enum.map(jobs, &Oban.insert!/1)
 

@@ -46,4 +46,26 @@ defmodule Oban.JobTest do
       assert Job.new(%{}, worker: Fake, unique: [states: [:random]]).errors[:unique]
     end
   end
+
+  describe "to_map/1" do
+    test "nil values are not retained" do
+      to_keys = fn opts ->
+        %{}
+        |> Job.new(opts)
+        |> Job.to_map()
+        |> Map.keys()
+      end
+
+      assert to_keys.([]) == [:args, :queue, :state]
+      assert to_keys.(worker: MyWorker) == [:args, :queue, :state, :worker]
+
+      assert to_keys.(schedule_in: 1, worker: MyWorker) == [
+               :args,
+               :queue,
+               :scheduled_at,
+               :state,
+               :worker
+             ]
+    end
+  end
 end

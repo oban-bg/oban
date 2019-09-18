@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Added
+
+- [Oban] Add `insert_all/2` and `insert_all/4`, corresponding to
+  `Ecto.Repo.insert_all/3` and `Ecto.Multi.insert_all/5`, respectively.
+
+- [Oban.Job] Add `to_map/1` for converting a changeset into a map suitable for
+  database insertion. This is used by `Oban.insert_all/2,4` internally and is
+  exposed for convenience.
+
 ### Changed
 
 - [Oban.Config] Remove the default queue value of `[default: 10]`, which was
