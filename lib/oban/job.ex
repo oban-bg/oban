@@ -141,6 +141,7 @@ defmodule Oban.Job do
     |> validate_required(@required)
     |> put_scheduling(params[:schedule_in])
     |> put_uniqueness(params[:unique])
+    |> put_state()
     |> validate_length(:queue, min: 1, max: 128)
     |> validate_length(:worker, min: 1, max: 128)
     |> validate_number(:max_attempts, greater_than: 0, less_than: 50)
@@ -176,15 +177,20 @@ defmodule Oban.Job do
       in_seconds when is_integer(in_seconds) ->
         scheduled_at = DateTime.add(DateTime.utc_now(), in_seconds)
 
-        changeset
-        |> put_change(:scheduled_at, scheduled_at)
-        |> put_change(:state, "scheduled")
+        put_change(changeset, :scheduled_at, scheduled_at)
 
       nil ->
         changeset
 
       _ ->
         add_error(changeset, :schedule_in, "invalid value")
+    end
+  end
+
+  defp put_state(changeset) do
+    case fetch_change(changeset, :scheduled_at) do
+      {:ok, _} -> put_change(changeset, :state, "scheduled")
+      :error -> changeset
     end
   end
 

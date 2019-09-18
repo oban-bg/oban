@@ -28,6 +28,14 @@ defmodule Oban.Integration.SchedulingTest do
     assert {1, nil} = Query.stage_scheduled_jobs(Config.new(repo: Repo), @queue)
   end
 
+  test "jobs scheduled at a specific time are unavailable for execution" do
+    at = DateTime.add(DateTime.utc_now(), 60)
+
+    %Job{scheduled_at: ^at, state: "scheduled"} = insert_job!(scheduled_at: at)
+
+    assert {0, nil} == Query.stage_scheduled_jobs(Config.new(repo: Repo), @queue)
+  end
+
   defp insert_job!(opts) do
     %{}
     |> FakeWorker.new(opts)

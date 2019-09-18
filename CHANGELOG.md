@@ -26,6 +26,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - [Oban.Job] Prevent a queue comparison with `nil` by retaining the default
   queue (`default`) when building uniqueness checks.
 
+- [Oban.Job] Set state to `scheduled` for jobs created with a `scheduled_at`
+  timestamp. Previously the state was only set when `schedule_in` was used.
+
 ## [0.8.1] — 2019-09-11
 
 ### Changed
