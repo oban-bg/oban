@@ -186,12 +186,12 @@ defmodule Oban.Query do
 
   defp next_attempt_at(backoff), do: DateTime.add(utc_now(), backoff, :second)
 
-  defp get_unique_job(repo, prefix, %{changes: %{unique: unique} = changes})
+  defp get_unique_job(repo, prefix, %{changes: %{unique: unique}} = changeset)
        when is_map(unique) do
     %{fields: fields, period: period, states: states} = unique
 
     since = DateTime.add(utc_now(), period * -1, :second)
-    fields = for field <- fields, do: {field, Map.get(changes, field)}
+    fields = for field <- fields, do: {field, Changeset.get_field(changeset, field)}
     states = for state <- states, do: to_string(state)
 
     Job

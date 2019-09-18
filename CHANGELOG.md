@@ -15,6 +15,17 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - [Oban.Telemetry] Allow the log level to be customized when attaching the
   default logger. The default level is `:info`, the same as it was before.
 
+### Fixed
+
+- [Oban.Migrations] Prevent invalid `up` and `down` _targets_ when attempting to
+  run migrations that have already been ran. This was primarily an issue in CI,
+  where the initial migration was unscoped and would migrate to the current
+  version while a subsequent migration would attempt to migrate to a lower
+  version.
+
+- [Oban.Job] Prevent a queue comparison with `nil` by retaining the default
+  queue (`default`) when building uniqueness checks.
+
 ## [0.8.1] — 2019-09-11
 
 ### Changed

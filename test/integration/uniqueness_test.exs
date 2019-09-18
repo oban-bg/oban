@@ -29,12 +29,12 @@ defmodule Oban.Integration.UniquenessTest do
   end
 
   test "scoping uniqueness to particular fields" do
-    assert %Job{id: id_1} = insert_job!(%{id: 1}, queue: "gamma")
+    assert %Job{id: id_1} = insert_job!(%{id: 1}, queue: "default")
     assert %Job{id: id_2} = insert_job!(%{id: 2}, queue: "delta")
     assert %Job{id: ^id_2} = insert_job!(%{id: 1}, unique: [fields: [:worker]])
 
     assert %Job{id: ^id_1} =
-             insert_job!(%{id: 3}, queue: "gamma", unique: [fields: [:queue, :worker]])
+             insert_job!(%{id: 3}, queue: "default", unique: [fields: [:queue, :worker]])
 
     assert %Job{id: ^id_2} =
              insert_job!(%{id: 3}, queue: "delta", unique: [fields: [:queue, :worker]])
