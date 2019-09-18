@@ -10,17 +10,17 @@ defmodule Oban.Migrations do
   def up(opts \\ []) when is_list(opts) do
     prefix = Keyword.get(opts, :prefix, @default_prefix)
     version = Keyword.get(opts, :version, @current_version)
-    range = min(get_initial(prefix) + 1, @current_version)..version
+    initial = min(get_initial(prefix) + 1, @current_version)
 
-    change(prefix, range, :up)
+    if initial <= version, do: change(prefix, initial..version, :up)
   end
 
   def down(opts \\ []) when is_list(opts) do
     prefix = Keyword.get(opts, :prefix, @default_prefix)
     version = Keyword.get(opts, :version, @initial_version)
-    range = max(get_initial(prefix), @initial_version)..version
+    initial = max(get_initial(prefix), @initial_version)
 
-    change(prefix, range, :down)
+    if initial >= version, do: change(prefix, initial..version, :down)
   end
 
   defp get_initial(prefix) do

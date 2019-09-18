@@ -82,6 +82,30 @@ defmodule Oban.Integration.MigratingTest do
     clear_migrated()
   end
 
+  property "migrating up arbitrary versions" do
+    check all up_1 <- integer(1..4), up_2 <- integer(1..4), max_runs: 20 do
+      Application.put_env(:oban, :up_version, up_1)
+      assert :ok = Ecto.Migrator.up(Repo, @base_version, StepMigration)
+
+      Application.put_env(:oban, :up_version, up_2)
+      assert :ok = Ecto.Migrator.up(Repo, @base_version + 1, StepMigration)
+
+      clear_migrated()
+    end
+  end
+
+  property "migrating up and down between arbitrary versions" do
+    check all up <- integer(2..4), down <- integer(1..3), max_runs: 20 do
+      Application.put_env(:oban, :up_version, up)
+      Application.put_env(:oban, :down_version, down)
+
+      assert :ok = Ecto.Migrator.up(Repo, @base_version, StepMigration)
+      assert :ok = Ecto.Migrator.down(Repo, @base_version, StepMigration)
+
+      clear_migrated()
+    end
+  end
+
   defp table_exists?(table) do
     query = """
     SELECT EXISTS (
