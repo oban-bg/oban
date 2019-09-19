@@ -621,7 +621,8 @@ defmodule Oban do
           multi_name :: atom(),
           changeset :: [Changeset.t(Job.t())]
         ) :: Multi.t()
-  def insert_all(name \\ __MODULE__, %Multi{} = multi, multi_name, changesets) when is_list(changesets) do
+  def insert_all(name \\ __MODULE__, %Multi{} = multi, multi_name, changesets)
+      when is_list(changesets) do
     name
     |> config()
     |> Query.insert_all_jobs(multi, multi_name, changesets)

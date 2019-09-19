@@ -38,7 +38,7 @@ defmodule Oban.Integration.InsertingTest do
     assert is_list(jobs)
     assert length(jobs) == 5
 
-    [%Job{} = job| _] = jobs
+    [%Job{} = job | _] = jobs
 
     assert job.id
     assert job.args
