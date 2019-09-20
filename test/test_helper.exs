@@ -110,7 +110,10 @@ defmodule Oban.Case do
       Repo.delete_all(Beat)
       Repo.delete_all(Job)
 
-      on_exit(fn -> Repo.delete_all(Beat) end)
+      on_exit(fn ->
+        Repo.delete_all(Beat)
+        Repo.delete_all(Job)
+      end)
     end
 
     {:ok, %{}}

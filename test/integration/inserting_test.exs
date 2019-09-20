@@ -1,8 +1,6 @@
 defmodule Oban.Integration.InsertingTest do
   use Oban.Case, async: true
 
-  @moduletag :integration
-
   @oban_opts repo: Repo, queues: false
 
   test "inserting multiple jobs with insert_all/2" do
