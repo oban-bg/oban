@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## [0.9.0] — 2019-09-20
+
 ### Added
 
 - [Oban] Add `insert_all/2` and `insert_all/4`, corresponding to
@@ -402,7 +404,8 @@ end
 
 - [Oban] Initial release with base functionality.
 
-[Unreleased]: https://github.com/sorentwo/oban/compare/v0.8.1...HEAD
+[Unreleased]: https://github.com/sorentwo/oban/compare/v0.9.0...HEAD
+[0.9.0]: https://github.com/sorentwo/oban/compare/v0.8.1...v0.9.0
 [0.8.1]: https://github.com/sorentwo/oban/compare/v0.8.0...v0.8.1
 [0.8.0]: https://github.com/sorentwo/oban/compare/v0.7.1...v0.8.0
 [0.7.1]: https://github.com/sorentwo/oban/compare/v0.7.0...v0.7.1
