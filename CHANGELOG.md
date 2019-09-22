@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+**Migration Optional (V5)**
+
+Tables with a _lot_ of available jobs (hundreds of thousands to several million)
+are prone to time outs when fetching new jobs. The planner fails to optimize
+using the index available on `queue`, `state` and `scheduled_at`, forcing both a
+slow sort pass and an expensive bitmap heap scan.
+
+This migration drops the separate indexes in favor of a a single composite
+index. The resulting query is up to **258,757x faster** on large tables while
+still usable for all of the other maintenance queries.
+
+History of the `EXPLAIN ANALYZE` output as the query was optimized is available
+here: https://explain.depesz.com/s/9Vh7
+
 ## [0.9.0] — 2019-09-20
 
 ### Added

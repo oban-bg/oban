@@ -38,7 +38,7 @@ defmodule Oban.Integration.MigratingTest do
   @base_version 20_300_000_000_000
 
   test "migrating up and down between specific versions" do
-    for up <- 1..4 do
+    for up <- 1..5 do
       Application.put_env(:oban, :up_version, up)
 
       assert :ok = Ecto.Migrator.up(Repo, @base_version + up, StepMigration)
@@ -83,7 +83,7 @@ defmodule Oban.Integration.MigratingTest do
   end
 
   property "migrating up arbitrary versions" do
-    check all up_1 <- integer(1..4), up_2 <- integer(1..4), max_runs: 20 do
+    check all up_1 <- integer(1..5), up_2 <- integer(1..5), max_runs: 20 do
       Application.put_env(:oban, :up_version, up_1)
       assert :ok = Ecto.Migrator.up(Repo, @base_version, StepMigration)
 
@@ -95,7 +95,7 @@ defmodule Oban.Integration.MigratingTest do
   end
 
   property "migrating up and down between arbitrary versions" do
-    check all up <- integer(2..4), down <- integer(1..3), max_runs: 20 do
+    check all up <- integer(2..5), down <- integer(1..3), max_runs: 20 do
       Application.put_env(:oban, :up_version, up)
       Application.put_env(:oban, :down_version, down)
 
