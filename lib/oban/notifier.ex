@@ -1,9 +1,30 @@
 defmodule Oban.Notifier do
   @moduledoc false
 
+  # The notifier has several different responsibilities and some nuanced behavior:
+  #
+  # On Start:
+  # 1. Create a connection
+  # 2. Listen for insert/signal events
+  # 3. If connection fails then log the error, break the circuit, and attempt to connect later
+  #
+  # On Exit:
+  # 1. Trip the circuit breaker
+  # 2. Schedule a reconnect with backoff
+  #
+  # On Listen:
+  # 1. Put the producer into the listeners map
+  # 2. Monitor the pid so that we can clean up if the producer dies
+  #
+  # On Notification:
+  # 1. Iterate through the listeners and forward the message
+  # 2. Possibly debounce by event type, on the leading edge, every 50ms?
+
   use GenServer
 
-  alias Oban.{Config, Query}
+  import Oban.Breaker, only: [trip_circuit: 2]
+
+  alias Oban.Config
   alias Postgrex.Notifications
 
   @type option :: {:name, module()} | {:conf, Config.t()}
@@ -17,13 +38,17 @@ defmodule Oban.Notifier do
     update: "oban_update"
   }
 
-  @channels Map.keys(@mappings)
-
   defmodule State do
     @moduledoc false
 
     @enforce_keys [:conf]
-    defstruct [:conf]
+    defstruct [
+      :conf,
+      :conn,
+      circuit: :enabled,
+      circuit_backoff: :timer.seconds(30),
+      listeners: %{}
+    ]
   end
 
   defmacro gossip, do: @mappings[:gossip]
@@ -33,67 +58,73 @@ defmodule Oban.Notifier do
 
   @spec start_link([option]) :: GenServer.on_start()
   def start_link(opts) do
-    name = Keyword.get(opts, :name, __MODULE__)
+    {name, opts} = Keyword.pop(opts, :name, __MODULE__)
 
-    GenServer.start_link(__MODULE__, Map.new(opts), name: name)
+    GenServer.start_link(__MODULE__, opts[:conf], name: name)
   end
 
-  @spec listen(module(), binary(), channel()) :: :ok
-  def listen(server, prefix, channel) when is_binary(prefix) and channel in @channels do
-    server
-    |> conn_name()
-    |> Notifications.listen("#{prefix}.#{@mappings[channel]}")
-
-    :ok
-  end
-
-  @spec notify(module(), channel(), term()) :: :ok
-  def notify(server, channel, payload) when channel in @channels do
-    GenServer.call(server, {:notify, @mappings[channel], payload})
-  end
-
-  @spec pause_queue(module(), queue()) :: :ok
-  def pause_queue(server, queue) when is_atom(queue) do
-    notify(server, :signal, %{action: :pause, queue: queue})
-  end
-
-  @spec resume_queue(module(), queue()) :: :ok
-  def resume_queue(server, queue) when is_atom(queue) do
-    notify(server, :signal, %{action: :resume, queue: queue})
-  end
-
-  @spec scale_queue(module(), queue(), pos_integer()) :: :ok
-  def scale_queue(server, queue, scale)
-      when is_atom(queue) and is_integer(scale) and scale > 0 do
-    notify(server, :signal, %{action: :scale, queue: queue, scale: scale})
-  end
-
-  @spec kill_job(module(), pos_integer()) :: :ok
-  def kill_job(server, job_id) when is_integer(job_id) do
-    notify(server, :signal, %{action: :pkill, job_id: job_id})
+  @spec listen(module()) :: :ok
+  def listen(server) when is_pid(server) or is_atom(server) do
+    GenServer.call(server, :listen)
   end
 
   @impl GenServer
-  def init(%{conf: conf, name: name}) do
-    {:ok, %State{conf: conf}, {:continue, {:start, name}}}
+  def init(%Config{} = conf) do
+    Process.flag(:trap_exit, true)
+
+    {:ok, %State{conf: conf}, {:continue, :start}}
   end
 
   @impl GenServer
-  def handle_continue({:start, name}, %State{conf: conf} = state) do
-    conn_conf = Keyword.put(conf.repo.config(), :name, conn_name(name))
+  def handle_continue(:start, state) do
+    {:noreply, connect_and_listen(state)}
+  end
 
-    {:ok, _} = Notifications.start_link(conn_conf)
+  @impl GenServer
+  def handle_info({:DOWN, _ref, :process, pid, _reason}, %State{listeners: listeners} = state) do
+    {:noreply, %{state | listeners: Map.delete(listeners, pid)}}
+  end
+
+  def handle_info({:notification, _, _, prefixed_channel, payload}, state) do
+    [_prefix, channel] = String.split(prefixed_channel, ".")
+
+    decoded = Jason.decode!(payload)
+
+    for {pid, _ref} <- state.listeners, do: send(pid, {:notification, channel, decoded})
 
     {:noreply, state}
   end
 
-  @impl GenServer
-  def handle_call({:notify, channel, payload}, _from, %State{conf: conf} = state) do
-    # Unlike `listen` the schema namespacing takes place in the Query module.
-    :ok = Query.notify(conf, channel, Jason.encode!(payload))
-
-    {:reply, :ok, state}
+  def handle_info({:EXIT, _pid, error}, %State{} = state) do
+    {:noreply, trip_circuit(error, state)}
   end
 
-  defp conn_name(name), do: Module.concat(name, "Conn")
+  def handle_info(:reset_circuit, %State{circuit: :disabled} = state) do
+    {:noreply, connect_and_listen(state)}
+  end
+
+  def handle_info(_message, state) do
+    {:noreply, state}
+  end
+
+  @impl GenServer
+  def handle_call(:listen, {pid, _}, %State{listeners: listeners} = state) do
+    if Map.has_key?(listeners, pid) do
+      {:reply, :ok, state}
+    else
+      ref = Process.monitor(pid)
+
+      {:reply, :ok, %{state | listeners: Map.put(listeners, pid, ref)}}
+    end
+  end
+
+  defp connect_and_listen(%State{conf: conf} = state) do
+    with {:ok, conn} <- Notifications.start_link(conf.repo.config()),
+         {:ok, _ref} <- Notifications.listen(conn, "#{conf.prefix}.#{insert()}"),
+         {:ok, _ref} <- Notifications.listen(conn, "#{conf.prefix}.#{signal()}") do
+      %{state | conn: conn, circuit: :enabled}
+    else
+      {:error, error} -> trip_circuit(error, state)
+    end
+  end
 end

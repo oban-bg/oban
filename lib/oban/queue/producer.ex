@@ -3,8 +3,7 @@ defmodule Oban.Queue.Producer do
 
   use GenServer
 
-  require Logger
-
+  import Oban.Breaker, only: [trip_errors: 0, trip_circuit: 2]
   import Oban.Notifier, only: [insert: 0, signal: 0]
 
   alias Oban.{Config, Notifier, Query}
@@ -121,10 +120,41 @@ defmodule Oban.Queue.Producer do
     dispatch(%{state | running: Map.delete(running, ref)})
   end
 
-  def handle_info({:notification, _, _, prefixed_channel, payload}, state) do
-    [_prefix, channel] = String.split(prefixed_channel, ".")
+  def handle_info({:notification, insert(), payload}, %State{queue: queue} = state) do
+    case payload do
+      %{"queue" => ^queue} -> dispatch(state)
+      _ -> {:noreply, state}
+    end
+  end
 
-    handle_notification(channel, payload, state)
+  def handle_info({:notification, signal(), payload}, state) do
+    %State{conf: conf, foreman: foreman, queue: queue, running: running} = state
+
+    state =
+      case payload do
+        %{"action" => "pause", "queue" => ^queue} ->
+          %{state | paused: true}
+
+        %{"action" => "resume", "queue" => ^queue} ->
+          %{state | paused: false}
+
+        %{"action" => "scale", "queue" => ^queue, "scale" => scale} ->
+          %{state | limit: scale}
+
+        %{"action" => "pkill", "job_id" => kid} ->
+          for {_ref, {job, pid}} <- running, job.id == kid do
+            with :ok <- DynamicSupervisor.terminate_child(foreman, pid) do
+              Query.discard_job(conf, job)
+            end
+          end
+
+          state
+
+        _ ->
+          state
+      end
+
+    dispatch(state)
   end
 
   def handle_info(:reset_circuit, state) do
@@ -154,14 +184,13 @@ defmodule Oban.Queue.Producer do
 
     state
   rescue
-    exception in [Postgrex.Error] -> trip_circuit(exception, state)
+    exception in trip_errors() -> trip_circuit(exception, state)
   end
 
   defp start_listener(%State{conf: conf} = state) do
-    notifier = Module.concat(conf.name, "Notifier")
-
-    :ok = Notifier.listen(notifier, conf.prefix, :insert)
-    :ok = Notifier.listen(notifier, conf.prefix, :signal)
+    conf.name
+    |> Module.concat("Notifier")
+    |> Notifier.listen()
 
     state
   end
@@ -178,45 +207,6 @@ defmodule Oban.Queue.Producer do
     %{state | rescue_ref: ref}
   end
 
-  # Notifications
-
-  defp handle_notification(insert(), payload, %State{queue: queue} = state) do
-    case Jason.decode(payload) do
-      {:ok, %{"queue" => ^queue}} -> dispatch(state)
-      _ -> {:noreply, state}
-    end
-  end
-
-  defp handle_notification(signal(), payload, state) do
-    %State{conf: conf, foreman: foreman, queue: queue, running: running} = state
-
-    state =
-      case Jason.decode(payload) do
-        {:ok, %{"action" => "pause", "queue" => ^queue}} ->
-          %{state | paused: true}
-
-        {:ok, %{"action" => "resume", "queue" => ^queue}} ->
-          %{state | paused: false}
-
-        {:ok, %{"action" => "scale", "queue" => ^queue, "scale" => scale}} ->
-          %{state | limit: scale}
-
-        {:ok, %{"action" => "pkill", "job_id" => kid}} ->
-          for {_ref, {job, pid}} <- running, job.id == kid do
-            with :ok <- DynamicSupervisor.terminate_child(foreman, pid) do
-              Query.discard_job(conf, job)
-            end
-          end
-
-          state
-
-        {:ok, _} ->
-          state
-      end
-
-    dispatch(state)
-  end
-
   # Dispatching
 
   defp deschedule(%State{circuit: :disabled} = state) do
@@ -228,7 +218,7 @@ defmodule Oban.Queue.Producer do
 
     state
   rescue
-    exception in [Postgrex.Error] -> trip_circuit(exception, state)
+    exception in trip_errors() -> trip_circuit(exception, state)
   end
 
   defp pulse(%State{circuit: :disabled} = state) do
@@ -246,7 +236,7 @@ defmodule Oban.Queue.Producer do
 
     state
   rescue
-    exception in [Postgrex.Error] -> trip_circuit(exception, state)
+    exception in trip_errors() -> trip_circuit(exception, state)
   end
 
   defp dispatch(%State{paused: true} = state) do
@@ -273,7 +263,7 @@ defmodule Oban.Queue.Producer do
 
     {:noreply, %{state | running: Map.merge(running, started_jobs)}}
   rescue
-    exception in [Postgrex.Error] -> {:noreply, trip_circuit(exception, state)}
+    exception in trip_errors() -> {:noreply, trip_circuit(exception, state)}
   end
 
   defp fetch_jobs(conf, queue, nonce, count) do
@@ -285,21 +275,5 @@ defmodule Oban.Queue.Producer do
 
   defp running_job_ids(%State{running: running}) do
     for {_ref, {%_{id: id}, _pid}} <- running, do: id
-  end
-
-  # Circuit Breaker
-
-  defp trip_circuit(exception, state) do
-    Logger.error(fn ->
-      Jason.encode!(%{
-        source: "oban",
-        message: "Circuit temporarily tripped by Postgrex.Error",
-        error: Postgrex.Error.message(exception)
-      })
-    end)
-
-    Process.send_after(self(), :reset_circuit, state.circuit_backoff)
-
-    %{state | circuit: :disabled}
   end
 end

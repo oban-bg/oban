@@ -394,6 +394,8 @@ defmodule Oban do
 
   use Supervisor
 
+  import Oban.Notifier, only: [signal: 0]
+
   alias Ecto.{Changeset, Multi}
   alias Oban.{Config, Job, Notifier, Pruner, Query}
   alias Oban.Queue.Producer
@@ -684,8 +686,8 @@ defmodule Oban do
   @spec pause_queue(name :: atom(), queue :: atom()) :: :ok
   def pause_queue(name \\ __MODULE__, queue) when is_atom(queue) do
     name
-    |> child_name("Notifier")
-    |> Notifier.pause_queue(queue)
+    |> config()
+    |> Query.notify(signal(), %{action: :pause, queue: queue})
   end
 
   @doc """
@@ -702,8 +704,8 @@ defmodule Oban do
   @spec resume_queue(name :: atom(), queue :: atom()) :: :ok
   def resume_queue(name \\ __MODULE__, queue) when is_atom(queue) do
     name
-    |> child_name("Notifier")
-    |> Notifier.resume_queue(queue)
+    |> config()
+    |> Query.notify(signal(), %{action: :resume, queue: queue})
   end
 
   @doc """
@@ -726,8 +728,8 @@ defmodule Oban do
   def scale_queue(name \\ __MODULE__, queue, scale)
       when is_atom(queue) and is_integer(scale) and scale > 0 do
     name
-    |> child_name("Notifier")
-    |> Notifier.scale_queue(queue, scale)
+    |> config()
+    |> Query.notify(signal(), %{action: :scale, queue: queue, scale: scale})
   end
 
   @doc """
@@ -747,8 +749,8 @@ defmodule Oban do
   @spec kill_job(name :: atom(), job_id :: pos_integer()) :: :ok
   def kill_job(name \\ __MODULE__, job_id) when is_integer(job_id) do
     name
-    |> child_name("Notifier")
-    |> Notifier.kill_job(job_id)
+    |> config()
+    |> Query.notify(signal(), %{action: :pkill, job_id: job_id})
   end
 
   defp queue_spec({queue, limit}, conf) do

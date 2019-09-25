@@ -194,10 +194,15 @@ defmodule Oban.Query do
     )
   end
 
-  @spec notify(Config.t(), binary(), binary()) :: :ok
-  def notify(%Config{prefix: prefix, repo: repo, verbose: verbose}, channel, payload)
-      when is_binary(channel) and is_binary(payload) do
-    repo.query("SELECT pg_notify($1, $2)", ["#{prefix}.#{channel}", payload], log: verbose)
+  @spec notify(Config.t(), binary(), map()) :: :ok
+  def notify(%Config{} = conf, channel, %{} = payload) when is_binary(channel) do
+    %Config{prefix: prefix, repo: repo, verbose: verbose} = conf
+
+    repo.query(
+      "SELECT pg_notify($1, $2)",
+      ["#{prefix}.#{channel}", Jason.encode!(payload)],
+      log: verbose
+    )
 
     :ok
   end

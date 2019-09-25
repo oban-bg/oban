@@ -21,6 +21,12 @@ still usable for all of the other maintenance queries.
 History of the `EXPLAIN ANALYZE` output as the query was optimized is available
 here: https://explain.depesz.com/s/9Vh7
 
+### Fixed
+
+- [Oban.Notifier] Restructure the notifier in order to to isolate producers from
+  connection failures. Errors or loss of connectivity in the notification
+  connection no longer kills the notifier and has no effect on the producers.
+
 ## [0.9.0] — 2019-09-20
 
 ### Added
