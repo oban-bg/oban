@@ -116,12 +116,15 @@ defmodule Oban.ConfigTest do
       assert %Config{} = Config.new(repo: Repo, shutdown_grace_period: 10)
     end
 
-    test ":verbose is validated as a boolean" do
+    test ":verbose is validated as `false` or a valid log level" do
       assert_raise ArgumentError, fn -> Config.new(repo: Repo, verbose: 1) end
       assert_raise ArgumentError, fn -> Config.new(repo: Repo, verbose: "false") end
       assert_raise ArgumentError, fn -> Config.new(repo: Repo, verbose: nil) end
+      assert_raise ArgumentError, fn -> Config.new(repo: Repo, verbose: :warning) end
+      assert_raise ArgumentError, fn -> Config.new(repo: Repo, verbose: true) end
 
-      assert %Config{} = Config.new(repo: Repo, verbose: true)
+      assert %Config{verbose: false} = Config.new(repo: Repo, verbose: false)
+      assert %Config{verbose: :warn} = Config.new(repo: Repo, verbose: :warn)
     end
   end
 

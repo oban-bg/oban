@@ -18,7 +18,7 @@ defmodule Oban.Config do
           rescue_after: pos_integer(),
           rescue_interval: pos_integer(),
           shutdown_grace_period: timeout(),
-          verbose: boolean()
+          verbose: false | Logger.level()
         }
 
   @type option :: {:name, module()} | {:conf, t()}
@@ -36,7 +36,7 @@ defmodule Oban.Config do
             rescue_after: 60,
             rescue_interval: :timer.minutes(1),
             shutdown_grace_period: :timer.seconds(15),
-            verbose: true
+            verbose: false
 
   @spec start_link([option()]) :: GenServer.on_start()
   def start_link(opts) when is_list(opts) do
@@ -152,8 +152,8 @@ defmodule Oban.Config do
   end
 
   defp validate_opt!({:verbose, verbose}) do
-    unless is_boolean(verbose) do
-      raise ArgumentError, "expected :verbose to be a boolean"
+    unless verbose in ~w(false error warn info debug)a do
+      raise ArgumentError, "expected :verbose to be `false` or a log level"
     end
   end
 

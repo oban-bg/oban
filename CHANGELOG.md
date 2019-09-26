@@ -21,6 +21,13 @@ still usable for all of the other maintenance queries.
 History of the `EXPLAIN ANALYZE` output as the query was optimized is available
 here: https://explain.depesz.com/s/9Vh7
 
+### Changed
+
+- [Oban.Config] Change the default for `verbose` from `true` to `false`. Also,
+  `:verbose` now accepts _only_ `false` and standard logger levels.  This change
+  aims to prevent crashes due to conflicting levels when the repo's log level is
+  set to `false`.
+
 ### Fixed
 
 - [Oban.Notifier] Restructure the notifier in order to to isolate producers from

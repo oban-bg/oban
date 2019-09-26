@@ -74,8 +74,8 @@ defmodule Oban do
   ```
 
   The value returned from `perform/2` is ignored, unless it an `{:error, reason}` tuple. With an
-  error return or when perform has an uncaught exception or throw then the error will be reported
-  and the job will be retried (provided there are attempts remaining).
+  error return or when perform has an uncaught exception or throw then the error is reported and
+  the job is retried (provided there are attempts remaining).
 
   See `Oban.Worker` for more details on failure conditions and `Oban.Telemetry` for details on job
   reporting.
@@ -159,7 +159,7 @@ defmodule Oban do
     always specify a period.
   * `:fields` — The fields to compare when evaluating uniqueness. The available fields are
     `:args`, `:queue` and `:worker`, by default all three are used.
-  * `:states` — The job states that will be checked for duplicates. The available states are
+  * `:states` — The job states that are checked for duplicates. The available states are
     `:available`, `:scheduled`, `:executing`, `:retryable` and `:completed`. By default all states
     are checked, which prevents _any_ duplicates, even if the previous job has been completed.
 
@@ -290,7 +290,7 @@ defmodule Oban do
 
   ### Limiting Retries
 
-  By default jobs will be retried up to 20 times. The number of retries is controlled by the
+  By default jobs are retried up to 20 times. The number of retries is controlled by the
   `max_attempts` value, which can be set at the Worker or Job level. For example, to instruct a
   worker to discard jobs after three failures:
 
@@ -308,17 +308,17 @@ defmodule Oban do
 
     * `:disabled` - This is the default, where no pruning happens at all
     * `{:maxlen, count}` - Pruning is based on the number of rows in the table, any rows beyond
-      the configured `count` will be deleted
+      the configured `count` are deleted
     * `{:maxage, seconds}` - Pruning is based on a row's age, any rows older than the configured
-      number of `seconds` will be deleted. The age unit is always specified in seconds, but values
+      number of `seconds` are deleted. The age unit is always specified in seconds, but values
       on the scale of days, weeks or months are perfectly acceptable.
 
   Pruning is best-effort and performed out-of-band. This means that all limits are soft; jobs
   beyond a specified length or age may not be pruned immediately after jobs complete. Prune timing
   is based on the configured `prune_interval`, which is one minute by default.
 
-  Only jobs in a `completed` or `discarded` state will be deleted. Currently `executing` jobs and
-  older jobs that are still in the `available` state will be retained.
+  Only jobs in a `completed` or `discarded` state can be deleted. Currently `executing` jobs and
+  older jobs that are still in the `available` state are retained.
 
   ## Instrumentation & Logging
 
@@ -412,7 +412,7 @@ defmodule Oban do
           | {:queues, [{atom(), pos_integer()}]}
           | {:repo, module()}
           | {:shutdown_grace_period, timeout()}
-          | {:verbose, boolean()}
+          | {:verbose, false | Logger.level()}
 
   @doc """
   Starts an `Oban` supervision tree linked to the current process.
@@ -440,7 +440,7 @@ defmodule Oban do
   * `:prune` - configures job pruning behavior, see "Pruning Historic Jobs" for more information
   * `:prune_interval` — the number of milliseconds between calls to prune historic jobs. The
     default is `60_000ms`, or one minute.
-  * `:prune_limit` – the maximum number of jobs that will be pruned at each prune interval. The
+  * `:prune_limit` – the maximum number of jobs that can be pruned at each prune interval. The
     default is `5_000`.
   * `:rescue_after` — the number of seconds after an executing job without any pulse activity may
     be rescued. This value _must_ be greater than the `poll_interval`. The default is `60s`.
@@ -448,8 +448,9 @@ defmodule Oban do
     default is `60_000ms`, or one minute.
   * `:shutdown_grace_period` - the amount of time a queue will wait for executing jobs to complete
     before hard shutdown, specified in milliseconds. The default is `15_000`, or 15 seconds.
-  * `:verbose` — determines whether queries will be logged or not, does not supersede the repo's
-    configured log level. Defaults to `true`, where all queries will be logged.
+  * `:verbose` — either `false` to disable logging or a standard log level (`:error`, `:warn`,
+    `:info`, `:debug`). This determines whether queries are logged or not; overriding the repo's
+    configured log level. Defaults to `false`, where no queries are logged.
 
   Note that any options passed to `start_link` will override options set through the `using` macro.
 
@@ -465,7 +466,7 @@ defmodule Oban do
 
   ## Node Name
 
-  When the `node` value hasn't been configured it will be generated based on the environment:
+  When the `node` value hasn't been configured it is generated based on the environment:
 
   * In a distributed system the node name is used
   * In a Heroku environment the system environment's `DYNO` value is used
@@ -642,8 +643,8 @@ defmodule Oban do
   ## Failures & Retries
 
   Draining a queue uses the same execution mechanism as regular job dispatch. That means that any
-  job failures or crashes will be captured and result in a retry. Retries are scheduled in the
-  future with backoff and won't be retried immediately.
+  job failures or crashes are captured and result in a retry. Retries are scheduled in the future
+  with backoff and won't be retried immediately.
 
   Exceptions are _not_ raised in to the calling process. If you expect jobs to fail, would like to
   track failures, or need to check for specific errors you can use one of these mechanisms:
