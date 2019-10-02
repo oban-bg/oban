@@ -95,7 +95,7 @@ defmodule Oban.Job do
     * `:scheduled_at` - a time in the future after which the job should be executed
     * `:worker` — a module to execute the job in. The module must implement the `Oban.Worker`
       behaviour.
-    * `:unique` — a keyword list of options specifying how uniquness will be calculated. The
+    * `:unique` — a keyword list of options specifying how uniqueness will be calculated. The
       options define which fields will be used, for how long, and for which states.
 
   ## Examples
