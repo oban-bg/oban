@@ -48,7 +48,7 @@ defmodule Oban.MixProject do
   def package do
     [
       maintainers: ["Parker Selbert"],
-      licenses: ["MIT"],
+      licenses: ["Apache-2.0"],
       links: %{github: "https://github.com/sorentwo/oban"}
     ]
   end
