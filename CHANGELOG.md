@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Changed
+
+- [Oban.Notifier] Replay `oban_gossip` notifications to subscribed processes.
+
 ## [0.10.0] — 2019-10-03
 
 **Migration Optional (V5)**
