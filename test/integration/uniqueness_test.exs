@@ -82,10 +82,6 @@ defmodule Oban.Integration.UniquenessTest do
     assert count_jobs() == 2
   end
 
-  test "inserting multiple unique jobs in a single call" do
-    # is there a property for this?
-  end
-
   def arg_map, do: map_of(arg_key(), arg_val())
   def arg_key, do: one_of([integer(), string(:ascii)])
   def arg_val, do: one_of([integer(), string(:ascii), list_of(integer())])
