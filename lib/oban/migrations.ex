@@ -279,6 +279,8 @@ defmodule Oban.Migrations do
       drop_if_exists index(:oban_jobs, [:state], prefix: prefix)
 
       create_if_not_exists index(:oban_jobs, [:queue, :state, :scheduled_at, :id], prefix: prefix)
+
+      execute "COMMENT ON TABLE #{prefix}.oban_jobs IS '5'"
     end
 
     def down(prefix) do
@@ -293,6 +295,8 @@ defmodule Oban.Migrations do
                where: "state in ('available'::#{state}, 'scheduled'::#{state})",
                prefix: prefix
              )
+
+      execute "COMMENT ON TABLE #{prefix}.oban_jobs IS '4'"
     end
   end
 end
