@@ -12,6 +12,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - [Oban.Migrations] Add a comment when migrating `oban_jobs` to V5 and when
   rolling back down to V4.
 
+- [Oban.Query] Apply the configured log level to unique queries.
+
 ## [0.10.1] — 2019-10-08
 
 ### Changed

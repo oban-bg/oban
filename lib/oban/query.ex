@@ -34,8 +34,10 @@ defmodule Oban.Query do
 
   @spec fetch_or_insert_job(Config.t(), Changeset.t()) :: {:ok, Job.t()} | {:error, Changeset.t()}
   def fetch_or_insert_job(%Config{prefix: prefix, repo: repo, verbose: verbose}, changeset) do
-    case get_unique_job(repo, prefix, changeset) do
-      %Job{} = job -> {:ok, job}
+    with {:ok, query} <- unique_query(changeset),
+         %Job{} = job <- repo.one(query, log: verbose, prefix: prefix) do
+      {:ok, job}
+    else
       nil -> repo.insert(changeset, log: verbose, on_conflict: :nothing, prefix: prefix)
     end
   end
@@ -211,22 +213,23 @@ defmodule Oban.Query do
 
   defp next_attempt_at(backoff), do: DateTime.add(utc_now(), backoff, :second)
 
-  defp get_unique_job(repo, prefix, %{changes: %{unique: unique}} = changeset)
-       when is_map(unique) do
+  defp unique_query(%{changes: %{unique: %{} = unique}} = changeset) do
     %{fields: fields, period: period, states: states} = unique
 
     since = DateTime.add(utc_now(), period * -1, :second)
     fields = for field <- fields, do: {field, Changeset.get_field(changeset, field)}
     states = for state <- states, do: to_string(state)
 
-    Job
-    |> where([j], j.state in ^states)
-    |> where([j], j.inserted_at > ^since)
-    |> where(^fields)
-    |> order_by(desc: :id)
-    |> limit(1)
-    |> repo.one(prefix: prefix)
+    query =
+      Job
+      |> where([j], j.state in ^states)
+      |> where([j], j.inserted_at > ^since)
+      |> where(^fields)
+      |> order_by(desc: :id)
+      |> limit(1)
+
+    {:ok, query}
   end
 
-  defp get_unique_job(_repo, _prefix, _changeset), do: nil
+  defp unique_query(_changeset), do: nil
 end
