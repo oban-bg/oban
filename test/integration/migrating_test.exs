@@ -46,12 +46,14 @@ defmodule Oban.Integration.MigratingTest do
 
     assert table_exists?("oban_jobs")
     assert table_exists?("oban_beats")
+    assert migrated_version() == "5"
 
     Application.put_env(:oban, :down_version, 2)
     assert :ok = Ecto.Migrator.down(Repo, @base_version + 2, StepMigration)
 
     assert table_exists?("oban_jobs")
     refute table_exists?("oban_beats")
+    assert migrated_version() == "1"
 
     Application.put_env(:oban, :down_version, 1)
     assert :ok = Ecto.Migrator.down(Repo, @base_version + 1, StepMigration)
@@ -67,6 +69,7 @@ defmodule Oban.Integration.MigratingTest do
 
     assert table_exists?("oban_jobs")
     assert table_exists?("oban_beats")
+    assert migrated_version() == "5"
 
     # Migrating once more to replicate multiple migrations that don't specify a version.
     assert :ok = Ecto.Migrator.up(Repo, @base_version + 1, DefaultMigration)
@@ -119,6 +122,21 @@ defmodule Oban.Integration.MigratingTest do
     {:ok, %{rows: [[bool]]}} = Repo.query(query)
 
     bool
+  end
+
+  defp migrated_version do
+    query = """
+    SELECT description
+    FROM pg_class
+    LEFT JOIN pg_description ON pg_description.objoid = pg_class.oid
+    LEFT JOIN pg_namespace ON pg_namespace.oid = pg_class.relnamespace
+    WHERE pg_class.relname = 'oban_jobs'
+    AND pg_namespace.nspname = 'migrating'
+    """
+
+    {:ok, %{rows: [[commented]]}} = Repo.query(query)
+
+    commented
   end
 
   defp clear_migrated do
