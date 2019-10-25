@@ -3,6 +3,8 @@ defmodule Oban.Integration.MigratingTest do
 
   @moduletag :integration
 
+  import Oban.Migrations, only: [initial_version: 0, current_version: 0, migrated_version: 2]
+
   defmodule StepMigration do
     use Ecto.Migration
 
@@ -38,7 +40,7 @@ defmodule Oban.Integration.MigratingTest do
   @base_version 20_300_000_000_000
 
   test "migrating up and down between specific versions" do
-    for up <- 1..5 do
+    for up <- initial_version()..current_version() do
       Application.put_env(:oban, :up_version, up)
 
       assert :ok = Ecto.Migrator.up(Repo, @base_version + up, StepMigration)
@@ -46,14 +48,14 @@ defmodule Oban.Integration.MigratingTest do
 
     assert table_exists?("oban_jobs")
     assert table_exists?("oban_beats")
-    assert migrated_version() == "5"
+    assert migrated_version() == current_version()
 
     Application.put_env(:oban, :down_version, 2)
     assert :ok = Ecto.Migrator.down(Repo, @base_version + 2, StepMigration)
 
     assert table_exists?("oban_jobs")
     refute table_exists?("oban_beats")
-    assert migrated_version() == "1"
+    assert migrated_version() == 1
 
     Application.put_env(:oban, :down_version, 1)
     assert :ok = Ecto.Migrator.down(Repo, @base_version + 1, StepMigration)
@@ -69,7 +71,7 @@ defmodule Oban.Integration.MigratingTest do
 
     assert table_exists?("oban_jobs")
     assert table_exists?("oban_beats")
-    assert migrated_version() == "5"
+    assert migrated_version() == current_version()
 
     # Migrating once more to replicate multiple migrations that don't specify a version.
     assert :ok = Ecto.Migrator.up(Repo, @base_version + 1, DefaultMigration)
@@ -86,7 +88,9 @@ defmodule Oban.Integration.MigratingTest do
   end
 
   property "migrating up arbitrary versions" do
-    check all up_1 <- integer(1..5), up_2 <- integer(1..5), max_runs: 20 do
+    check all up_1 <- integer(1..current_version()),
+              up_2 <- integer(1..current_version()),
+              max_runs: 30 do
       Application.put_env(:oban, :up_version, up_1)
       assert :ok = Ecto.Migrator.up(Repo, @base_version, StepMigration)
 
@@ -98,7 +102,9 @@ defmodule Oban.Integration.MigratingTest do
   end
 
   property "migrating up and down between arbitrary versions" do
-    check all up <- integer(2..5), down <- integer(1..3), max_runs: 20 do
+    check all up <- integer(2..current_version()),
+              down <- integer(1..(current_version() - 1)),
+              max_runs: 30 do
       Application.put_env(:oban, :up_version, up)
       Application.put_env(:oban, :down_version, down)
 
@@ -107,6 +113,10 @@ defmodule Oban.Integration.MigratingTest do
 
       clear_migrated()
     end
+  end
+
+  defp migrated_version do
+    migrated_version(Repo, "migrating")
   end
 
   defp table_exists?(table) do
@@ -122,21 +132,6 @@ defmodule Oban.Integration.MigratingTest do
     {:ok, %{rows: [[bool]]}} = Repo.query(query)
 
     bool
-  end
-
-  defp migrated_version do
-    query = """
-    SELECT description
-    FROM pg_class
-    LEFT JOIN pg_description ON pg_description.objoid = pg_class.oid
-    LEFT JOIN pg_namespace ON pg_namespace.oid = pg_class.relnamespace
-    WHERE pg_class.relname = 'oban_jobs'
-    AND pg_namespace.nspname = 'migrating'
-    """
-
-    {:ok, %{rows: [[commented]]}} = Repo.query(query)
-
-    commented
   end
 
   defp clear_migrated do

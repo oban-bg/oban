@@ -4,13 +4,13 @@ defmodule Oban.Migrations do
   use Ecto.Migration
 
   @initial_version 1
-  @current_version 5
+  @current_version 6
   @default_prefix "public"
 
   def up(opts \\ []) when is_list(opts) do
     prefix = Keyword.get(opts, :prefix, @default_prefix)
     version = Keyword.get(opts, :version, @current_version)
-    initial = min(get_initial(prefix) + 1, @current_version)
+    initial = min(migrated_version(repo(), prefix) + 1, @current_version)
 
     if initial <= version, do: change(prefix, initial..version, :up)
   end
@@ -18,12 +18,16 @@ defmodule Oban.Migrations do
   def down(opts \\ []) when is_list(opts) do
     prefix = Keyword.get(opts, :prefix, @default_prefix)
     version = Keyword.get(opts, :version, @initial_version)
-    initial = max(get_initial(prefix), @initial_version)
+    initial = max(migrated_version(repo(), prefix), @initial_version)
 
     if initial >= version, do: change(prefix, initial..version, :down)
   end
 
-  defp get_initial(prefix) do
+  def initial_version, do: @initial_version
+
+  def current_version, do: @current_version
+
+  def migrated_version(repo, prefix) do
     query = """
     SELECT description
     FROM pg_class
@@ -33,7 +37,7 @@ defmodule Oban.Migrations do
     AND pg_namespace.nspname = '#{prefix}'
     """
 
-    case repo().query(query) do
+    case repo.query(query) do
       {:ok, %{rows: [[version]]}} when is_binary(version) -> String.to_integer(version)
       _ -> 0
     end
@@ -47,13 +51,17 @@ defmodule Oban.Migrations do
     end
   end
 
-  defmodule Macros do
+  defmodule Helper do
     @moduledoc false
 
     defmacro now do
       quote do
         fragment("timezone('UTC', now())")
       end
+    end
+
+    def record_version(prefix, version) do
+      execute "COMMENT ON TABLE #{prefix}.oban_jobs IS '#{version}'"
     end
   end
 
@@ -62,7 +70,7 @@ defmodule Oban.Migrations do
 
     use Ecto.Migration
 
-    import Oban.Migrations.Macros
+    import Oban.Migrations.Helper
 
     def up(prefix) do
       execute "CREATE SCHEMA IF NOT EXISTS #{prefix}"
@@ -139,7 +147,7 @@ defmodule Oban.Migrations do
       FOR EACH ROW EXECUTE PROCEDURE #{prefix}.oban_jobs_notify();
       """
 
-      execute "COMMENT ON TABLE #{prefix}.oban_jobs IS '1'"
+      record_version(prefix, 1)
     end
 
     def down(prefix) do
@@ -156,6 +164,8 @@ defmodule Oban.Migrations do
     @moduledoc false
 
     use Ecto.Migration
+
+    import Oban.Migrations.Helper
 
     def up(prefix) do
       # We only need the scheduled_at index for scheduled and available jobs
@@ -186,7 +196,7 @@ defmodule Oban.Migrations do
       $$ LANGUAGE plpgsql IMMUTABLE;
       """
 
-      execute "COMMENT ON TABLE #{prefix}.oban_jobs IS '2'"
+      record_version(prefix, 2)
     end
 
     def down(prefix) do
@@ -198,7 +208,7 @@ defmodule Oban.Migrations do
 
       execute("DROP FUNCTION IF EXISTS #{prefix}.oban_wrap_id(value bigint)")
 
-      execute "COMMENT ON TABLE #{prefix}.oban_jobs IS '1'"
+      record_version(prefix, 1)
     end
   end
 
@@ -207,7 +217,7 @@ defmodule Oban.Migrations do
 
     use Ecto.Migration
 
-    import Oban.Migrations.Macros
+    import Oban.Migrations.Helper
 
     def up(prefix) do
       alter table(:oban_jobs, prefix: prefix) do
@@ -228,7 +238,7 @@ defmodule Oban.Migrations do
 
       create_if_not_exists index(:oban_beats, [:inserted_at], prefix: prefix)
 
-      execute "COMMENT ON TABLE #{prefix}.oban_jobs IS '3'"
+      record_version(prefix, 3)
     end
 
     def down(prefix) do
@@ -238,7 +248,7 @@ defmodule Oban.Migrations do
 
       drop_if_exists table(:oban_beats, prefix: prefix)
 
-      execute "COMMENT ON TABLE #{prefix}.oban_jobs IS '2'"
+      record_version(prefix, 2)
     end
   end
 
@@ -249,10 +259,12 @@ defmodule Oban.Migrations do
 
     use Ecto.Migration
 
+    import Oban.Migrations.Helper
+
     def up(prefix) do
       execute("DROP FUNCTION IF EXISTS #{prefix}.oban_wrap_id(value bigint)")
 
-      execute "COMMENT ON TABLE #{prefix}.oban_jobs IS '4'"
+      record_version(prefix, 4)
     end
 
     def down(prefix) do
@@ -264,7 +276,7 @@ defmodule Oban.Migrations do
       $$ LANGUAGE plpgsql IMMUTABLE;
       """
 
-      execute "COMMENT ON TABLE #{prefix}.oban_jobs IS '3'"
+      record_version(prefix, 3)
     end
   end
 
@@ -273,6 +285,8 @@ defmodule Oban.Migrations do
 
     use Ecto.Migration
 
+    import Oban.Migrations.Helper
+
     def up(prefix) do
       drop_if_exists index(:oban_jobs, [:scheduled_at], prefix: prefix)
       drop_if_exists index(:oban_jobs, [:queue], prefix: prefix)
@@ -280,7 +294,7 @@ defmodule Oban.Migrations do
 
       create_if_not_exists index(:oban_jobs, [:queue, :state, :scheduled_at, :id], prefix: prefix)
 
-      execute "COMMENT ON TABLE #{prefix}.oban_jobs IS '5'"
+      record_version(prefix, 5)
     end
 
     def down(prefix) do
@@ -296,7 +310,27 @@ defmodule Oban.Migrations do
                prefix: prefix
              )
 
-      execute "COMMENT ON TABLE #{prefix}.oban_jobs IS '4'"
+      record_version(prefix, 4)
+    end
+  end
+
+  defmodule V6 do
+    @moduledoc false
+
+    use Ecto.Migration
+
+    import Oban.Migrations.Helper
+
+    def up(prefix) do
+      execute "ALTER TABLE #{prefix}.oban_beats ALTER COLUMN running TYPE bigint[]"
+
+      record_version(prefix, 6)
+    end
+
+    def down(prefix) do
+      execute "ALTER TABLE #{prefix}.oban_beats ALTER COLUMN running TYPE integer[]"
+
+      record_version(prefix, 5)
     end
   end
 end
