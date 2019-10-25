@@ -14,6 +14,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 - [Oban.Query] Apply the configured log level to unique queries.
 
+### Changed
+
+- [Oban.Notifier] Replay `oban_update` notifications to subscribed processes.
+
 ## [0.10.1] — 2019-10-08
 
 ### Changed

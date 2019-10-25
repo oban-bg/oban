@@ -122,7 +122,8 @@ defmodule Oban.Notifier do
     with {:ok, conn} <- Notifications.start_link(conf.repo.config()),
          {:ok, _ref} <- Notifications.listen(conn, "#{conf.prefix}.#{gossip()}"),
          {:ok, _ref} <- Notifications.listen(conn, "#{conf.prefix}.#{insert()}"),
-         {:ok, _ref} <- Notifications.listen(conn, "#{conf.prefix}.#{signal()}") do
+         {:ok, _ref} <- Notifications.listen(conn, "#{conf.prefix}.#{signal()}"),
+         {:ok, _ref} <- Notifications.listen(conn, "#{conf.prefix}.#{update()}") do
       %{state | conn: conn, circuit: :enabled}
     else
       {:error, error} -> trip_circuit(error, state)
