@@ -13,6 +13,10 @@ defmodule Oban.Crontab.Scheduler do
   # a one second window where a double enqueue can happen.
   @unique [period: 59]
 
+  # Use an extremely large 64bit integer as the key value to prevent any chance of intersecting
+  # with application keyspace.
+  @lock_key 1_149_979_440_242_868_330
+
   @type option :: {:name, module()} | {:conf, Config.t()}
 
   defmodule State do
@@ -21,12 +25,9 @@ defmodule Oban.Crontab.Scheduler do
     @enforce_keys [:conf]
     defstruct [
       :conf,
-      :conn,
       :poll_ref,
       circuit: :enabled,
       circuit_backoff: :timer.seconds(30),
-      lock_held?: false,
-      lock_key: 325_556_101,
       poll_interval: :timer.seconds(60)
     ]
   end
@@ -53,7 +54,7 @@ defmodule Oban.Crontab.Scheduler do
 
   @impl GenServer
   def handle_continue(:start, state) do
-    handle_info(:poll, connect(state))
+    handle_info(:poll, state)
   end
 
   @impl GenServer
@@ -68,8 +69,7 @@ defmodule Oban.Crontab.Scheduler do
     state =
       state
       |> send_poll_after()
-      |> aquire_lock()
-      |> enqueue_jobs()
+      |> lock_and_enqueue()
 
     {:noreply, state}
   end
@@ -78,15 +78,8 @@ defmodule Oban.Crontab.Scheduler do
     {:noreply, trip_circuit(error, state)}
   end
 
-  def handle_info(:reset_circuit, %State{circuit: :disabled} = state) do
-    {:noreply, connect(state)}
-  end
-
-  defp connect(%State{conf: conf} = state) do
-    case Postgrex.start_link(conf.repo.config()) do
-      {:ok, conn} -> %{state | conn: conn}
-      {:error, error} -> trip_circuit(error, state)
-    end
+  def handle_info(:reset_circuit, state) do
+    {:noreply, %{state | circuit: :enabled}}
   end
 
   defp send_poll_after(%State{poll_interval: interval} = state) do
@@ -95,25 +88,30 @@ defmodule Oban.Crontab.Scheduler do
     %{state | poll_ref: ref}
   end
 
-  defp aquire_lock(%State{lock_held?: true} = state), do: state
+  defp lock_and_enqueue(%State{circuit: :disabled} = state), do: state
 
-  defp aquire_lock(%State{circuit: :disabled} = state) do
-    %{state | lock_held?: false}
-  end
+  defp lock_and_enqueue(%State{conf: conf} = state) do
+    conf.repo.transaction(fn _repo ->
+      if aquire_lock?(conf), do: enqueue_jobs(conf)
+    end)
 
-  defp aquire_lock(%State{conn: conn, lock_key: lock_key} = state) do
-    %{rows: [[aquired?]]} = Postgrex.query!(conn, "SELECT pg_try_advisory_lock($1)", [lock_key])
-
-    %{state | lock_held?: aquired?}
+    state
   rescue
     exception in trip_errors() -> trip_circuit(exception, state)
   end
 
-  defp enqueue_jobs(%State{circuit: :disabled} = state), do: state
+  defp aquire_lock?(%Config{repo: repo, verbose: verbose}) do
+    %{rows: [[locked?]]} =
+      repo.query!(
+        "SELECT pg_try_advisory_xact_lock($1)",
+        [@lock_key],
+        log: verbose
+      )
 
-  defp enqueue_jobs(%State{lock_held?: false} = state), do: state
+    locked?
+  end
 
-  defp enqueue_jobs(%State{conf: conf} = state) do
+  defp enqueue_jobs(conf) do
     for {cron, worker, opts} <- conf.crontab, Cron.now?(cron) do
       {args, opts} = Keyword.pop(opts, :args, %{})
 
@@ -121,9 +119,5 @@ defmodule Oban.Crontab.Scheduler do
 
       {:ok, _job} = Query.fetch_or_insert_job(conf, worker.new(args, opts))
     end
-
-    state
-  rescue
-    exception in trip_errors() -> trip_circuit(exception, state)
   end
 end
