@@ -39,8 +39,6 @@ defmodule Oban.Crontab.Scheduler do
     GenServer.start_link(__MODULE__, opts[:conf], name: name)
   end
 
-  # There isn't any reason to run the server without cron jobs. We save a dedicated PG connection
-  # by returning :ignore.
   @impl GenServer
   def init(%Config{crontab: []}) do
     :ignore
