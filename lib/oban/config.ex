@@ -1,11 +1,16 @@
 defmodule Oban.Config do
   @moduledoc false
 
+  alias Oban.Crontab.Cron
+
   use Agent
 
   @type prune :: :disabled | {:maxlen, pos_integer()} | {:maxage, pos_integer()}
 
+  @type cronjob :: {binary(), module(), Keyword.t()}
+
   @type t :: %__MODULE__{
+          crontab: [cronjob()],
           name: atom(),
           node: binary(),
           poll_interval: pos_integer(),
@@ -24,7 +29,8 @@ defmodule Oban.Config do
   @type option :: {:name, module()} | {:conf, t()}
 
   @enforce_keys [:node, :repo]
-  defstruct name: Oban,
+  defstruct crontab: [],
+            name: Oban,
             node: nil,
             poll_interval: :timer.seconds(1),
             prefix: "public",
@@ -50,6 +56,7 @@ defmodule Oban.Config do
     opts =
       opts
       |> Keyword.put_new(:node, node_name())
+      |> Keyword.update(:crontab, [], &parse_crontab/1)
       |> Keyword.put(:queues, Keyword.get(opts, :queues) || [])
 
     Enum.each(opts, &validate_opt!/1)
@@ -74,6 +81,18 @@ defmodule Oban.Config do
         |> elem(1)
         |> to_string()
     end
+  end
+
+  defp parse_crontab([_ | _] = crontab) do
+    Enum.map(crontab, fn tuple ->
+      put_elem(tuple, 0, Cron.parse!(elem(tuple, 0)))
+    end)
+  end
+
+  defp parse_crontab(crontab), do: crontab
+
+  defp validate_opt!({:crontab, crontab}) do
+    # nothing
   end
 
   defp validate_opt!({:name, name}) do

@@ -398,6 +398,7 @@ defmodule Oban do
 
   alias Ecto.{Changeset, Multi}
   alias Oban.{Config, Job, Notifier, Pruner, Query}
+  alias Oban.Crontab.Scheduler
   alias Oban.Queue.Producer
   alias Oban.Queue.Supervisor, as: QueueSupervisor
 
@@ -485,7 +486,8 @@ defmodule Oban do
     children = [
       {Config, conf: conf, name: child_name(name, "Config")},
       {Pruner, conf: conf, name: child_name(name, "Pruner")},
-      {Notifier, conf: conf, name: child_name(name, "Notifier")}
+      {Notifier, conf: conf, name: child_name(name, "Notifier")},
+      {Scheduler, conf: conf, name: child_name(name, "Scheduler")}
     ]
 
     children = children ++ Enum.map(queues, &queue_spec(&1, conf))

@@ -57,6 +57,7 @@ defmodule Oban.MixProject do
     [
       {:ecto_sql, "~> 3.1"},
       {:jason, "~> 1.1"},
+      {:nimble_parsec, "~> 0.5"},
       {:postgrex, "~> 0.14"},
       {:telemetry, "~> 0.4"},
       {:stream_data, "~> 0.4", only: [:test, :dev]},
