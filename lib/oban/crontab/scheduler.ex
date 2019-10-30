@@ -111,6 +111,8 @@ defmodule Oban.Crontab.Scheduler do
 
   defp enqueue_jobs(%State{circuit: :disabled} = state), do: state
 
+  defp enqueue_jobs(%State{lock_held?: false} = state), do: state
+
   defp enqueue_jobs(%State{conf: conf} = state) do
     for {cron, worker, opts} <- conf.crontab, Cron.now?(cron) do
       {args, opts} = Keyword.pop(opts, :args, %{})

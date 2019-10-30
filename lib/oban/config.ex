@@ -5,9 +5,9 @@ defmodule Oban.Config do
 
   use Agent
 
-  @type prune :: :disabled | {:maxlen, pos_integer()} | {:maxage, pos_integer()}
+  @type cronjob :: {Cron.t(), module(), Keyword.t()}
 
-  @type cronjob :: {binary(), module(), Keyword.t()}
+  @type prune :: :disabled | {:maxlen, pos_integer()} | {:maxage, pos_integer()}
 
   @type t :: %__MODULE__{
           crontab: [cronjob()],
@@ -56,10 +56,11 @@ defmodule Oban.Config do
     opts =
       opts
       |> Keyword.put_new(:node, node_name())
-      |> Keyword.update(:crontab, [], &parse_crontab/1)
-      |> Keyword.put(:queues, Keyword.get(opts, :queues) || [])
+      |> Keyword.update(:queues, [], &(&1 || []))
 
     Enum.each(opts, &validate_opt!/1)
+
+    opts = Keyword.update(opts, :crontab, [], &parse_crontab/1)
 
     struct!(__MODULE__, opts)
   end
@@ -83,16 +84,12 @@ defmodule Oban.Config do
     end
   end
 
-  defp parse_crontab([_ | _] = crontab) do
-    Enum.map(crontab, fn tuple ->
-      put_elem(tuple, 0, Cron.parse!(elem(tuple, 0)))
-    end)
-  end
-
-  defp parse_crontab(crontab), do: crontab
-
   defp validate_opt!({:crontab, crontab}) do
-    # nothing
+    unless is_list(crontab) and Enum.all?(crontab, &valid_crontab?/1) do
+      raise ArgumentError,
+            "expected :crontab to be a list of {expression, worker} or " <>
+              "{expression, worker, options} tuples"
+    end
   end
 
   defp validate_opt!({:name, name}) do
@@ -180,5 +177,30 @@ defmodule Oban.Config do
     raise ArgumentError, "unknown option provided #{inspect(option)}"
   end
 
+  defp valid_crontab?({expression, worker}) do
+    valid_crontab?({expression, worker, []})
+  end
+
+  defp valid_crontab?({expression, worker, options}) do
+    is_binary(expression) and
+      Code.ensure_loaded?(worker) and
+      function_exported?(worker, :perform, 2) and
+      Keyword.keyword?(options)
+  end
+
+  defp valid_crontab?(_crontab), do: false
+
   defp valid_queue?({_name, size}), do: is_integer(size) and size > 0
+
+  defp parse_crontab(crontab) do
+    for tuple <- crontab do
+      case tuple do
+        {expression, worker} ->
+          {Cron.parse!(expression), worker, []}
+
+        {expression, worker, options} ->
+          {Cron.parse!(expression), worker, options}
+      end
+    end
+  end
 end

@@ -14,6 +14,23 @@ defmodule Oban.ConfigTest do
   end
 
   describe "new/1" do
+    test ":crontab is validated as a list of cron job expressions" do
+      assert_raise ArgumentError, fn -> Config.new(repo: Repo, crontab: ["* * * * *"]) end
+      assert_raise ArgumentError, fn -> Config.new(repo: Repo, crontab: [["* * * * *", Fake]]) end
+      assert_raise ArgumentError, fn -> Config.new(repo: Repo, crontab: [Worker]) end
+
+      assert %Config{crontab: crontab} = Config.new(repo: Repo, crontab: [{"* * * * *", Worker}])
+      assert [{%_{minutes: _}, Worker, []}] = crontab
+
+      assert %Config{crontab: crontab} =
+               Config.new(
+                 repo: Repo,
+                 crontab: [{"* * * * *", Worker, queue: "special"}]
+               )
+
+      assert [{%_{minutes: _}, Worker, [queue: "special"]}] = crontab
+    end
+
     test ":name is validated as a module" do
       assert_raise ArgumentError, fn -> Config.new(repo: Repo, name: "Oban") end
       assert_raise ArgumentError, fn -> Config.new(repo: Repo, name: {:via, :whatever}) end
