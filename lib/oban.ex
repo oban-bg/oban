@@ -194,6 +194,73 @@ defmodule Oban do
   `inserted_at` columns of the `oban_jobs` table. The other columns considered for uniqueness are
   already covered by indexes.
 
+  ## Periodic (CRON) Jobs
+
+  Oban allows jobs to be registered with a cron-like schedule and enqueued automatically. Periodic
+  jobs are registered as a list of `{cron, worker}` or `{cron, worker, options}` tuples:
+
+  ```elixir
+  config :my_app, Oban, repo: MyApp.Repo, crontab: [
+    {"* * * * *", MyApp.MinuteWorker},
+    {"0 * * * *", MyApp.HourlyWorker, args: %{custom: "arg"}},
+    {"0 0 * * *", MyApp.DailyWorker, max_attempts: 1},
+    {"0 12 * * MON", MyApp.MondayWorker, queue: "scheduled"}
+  ]
+  ```
+
+  These jobs would be executed as follows:
+
+    * `MyApp.MinuteWorker` - Executed once every minute
+    * `MyApp.HourlyWorker` - Executed at the first minute of every hour with custom args
+    * `MyApp.DailyWorker` - Executed at midnight every day with no retries
+    * `MyApp.MondayWorker` — Executed at noon every Monday in the "scheduled" queue
+
+  The crontab format respects all [standard rules][cron] and has one minute resolution. Jobs are
+  considered unique for most of each minute, which prevents duplicate jobs with multiple nodes and
+  across node restarts.
+
+  ### Cron Expressions
+
+  Standard Cron expressions are composed of rules specifying the minutes, hours, days, months and
+  weekdays. Rules for each field are comprised of literal values, wildcards, step values or
+  ranges:
+
+  * `*` - Wildcard, matches any value (0, 1, 2, ...)
+  * `0` — Literal, matches only itself (only 0)
+  * `*/15` — Step, matches any value that is a multiple (0, 15, 30, 45)
+  * `0-5` — Range, matches any value within the range (0, 1, 2, 3, 4, 5)
+
+  Each part may have multiple rules, where rules are separated by a comma. The allowed values for
+  each field are as follows:
+
+  * `minute` - 0-59
+  * `hour` - 0-23
+  * `days` - 1-31
+  * `month` - 1-12 (or aliases, `JAN`, `FEB`, `MAR`, etc.)
+  * `weekdays` - 0-6 (or aliases, `SUN`, `MON`, `TUE`, etc.)
+
+  Some specific examples that demonstrate the full range of expressions:
+
+  * `0 * * * *` — The first minute of every hour
+  * `*/15 9-17 * * *` — Every fifteen minutes during standard business hours
+  * `0 0 * DEC *` — Once a day at midnight during december
+  * `0 7-9,4-6 13 * FRI` — Once an hour during both rush hours on Friday the 13th
+
+  For more in depth information see the man documentation for `cron` and `crontab` in your system.
+  Alternatively you can experiment with various expressions online at [Crontab Guru][guru].
+
+  ### Caveats
+
+  * All schedules are evaluated as UTC, the local timezone is never taken into account.
+
+  * Workers can be used for regular and scheduled jobs so long as they accept different arguments.
+
+  * Duplicate jobs are prevented through transactional locks and unique constraints. Workers that
+  are used for regular and scheduled jobs _must not_ specify `unique` options less than `60s`.
+
+  [cron]: https://en.wikipedia.org/wiki/Cron#Overview
+  [guru]: https://crontab.guru
+
   ## Testing
 
   As noted in the Usage section above there are some guidelines for running tests:
