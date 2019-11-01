@@ -56,7 +56,7 @@ defmodule Oban.Config do
     opts =
       opts
       |> Keyword.put_new(:node, node_name())
-      |> Keyword.update(:queues, [], &(&1 || []))
+      |> Keyword.put(:queues, Keyword.get(opts, :queues) || [])
 
     Enum.each(opts, &validate_opt!/1)
 
