@@ -57,13 +57,13 @@ defmodule Oban.MixProject do
     [
       {:ecto_sql, "~> 3.1"},
       {:jason, "~> 1.1"},
-      {:nimble_parsec, "~> 0.5"},
       {:postgrex, "~> 0.14"},
       {:telemetry, "~> 0.4"},
       {:stream_data, "~> 0.4", only: [:test, :dev]},
       {:credo, "~> 1.0", only: [:test, :dev], runtime: false},
       {:dialyxir, "~> 0.5", only: [:test, :dev], runtime: false},
-      {:ex_doc, "~> 0.20", only: [:test, :dev], runtime: false}
+      {:ex_doc, "~> 0.20", only: [:test, :dev], runtime: false},
+      {:nimble_parsec, "~> 0.5", only: [:test, :dev], runtime: false}
     ]
   end
 
