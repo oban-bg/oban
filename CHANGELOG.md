@@ -14,6 +14,12 @@ running array on `oban_beats`. The array that Ecto defines uses `int` instead of
 `bigint`, which can't store the larger integers. This migration changes the
 column type to `bigint[]`, a locking operation that may take a few seconds.
 
+### Added
+
+- [Oban] Added `crontab` support for automatically enqueuing jobs on a fixed
+  schedule. A combination of transactional locks and unique jobs prevents
+  scheduling duplicate jobs.
+
 ### Fixed
 
 - [Oban.Migrations] Add a comment when migrating `oban_jobs` to V5 and when

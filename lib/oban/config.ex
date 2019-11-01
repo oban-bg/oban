@@ -1,11 +1,16 @@
 defmodule Oban.Config do
   @moduledoc false
 
+  alias Oban.Crontab.Cron
+
   use Agent
+
+  @type cronjob :: {Cron.t(), module(), Keyword.t()}
 
   @type prune :: :disabled | {:maxlen, pos_integer()} | {:maxage, pos_integer()}
 
   @type t :: %__MODULE__{
+          crontab: [cronjob()],
           name: atom(),
           node: binary(),
           poll_interval: pos_integer(),
@@ -24,7 +29,8 @@ defmodule Oban.Config do
   @type option :: {:name, module()} | {:conf, t()}
 
   @enforce_keys [:node, :repo]
-  defstruct name: Oban,
+  defstruct crontab: [],
+            name: Oban,
             node: nil,
             poll_interval: :timer.seconds(1),
             prefix: "public",
@@ -54,6 +60,8 @@ defmodule Oban.Config do
 
     Enum.each(opts, &validate_opt!/1)
 
+    opts = Keyword.update(opts, :crontab, [], &parse_crontab/1)
+
     struct!(__MODULE__, opts)
   end
 
@@ -73,6 +81,14 @@ defmodule Oban.Config do
         :inet.gethostname()
         |> elem(1)
         |> to_string()
+    end
+  end
+
+  defp validate_opt!({:crontab, crontab}) do
+    unless is_list(crontab) and Enum.all?(crontab, &valid_crontab?/1) do
+      raise ArgumentError,
+            "expected :crontab to be a list of {expression, worker} or " <>
+              "{expression, worker, options} tuples"
     end
   end
 
@@ -161,5 +177,30 @@ defmodule Oban.Config do
     raise ArgumentError, "unknown option provided #{inspect(option)}"
   end
 
+  defp valid_crontab?({expression, worker}) do
+    valid_crontab?({expression, worker, []})
+  end
+
+  defp valid_crontab?({expression, worker, options}) do
+    is_binary(expression) and
+      Code.ensure_loaded?(worker) and
+      function_exported?(worker, :perform, 2) and
+      Keyword.keyword?(options)
+  end
+
+  defp valid_crontab?(_crontab), do: false
+
   defp valid_queue?({_name, size}), do: is_integer(size) and size > 0
+
+  defp parse_crontab(crontab) do
+    for tuple <- crontab do
+      case tuple do
+        {expression, worker} ->
+          {Cron.parse!(expression), worker, []}
+
+        {expression, worker, options} ->
+          {Cron.parse!(expression), worker, options}
+      end
+    end
+  end
 end

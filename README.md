@@ -77,6 +77,8 @@ Advanced features and advantages over other RDBMS based tools:
   period of time.
 - **Scheduled Jobs** — Jobs can be scheduled at any time in the future, down to
   the second.
+- **Periodic (CRON) Jobs** — Automatically enqueue jobs on a cron-like schedule.
+  Duplicate jobs are never enqueued, no matter how many nodes you're running.
 - **Job Safety** — When a process crashes or the BEAM is terminated executing
   jobs aren't lost—they are quickly recovered by other running nodes or
   immediately when the node is restarted.

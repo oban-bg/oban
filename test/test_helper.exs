@@ -13,7 +13,7 @@ defmodule Oban.Integration.Worker do
 
     args
     |> Map.new()
-    |> Map.put(:bin_pid, pid_to_bin())
+    |> Map.put_new(:bin_pid, pid_to_bin())
     |> Job.new(opts)
   end
 
