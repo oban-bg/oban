@@ -347,6 +347,11 @@ deleting old records from the `oban_jobs` tables. It has 3 modes:
 * Limit-based - Keeps the latest N records. Example: `{:maxlen, 100_000}`
 * Time-based - Keeps records for the last N seconds. Example for 7 days: `{:maxage, 60 * 60 * 24 * 7}`
 
+If you're using a row-limited database service, like Heroku's hobby plan with 10M rows, and you have pruning
+`:disabled`, you could hit that row limit quickly by filling up the `oban_beats` table. Instead of fully
+disabling pruning, consider setting a far-out time-based limit: `{:maxage, 60 * 60 * 24 * 365}` (1 year).
+You will get the benefit of retaining completed & discarded jobs for a year without an unwieldy beats table.
+
 **Important**: Pruning is only applied to jobs that are completed or discarded
 (has reached the maximum number of retries or has been manually killed). It'll
 never delete a new job, a scheduled job or a job that failed and will be
