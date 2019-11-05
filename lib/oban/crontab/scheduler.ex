@@ -92,7 +92,7 @@ defmodule Oban.Crontab.Scheduler do
     %Config{repo: repo, verbose: verbose} = conf
 
     repo.transaction(
-      fn _ -> if aquire_lock?(conf), do: enqueue_jobs(conf) end,
+      fn _ -> if acquire_lock?(conf), do: enqueue_jobs(conf) end,
       log: verbose,
       timeout: timeout
     )
@@ -102,7 +102,7 @@ defmodule Oban.Crontab.Scheduler do
     exception in trip_errors() -> trip_circuit(exception, state)
   end
 
-  defp aquire_lock?(%Config{repo: repo, verbose: verbose}) do
+  defp acquire_lock?(%Config{repo: repo, verbose: verbose}) do
     %{rows: [[locked?]]} =
       repo.query!(
         "SELECT pg_try_advisory_xact_lock($1)",
