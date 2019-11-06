@@ -27,6 +27,10 @@ column type to `bigint[]`, a locking operation that may take a few seconds.
 
 - [Oban.Query] Apply the configured log level to unique queries.
 
+- [Oban.Notifier] Prevent open connections from accumulating when the circuit is
+  tripped during the connection phase. This change may leave notifications in a
+  state where they aren't listening to all channels.
+
 ### Changed
 
 - [Oban.Notifier] Replay `oban_update` notifications to subscribed processes.

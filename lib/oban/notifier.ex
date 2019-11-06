@@ -18,7 +18,6 @@ defmodule Oban.Notifier do
   #
   # On Notification:
   # 1. Iterate through the listeners and forward the message
-  # 2. Possibly debounce by event type, on the leading edge, every 50ms?
 
   use GenServer
 
@@ -96,7 +95,9 @@ defmodule Oban.Notifier do
   end
 
   def handle_info({:EXIT, _pid, error}, %State{} = state) do
-    {:noreply, trip_circuit(error, state)}
+    state = trip_circuit(error, state)
+
+    {:noreply, %{state | conn: nil}}
   end
 
   def handle_info(:reset_circuit, %State{circuit: :disabled} = state) do
@@ -118,7 +119,7 @@ defmodule Oban.Notifier do
     end
   end
 
-  defp connect_and_listen(%State{conf: conf} = state) do
+  defp connect_and_listen(%State{conf: conf, conn: nil} = state) do
     with {:ok, conn} <- Notifications.start_link(conf.repo.config()),
          {:ok, _ref} <- Notifications.listen(conn, "#{conf.prefix}.#{gossip()}"),
          {:ok, _ref} <- Notifications.listen(conn, "#{conf.prefix}.#{insert()}"),
@@ -129,4 +130,6 @@ defmodule Oban.Notifier do
       {:error, error} -> trip_circuit(error, state)
     end
   end
+
+  defp connect_and_listen(state), do: state
 end
