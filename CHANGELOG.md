@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## [0.11.0] — 2019-11-06
+
 **Migration Optional (V6)**
 
 Job id's greater than 2,147,483,647 (PG `int` limit) can't be inserted into the
@@ -467,7 +469,8 @@ end
 
 - [Oban] Initial release with base functionality.
 
-[Unreleased]: https://github.com/sorentwo/oban/compare/v0.10.1...HEAD
+[Unreleased]: https://github.com/sorentwo/oban/compare/v0.11.0...HEAD
+[0.11.0]: https://github.com/sorentwo/oban/compare/v0.10.1...v0.11.0
 [0.10.1]: https://github.com/sorentwo/oban/compare/v0.10.0...v0.10.1
 [0.10.0]: https://github.com/sorentwo/oban/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/sorentwo/oban/compare/v0.8.1...v0.9.0
