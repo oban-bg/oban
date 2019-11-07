@@ -43,13 +43,13 @@ defmodule Oban.Pruner do
   # the queue is idle.
   @beats_maxage_seconds 60 * 60
 
-  defp prune_beats(%Config{prune: prune} = conf) do
+  defp prune_beats(%Config{prune: prune, prune_limit: prune_limit} = conf) do
     case prune do
       :disabled ->
         :ok
 
       {_method, _setting} ->
-        Query.delete_outdated_beats(conf, @beats_maxage_seconds)
+        Query.delete_outdated_beats(conf, @beats_maxage_seconds, prune_limit)
     end
 
     conf

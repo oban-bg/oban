@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Fixed
+
+- [Oban.Pruner] Apply `prune_limit` when pruning beats. A _lot_ of beats can
+  accumulate when pruning has been disabled. Later, when pruning is enabled,
+  the pruner would try to delete too many beats and would time out.
+
 ## [0.11.0] — 2019-11-06
 
 **Migration Optional (V6)**

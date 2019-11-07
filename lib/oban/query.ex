@@ -131,20 +131,28 @@ defmodule Oban.Query do
       Job
       |> where([j], j.state == "completed" and j.completed_at < ^outdated_at)
       |> or_where([j], j.state == "discarded" and j.attempted_at < ^outdated_at)
-      |> limit(^limit)
       |> order_by(desc: :id)
+      |> limit(^limit)
 
     Job
     |> join(:inner, [j], x in subquery(subquery, prefix: prefix), on: j.id == x.id)
     |> repo.delete_all(log: verbose, prefix: prefix)
   end
 
-  @spec delete_outdated_beats(Config.t(), pos_integer()) :: {integer(), nil}
-  def delete_outdated_beats(%Config{prefix: prefix, repo: repo, verbose: verbose}, seconds) do
+  @spec delete_outdated_beats(Config.t(), pos_integer(), pos_integer()) :: {integer(), nil}
+  def delete_outdated_beats(%Config{prefix: prefix, repo: repo, verbose: verbose}, seconds, limit) do
     outdated_at = DateTime.add(utc_now(), -seconds)
 
+    subquery =
+      Beat
+      |> where([b], b.inserted_at < ^outdated_at)
+      |> order_by(asc: :inserted_at)
+      |> limit(^limit)
+
     Beat
-    |> where([b], b.inserted_at < ^outdated_at)
+    |> join(:inner, [b], x in subquery(subquery, prefix: prefix),
+      on: b.inserted_at == x.inserted_at
+    )
     |> repo.delete_all(log: verbose, prefix: prefix)
   end
 
