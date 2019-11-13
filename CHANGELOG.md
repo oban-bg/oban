@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Fixed
+
+- [Oban.Query] Avoid using prepared statements for all unique queries. This
+  forces Postgres to use a custom plan (which utilizes the compound index)
+  rather than falling back to a generic plan.
+
 ## [0.11.1] — 2019-11-13
 
 ### Fixed

@@ -35,7 +35,7 @@ defmodule Oban.Query do
   @spec fetch_or_insert_job(Config.t(), Changeset.t()) :: {:ok, Job.t()} | {:error, Changeset.t()}
   def fetch_or_insert_job(%Config{prefix: prefix, repo: repo, verbose: verbose}, changeset) do
     with {:ok, query} <- unique_query(changeset),
-         %Job{} = job <- repo.one(query, log: verbose, prefix: prefix) do
+         {:ok, job} <- unprepared_one(repo, query, log: verbose, prefix: prefix) do
       {:ok, job}
     else
       nil -> repo.insert(changeset, log: verbose, on_conflict: :nothing, prefix: prefix)
@@ -240,4 +240,17 @@ defmodule Oban.Query do
   end
 
   defp unique_query(_changeset), do: nil
+
+  # With certain unique option combinations Postgres will decide to use a `generic plan` instead
+  # of a `custom plan`, which *drastically* impacts the unique query performance. Ecto doesn't
+  # provide a way to opt out of prepared statements for a single query, so this function works
+  # around the issue by forcing a raw SQL query.
+  defp unprepared_one(repo, query, opts) do
+    {raw_sql, bindings} = repo.to_sql(:all, query)
+
+    case repo.query(raw_sql, bindings, opts) do
+      {:ok, %{columns: columns, rows: [rows]}} -> {:ok, repo.load(Job, {columns, rows})}
+      _ -> nil
+    end
+  end
 end
