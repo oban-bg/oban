@@ -61,7 +61,7 @@ Advantages over in-memory, mnesia, Redis and RabbitMQ based tools:
 Advanced features and advantages over other RDBMS based tools:
 
 - **Isolated Queues** — Jobs are stored in a single table but are executed in
-  distinct queues. Each queue runs in isolation, ensuring that a jobs in a single
+  distinct queues. Each queue runs in isolation, ensuring that a job in a single
   slow queue can't back up other faster queues.
 - **Queue Control** — Queues can be paused, resumed and scaled independently at
   runtime.
