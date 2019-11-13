@@ -92,7 +92,7 @@ defmodule Oban.Crontab.Scheduler do
     %Config{repo: repo, verbose: verbose} = conf
 
     repo.transaction(
-      fn _ -> if acquire_lock?(conf), do: enqueue_jobs(conf) end,
+      fn -> if acquire_lock?(conf), do: enqueue_jobs(conf) end,
       log: verbose,
       timeout: timeout
     )

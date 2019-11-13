@@ -13,6 +13,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   accumulate when pruning has been disabled. Later, when pruning is enabled,
   the pruner would try to delete too many beats and would time out.
 
+- [Oban.Crontab.Scheduler] Use a zero arity function for the transaction
+  callback. The one arity version is only available in Ecto >= 3.2.
+
 ## [0.11.0] — 2019-11-06
 
 **Migration Optional (V6)**
