@@ -464,7 +464,7 @@ defmodule Oban do
   import Oban.Notifier, only: [signal: 0]
 
   alias Ecto.{Changeset, Multi}
-  alias Oban.{Config, Job, Notifier, Pruner, Query}
+  alias Oban.{Config, Job, Midwife, Notifier, Pruner, Query}
   alias Oban.Crontab.Scheduler
   alias Oban.Queue.Producer
   alias Oban.Queue.Supervisor, as: QueueSupervisor
@@ -482,8 +482,12 @@ defmodule Oban do
           | {:shutdown_grace_period, timeout()}
           | {:verbose, false | Logger.level()}
 
+  @type queue_name :: atom() | binary()
+
   defguardp is_queue(name)
             when (is_binary(name) and byte_size(name) > 0) or (is_atom(name) and not is_nil(name))
+
+  defguardp is_limit(limit) when is_integer(limit) and limit > 0
 
   @doc """
   Starts an `Oban` supervision tree linked to the current process.
@@ -574,10 +578,11 @@ defmodule Oban do
       {Config, conf: conf, name: child_name(name, "Config")},
       {Pruner, conf: conf, name: child_name(name, "Pruner")},
       {Notifier, conf: conf, name: child_name(name, "Notifier")},
+      {Midwife, conf: conf, name: child_name(name, "Midwife")},
       {Scheduler, conf: conf, name: child_name(name, "Scheduler")}
     ]
 
-    children = children ++ Enum.map(queues, &queue_spec(&1, conf))
+    children = children ++ Enum.map(queues, &QueueSupervisor.child_spec(&1, conf))
 
     Supervisor.init(children, strategy: :one_for_one)
   end
@@ -750,12 +755,30 @@ defmodule Oban do
       %{success: 2, failure: 1}
   """
   @doc since: "0.4.0"
-  @spec drain_queue(name :: atom(), queue :: atom() | binary()) :: %{
+  @spec drain_queue(name :: atom(), queue :: queue_name()) :: %{
           success: non_neg_integer(),
           failure: non_neg_integer()
         }
   def drain_queue(name \\ __MODULE__, queue) when is_atom(name) and is_queue(queue) do
     Producer.drain(to_string(queue), config(name))
+  end
+
+  @doc """
+  Start a new supervised queue across all connected nodes.
+
+  ## Example
+
+  Start the `:priority` queue with a concurrency limit of 10.
+
+      Oban.start_queue(:priority, 10)
+      :ok
+  """
+  @doc since: "0.12.0"
+  @spec start_queue(name :: atom(), queue :: queue_name(), limit :: pos_integer()) :: :ok
+  def start_queue(name \\ __MODULE__, queue, limit) when is_queue(queue) and is_limit(limit) do
+    name
+    |> config()
+    |> Query.notify(signal(), %{action: :start, queue: queue, limit: limit})
   end
 
   @doc """
@@ -772,7 +795,7 @@ defmodule Oban do
       :ok
   """
   @doc since: "0.2.0"
-  @spec pause_queue(name :: atom(), queue :: atom()) :: :ok
+  @spec pause_queue(name :: atom(), queue :: queue_name()) :: :ok
   def pause_queue(name \\ __MODULE__, queue) when is_queue(queue) do
     name
     |> config()
@@ -790,7 +813,7 @@ defmodule Oban do
       :ok
   """
   @doc since: "0.2.0"
-  @spec resume_queue(name :: atom(), queue :: atom()) :: :ok
+  @spec resume_queue(name :: atom(), queue :: queue_name()) :: :ok
   def resume_queue(name \\ __MODULE__, queue) when is_queue(queue) do
     name
     |> config()
@@ -813,12 +836,31 @@ defmodule Oban do
       :ok
   """
   @doc since: "0.2.0"
-  @spec scale_queue(name :: atom(), queue :: atom(), scale :: pos_integer()) :: :ok
-  def scale_queue(name \\ __MODULE__, queue, scale)
-      when is_queue(queue) and is_integer(scale) and scale > 0 do
+  @spec scale_queue(name :: atom(), queue :: queue_name(), scale :: pos_integer()) :: :ok
+  def scale_queue(name \\ __MODULE__, queue, scale) when is_queue(queue) and is_limit(scale) do
     name
     |> config()
     |> Query.notify(signal(), %{action: :scale, queue: queue, scale: scale})
+  end
+
+  @doc """
+  Shutdown a queue's supervision tree and stop running jobs for that queue across all running
+  nodes.
+
+  The shutdown process pauses the queue first and allows current jobs to exit gracefully,
+  provided they finish within the shutdown limit.
+
+  ## Example
+
+      Oban.stop_queue(:default)
+      :ok
+  """
+  @doc since: "0.12.0"
+  @spec stop_queue(name :: atom(), queue :: queue_name()) :: :ok
+  def stop_queue(name \\ __MODULE__, queue) when is_atom(name) and is_queue(queue) do
+    name
+    |> config()
+    |> Query.notify(signal(), %{action: :stop, queue: queue})
   end
 
   @doc """
@@ -840,14 +882,6 @@ defmodule Oban do
     name
     |> config()
     |> Query.notify(signal(), %{action: :pkill, job_id: job_id})
-  end
-
-  defp queue_spec({queue, limit}, conf) do
-    queue = to_string(queue)
-    name = Module.concat([conf.name, "Queue", Macro.camelize(queue)])
-    opts = [conf: conf, queue: queue, limit: limit, name: name]
-
-    Supervisor.child_spec({QueueSupervisor, opts}, id: name)
   end
 
   defp child_name(name, child), do: Module.concat(name, child)

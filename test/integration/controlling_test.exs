@@ -3,40 +3,90 @@ defmodule Oban.Integration.ControllingTest do
 
   @moduletag :integration
 
-  @oban_opts repo: Repo, queues: [control: 10, default: 5]
+  @oban_opts repo: Repo, queues: [alpha: 10]
 
-  test "individual queues can be paused and resumed" do
+  test "starting individual queues dynamically" do
+    start_supervised!({Oban, @oban_opts})
+
+    insert_job!(%{ref: 1, action: "OK"}, queue: :gamma)
+    insert_job!(%{ref: 2, action: "OK"}, queue: :delta)
+
+    refute_receive {:ok, 1}
+    refute_receive {:ok, 2}
+
+    assert :ok = Oban.start_queue(:gamma, 5)
+    assert :ok = Oban.start_queue(:delta, 6)
+    assert :ok = Oban.start_queue(:alpha, 5)
+
+    assert_receive {:ok, 1}
+    assert_receive {:ok, 2}
+
+    :ok = stop_supervised(Oban)
+  end
+
+  test "stopping individual queues" do
+    start_supervised!({Oban, repo: Repo, queues: [alpha: 5, delta: 5, gamma: 5]})
+
+    assert supervised_queue?(Oban.Queue.Delta)
+    assert supervised_queue?(Oban.Queue.Gamma)
+
+    insert_job!(%{ref: 1, action: "OK"}, queue: :delta)
+    insert_job!(%{ref: 2, action: "OK"}, queue: :gamma)
+
+    assert_receive {:ok, 1}
+    assert_receive {:ok, 2}
+
+    assert :ok = Oban.stop_queue(:delta)
+    assert :ok = Oban.stop_queue(:gamma)
+
+    with_backoff(fn ->
+      refute supervised_queue?(Oban.Queue.Delta)
+      refute supervised_queue?(Oban.Queue.Gamma)
+    end)
+
+    insert_job!(%{ref: 3, action: "OK"}, queue: :alpha)
+    insert_job!(%{ref: 4, action: "OK"}, queue: :delta)
+    insert_job!(%{ref: 5, action: "OK"}, queue: :gamma)
+
+    assert_receive {:ok, 3}
+    refute_receive {:ok, 4}
+    refute_receive {:ok, 5}
+
+    :ok = stop_supervised(Oban)
+  end
+
+  test "pausing and resuming individual queues" do
     start_supervised!({Oban, @oban_opts})
 
     # Pause briefly so that the producer has time to subscribe to notifications.
-    Process.sleep(10)
+    Process.sleep(20)
 
-    Oban.pause_queue(:control)
+    assert :ok = Oban.pause_queue(:alpha)
 
     insert_job!(ref: 1, action: "OK")
 
     refute_receive {:ok, 1}
 
-    Oban.resume_queue(:control)
+    assert :ok = Oban.resume_queue(:alpha)
 
     assert_receive {:ok, 1}
 
-    stop_supervised(Oban)
+    :ok = stop_supervised(Oban)
   end
 
-  test "individual queues can be scaled" do
-    start_supervised!({Oban, Keyword.put(@oban_opts, :queues, control: 1)})
+  test "scaling individual queues" do
+    start_supervised!({Oban, Keyword.put(@oban_opts, :queues, alpha: 1)})
 
     for ref <- 1..20, do: insert_job!(ref: ref, sleep: 50)
 
-    Oban.scale_queue(:control, 20)
+    Oban.scale_queue(:alpha, 20)
 
     assert_receive {:ok, 20}
 
-    stop_supervised(Oban)
+    :ok = stop_supervised(Oban)
   end
 
-  test "executing jobs can be killed by id" do
+  test "killing an executing job by its id" do
     start_supervised!({Oban, @oban_opts})
 
     %Job{id: job_id} = insert_job!(ref: 1, sleep: 100)
@@ -49,10 +99,10 @@ defmodule Oban.Integration.ControllingTest do
 
     assert Repo.get(Job, job_id).state == "discarded"
 
-    stop_supervised(Oban)
+    :ok = stop_supervised(Oban)
   end
 
-  test "jobs may be dispatched from a queue via database trigger" do
+  test "dispatching jobs from a queue via database trigger" do
     start_supervised!({Oban, Keyword.put(@oban_opts, :poll_interval, :timer.minutes(5))})
 
     # Producers start up asynchronously and we want to be sure the job doesn't run immediately on
@@ -63,12 +113,20 @@ defmodule Oban.Integration.ControllingTest do
 
     assert_receive {:ok, 1}
 
-    stop_supervised(Oban)
+    :ok = stop_supervised(Oban)
   end
 
-  defp insert_job!(args) do
+  defp insert_job!(args, opts \\ []) do
+    opts = Keyword.put_new(opts, :queue, :alpha)
+
     args
-    |> Worker.new(queue: :control)
+    |> Worker.new(opts)
     |> Oban.insert!()
+  end
+
+  defp supervised_queue?(queue_name) do
+    Oban
+    |> Supervisor.which_children()
+    |> Enum.any?(fn {name, _, _, _} -> name == queue_name end)
   end
 end
