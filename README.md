@@ -29,6 +29,7 @@
 ## Table of Contents
 
 - [Features](#Features)
+- [UI](#UI)
 - [Requirements](#Requirements)
 - [Installation](#Installation)
 - [Usage](#Usage)
@@ -103,6 +104,12 @@ Advanced features and advantages over other RDBMS based tools:
 Oban has been developed and actively tested with Elixir 1.8+, Erlang/OTP 21.1+
 and PostgreSQL 11.0+. Running Oban currently requires Elixir 1.8+, Erlang 21+, and PostgreSQL
 9.6+.
+
+## UI
+
+A web-based user interface for monitoring and managing Oban is availabe as a
+private beta. Learn more about it and register for the beta at
+[oban.dev](https://oban.dev).
 
 ## Installation
 
