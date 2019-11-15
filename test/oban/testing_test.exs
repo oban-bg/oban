@@ -5,6 +5,10 @@ defmodule Oban.TestingTest do
 
   @moduletag :integration
 
+  defp seconds_from_now(seconds) do
+    DateTime.add(DateTime.utc_now(), seconds, :second)
+  end
+
   describe "all_enqueued/1" do
     test "retrieving a filtered list of enqueued jobs" do
       insert_job!(%{id: 1, ref: "a"}, worker: Ping, queue: :alpha)
@@ -30,6 +34,18 @@ defmodule Oban.TestingTest do
       assert_enqueued worker: "Pong", queue: "gamma", args: %{message: "hello"}
       assert_enqueued args: %{id: 1}
       assert_enqueued args: %{message: "hello"}
+    end
+
+    test "checking for jobs with matching timestamps with delta" do
+      insert_job!(%{}, worker: Ping, scheduled_at: seconds_from_now(60))
+
+      assert_enqueued worker: Ping, scheduled_at: seconds_from_now(60)
+    end
+
+    test "checking for jobs allows to configure timetamp delta" do
+      insert_job!(%{}, worker: Ping, scheduled_at: seconds_from_now(60))
+
+      assert_enqueued worker: Ping, scheduled_at: {seconds_from_now(69), delta: 10}
     end
   end
 

@@ -60,6 +60,20 @@ defmodule Oban.Testing do
         end
       end
 
+  ## Matching scheduled jobs and timestamps in general
+
+  In order to assert a job has been scheduled at a certain time, you will need to match against
+  the `scheduled_at` attribute of the enqueued job.
+
+      in_an_hour = DateTime.add(DateTime.utc_now(), 3600, :second)
+      assert_enqueued worker: MyApp.Worker, scheduled_at: in_an_hour
+
+  By default, Oban will apply a 1 second delta to all timestamp fields of jobs, so that small
+  deviations between the actual value and the expected one are ignored. You may configure this
+  delta by passing a tuple of value and a `delta` option (in seconds) to corresponding keyword:
+
+      assert_enqueued worker: MyApp.Worker, scheduled_at: {in_an_hour, delta: 10}
+
   ## Adding to Case Templates
 
   To include helpers in all of your tests you can add it to your case template:
@@ -179,20 +193,59 @@ defmodule Oban.Testing do
   end
 
   defp base_query(opts) do
+    {fields, field_opts} = Enum.map_reduce(opts, [], &extract_field_opts/2)
+
+    fields_with_opts =
+      fields
+      |> normalize_fields()
+      |> Enum.map(fn {key, value} ->
+        {key, value, Keyword.get(field_opts, key, [])}
+      end)
+
     Job
     |> where([j], j.state in ["available", "scheduled"])
-    |> where(^normalize_opts(opts))
+    |> apply_where_clauses(fields_with_opts)
   end
 
-  defp normalize_opts(opts) do
-    args = Keyword.get(opts, :args, %{})
-    keys = Keyword.keys(opts)
+  defp extract_field_opts({key, {value, field_opts}}, field_opts_acc) do
+    {{key, value}, [{key, field_opts} | field_opts_acc]}
+  end
+
+  defp extract_field_opts({key, value}, field_opts_acc) do
+    {{key, value}, field_opts_acc}
+  end
+
+  defp normalize_fields(fields) do
+    args = Keyword.get(fields, :args, %{})
+    keys = Keyword.keys(fields)
 
     args
-    |> Job.new(opts)
+    |> Job.new(fields)
     |> Changeset.apply_changes()
     |> Map.from_struct()
     |> Map.take(keys)
     |> Keyword.new()
+  end
+
+  @timestamp_fields ~W(attempted_at completed_at inserted_at scheduled_at)a
+  @timestamp_default_delta_seconds 1
+
+  defp apply_where_clauses(query, []), do: query
+
+  defp apply_where_clauses(query, [{key, value, opts} | rest]) when key in @timestamp_fields do
+    delta = Keyword.get(opts, :delta, @timestamp_default_delta_seconds)
+
+    window_start = DateTime.add(value, -delta, :second)
+    window_end = DateTime.add(value, delta, :second)
+
+    query
+    |> where([j], fragment("? BETWEEN ? AND ?", field(j, ^key), ^window_start, ^window_end))
+    |> apply_where_clauses(rest)
+  end
+
+  defp apply_where_clauses(query, [{key, value, _opts} | rest]) do
+    query
+    |> where(^[{key, value}])
+    |> apply_where_clauses(rest)
   end
 end
