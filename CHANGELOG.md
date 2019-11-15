@@ -13,6 +13,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   forces Postgres to use a custom plan (which utilizes the compound index)
   rather than falling back to a generic plan.
 
+### Changed
+
+- [Oban] Allow the multi `name` provided to `Oban.insert/3,4` to be any term,
+  not just an atom.
+
 ## [0.11.1] — 2019-11-13
 
 ### Fixed

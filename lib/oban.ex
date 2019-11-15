@@ -611,19 +611,19 @@ defmodule Oban do
   ## Example
 
       Ecto.Multi.new()
-      |> Oban.insert(:job_1, MyApp.Worker.new(%{id: 1}))
-      |> Oban.insert(:job_2, MyApp.Worker.new(%{id: 2}))
+      |> Oban.insert("job-1", MyApp.Worker.new(%{id: 1}))
+      |> Oban.insert("job-2", MyApp.Worker.new(%{id: 2}))
       |> MyApp.Repo.transaction()
   """
   @doc since: "0.7.0"
   @spec insert(
           name :: atom(),
           multi :: Multi.t(),
-          multi_name :: atom(),
+          multi_name :: term(),
           changeset :: Changeset.t(Job.t())
         ) :: Multi.t()
   def insert(name \\ __MODULE__, %Multi{} = multi, multi_name, %Changeset{} = changeset)
-      when is_atom(name) and is_atom(multi_name) do
+      when is_atom(name) do
     name
     |> config()
     |> Query.fetch_or_insert_job(multi, multi_name, changeset)
@@ -690,7 +690,7 @@ defmodule Oban do
   @spec insert_all(
           name :: atom(),
           multi :: Multi.t(),
-          multi_name :: atom(),
+          multi_name :: term(),
           changeset :: [Changeset.t(Job.t())]
         ) :: Multi.t()
   def insert_all(name \\ __MODULE__, %Multi{} = multi, multi_name, changesets)
