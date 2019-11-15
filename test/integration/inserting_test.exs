@@ -3,8 +3,6 @@ defmodule Oban.Integration.InsertingTest do
 
   alias Ecto.Multi
 
-  @moduletag :integration
-
   @oban_opts repo: Repo, queues: false
 
   test "inserting multiple jobs within a multi using insert/3" do
