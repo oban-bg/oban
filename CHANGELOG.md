@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Added
+
+- [Oban.Testing] Accept a value/delta tuple for testing timestamp fields. This
+  allows more robust testing of timestamps such as `scheduled_at`.
+
 ### Fixed
 
 - [Oban.Query] Avoid using prepared statements for all unique queries. This
