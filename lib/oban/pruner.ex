@@ -27,6 +27,10 @@ defmodule Oban.Pruner do
   end
 
   @impl GenServer
+  def init(%{conf: %Config{prune: :disabled}}) do
+    :ignore
+  end
+
   def init(%{conf: %Config{} = conf} = opts) do
     send_after(conf.prune_interval)
 
@@ -60,15 +64,7 @@ defmodule Oban.Pruner do
   defp prune_beats(%State{circuit: :disabled} = state), do: state
 
   defp prune_beats(%State{conf: conf} = state) do
-    %Config{prune: prune, prune_limit: prune_limit} = conf
-
-    case prune do
-      :disabled ->
-        :ok
-
-      {_method, _setting} ->
-        Query.delete_outdated_beats(conf, @beats_maxage_seconds, prune_limit)
-    end
+    Query.delete_outdated_beats(conf, @beats_maxage_seconds, conf.prune_limit)
 
     state
   rescue
@@ -81,9 +77,6 @@ defmodule Oban.Pruner do
     %Config{prune: prune, prune_limit: prune_limit} = conf
 
     case prune do
-      :disabled ->
-        :ok
-
       {:maxlen, length} ->
         Query.delete_truncated_jobs(conf, length, prune_limit)
 
