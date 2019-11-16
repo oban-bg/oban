@@ -485,32 +485,27 @@ defmodule Oban do
   @doc """
   Starts an `Oban` supervision tree linked to the current process.
 
-  ## Required Options
+  ## Options
 
-  * `:repo` — specifies the Ecto repo used to insert and retreive jobs.
+  These options are required; without them the supervisor won't start
 
-  ## Other Options
+  * `:name` — used for supervisor registration, defaults to `Oban`
+  * `:repo` — specifies the Ecto repo used to insert and retrieve jobs.
 
-  * `:circuit_backoff` — the number of milliseconds until queries are attempted after a database
-    error. ALl processes communicating with the database are equipped with circuit breakers and
-    will use this for the backoff. Defaults to `30_000ms`.
+  ### Primary Options
+
+  These options determine what the system does at a high level, i.e. which queues to run or how
+  vigorously to prune.
+
   * `:crontab` — a list of cron expressions that enqueue jobs on a periodic basis. See "Periodic
     (CRON) Jobs" in the module docs.
-  * `:name` — used for supervisor registration, defaults to `Oban`
   * `:node` — used to identify the node that the supervision tree is running in. If no value is
-    provided it will use the `node` name in a distributed system, the `hostname` in an isolated
+    provided it will use the `node` name in a distributed system, or the `hostname` in an isolated
     node. See "Node Name" below.
   * `:prefix` — the query prefix, or schema, to use for inserting and executing jobs. An
     `oban_jobs` table must exist within the prefix. See the "Prefix Support" section in the module
     documentation for more details.
-  * `:poll_interval` - the number of milliseconds between polling for new jobs in a queue. This
-    is directly tied to the resolution of _scheduled_ jobs. For example, with a `poll_interval` of
-    `5_000ms`, scheduled jobs are checked every 5 seconds. The default is `1_000ms`.
   * `:prune` - configures job pruning behavior, see "Pruning Historic Jobs" for more information
-  * `:prune_interval` — the number of milliseconds between calls to prune historic jobs. The
-    default is `60_000ms`, or one minute.
-  * `:prune_limit` – the maximum number of jobs that can be pruned at each prune interval. The
-    default is `5_000`.
   * `:queues` — a keyword list where the keys are queue names and the values are the concurrency
     setting. For example, setting queues to `[default: 10, exports: 5]` would start the queues
     `default` and `exports` with a combined concurrency level of 20. The concurrency setting
@@ -518,17 +513,31 @@ defmodule Oban do
 
     For testing purposes `:queues` may be set to `false` or `nil`, which effectively disables all
     job dispatching.
+  * `:verbose` — either `false` to disable logging or a standard log level (`:error`, `:warn`,
+    `:info`, `:debug`). This determines whether queries are logged or not; overriding the repo's
+    configured log level. Defaults to `false`, where no queries are logged.
+
+  ### Twiddly Options
+
+  Additional options used to tune system behaviour. These are primarily useful for testing or
+  troubleshooting and shouldn't be changed usually.
+
+  * `:circuit_backoff` — the number of milliseconds until queries are attempted after a database
+    error. All processes communicating with the database are equipped with circuit breakers and
+    will use this for the backoff. Defaults to `30_000ms`.
+  * `:poll_interval` - the number of milliseconds between polling for new jobs in a queue. This
+    is directly tied to the resolution of _scheduled_ jobs. For example, with a `poll_interval` of
+    `5_000ms`, scheduled jobs are checked every 5 seconds. The default is `1_000ms`.
+  * `:prune_interval` — the number of milliseconds between calls to prune historic jobs. The
+    default is `60_000ms`, or one minute.
+  * `:prune_limit` – the maximum number of jobs that can be pruned at each prune interval. The
+    default is `5_000`.
   * `:rescue_after` — the number of seconds after an executing job without any pulse activity may
     be rescued. This value _must_ be greater than the `poll_interval`. The default is `60s`.
   * `:rescue_interval` — the number of milliseconds between calls to rescue orphaned jobs, the
     default is `60_000ms`, or one minute.
   * `:shutdown_grace_period` - the amount of time a queue will wait for executing jobs to complete
     before hard shutdown, specified in milliseconds. The default is `15_000`, or 15 seconds.
-  * `:verbose` — either `false` to disable logging or a standard log level (`:error`, `:warn`,
-    `:info`, `:debug`). This determines whether queries are logged or not; overriding the repo's
-    configured log level. Defaults to `false`, where no queries are logged.
-
-  Note that any options passed to `start_link` will override options set through the `using` macro.
 
   ## Examples
 
