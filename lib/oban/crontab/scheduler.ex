@@ -3,7 +3,7 @@ defmodule Oban.Crontab.Scheduler do
 
   use GenServer
 
-  import Oban.Breaker, only: [trip_errors: 0, trip_circuit: 2]
+  import Oban.Breaker, only: [open_circuit: 1, trip_errors: 0, trip_circuit: 2]
 
   alias Oban.Crontab.Cron
   alias Oban.{Config, Query}
@@ -77,7 +77,7 @@ defmodule Oban.Crontab.Scheduler do
   end
 
   def handle_info(:reset_circuit, state) do
-    {:noreply, %{state | circuit: :enabled}}
+    {:noreply, open_circuit(state)}
   end
 
   defp send_poll_after(%State{poll_interval: interval} = state) do

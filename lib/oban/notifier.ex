@@ -21,7 +21,7 @@ defmodule Oban.Notifier do
 
   use GenServer
 
-  import Oban.Breaker, only: [trip_circuit: 2]
+  import Oban.Breaker, only: [open_circuit: 1, trip_circuit: 2]
 
   alias Oban.Config
   alias Postgrex.Notifications
@@ -101,7 +101,12 @@ defmodule Oban.Notifier do
   end
 
   def handle_info(:reset_circuit, %State{circuit: :disabled} = state) do
-    {:noreply, connect_and_listen(state)}
+    state =
+      state
+      |> open_circuit()
+      |> connect_and_listen()
+
+    {:noreply, state}
   end
 
   def handle_info(_message, state) do
@@ -125,7 +130,7 @@ defmodule Oban.Notifier do
          {:ok, _ref} <- Notifications.listen(conn, "#{conf.prefix}.#{insert()}"),
          {:ok, _ref} <- Notifications.listen(conn, "#{conf.prefix}.#{signal()}"),
          {:ok, _ref} <- Notifications.listen(conn, "#{conf.prefix}.#{update()}") do
-      %{state | conn: conn, circuit: :enabled}
+      %{state | conn: conn}
     else
       {:error, error} -> trip_circuit(error, state)
     end

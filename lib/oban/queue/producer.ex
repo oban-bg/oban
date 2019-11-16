@@ -3,7 +3,7 @@ defmodule Oban.Queue.Producer do
 
   use GenServer
 
-  import Oban.Breaker, only: [trip_errors: 0, trip_circuit: 2]
+  import Oban.Breaker, only: [open_circuit: 1, trip_errors: 0, trip_circuit: 2]
   import Oban.Notifier, only: [insert: 0, signal: 0]
 
   alias Oban.{Config, Notifier, Query}
@@ -158,7 +158,7 @@ defmodule Oban.Queue.Producer do
   end
 
   def handle_info(:reset_circuit, state) do
-    {:noreply, %{state | circuit: :enabled}}
+    {:noreply, open_circuit(state)}
   end
 
   def handle_info(_message, state) do

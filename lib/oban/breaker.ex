@@ -8,7 +8,7 @@ defmodule Oban.Breaker do
   defmacro trip_errors, do: @trip_errors
 
   @spec trip_circuit(Exception.t(), struct()) :: map()
-  def trip_circuit(exception, state) do
+  def trip_circuit(exception, %_{circuit: _} = state) do
     Logger.error(fn ->
       Jason.encode!(%{
         source: "oban",
@@ -20,6 +20,11 @@ defmodule Oban.Breaker do
     Process.send_after(self(), :reset_circuit, state.circuit_backoff)
 
     %{state | circuit: :disabled}
+  end
+
+  @spec open_circuit(struct()) :: map()
+  def open_circuit(%_{circuit: _} = state) do
+    %{state | circuit: :enabled}
   end
 
   defp error_message(%Postgrex.Error{} = exception) do
