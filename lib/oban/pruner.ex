@@ -12,11 +12,7 @@ defmodule Oban.Pruner do
   defmodule State do
     @moduledoc false
 
-    defstruct [
-      :conf,
-      circuit: :enabled,
-      circuit_backoff: :timer.seconds(30)
-    ]
+    defstruct [:conf, circuit: :enabled]
   end
 
   @spec start_link([option]) :: GenServer.on_start()

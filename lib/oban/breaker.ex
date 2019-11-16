@@ -3,12 +3,20 @@ defmodule Oban.Breaker do
 
   require Logger
 
+  alias Oban.Config
+
+  @type state_struct :: %{
+          :circuit => :enabled | :disabled,
+          :conf => Config.t(),
+          optional(atom()) => any()
+        }
+
   @trip_errors [DBConnection.ConnectionError, Postgrex.Error]
 
   defmacro trip_errors, do: @trip_errors
 
-  @spec trip_circuit(Exception.t(), struct()) :: map()
-  def trip_circuit(exception, %_{circuit: _} = state) do
+  @spec trip_circuit(Exception.t(), state_struct()) :: map()
+  def trip_circuit(exception, %{circuit: _, conf: conf} = state) do
     Logger.error(fn ->
       Jason.encode!(%{
         source: "oban",
@@ -17,13 +25,13 @@ defmodule Oban.Breaker do
       })
     end)
 
-    Process.send_after(self(), :reset_circuit, state.circuit_backoff)
+    Process.send_after(self(), :reset_circuit, conf.circuit_backoff)
 
     %{state | circuit: :disabled}
   end
 
-  @spec open_circuit(struct()) :: map()
-  def open_circuit(%_{circuit: _} = state) do
+  @spec open_circuit(state_struct()) :: map()
+  def open_circuit(%{circuit: _} = state) do
     %{state | circuit: :enabled}
   end
 

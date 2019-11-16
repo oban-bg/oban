@@ -485,20 +485,21 @@ defmodule Oban do
   @doc """
   Starts an `Oban` supervision tree linked to the current process.
 
-  ## Options
+  ## Required Options
 
-  * `:name` — used for name supervisor registration
+  * `:repo` — specifies the Ecto repo used to insert and retreive jobs.
+
+  ## Other Options
+
+  * `:circuit_backoff` — the number of milliseconds until queries are attempted after a database
+    error. ALl processes communicating with the database are equipped with circuit breakers and
+    will use this for the backoff. Defaults to `30_000ms`.
+  * `:crontab` — a list of cron expressions that enqueue jobs on a periodic basis. See "Periodic
+    (CRON) Jobs" in the module docs.
+  * `:name` — used for supervisor registration, defaults to `Oban`
   * `:node` — used to identify the node that the supervision tree is running in. If no value is
     provided it will use the `node` name in a distributed system, the `hostname` in an isolated
     node. See "Node Name" below.
-  * `:repo` — specifies the Ecto repo used to insert and retreive jobs.
-  * `:queues` — a keyword list where the keys are queue names and the values are the concurrency
-    setting. For example, setting queues to `[default: 10, exports: 5]` would start the queues
-    `default` and `exports` with a combined concurrency level of 20. The concurrency setting
-    specifies how many jobs _each queue_ will run concurrently.
-
-    For testing purposes `:queues` may be set to `false` or `nil`, which effectively disables all
-    job dispatching.
   * `:prefix` — the query prefix, or schema, to use for inserting and executing jobs. An
     `oban_jobs` table must exist within the prefix. See the "Prefix Support" section in the module
     documentation for more details.
@@ -510,6 +511,13 @@ defmodule Oban do
     default is `60_000ms`, or one minute.
   * `:prune_limit` – the maximum number of jobs that can be pruned at each prune interval. The
     default is `5_000`.
+  * `:queues` — a keyword list where the keys are queue names and the values are the concurrency
+    setting. For example, setting queues to `[default: 10, exports: 5]` would start the queues
+    `default` and `exports` with a combined concurrency level of 20. The concurrency setting
+    specifies how many jobs _each queue_ will run concurrently.
+
+    For testing purposes `:queues` may be set to `false` or `nil`, which effectively disables all
+    job dispatching.
   * `:rescue_after` — the number of seconds after an executing job without any pulse activity may
     be rescued. This value _must_ be greater than the `poll_interval`. The default is `60s`.
   * `:rescue_interval` — the number of milliseconds between calls to rescue orphaned jobs, the

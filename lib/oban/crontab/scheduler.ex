@@ -27,7 +27,6 @@ defmodule Oban.Crontab.Scheduler do
       :conf,
       :poll_ref,
       circuit: :enabled,
-      circuit_backoff: :timer.seconds(30),
       poll_interval: :timer.seconds(60)
     ]
   end

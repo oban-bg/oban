@@ -30,7 +30,6 @@ defmodule Oban.Queue.Producer do
       :rescue_ref,
       :started_at,
       circuit: :enabled,
-      circuit_backoff: :timer.seconds(30),
       paused: false,
       running: %{}
     ]

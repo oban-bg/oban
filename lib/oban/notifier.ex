@@ -45,7 +45,6 @@ defmodule Oban.Notifier do
       :conf,
       :conn,
       circuit: :enabled,
-      circuit_backoff: :timer.seconds(30),
       listeners: %{}
     ]
   end

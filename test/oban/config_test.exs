@@ -14,6 +14,15 @@ defmodule Oban.ConfigTest do
   end
 
   describe "new/1" do
+    test ":circuit_backoff is validated as an integer" do
+      assert_raise ArgumentError, fn -> Config.new(repo: Repo, circuit_backoff: -1) end
+      assert_raise ArgumentError, fn -> Config.new(repo: Repo, circuit_backoff: 0) end
+      assert_raise ArgumentError, fn -> Config.new(repo: Repo, circuit_backoff: "5") end
+      assert_raise ArgumentError, fn -> Config.new(repo: Repo, circuit_backoff: 1.0) end
+
+      assert %Config{} = Config.new(repo: Repo, circuit_backoff: 10)
+    end
+
     test ":crontab is validated as a list of cron job expressions" do
       assert_raise ArgumentError, fn -> Config.new(repo: Repo, crontab: ["* * * * *"]) end
       assert_raise ArgumentError, fn -> Config.new(repo: Repo, crontab: [["* * * * *", Fake]]) end
