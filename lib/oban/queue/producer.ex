@@ -3,7 +3,7 @@ defmodule Oban.Queue.Producer do
 
   use GenServer
 
-  import Oban.Breaker, only: [trip_errors: 0, trip_circuit: 2]
+  import Oban.Breaker, only: [open_circuit: 1, trip_errors: 0, trip_circuit: 2]
   import Oban.Notifier, only: [insert: 0, signal: 0]
 
   alias Oban.{Config, Notifier, Query}
@@ -24,13 +24,13 @@ defmodule Oban.Queue.Producer do
       :conf,
       :foreman,
       :limit,
+      :name,
       :nonce,
       :queue,
       :poll_ref,
       :rescue_ref,
       :started_at,
       circuit: :enabled,
-      circuit_backoff: :timer.seconds(30),
       paused: false,
       running: %{}
     ]
@@ -38,9 +38,7 @@ defmodule Oban.Queue.Producer do
 
   @spec start_link([option()]) :: GenServer.on_start()
   def start_link(opts) do
-    {name, opts} = Keyword.pop(opts, :name)
-
-    GenServer.start_link(__MODULE__, opts, name: name)
+    GenServer.start_link(__MODULE__, opts, name: opts[:name])
   end
 
   @spec pause(GenServer.name()) :: :ok
@@ -158,7 +156,7 @@ defmodule Oban.Queue.Producer do
   end
 
   def handle_info(:reset_circuit, state) do
-    {:noreply, %{state | circuit: :enabled}}
+    {:noreply, open_circuit(state)}
   end
 
   def handle_info(_message, state) do

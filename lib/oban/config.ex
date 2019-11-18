@@ -10,6 +10,7 @@ defmodule Oban.Config do
   @type prune :: :disabled | {:maxlen, pos_integer()} | {:maxage, pos_integer()}
 
   @type t :: %__MODULE__{
+          circuit_backoff: timeout(),
           crontab: [cronjob()],
           name: atom(),
           node: binary(),
@@ -29,7 +30,8 @@ defmodule Oban.Config do
   @type option :: {:name, module()} | {:conf, t()}
 
   @enforce_keys [:node, :repo]
-  defstruct crontab: [],
+  defstruct circuit_backoff: :timer.seconds(30),
+            crontab: [],
             name: Oban,
             node: nil,
             poll_interval: :timer.seconds(1),
@@ -81,6 +83,12 @@ defmodule Oban.Config do
         :inet.gethostname()
         |> elem(1)
         |> to_string()
+    end
+  end
+
+  defp validate_opt!({:circuit_backoff, interval}) do
+    unless is_integer(interval) and interval > 0 do
+      raise ArgumentError, "expected :circuit_backoff to be a positive integer"
     end
   end
 

@@ -3,23 +3,35 @@ defmodule Oban.Breaker do
 
   require Logger
 
-  @trip_errors [DBConnection.ConnectionError, Postgrex.Error]
+  alias Oban.Config
 
-  defmacro trip_errors, do: @trip_errors
+  @type state_struct :: %{
+          :circuit => :enabled | :disabled,
+          :conf => Config.t(),
+          :name => GenServer.name(),
+          optional(atom()) => any()
+        }
 
-  @spec trip_circuit(Exception.t(), struct()) :: map()
-  def trip_circuit(exception, state) do
-    Logger.error(fn ->
-      Jason.encode!(%{
-        source: "oban",
-        message: "Circuit temporarily tripped",
-        error: error_message(exception)
-      })
-    end)
+  defmacro trip_errors, do: [DBConnection.ConnectionError, Postgrex.Error]
 
-    Process.send_after(self(), :reset_circuit, state.circuit_backoff)
+  @spec trip_circuit(Exception.t(), state_struct()) :: state_struct()
+  def trip_circuit(exception, %{circuit: _, conf: conf, name: name} = state) do
+    :telemetry.execute(
+      [:oban, :trip_circuit],
+      %{},
+      %{message: error_message(exception), name: name}
+    )
+
+    Process.send_after(self(), :reset_circuit, conf.circuit_backoff)
 
     %{state | circuit: :disabled}
+  end
+
+  @spec open_circuit(state_struct()) :: state_struct()
+  def open_circuit(%{circuit: _, name: name} = state) do
+    :telemetry.execute([:oban, :open_circuit], %{}, %{name: name})
+
+    %{state | circuit: :enabled}
   end
 
   defp error_message(%Postgrex.Error{} = exception) do

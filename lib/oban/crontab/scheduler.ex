@@ -3,7 +3,7 @@ defmodule Oban.Crontab.Scheduler do
 
   use GenServer
 
-  import Oban.Breaker, only: [trip_errors: 0, trip_circuit: 2]
+  import Oban.Breaker, only: [open_circuit: 1, trip_errors: 0, trip_circuit: 2]
 
   alias Oban.Crontab.Cron
   alias Oban.{Config, Query}
@@ -25,16 +25,16 @@ defmodule Oban.Crontab.Scheduler do
     @enforce_keys [:conf]
     defstruct [
       :conf,
+      :name,
       :poll_ref,
       circuit: :enabled,
-      circuit_backoff: :timer.seconds(30),
       poll_interval: :timer.seconds(60)
     ]
   end
 
   @spec start_link([option()]) :: GenServer.on_start()
   def start_link(opts) when is_list(opts) do
-    {name, opts} = Keyword.pop(opts, :name, __MODULE__)
+    name = Keyword.get(opts, :name, __MODULE__)
 
     GenServer.start_link(__MODULE__, opts[:conf], name: name)
   end
@@ -77,7 +77,7 @@ defmodule Oban.Crontab.Scheduler do
   end
 
   def handle_info(:reset_circuit, state) do
-    {:noreply, %{state | circuit: :enabled}}
+    {:noreply, open_circuit(state)}
   end
 
   defp send_poll_after(%State{poll_interval: interval} = state) do

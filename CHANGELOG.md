@@ -12,6 +12,16 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - [Oban.Testing] Accept a value/delta tuple for testing timestamp fields. This
   allows more robust testing of timestamps such as `scheduled_at`.
 
+- [Oban.Telemetry] Emit `[:oban, :trip_circuit]` and `[:oban, :open_circuit]`
+  events for circuit breaker activity. Previously an error was logged when the
+  circuit was tripped, but there wasn't any way to monitor circuit breakers.
+
+  Circuit breaker activity is logged by the default telemetry logger (both
+  `:trip_circuit` and `:open_circuit` events).
+
+- [Oban] Expose `circuit_backoff` as a "twiddly" option that controls how long
+  tripped circuit breakers wait until re-opening.
+
 ### Fixed
 
 - [Oban.Query] Avoid using prepared statements for all unique queries. This

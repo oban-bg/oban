@@ -21,7 +21,7 @@ defmodule Oban.Notifier do
 
   use GenServer
 
-  import Oban.Breaker, only: [trip_circuit: 2]
+  import Oban.Breaker, only: [open_circuit: 1, trip_circuit: 2]
 
   alias Oban.Config
   alias Postgrex.Notifications
@@ -44,8 +44,8 @@ defmodule Oban.Notifier do
     defstruct [
       :conf,
       :conn,
+      :name,
       circuit: :enabled,
-      circuit_backoff: :timer.seconds(30),
       listeners: %{}
     ]
   end
@@ -57,9 +57,9 @@ defmodule Oban.Notifier do
 
   @spec start_link([option]) :: GenServer.on_start()
   def start_link(opts) do
-    {name, opts} = Keyword.pop(opts, :name, __MODULE__)
+    name = Keyword.get(opts, :name, __MODULE__)
 
-    GenServer.start_link(__MODULE__, opts[:conf], name: name)
+    GenServer.start_link(__MODULE__, Map.new(opts), name: name)
   end
 
   @spec listen(module()) :: :ok
@@ -68,10 +68,10 @@ defmodule Oban.Notifier do
   end
 
   @impl GenServer
-  def init(%Config{} = conf) do
+  def init(opts) do
     Process.flag(:trap_exit, true)
 
-    {:ok, %State{conf: conf}, {:continue, :start}}
+    {:ok, struct!(State, opts), {:continue, :start}}
   end
 
   @impl GenServer
@@ -101,7 +101,12 @@ defmodule Oban.Notifier do
   end
 
   def handle_info(:reset_circuit, %State{circuit: :disabled} = state) do
-    {:noreply, connect_and_listen(state)}
+    state =
+      state
+      |> open_circuit()
+      |> connect_and_listen()
+
+    {:noreply, state}
   end
 
   def handle_info(_message, state) do
@@ -125,7 +130,7 @@ defmodule Oban.Notifier do
          {:ok, _ref} <- Notifications.listen(conn, "#{conf.prefix}.#{insert()}"),
          {:ok, _ref} <- Notifications.listen(conn, "#{conf.prefix}.#{signal()}"),
          {:ok, _ref} <- Notifications.listen(conn, "#{conf.prefix}.#{update()}") do
-      %{state | conn: conn, circuit: :enabled}
+      %{state | conn: conn}
     else
       {:error, error} -> trip_circuit(error, state)
     end
