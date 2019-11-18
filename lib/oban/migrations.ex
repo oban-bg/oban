@@ -46,7 +46,7 @@ defmodule Oban.Migrations do
   defp change(prefix, range, direction) do
     for index <- range do
       [__MODULE__, "V#{index}"]
-      |> Module.safe_concat()
+      |> Module.concat()
       |> apply(direction, [prefix])
     end
   end
