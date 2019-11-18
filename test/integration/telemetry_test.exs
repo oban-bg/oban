@@ -68,6 +68,8 @@ defmodule Oban.Integration.TelemetryTest do
            } = error_meta
 
     :ok = stop_supervised(Oban)
+  after
+    :telemetry.detach("job-handler")
   end
 
   test "the default handler logs detailed event information" do
@@ -90,6 +92,27 @@ defmodule Oban.Integration.TelemetryTest do
     assert logged =~ ~s("worker":"Oban.Integration.Worker")
     assert logged =~ ~s("queue":"zeta")
     assert logged =~ ~s("duration":)
+  after
+    :telemetry.detach("oban-default-logger")
+  end
+
+  test "the default handler logs circuit breaker information" do
+    start_supervised!({Oban, @oban_opts})
+
+    :ok = Telemetry.attach_default_logger(:warn)
+
+    logged =
+      capture_log(fn ->
+        assert %{conn: conn} = :sys.get_state(Oban.Notifier)
+        assert Process.exit(conn, :forced_exit)
+
+        # Give it time to log
+        Process.sleep(50)
+      end)
+
+    assert logged =~ ~s("event":"trip_circuit")
+    assert logged =~ ~s("message":":forced_exit")
+    assert logged =~ ~s("name":"Elixir.Oban.Notifier")
   after
     :telemetry.detach("oban-default-logger")
   end

@@ -25,6 +25,7 @@ defmodule Oban.Crontab.Scheduler do
     @enforce_keys [:conf]
     defstruct [
       :conf,
+      :name,
       :poll_ref,
       circuit: :enabled,
       poll_interval: :timer.seconds(60)
@@ -33,7 +34,7 @@ defmodule Oban.Crontab.Scheduler do
 
   @spec start_link([option()]) :: GenServer.on_start()
   def start_link(opts) when is_list(opts) do
-    {name, opts} = Keyword.pop(opts, :name, __MODULE__)
+    name = Keyword.get(opts, :name, __MODULE__)
 
     GenServer.start_link(__MODULE__, opts[:conf], name: name)
   end

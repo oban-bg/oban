@@ -24,6 +24,7 @@ defmodule Oban.Queue.Producer do
       :conf,
       :foreman,
       :limit,
+      :name,
       :nonce,
       :queue,
       :poll_ref,
@@ -37,9 +38,7 @@ defmodule Oban.Queue.Producer do
 
   @spec start_link([option()]) :: GenServer.on_start()
   def start_link(opts) do
-    {name, opts} = Keyword.pop(opts, :name)
-
-    GenServer.start_link(__MODULE__, opts, name: name)
+    GenServer.start_link(__MODULE__, opts, name: opts[:name])
   end
 
   @spec pause(GenServer.name()) :: :ok

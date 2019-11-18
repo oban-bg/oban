@@ -2,20 +2,22 @@ defmodule Oban.Telemetry do
   @moduledoc """
   Telemetry integration for event metrics, logging and error reporting.
 
-  Oban currently emits an event when a job has exeucted: `[:oban, :success]` if the job succeeded
-  or `[:oban, :failure]` if there was an error or the process crashed.
+  ### Job Events
+
+  Oban emits an event after a job executes: `[:oban, :success]` if the job succeeded or `[:oban,
+  :failure]` if there was an error or the process crashed.
 
   All job events share the same details about the job that was executed. In addition, failed jobs
   provide the error type, the error itself, and the stacktrace. The following chart shows which
   metadata you can expect for each event:
 
-  | event      | metadata                                                                     |
-  | ---------- | ---------------------------------------------------------------------------- |
-  | `:success` | `:id, :args, :queue, :worker, :attempt, :max_attempt`                        |
-  | `:failure` | `:id, :args, :queue, :worker, :attempt, :max_attempt, :kind, :error, :stack` |
+  | event      | measures    | metadata                                                                     |
+  | ---------- | ----------- | ---------------------------------------------------------------------------- |
+  | `:success` | `:duration` | `:id, :args, :queue, :worker, :attempt, :max_attempt`                        |
+  | `:failure` | `:duration` | `:id, :args, :queue, :worker, :attempt, :max_attempt, :kind, :error, :stack` |
 
-  For `:failure` events the metadata will include details about what caused the failure. The
-  `:kind` value is determined by how an error occurred. Here are the possible kinds:
+  For `:failure` events the metadata includes details about what caused the failure. The `:kind`
+  value is determined by how an error occurred. Here are the possible kinds:
 
   * `:error` — from an `{:error, error}` return value. Some Erlang functions may also throw an
     `:error` tuple, which will be reported as `:error`.
@@ -23,6 +25,22 @@ defmodule Oban.Telemetry do
   * `:exit` — from a caught process exit
   * `:throw` — from a caught value, this doesn't necessarily mean that an error occurred and the
     error value is unpredictable
+
+  ### Circuit Events
+
+  All processes that interact with the database have circuit breakers to prevent errors from
+  crashing the entire supervision tree. Processes emit a `[:oban, :trip_circuit]` event when a
+  circuit is tripped and `[:oban, :open_circuit]` when the breaker is subsequently opened again.
+
+  | event           | measures | metadata            |
+  | --------------- | -------- | ------------------- |
+  | `:trip_circuit` |          | `:name`, `:message` |
+  | `:open_circuit` |          | `:name`             |
+
+  Metadata
+
+  * `:name` — the registered name of the process that tripped a circuit, i.e. `Oban.Notifier`
+  * `:message` — a formatted error message describing what went wrong
 
   ## Default Logger
 
@@ -94,24 +112,39 @@ defmodule Oban.Telemetry do
   @doc since: "0.4.0"
   @spec attach_default_logger() :: :ok | {:error, :already_exists}
   def attach_default_logger(level \\ :info) do
-    events = [[:oban, :success], [:oban, :failure]]
+    events = [
+      [:oban, :success],
+      [:oban, :failure],
+      [:oban, :trip_circuit],
+      [:oban, :open_circuit]
+    ]
 
     :telemetry.attach_many("oban-default-logger", events, &handle_event/4, level)
   end
 
   @doc false
   @spec handle_event([atom()], map(), map(), Logger.level()) :: :ok
-  def handle_event([:oban, event], measurement, meta, level)
+  def handle_event([:oban, event], measure, meta, level)
       when event in [:success, :failure] do
-    Logger.log(level, fn ->
-      Jason.encode!(%{
+    log_message(
+      level,
+      %{
         source: "oban",
         event: event,
         args: meta[:args],
         worker: meta[:worker],
         queue: meta[:queue],
-        duration: measurement[:duration]
-      })
-    end)
+        duration: measure[:duration]
+      }
+    )
+  end
+
+  def handle_event([:oban, event], _measure, meta, level)
+      when event in [:trip_circuit, :open_circuit] do
+    log_message(level, Map.merge(meta, %{source: "oban", event: event}))
+  end
+
+  defp log_message(level, message) do
+    Logger.log(level, fn -> Jason.encode!(message) end)
   end
 end

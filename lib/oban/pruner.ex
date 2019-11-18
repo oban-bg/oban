@@ -12,12 +12,12 @@ defmodule Oban.Pruner do
   defmodule State do
     @moduledoc false
 
-    defstruct [:conf, circuit: :enabled]
+    defstruct [:conf, :name, circuit: :enabled]
   end
 
   @spec start_link([option]) :: GenServer.on_start()
   def start_link(opts) do
-    {name, opts} = Keyword.pop(opts, :name)
+    name = Keyword.get(opts, :name, __MODULE__)
 
     GenServer.start_link(__MODULE__, Map.new(opts), name: name)
   end
