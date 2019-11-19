@@ -165,7 +165,7 @@ defmodule Oban.Job do
     changeset
     |> apply_changes()
     |> Map.from_struct()
-    |> Map.take([:args, :queue, :state, :worker, :scheduled_at])
+    |> Map.take(@permitted)
     |> Enum.reject(fn {_, val} -> is_nil(val) end)
     |> Map.new()
   end
