@@ -48,24 +48,44 @@ defmodule Oban.JobTest do
   end
 
   describe "to_map/1" do
+    @keys_with_defaults ~w(args attempt errors max_attempts queue state)a
+    defp to_keys(opts) do
+      %{}
+      |> Job.new(opts)
+      |> Job.to_map()
+      |> Map.keys()
+    end
+
+    defp default_keys_with(extra_keys) do
+      (@keys_with_defaults ++ extra_keys) |> Enum.sort() |> Enum.uniq()
+    end
+
     test "nil values are not retained" do
-      to_keys = fn opts ->
-        %{}
-        |> Job.new(opts)
-        |> Job.to_map()
-        |> Map.keys()
-      end
+      assert to_keys([]) == @keys_with_defaults
+      assert to_keys(worker: MyWorker) == default_keys_with([:worker])
 
-      assert to_keys.([]) == [:args, :queue, :state]
-      assert to_keys.(worker: MyWorker) == [:args, :queue, :state, :worker]
+      assert to_keys(schedule_in: 1, worker: MyWorker) ==
+               default_keys_with([:scheduled_at, :worker])
+    end
 
-      assert to_keys.(schedule_in: 1, worker: MyWorker) == [
-               :args,
-               :queue,
-               :scheduled_at,
-               :state,
-               :worker
-             ]
+    test "retains all non-nil permitted attributes" do
+      attrs = [
+        attempt: 1,
+        attempted_by: ["foo"],
+        attempted_at: DateTime.utc_now(),
+        completed_at: DateTime.utc_now(),
+        errors: [%{err: "baz"}],
+        inserted_at: DateTime.utc_now(),
+        max_attempts: 5,
+        queue: "default",
+        scheduled_at: DateTime.utc_now(),
+        state: "scheduled",
+        worker: "Fake"
+      ]
+
+      map = %{foo: "bar"} |> Job.new(attrs) |> Job.to_map()
+      assert map[:args] == %{foo: "bar"}
+      Enum.each(attrs, fn {key, val} -> assert map[key] == val end)
     end
   end
 end
