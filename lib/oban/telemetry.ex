@@ -57,11 +57,11 @@ defmodule Oban.Telemetry do
     require Logger
 
     def handle_event([:oban, :failure], %{duration: duration}, meta, nil) do
-      Logger.warning("[#\{meta.queue}] #\{meta.worker} failed in #\{duration}")
+      Logger.warn("[#\{meta.queue}] #\{meta.worker} failed in #\{duration}")
     end
   end
 
-  :telemetry.attach("oban-logger", [:oban, :failure], &ObanLogger.handle_event/4, nil)
+  :telemetry.attach("oban-logger", [:oban, :failure], &MicroLogger.handle_event/4, nil)
   ```
 
   Another great use of execution data is error reporting. Here is an example of integrating with
