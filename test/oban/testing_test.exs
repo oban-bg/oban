@@ -5,10 +5,6 @@ defmodule Oban.TestingTest do
 
   @moduletag :integration
 
-  defp seconds_from_now(seconds) do
-    DateTime.add(DateTime.utc_now(), seconds, :second)
-  end
-
   describe "all_enqueued/1" do
     test "retrieving a filtered list of enqueued jobs" do
       insert_job!(%{id: 1, ref: "a"}, worker: Ping, queue: :alpha)

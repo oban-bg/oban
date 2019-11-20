@@ -77,6 +77,8 @@ defmodule Oban.Case do
     quote do
       use ExUnitProperties
 
+      import Oban.Case
+
       alias Oban.Integration.Worker
       alias Oban.{Beat, Job}
       alias Repo
@@ -117,5 +119,13 @@ defmodule Oban.Case do
     end
 
     {:ok, %{}}
+  end
+
+  def seconds_from_now(seconds) do
+    DateTime.add(DateTime.utc_now(), seconds, :second)
+  end
+
+  def seconds_ago(seconds) do
+    DateTime.add(DateTime.utc_now(), -seconds)
   end
 end

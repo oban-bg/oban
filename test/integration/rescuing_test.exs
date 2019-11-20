@@ -87,8 +87,4 @@ defmodule Oban.Integration.RescuingTest do
     |> Worker.new(opts)
     |> Repo.insert!()
   end
-
-  defp seconds_ago(seconds) do
-    DateTime.add(DateTime.utc_now(), -seconds)
-  end
 end

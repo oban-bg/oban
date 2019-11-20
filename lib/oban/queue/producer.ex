@@ -47,12 +47,19 @@ defmodule Oban.Queue.Producer do
   end
 
   @unlimited 100_000_000
+  @far_future DateTime.from_unix!(9_999_999_999)
 
-  @spec drain(queue :: binary(), config :: Config.t()) :: %{
+  @type drain_option :: {:with_scheduled, boolean()}
+
+  @spec drain(queue :: binary(), config :: Config.t(), opts :: [drain_option()]) :: %{
           success: non_neg_integer(),
           failure: non_neg_integer()
         }
-  def drain(queue, %Config{} = conf) when is_binary(queue) do
+  def drain(queue, %Config{} = conf, opts \\ []) when is_binary(queue) and is_list(opts) do
+    if Keyword.get(opts, :with_scheduled, false) do
+      Query.stage_scheduled_jobs(conf, queue, max_scheduled_at: @far_future)
+    end
+
     conf
     |> fetch_jobs(queue, nonce(), @unlimited)
     |> Enum.reduce(%{failure: 0, success: 0}, fn job, acc ->
