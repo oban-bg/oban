@@ -4,7 +4,7 @@ defmodule Oban.Migrations do
   use Ecto.Migration
 
   @initial_version 1
-  @current_version 6
+  @current_version 7
   @default_prefix "public"
 
   def up(opts \\ []) when is_list(opts) do
@@ -331,6 +331,32 @@ defmodule Oban.Migrations do
       execute "ALTER TABLE #{prefix}.oban_beats ALTER COLUMN running TYPE integer[]"
 
       record_version(prefix, 5)
+    end
+  end
+
+  defmodule V7 do
+    @moduledoc false
+
+    use Ecto.Migration
+
+    import Oban.Migrations.Helper
+
+    def up(prefix) do
+      create_if_not_exists index(
+                             :oban_jobs,
+                             ["attempted_at desc", :id],
+                             where: "state in ('completed', 'discarded')",
+                             prefix: prefix,
+                             name: :oban_jobs_attempted_at_id_index
+                           )
+
+      record_version(prefix, 7)
+    end
+
+    def down(prefix) do
+      drop_if_exists index(:oban_jobs, [:attempted_at, :id], prefix: prefix)
+
+      record_version(prefix, 6)
     end
   end
 end

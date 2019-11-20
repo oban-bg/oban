@@ -85,10 +85,6 @@ defmodule Oban.Query do
     |> repo.insert(log: verbose, prefix: prefix)
   end
 
-  @doc """
-  Finds all executing jobs within a queue which were attempted by a producer that hasn't had a
-  pulse recently.
-  """
   @spec rescue_orphaned_jobs(Config.t(), binary()) :: {integer(), nil}
   def rescue_orphaned_jobs(%Config{} = conf, queue) do
     %Config{prefix: prefix, repo: repo, rescue_after: seconds, verbose: verbose} = conf
@@ -109,14 +105,18 @@ defmodule Oban.Query do
     |> repo.update_all([set: [state: "available"]], log: verbose, prefix: prefix)
   end
 
+  # Deleting truncated or outdated jobs needs to use the same index. We force the queries to use
+  # the same partial composite index by providing an `attempted_at` value for both.
   @spec delete_truncated_jobs(Config.t(), pos_integer(), pos_integer()) :: {integer(), nil}
   def delete_truncated_jobs(%Config{prefix: prefix, repo: repo, verbose: verbose}, length, limit) do
     subquery =
       Job
       |> where([j], j.state in ["completed", "discarded"])
+      |> where([j], j.attempted_at < ^utc_now())
+      |> order_by(desc: :attempted_at)
+      |> select([:id])
       |> offset(^length)
       |> limit(^limit)
-      |> order_by(desc: :id)
 
     Job
     |> join(:inner, [j], x in subquery(subquery, prefix: prefix), on: j.id == x.id)
@@ -129,9 +129,9 @@ defmodule Oban.Query do
 
     subquery =
       Job
-      |> where([j], j.state == "completed" and j.completed_at < ^outdated_at)
-      |> or_where([j], j.state == "discarded" and j.attempted_at < ^outdated_at)
-      |> order_by(desc: :id)
+      |> where([j], j.state in ["completed", "discarded"])
+      |> where([j], j.attempted_at < ^outdated_at)
+      |> select([:id])
       |> limit(^limit)
 
     Job
