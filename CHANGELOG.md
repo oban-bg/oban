@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+**Migration Optional (V7)**
+
+The queries used to prune by limit and age are written to utilize a single
+partial index for a huge performance boost on large tables. The new V7 migration
+will create the index for you—but that may not be ideal for tables with millions
+of completed or discarded jobs because it can't be done concurrently.
+
+If you have an extremely large jobs table you can add the index concurrently in
+a dedicated migration:
+
+```elixir
+create index(
+         :oban_jobs,
+         ["attempted_at desc", :id],
+         where: "state in ('completed', 'discarded')",
+         name: :oban_jobs_attempted_at_id_index,
+         concurrently: true
+       )
+```
+
 ### Added
 
 - [Oban.Testing] Accept a value/delta tuple for testing timestamp fields. This
@@ -32,6 +52,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 - [Oban] Allow the multi `name` provided to `Oban.insert/3,4` to be any term,
   not just an atom.
+
+- [Oban.Query] Use a consistent and more performant set of queries for pruning.
+  Both pruning methods are optimized to utilize a single partial index.
 
 ## [0.11.1] — 2019-11-13
 
