@@ -482,6 +482,9 @@ defmodule Oban do
           | {:shutdown_grace_period, timeout()}
           | {:verbose, false | Logger.level()}
 
+  defguardp is_queue(name)
+            when (is_binary(name) and byte_size(name) > 0) or (is_atom(name) and not is_nil(name))
+
   @doc """
   Starts an `Oban` supervision tree linked to the current process.
 
@@ -751,8 +754,7 @@ defmodule Oban do
           success: non_neg_integer(),
           failure: non_neg_integer()
         }
-  def drain_queue(name \\ __MODULE__, queue)
-      when is_atom(name) and (is_atom(queue) or is_binary(queue)) do
+  def drain_queue(name \\ __MODULE__, queue) when is_atom(name) and is_queue(queue) do
     Producer.drain(to_string(queue), config(name))
   end
 
@@ -771,7 +773,7 @@ defmodule Oban do
   """
   @doc since: "0.2.0"
   @spec pause_queue(name :: atom(), queue :: atom()) :: :ok
-  def pause_queue(name \\ __MODULE__, queue) when is_atom(queue) do
+  def pause_queue(name \\ __MODULE__, queue) when is_queue(queue) do
     name
     |> config()
     |> Query.notify(signal(), %{action: :pause, queue: queue})
@@ -789,7 +791,7 @@ defmodule Oban do
   """
   @doc since: "0.2.0"
   @spec resume_queue(name :: atom(), queue :: atom()) :: :ok
-  def resume_queue(name \\ __MODULE__, queue) when is_atom(queue) do
+  def resume_queue(name \\ __MODULE__, queue) when is_queue(queue) do
     name
     |> config()
     |> Query.notify(signal(), %{action: :resume, queue: queue})
@@ -813,7 +815,7 @@ defmodule Oban do
   @doc since: "0.2.0"
   @spec scale_queue(name :: atom(), queue :: atom(), scale :: pos_integer()) :: :ok
   def scale_queue(name \\ __MODULE__, queue, scale)
-      when is_atom(queue) and is_integer(scale) and scale > 0 do
+      when is_queue(queue) and is_integer(scale) and scale > 0 do
     name
     |> config()
     |> Query.notify(signal(), %{action: :scale, queue: queue, scale: scale})
