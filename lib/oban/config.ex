@@ -198,7 +198,7 @@ defmodule Oban.Config do
 
   defp valid_crontab?(_crontab), do: false
 
-  defp valid_queue?({_name, size}), do: is_integer(size) and size > 0
+  defp valid_queue?({_name, limit}), do: is_integer(limit) and limit > 0
 
   defp parse_crontab(crontab) do
     for tuple <- crontab do
