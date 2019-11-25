@@ -29,8 +29,11 @@ create index(
 
 ### Added
 
-- [Oban] Add `start_queue/3` and `stop_queue/2` for dynamically starting an
+- [Oban] Add `start_queue/3` and `stop_queue/2` for dynamically starting and
   stopping supervised queues across nodes.
+
+- [Oban] Add `drain_queue/3` to accept drain options. `with_scheduled: true`
+  allows draining scheduled jobs.
 
 - [Oban] Expose `circuit_backoff` as a "twiddly" option that controls how long
   tripped circuit breakers wait until re-opening.
@@ -44,12 +47,6 @@ create index(
 
   Circuit breaker activity is logged by the default telemetry logger (both
   `:trip_circuit` and `:open_circuit` events).
-
-- [Oban] Expose `circuit_backoff` as a "twiddly" option that controls how long
-  tripped circuit breakers wait until re-opening.
-
-- [Oban] Add `drain_queue/3` to accept drain options. `with_scheduled: true`
-  allows draining scheduled jobs.
 
 ### Fixed
 

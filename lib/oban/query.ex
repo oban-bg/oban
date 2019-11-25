@@ -73,7 +73,7 @@ defmodule Oban.Query do
   def stage_scheduled_jobs(%Config{} = config, queue, opts \\ []) do
     %Config{prefix: prefix, repo: repo, verbose: verbose} = config
 
-    max_scheduled_at = Keyword.get(opts, :max_scheduled_at, DateTime.utc_now())
+    max_scheduled_at = Keyword.get(opts, :max_scheduled_at, utc_now())
 
     Job
     |> where([j], j.state in ["scheduled", "retryable"])
