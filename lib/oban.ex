@@ -309,7 +309,7 @@ defmodule Oban do
 
   During integration testing it may be necessary to run jobs because they do work essential for
   the test to complete, i.e. sending an email, processing media, etc. You can execute all
-  available jobs in a particular queue by calling `Oban.drain_queue/1` directly from your tests.
+  available jobs in a particular queue by calling `Oban.drain_queue/3` directly from your tests.
 
   For example, to process all pending jobs in the "mailer" queue while testing some business
   logic:
@@ -330,7 +330,7 @@ defmodule Oban do
   end
   ```
 
-  See `Oban.drain_queue/1` for additional details.
+  See `Oban.drain_queue/3` for additional details.
 
   ## Error Handling
 
@@ -588,7 +588,7 @@ defmodule Oban do
   end
 
   @doc """
-  Retreive the config struct for a named Oban supervision tree.
+  Retrieve the config struct for a named Oban supervision tree.
   """
   @doc since: "0.2.0"
   @spec config(name :: atom()) :: Config.t()
@@ -725,14 +725,49 @@ defmodule Oban do
     |> Query.insert_all_jobs(multi, multi_name, changesets)
   end
 
+  @type drain_option :: {:with_scheduled, boolean()}
+  @type drain_result :: %{success: non_neg_integer(), failure: non_neg_integer()}
+
+  @doc """
+  Synchronously execute all available jobs in a queue.
+
+  See `drain_queue/3`.
+  """
+  @doc since: "0.4.0"
+  @spec drain_queue(queue :: atom() | binary()) :: drain_result()
+  def drain_queue(queue) when is_queue(queue) do
+    drain_queue(__MODULE__, queue, [])
+  end
+
+  @doc """
+  Synchronously execute all available jobs in a queue.
+
+  See `drain_queue/3`.
+  """
+  @doc since: "0.4.0"
+  def drain_queue(queue, opts) when is_queue(queue) and is_list(opts) do
+    drain_queue(__MODULE__, queue, opts)
+  end
+
+  def drain_queue(name, queue) when is_atom(name) and is_queue(queue) do
+    drain_queue(name, queue, [])
+  end
+
   @doc """
   Synchronously execute all available jobs in a queue. All execution happens within the current
   process and it is guaranteed not to raise an error or exit.
 
   Draining a queue from within the current process is especially useful for testing. Jobs that are
   enqueued by a process when Ecto is in sandbox mode are only visible to that process. Calling
-  `drain_queue/1` allows you to control when the jobs are executed and to wait synchronously for
+  `drain_queue/3` allows you to control when the jobs are executed and to wait synchronously for
   all jobs to complete.
+
+  ## Example
+
+  Drain a queue with three available jobs, two of which succeed and one of which fails:
+
+      Oban.drain_queue(:default)
+      %{success: 2, failure: 1}
 
   ## Failures & Retries
 
@@ -747,20 +782,21 @@ defmodule Oban do
   * Use telemetry events to track success and failure
   * Check the database for jobs with errors
 
-  ## Example
+  ## Scheduled Jobs
 
-  Drain a queue with three available jobs, two of which succeed and one of which fails:
+  By default, `drain_queue/3` will execute all currently available jobs. In order to execute scheduled
+  jobs, you may pass the `:with_scheduled` flag which will cause scheduled jobs to be marked as
+  `available` beforehand.
 
-      Oban.drain_queue(:default)
-      %{success: 2, failure: 1}
+      # This will execute all scheduled jobs.
+      Oban.drain_queue(:default, with_scheduled: true)
+      %{success: 1, failure: 0}
   """
   @doc since: "0.4.0"
-  @spec drain_queue(name :: atom(), queue :: queue_name()) :: %{
-          success: non_neg_integer(),
-          failure: non_neg_integer()
-        }
-  def drain_queue(name \\ __MODULE__, queue) when is_atom(name) and is_queue(queue) do
-    Producer.drain(to_string(queue), config(name))
+  @spec drain_queue(name :: atom(), queue :: queue_name(), [drain_option()]) ::
+          drain_result()
+  def drain_queue(name, queue, opts) when is_atom(name) and is_queue(queue) and is_list(opts) do
+    Producer.drain(to_string(queue), config(name), opts)
   end
 
   @doc """

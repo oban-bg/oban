@@ -69,12 +69,16 @@ defmodule Oban.Query do
     end)
   end
 
-  @spec stage_scheduled_jobs(Config.t(), binary()) :: {integer(), nil}
-  def stage_scheduled_jobs(%Config{prefix: prefix, repo: repo, verbose: verbose}, queue) do
+  @spec stage_scheduled_jobs(Config.t(), binary(), opts :: keyword()) :: {integer(), nil}
+  def stage_scheduled_jobs(%Config{} = config, queue, opts \\ []) do
+    %Config{prefix: prefix, repo: repo, verbose: verbose} = config
+
+    max_scheduled_at = Keyword.get(opts, :max_scheduled_at, DateTime.utc_now())
+
     Job
     |> where([j], j.state in ["scheduled", "retryable"])
     |> where([j], j.queue == ^queue)
-    |> where([j], j.scheduled_at <= ^utc_now())
+    |> where([j], j.scheduled_at <= ^max_scheduled_at)
     |> repo.update_all([set: [state: "available"]], log: verbose, prefix: prefix)
   end
 
