@@ -48,6 +48,10 @@ create index(
   forces Postgres to use a custom plan (which utilizes the compound index)
   rather than falling back to a generic plan.
 
+- [Oban.Job] Include all permitted fields when converting a Job to a map,
+  preserving any optional values that were either specified by the user or came
+  via Worker defaults.
+
 ### Changed
 
 - [Oban] Allow the multi `name` provided to `Oban.insert/3,4` to be any term,
