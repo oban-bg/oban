@@ -64,8 +64,8 @@ Advanced features and advantages over other RDBMS based tools:
 - **Isolated Queues** — Jobs are stored in a single table but are executed in
   distinct queues. Each queue runs in isolation, ensuring that a job in a single
   slow queue can't back up other faster queues.
-- **Queue Control** — Queues can be paused, resumed and scaled independently at
-  runtime.
+- **Queue Control** — Queues can be started, stopped, paused, resumed and scaled
+  independently at runtime.
 - **Resilient Queues** — Failing queries won't crash the entire supervision tree,
   instead they trip a circuit breaker and will be retried again in the future.
 - **Job Killing** — Jobs can be killed in the middle of execution regardless of
