@@ -44,7 +44,7 @@ defmodule Oban.TestingTest do
       assert_enqueued worker: Ping, scheduled_at: {seconds_from_now(69), delta: 10}
     end
 
-    test "prints a helpful error message" do
+    test "printing a helpful error message" do
       insert_job!(%{dest: "some_node"}, worker: Ping)
 
       try do

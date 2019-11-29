@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Changed
 
-- Better error message for `Oban.Testing.assert_enqueued/2`
+- [Oban.Testing] Better error message for `Oban.Testing.assert_enqueued/2`
 
 ## [0.12.0] – 2019-11-26
 
