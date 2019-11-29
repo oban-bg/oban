@@ -12,6 +12,9 @@ defmodule Oban.MixProject do
       start_permanent: Mix.env() == :prod,
       deps: deps(),
       aliases: aliases(),
+      preferred_cli_env: [
+        "test.setup": :test
+      ],
 
       # Hex
       package: package(),
@@ -69,6 +72,7 @@ defmodule Oban.MixProject do
 
   defp aliases do
     [
+      "test.setup": ["ecto.create", "ecto.migrate"],
       ci: [
         "format --check-formatted",
         "credo --strict",

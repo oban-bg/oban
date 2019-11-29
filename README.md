@@ -464,11 +464,7 @@ database named `oban_test`. Follow these steps to create the database, create
 the database and run all migrations:
 
 ```bash
-# Create the database
-MIX_ENV=test mix ecto.create -r Oban.Test.Repo
-
-# Run the base migration
-MIX_ENV=test mix ecto.migrate -r Oban.Test.Repo
+mix test.setup
 ```
 
 To ensure a commit passes CI you should run `mix ci` locally, which executes the
