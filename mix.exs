@@ -13,6 +13,7 @@ defmodule Oban.MixProject do
       deps: deps(),
       aliases: aliases(),
       preferred_cli_env: [
+        ci: :test,
         "test.setup": :test
       ],
 
