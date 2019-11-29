@@ -158,10 +158,19 @@ defmodule Oban.Testing do
   @doc since: "0.3.0"
   @spec assert_enqueued(repo :: module(), opts :: Keyword.t()) :: true
   def assert_enqueued(repo, [_ | _] = opts) do
-    assert get_job(repo, opts),
-           "Expected a job matching #{inspect(opts)} to be enqueued. Found: #{
-             inspect(available_jobs(repo, opts))
-           }"
+    job = Enum.into(opts, %{})
+
+    error_message = """
+    Expected a job matching:
+
+    #{inspect(job, pretty: true)}
+
+    to be enqueued. Instead found:
+
+    #{inspect(available_jobs(repo, opts), pretty: true)}
+    """
+
+    assert get_job(repo, opts), error_message
   end
 
   @doc """

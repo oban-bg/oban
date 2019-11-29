@@ -43,6 +43,27 @@ defmodule Oban.TestingTest do
 
       assert_enqueued worker: Ping, scheduled_at: {seconds_from_now(69), delta: 10}
     end
+
+    test "prints a helpful error message" do
+      insert_job!(%{dest: "some_node"}, worker: Ping)
+
+      try do
+        assert_enqueued worker: Ping, args: %{dest: "other_node"}
+      rescue
+        error in [ExUnit.AssertionError] ->
+          expected = """
+          Expected a job matching:
+
+          %{args: %{dest: "other_node"}, worker: Ping}
+
+          to be enqueued. Instead found:
+
+          [%{args: %{"dest" => "some_node"}, worker: "Ping"}]
+          """
+
+          assert error.message == expected
+      end
+    end
   end
 
   describe "refute_enqueued/1" do
