@@ -158,12 +158,10 @@ defmodule Oban.Testing do
   @doc since: "0.3.0"
   @spec assert_enqueued(repo :: module(), opts :: Keyword.t()) :: true
   def assert_enqueued(repo, [_ | _] = opts) do
-    job = Enum.into(opts, %{})
-
     error_message = """
     Expected a job matching:
 
-    #{inspect(job, pretty: true)}
+    #{inspect(Map.new(opts), pretty: true)}
 
     to be enqueued. Instead found:
 
