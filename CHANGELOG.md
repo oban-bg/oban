@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Changed
+
+- [Oban.Testing] Better error message for `Oban.Testing.assert_enqueued/2`
+
 ## [0.12.0] – 2019-11-26
 
 **Migration Optional (V7)**
