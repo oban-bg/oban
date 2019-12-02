@@ -30,7 +30,7 @@ defmodule Oban do
   end
   ```
 
-  ### Configuring Queues
+  ## Configuring Queues
 
   Queues are specified as a keyword list where the key is the name of the queue and the value is
   the maximum number of concurrent jobs. The following configuration would start four queues with
@@ -40,19 +40,26 @@ defmodule Oban do
   queues: [default: 10, mailers: 20, events: 50, media: 5]
   ```
 
-  There isn't a limit to the number of queues or how many jobs may execute
-  concurrently. Here are a few caveats and guidelines:
+  There isn't a limit to the number of queues or how many jobs may execute concurrently.
+
+  ### Caveats & Guidelines
 
   * Each queue will run as many jobs as possible concurrently, up to the configured limit. Make
     sure your system has enough resources (i.e. database connections) to handle the concurrent
     load.
+
+  * Queue limits are local (per-node), not global (per-cluster). For example, running a queue with
+    a local limit of one on three separate nodes is effectively a global limit of three. If you
+    require a global limit you must restrict the number of nodes running a particular queue.
+
   * Only jobs in the configured queues will execute. Jobs in any other queue will stay in the
     database untouched.
+
   * Be careful how many concurrent jobs make expensive system calls (i.e. FFMpeg, ImageMagick).
     The BEAM ensures that the system stays responsive under load, but those guarantees don't apply
     when using ports or shelling out commands.
 
-  ### Defining Workers
+  ## Defining Workers
 
   Worker modules do the work of processing a job. At a minimum they must define a `perform/2`
   function, which is called first with the full `Oban.Job` struct, and subsequently with the
@@ -80,7 +87,7 @@ defmodule Oban do
   See `Oban.Worker` for more details on failure conditions and `Oban.Telemetry` for details on job
   reporting.
 
-  ### Enqueueing Jobs
+  ## Enqueueing Jobs
 
   Jobs are simply Ecto structs and are enqueued by inserting them into the database. For
   convenience and consistency all workers provide a `new/2` function that converts an args map
@@ -157,8 +164,10 @@ defmodule Oban do
 
   * `:period` — The number of seconds until a job is no longer considered duplicate. You should
     always specify a period.
+
   * `:fields` — The fields to compare when evaluating uniqueness. The available fields are
     `:args`, `:queue` and `:worker`, by default all three are used.
+
   * `:states` — The job states that are checked for duplicates. The available states are
     `:available`, `:scheduled`, `:executing`, `:retryable` and `:completed`. By default all states
     are checked, which prevents _any_ duplicates, even if the previous job has been completed.
@@ -256,7 +265,24 @@ defmodule Oban do
   * Workers can be used for regular and scheduled jobs so long as they accept different arguments.
 
   * Duplicate jobs are prevented through transactional locks and unique constraints. Workers that
-  are used for regular and scheduled jobs _must not_ specify `unique` options less than `60s`.
+    are used for regular and scheduled jobs _must not_ specify `unique` options less than `60s`.
+
+  * Long running jobs may execute simultaneously if the scheduling interval is shorter than it
+    takes to execute the job. You can prevent overlap by passing custom `unique` opts in the crontab
+    config:
+
+    ```elixir
+    custom_args = %{scheduled: true}
+
+    unique_opts = [
+      period: 60 * 60 * 24,
+      states: [:available, :scheduled, :executing]
+    ]
+
+    config :my_app, Oban, repo: MyApp.Repo, crontab: [
+      {"* * * * *", MyApp.SlowWorker, args: custom_args, unique: unique_opts},
+    ]
+    ```
 
   [cron]: https://en.wikipedia.org/wiki/Cron#Overview
   [guru]: https://crontab.guru
