@@ -532,6 +532,8 @@ defmodule Oban do
 
   * `:crontab` — a list of cron expressions that enqueue jobs on a periodic basis. See "Periodic
     (CRON) Jobs" in the module docs.
+
+    For testing purposes `:crontab` may be set to `false` or `nil`, which disables scheduling.
   * `:node` — used to identify the node that the supervision tree is running in. If no value is
     provided it will use the `node` name in a distributed system, or the `hostname` in an isolated
     node. See "Node Name" below.

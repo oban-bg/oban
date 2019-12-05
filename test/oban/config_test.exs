@@ -38,6 +38,8 @@ defmodule Oban.ConfigTest do
                )
 
       assert [{%_{minutes: _}, Worker, [queue: "special"]}] = crontab
+
+      assert %Config{crontab: []} = Config.new(repo: Repo, crontab: false)
     end
 
     test ":name is validated as a module" do

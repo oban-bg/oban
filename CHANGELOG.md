@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Changed
 
+- [Oban] Allow setting `crontab: false` or `crontab: nil` to disable scheduling.
+  This matches the `queues` behavior and makes it possible to override the
+  default configuration within each environment, i.e. when testing.
+
 - [Oban.Testing] Better error message for `Oban.Testing.assert_enqueued/2`
 
 ## [0.12.0] – 2019-11-26
