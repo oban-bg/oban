@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Fixed
+
+- [Oban.Worker] Deep merge `unique` options between the worker and custom
+  params. Previously the `unique` options passed to `Worker.new/2` would
+  completely override the options stored by `use Oban.Worker`. This was
+  primarily an issue for crontab jobs, where the period is always passed by the
+  scheduler.
+
 ### Changed
 
 - [Oban] Allow setting `crontab: false` or `crontab: nil` to disable scheduling.

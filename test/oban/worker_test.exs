@@ -41,6 +41,17 @@ defmodule Oban.WorkerTest do
       assert job.worker == "Oban.WorkerTest.CustomWorker"
       assert job.unique.period == 60
     end
+
+    test "building a job deep merges unique options" do
+      job =
+        %{}
+        |> CustomWorker.new(unique: [period: 90])
+        |> Ecto.Changeset.apply_changes()
+
+      assert job.unique.fields == [:queue, :worker]
+      assert job.unique.period == 90
+      assert job.unique.states == [:scheduled]
+    end
   end
 
   describe "backoff/1" do

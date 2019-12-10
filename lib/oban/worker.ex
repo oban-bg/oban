@@ -194,7 +194,7 @@ defmodule Oban.Worker do
 
       @impl Worker
       def new(args, opts \\ []) when is_map(args) and is_list(opts) do
-        Job.new(args, Keyword.merge(__opts__(), opts))
+        Job.new(args, Keyword.merge(__opts__(), opts, &Worker.resolve_opts/3))
       end
 
       @impl Worker
@@ -210,6 +210,13 @@ defmodule Oban.Worker do
   defmacro __after_compile__(%{module: module}, _) do
     Enum.each(module.__opts__(), &validate_opt!/1)
   end
+
+  @doc false
+  def resolve_opts(:unique, [_ | _] = opts_1, [_ | _] = opts_2) do
+    Keyword.merge(opts_1, opts_2)
+  end
+
+  def resolve_opts(_key, _opts, opts), do: opts
 
   @doc false
   @spec default_backoff(pos_integer(), non_neg_integer()) :: pos_integer()
