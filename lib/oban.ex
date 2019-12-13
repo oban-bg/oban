@@ -413,6 +413,22 @@ defmodule Oban do
   Only jobs in a `completed` or `discarded` state can be deleted. Currently `executing` jobs and
   older jobs that are still in the `available` state are retained.
 
+  ## Pulse Tracking (Heartbeats)
+
+  Historic introspection is a defining feature of Oban. In addition to retaining completed jobs
+  Oban also generates "heartbeat" records every second for each running queue.
+
+  Heartbeat records are recorded in the `oban_beats` table and pruned to an hour of backlog. The
+  recorded information is used for a couple of purposes:
+
+  1. To track active jobs. When a job executes it records the node and queue that ran it in the
+    `attempted_by` column. Zombie jobs (jobs that were left executing when a producer crashes or the
+    node is shut down) are found by comparing the `attempted_by` values with recent heartbeat
+    records and resurrected accordingly.
+  2. Each heartbeat records information about a node/queue pair such as whether it is paused, what
+    the execution limit is and exactly which jobs are running. These records can power additional
+    logging or metrics (and are the backbone of the Oban UI).
+
   ## Instrumentation & Logging
 
   Oban provides integration with [Telemetry][tele], a dispatching library for metrics. It is easy
