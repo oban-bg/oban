@@ -6,7 +6,7 @@ defmodule Oban.Crontab.Scheduler do
   import Oban.Breaker, only: [open_circuit: 1, trip_errors: 0, trip_circuit: 2]
 
   alias Oban.Crontab.Cron
-  alias Oban.{Config, Query}
+  alias Oban.{Config, Query, Worker}
 
   # Make each job unique for 59 seconds to prevent double-enqueue if the node or scheduler
   # crashes. The minimum resolution for our cron jobs is 1 minute, so there is potentially
@@ -117,7 +117,11 @@ defmodule Oban.Crontab.Scheduler do
     for {cron, worker, opts} <- conf.crontab, Cron.now?(cron) do
       {args, opts} = Keyword.pop(opts, :args, %{})
 
-      opts = Keyword.put_new(opts, :unique, @unique)
+      # Ensure that `unique` is deep merged and the default period has the lowest priority.
+      opts =
+        [unique: @unique]
+        |> Keyword.merge(worker.__opts__(), &Worker.resolve_opts/3)
+        |> Keyword.merge(opts, &Worker.resolve_opts/3)
 
       {:ok, _job} = Query.fetch_or_insert_job(conf, worker.new(args, opts))
     end
