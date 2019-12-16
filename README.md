@@ -248,6 +248,8 @@ concurrently. Here are a few caveats and guidelines:
 
 Worker modules do the work of processing a job. At a minimum they must define a
 `perform/2` function, which is called with an `args` map and the job struct.
+The keys in the `args` map will always be converted to strings prior to calling
+`perform/2`.
 
 Define a worker to process jobs in the `events` queue:
 

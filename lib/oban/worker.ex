@@ -173,6 +173,9 @@ defmodule Oban.Worker do
   @doc """
   The `perform/2` function is called when the job is executed.
 
+  The map given as the first argument will have string keys, even if atom keys were used when
+  enqueueing the job originally.
+
   The value returned from `perform/2` is ignored, unless it returns an `{:error, reason}` tuple.
   With an error return or when perform has an uncaught exception or throw then the error will be
   reported and the job will be retried (provided there are attempts remaining).
