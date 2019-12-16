@@ -440,6 +440,18 @@ See `Oban.drain_queue/1` for additional details.
 
 ## Troubleshooting
 
+### Querying the Jobs Table
+
+`Oban.Job` defines an Ecto schema and the jobs table can therefore be queried as usual, e.g.:
+
+```
+MyApp.Repo.all(
+  from j in Oban.Job,
+    where: j.worker == "MyApp.Business",
+    where: j.state == "discarded"
+)
+```
+
 ### Heroku
 
 If your app crashes on launch, be sure to confirm you are running the correct
