@@ -255,7 +255,7 @@ Define a worker to process jobs in the `events` queue:
 
 ```elixir
 defmodule MyApp.Business do
-  use Oban.Worker, queue: "events", max_attempts: 10
+  use Oban.Worker, queue: :events, max_attempts: 10
 
   @impl Oban.Worker
   def perform(%{"id" => id}, _job) do
@@ -276,7 +276,7 @@ of time through the `:unique` option. Here we'll configure it to be unique for
 60 seconds:
 
 ```elixir
-use Oban.Worker, queue: "events", max_attempts: 10, unique: [period: 60]
+use Oban.Worker, queue: :events, max_attempts: 10, unique: [period: 60]
 ```
 
 #### Enqueueing Jobs
@@ -295,7 +295,7 @@ The worker's defaults may be overridden by passing options:
 
 ```elixir
 %{vote_for: "none of the above"}
-|> MyApp.Business.new(queue: "special", max_attempts: 5)
+|> MyApp.Business.new(queue: :special, max_attempts: 5)
 |> Oban.insert()
 ```
 
@@ -403,7 +403,7 @@ assert_enqueued worker: MyWorker, args: %{id: 1}
 
 # or
 
-refute_enqueued queue: "special", args: %{id: 2}
+refute_enqueued queue: :special, args: %{id: 2}
 
 # or
 
