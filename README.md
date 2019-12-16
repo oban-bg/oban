@@ -258,7 +258,7 @@ defmodule MyApp.Business do
   use Oban.Worker, queue: :events, max_attempts: 10
 
   @impl Oban.Worker
-  def perform(%{"id" => id}, _job) do
+  def perform(%{"id" => id, industry: _industry}, _job) do
     model = MyApp.Repo.get(MyApp.Business.Man, id)
 
     IO.inspect(model)
@@ -286,7 +286,7 @@ database. For convenience and consistency all workers provide a `new/2`
 function that converts an args map into a job changeset suitable for insertion:
 
 ```elixir
-%{in_the: "business", of_doing: "business"}
+%{id: 1, industry: "technology", in_the: "business", of_doing: "business"}
 |> MyApp.Business.new()
 |> Oban.insert()
 ```
@@ -294,7 +294,7 @@ function that converts an args map into a job changeset suitable for insertion:
 The worker's defaults may be overridden by passing options:
 
 ```elixir
-%{vote_for: "none of the above"}
+%{id: 1, industry: "science", vote_for: "none of the above"}
 |> MyApp.Business.new(queue: :special, max_attempts: 5)
 |> Oban.insert()
 ```
