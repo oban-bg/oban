@@ -65,6 +65,10 @@ defmodule Oban do
   function, which is called first with the full `Oban.Job` struct, and subsequently with the
   `args` map if no clause matches.
 
+  Note that when Oban calls `perform/2`, the `args` map given when enqueueing
+  the job will have been deserialized from the PostgreSQL `jsonb` data type
+  and therefore map keys will have been converted to strings.
+
   Define a worker to process jobs in the `events` queue:
 
   ```elixir
@@ -72,10 +76,21 @@ defmodule Oban do
     use Oban.Worker, queue: "events", max_attempts: 10
 
     @impl Worker
-    def perform(%{"id" => id}, _job) do
+    def perform(%{"id" => id} = args, _job) do
       model = MyApp.Repo.get(MyApp.Business.Man, id)
 
-      IO.inspect(model)
+      case args do
+        %{"in_the" => "business"} ->
+          # handle business job
+          IO.inspect(model)
+
+        %{"vote_for" => vote} ->
+          # handle vote job
+          IO.inspect(model)
+
+        _ ->
+          IO.inspect(model)
+      end
     end
   end
   ```
