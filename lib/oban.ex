@@ -73,7 +73,7 @@ defmodule Oban do
 
   ```elixir
   defmodule MyApp.Business do
-    use Oban.Worker, queue: "events", max_attempts: 10
+    use Oban.Worker, queue: :events, max_attempts: 10
 
     @impl Worker
     def perform(%{"id" => id} = args, _job) do
@@ -118,7 +118,7 @@ defmodule Oban do
 
   ```elixir
   %{vote_for: "none of the above"}
-  |> MyApp.Business.new(queue: "special", max_attempts: 5)
+  |> MyApp.Business.new(queue: :special, max_attempts: 5)
   |> Oban.insert()
   ```
 
@@ -228,7 +228,7 @@ defmodule Oban do
     {"* * * * *", MyApp.MinuteWorker},
     {"0 * * * *", MyApp.HourlyWorker, args: %{custom: "arg"}},
     {"0 0 * * *", MyApp.DailyWorker, max_attempts: 1},
-    {"0 12 * * MON", MyApp.MondayWorker, queue: "scheduled"}
+    {"0 12 * * MON", MyApp.MondayWorker, queue: :scheduled}
   ]
   ```
 
@@ -337,7 +337,7 @@ defmodule Oban do
 
   # or
 
-  refute_enqueued queue: "special", args: %{id: 2}
+  refute_enqueued queue: :special, args: %{id: 2}
 
   # or
 
@@ -402,7 +402,7 @@ defmodule Oban do
   `max_attempts` value, which can be set at the Worker or Job level. For example, to instruct a
   worker to discard jobs after three failures:
 
-      use Oban.Worker, queue: "limited", max_attempts: 3
+      use Oban.Worker, queue: :limited, max_attempts: 3
 
   ## Pruning Historic Jobs
 
