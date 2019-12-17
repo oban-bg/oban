@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Added
+
+- [Oban] Add `timezone` support for scheduling cronjobs using timezones other
+  than "Etc/UTC". Using a custom timezone requires a timezone database such as
+  tzdata.
+
 ## [0.12.1] — 2019-12-13
 
 ### Fixed

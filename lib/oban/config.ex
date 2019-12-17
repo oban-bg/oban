@@ -24,6 +24,7 @@ defmodule Oban.Config do
           rescue_after: pos_integer(),
           rescue_interval: pos_integer(),
           shutdown_grace_period: timeout(),
+          timezone: Calendar.time_zone(),
           verbose: false | Logger.level()
         }
 
@@ -44,6 +45,7 @@ defmodule Oban.Config do
             rescue_after: 60,
             rescue_interval: :timer.minutes(1),
             shutdown_grace_period: :timer.seconds(15),
+            timezone: "Etc/UTC",
             verbose: false
 
   @spec start_link([option()]) :: GenServer.on_start()
@@ -173,6 +175,12 @@ defmodule Oban.Config do
   defp validate_opt!({:shutdown_grace_period, interval}) do
     unless is_integer(interval) and interval > 0 do
       raise ArgumentError, "expected :shutdown_grace_period to be a positive integer"
+    end
+  end
+
+  defp validate_opt!({:timezone, timezone}) do
+    unless is_binary(timezone) and match?({:ok, _}, DateTime.now(timezone)) do
+      raise ArgumentError, "expected :timezone to be a known timezone"
     end
   end
 
