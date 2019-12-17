@@ -248,8 +248,10 @@ concurrently. Here are a few caveats and guidelines:
 
 Worker modules do the work of processing a job. At a minimum they must define a
 `perform/2` function, which is called with an `args` map and the job struct.
-The keys in the `args` map will always be converted to strings prior to calling
-`perform/2`.
+
+Note that when Oban calls `perform/2`, the `args` map given when enqueueing
+the job will have been deserialized from the PostgreSQL `jsonb` data type
+and therefore map keys will have been converted to strings.
 
 Define a worker to process jobs in the `events` queue:
 

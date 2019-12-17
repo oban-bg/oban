@@ -173,8 +173,9 @@ defmodule Oban.Worker do
   @doc """
   The `perform/2` function is called when the job is executed.
 
-  The map given as the first argument will have string keys, even if atom keys were used when
-  enqueueing the job originally.
+  Note that when Oban calls `perform/2`, the `args` map given when enqueueing the job will have
+  been deserialized from the PostgreSQL `jsonb` data type and therefore map keys will have been
+  converted to strings.
 
   The value returned from `perform/2` is ignored, unless it returns an `{:error, reason}` tuple.
   With an error return or when perform has an uncaught exception or throw then the error will be
