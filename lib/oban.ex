@@ -260,7 +260,8 @@ defmodule Oban do
 
   ### Caveats
 
-  * All schedules are evaluated as UTC, the local timezone is never taken into account.
+  * All schedules are evaluated as UTC unless a different timezone is configured. See
+    `start_link/1` for information about configuring a timezone.
 
   * Workers can be used for regular and scheduled jobs so long as they accept different arguments.
 
@@ -564,9 +565,14 @@ defmodule Oban do
 
     For testing purposes `:queues` may be set to `false` or `nil`, which effectively disables all
     job dispatching.
+  * `:timezone` — which timezone to use when scheduling cron jobs. To use a timezone other than
+    the default of "Etc/UTC" you *must* have a timezone database like [tzdata][tzdata] installed
+    and configured.
   * `:verbose` — either `false` to disable logging or a standard log level (`:error`, `:warn`,
     `:info`, `:debug`). This determines whether queries are logged or not; overriding the repo's
     configured log level. Defaults to `false`, where no queries are logged.
+
+  [tzdata]: https://hexdocs.pm/tzdata
 
   ### Twiddly Options
 

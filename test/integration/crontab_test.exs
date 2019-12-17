@@ -59,10 +59,32 @@ defmodule Oban.Integration.CrontabTest do
 
     assert_receive {:ok, 1}
 
-    assert [1] == Job |> select(count()) |> Repo.all()
+    assert 1 == Job |> select(count()) |> Repo.one()
 
     :ok = stop_supervised(ObanA)
     :ok = stop_supervised(ObanB)
+  end
+
+  test "cron jobs are scheduled using the configured timezone" do
+    {:ok, %DateTime{hour: chi_hour}} = DateTime.now("America/Chicago")
+    {:ok, %DateTime{hour: utc_hour}} = DateTime.now("Etc/UTC")
+
+    oban_opts = [
+      repo: Repo,
+      queues: [default: 5],
+      timezone: "America/Chicago",
+      crontab: [
+        {"* #{chi_hour} * * *", Worker, args: worker_args(1)},
+        {"* #{utc_hour} * * *", Worker, args: worker_args(2)}
+      ]
+    ]
+
+    start_supervised!({Oban, oban_opts})
+
+    assert_receive {:ok, 1}
+    refute_receive {:ok, 2}
+
+    :ok = stop_supervised(Oban)
   end
 
   defp worker_args(ref) do

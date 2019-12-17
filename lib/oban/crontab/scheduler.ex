@@ -113,17 +113,22 @@ defmodule Oban.Crontab.Scheduler do
     locked?
   end
 
-  defp enqueue_jobs(conf) do
-    for {cron, worker, opts} <- conf.crontab, Cron.now?(cron) do
+  defp enqueue_jobs(%Config{crontab: crontab, timezone: timezone} = conf) do
+    {:ok, datetime} = DateTime.now(timezone)
+
+    for {cron, worker, opts} <- crontab, Cron.now?(cron, datetime) do
       {args, opts} = Keyword.pop(opts, :args, %{})
 
-      # Ensure that `unique` is deep merged and the default period has the lowest priority.
-      opts =
-        [unique: @unique]
-        |> Keyword.merge(worker.__opts__(), &Worker.resolve_opts/3)
-        |> Keyword.merge(opts, &Worker.resolve_opts/3)
+      opts = unique_opts(worker.__opts__(), opts)
 
       {:ok, _job} = Query.fetch_or_insert_job(conf, worker.new(args, opts))
     end
+  end
+
+  # Ensure that `unique` is deep merged and the default period has the lowest priority.
+  defp unique_opts(worker_opts, crontab_opts) do
+    [unique: @unique]
+    |> Keyword.merge(worker_opts, &Worker.resolve_opts/3)
+    |> Keyword.merge(crontab_opts, &Worker.resolve_opts/3)
   end
 end

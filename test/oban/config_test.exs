@@ -15,144 +15,151 @@ defmodule Oban.ConfigTest do
 
   describe "new/1" do
     test ":circuit_backoff is validated as an integer" do
-      assert_raise ArgumentError, fn -> Config.new(repo: Repo, circuit_backoff: -1) end
-      assert_raise ArgumentError, fn -> Config.new(repo: Repo, circuit_backoff: 0) end
-      assert_raise ArgumentError, fn -> Config.new(repo: Repo, circuit_backoff: "5") end
-      assert_raise ArgumentError, fn -> Config.new(repo: Repo, circuit_backoff: 1.0) end
+      assert_invalid(circuit_backoff: -1)
+      assert_invalid(circuit_backoff: 0)
+      assert_invalid(circuit_backoff: "5")
+      assert_invalid(circuit_backoff: 1.0)
 
-      assert %Config{} = Config.new(repo: Repo, circuit_backoff: 10)
+      assert_valid(circuit_backoff: 10)
     end
 
     test ":crontab is validated as a list of cron job expressions" do
-      assert_raise ArgumentError, fn -> Config.new(repo: Repo, crontab: ["* * * * *"]) end
-      assert_raise ArgumentError, fn -> Config.new(repo: Repo, crontab: [["* * * * *", Fake]]) end
-      assert_raise ArgumentError, fn -> Config.new(repo: Repo, crontab: [Worker]) end
+      assert_invalid(crontab: ["* * * * *"])
+      assert_invalid(crontab: [["* * * * *", Fake]])
+      assert_invalid(crontab: [Worker])
 
-      assert %Config{crontab: crontab} = Config.new(repo: Repo, crontab: [{"* * * * *", Worker}])
-      assert [{%_{minutes: _}, Worker, []}] = crontab
+      config = assert_valid(crontab: [{"* * * * *", Worker}])
+      assert [{%_{minutes: _}, Worker, []}] = config.crontab
 
-      assert %Config{crontab: crontab} =
-               Config.new(
-                 repo: Repo,
-                 crontab: [{"* * * * *", Worker, queue: "special"}]
-               )
+      config = assert_valid(crontab: [{"* * * * *", Worker, queue: "special"}])
+      assert [{%_{minutes: _}, Worker, [queue: "special"]}] = config.crontab
 
-      assert [{%_{minutes: _}, Worker, [queue: "special"]}] = crontab
-
-      assert %Config{crontab: []} = Config.new(repo: Repo, crontab: false)
+      assert %Config{crontab: []} = conf(crontab: false)
     end
 
     test ":name is validated as a module" do
-      assert_raise ArgumentError, fn -> Config.new(repo: Repo, name: "Oban") end
-      assert_raise ArgumentError, fn -> Config.new(repo: Repo, name: {:via, :whatever}) end
+      assert_invalid(name: "Oban")
+      assert_invalid(name: {:via, :whatever})
 
-      assert %Config{} = Config.new(repo: Repo, name: MyOban)
+      assert_valid(name: MyOban)
     end
 
     test ":node is validated as a binary" do
-      assert_raise ArgumentError, fn -> Config.new(repo: Repo, node: nil) end
-      assert_raise ArgumentError, fn -> Config.new(repo: Repo, node: '') end
-      assert_raise ArgumentError, fn -> Config.new(repo: Repo, node: "") end
-      assert_raise ArgumentError, fn -> Config.new(repo: Repo, node: MyNode) end
+      assert_invalid(node: nil)
+      assert_invalid(node: '')
+      assert_invalid(node: "")
+      assert_invalid(node: MyNode)
 
-      assert %Config{} = Config.new(repo: Repo, node: "MyNode")
+      assert_valid(node: "MyNode")
     end
 
     test ":poll_interval is validated as an integer" do
-      assert_raise ArgumentError, fn -> Config.new(repo: Repo, poll_interval: -1) end
-      assert_raise ArgumentError, fn -> Config.new(repo: Repo, poll_interval: 0) end
-      assert_raise ArgumentError, fn -> Config.new(repo: Repo, poll_interval: "5") end
-      assert_raise ArgumentError, fn -> Config.new(repo: Repo, poll_interval: 1.0) end
+      assert_invalid(poll_interval: -1)
+      assert_invalid(poll_interval: 0)
+      assert_invalid(poll_interval: "5")
+      assert_invalid(poll_interval: 1.0)
 
-      assert %Config{} = Config.new(repo: Repo, poll_interval: 10)
+      assert_valid(poll_interval: 10)
     end
 
     test ":prefix is validated as a binary" do
-      assert_raise ArgumentError, fn -> Config.new(repo: Repo, prefix: :private) end
-      assert_raise ArgumentError, fn -> Config.new(repo: Repo, prefix: " private schema ") end
-      assert_raise ArgumentError, fn -> Config.new(repo: Repo, prefix: "") end
+      assert_invalid(prefix: :private)
+      assert_invalid(prefix: " private schema ")
+      assert_invalid(prefix: "")
 
-      assert %Config{} = Config.new(repo: Repo, prefix: "private")
+      assert_valid(prefix: "private")
     end
 
     test ":prune is validated as disabled or a max* option" do
-      assert_raise ArgumentError, fn -> Config.new(repo: Repo, prune: :unknown) end
-      assert_raise ArgumentError, fn -> Config.new(repo: Repo, prune: 5) end
-      assert_raise ArgumentError, fn -> Config.new(repo: Repo, prune: "disabled") end
-      assert_raise ArgumentError, fn -> Config.new(repo: Repo, prune: {:maxlen, "1"}) end
-      assert_raise ArgumentError, fn -> Config.new(repo: Repo, prune: {:maxlen, -5}) end
-      assert_raise ArgumentError, fn -> Config.new(repo: Repo, prune: {:maxage, "1"}) end
-      assert_raise ArgumentError, fn -> Config.new(repo: Repo, prune: {:maxage, -5}) end
+      assert_invalid(prune: :unknown)
+      assert_invalid(prune: 5)
+      assert_invalid(prune: "disabled")
+      assert_invalid(prune: {:maxlen, "1"})
+      assert_invalid(prune: {:maxlen, -5})
+      assert_invalid(prune: {:maxage, "1"})
+      assert_invalid(prune: {:maxage, -5})
 
-      assert %Config{} = Config.new(repo: Repo, prune: :disabled)
-      assert %Config{} = Config.new(repo: Repo, prune: {:maxlen, 10})
-      assert %Config{} = Config.new(repo: Repo, prune: {:maxage, 10})
+      assert_valid(prune: :disabled)
+      assert_valid(prune: {:maxlen, 10})
+      assert_valid(prune: {:maxage, 10})
     end
 
     test ":prune_interval is validated as a positive integer" do
-      assert_raise ArgumentError, fn -> Config.new(repo: Repo, prune_interval: -1) end
-      assert_raise ArgumentError, fn -> Config.new(repo: Repo, prune_interval: 0) end
-      assert_raise ArgumentError, fn -> Config.new(repo: Repo, prune_interval: "5") end
-      assert_raise ArgumentError, fn -> Config.new(repo: Repo, prune_interval: 1.0) end
+      assert_invalid(prune_interval: -1)
+      assert_invalid(prune_interval: 0)
+      assert_invalid(prune_interval: "5")
+      assert_invalid(prune_interval: 1.0)
 
-      assert %Config{} = Config.new(repo: Repo, prune_interval: 500)
+      assert_valid(prune_interval: 500)
     end
 
     test ":prune_limit is validated as a positive integer" do
-      assert_raise ArgumentError, fn -> Config.new(repo: Repo, prune_limit: -1) end
-      assert_raise ArgumentError, fn -> Config.new(repo: Repo, prune_limit: 0) end
-      assert_raise ArgumentError, fn -> Config.new(repo: Repo, prune_limit: "5") end
-      assert_raise ArgumentError, fn -> Config.new(repo: Repo, prune_limit: 1.0) end
+      assert_invalid(prune_limit: -1)
+      assert_invalid(prune_limit: 0)
+      assert_invalid(prune_limit: "5")
+      assert_invalid(prune_limit: 1.0)
 
-      assert %Config{} = Config.new(repo: Repo, prune_limit: 5_000)
+      assert_valid(prune_limit: 5_000)
     end
 
     test ":queues are validated as atom, integer pairs" do
-      assert_raise ArgumentError, fn -> Config.new(repo: Repo, queues: %{default: 25}) end
-      assert_raise ArgumentError, fn -> Config.new(repo: Repo, queues: [{"default", 25}]) end
-      assert_raise ArgumentError, fn -> Config.new(repo: Repo, queues: [default: 0]) end
-      assert_raise ArgumentError, fn -> Config.new(repo: Repo, queues: [default: 3.5]) end
+      assert_invalid(queues: %{default: 25})
+      assert_invalid(queues: [{"default", 25}])
+      assert_invalid(queues: [default: 0])
+      assert_invalid(queues: [default: 3.5])
 
-      assert %Config{} = Config.new(repo: Repo, queues: [default: 1])
-      assert %Config{queues: []} = Config.new(repo: Repo, queues: false)
+      assert_valid(queues: [default: 1])
+
+      assert %Config{queues: []} = conf(queues: false)
     end
 
     test ":rescue_after is validated as an integer" do
-      assert_raise ArgumentError, fn -> Config.new(repo: Repo, rescue_after: -1) end
-      assert_raise ArgumentError, fn -> Config.new(repo: Repo, rescue_after: 0) end
-      assert_raise ArgumentError, fn -> Config.new(repo: Repo, rescue_after: "5") end
-      assert_raise ArgumentError, fn -> Config.new(repo: Repo, rescue_after: 1.0) end
+      assert_invalid(rescue_after: -1)
+      assert_invalid(rescue_after: 0)
+      assert_invalid(rescue_after: "5")
+      assert_invalid(rescue_after: 1.0)
 
-      assert %Config{} = Config.new(repo: Repo, rescue_after: 30)
+      assert_valid(rescue_after: 30)
     end
 
     test ":rescue_interval is validated as an integer" do
-      assert_raise ArgumentError, fn -> Config.new(repo: Repo, rescue_interval: -1) end
-      assert_raise ArgumentError, fn -> Config.new(repo: Repo, rescue_interval: 0) end
-      assert_raise ArgumentError, fn -> Config.new(repo: Repo, rescue_interval: "5") end
-      assert_raise ArgumentError, fn -> Config.new(repo: Repo, rescue_interval: 1.0) end
+      assert_invalid(rescue_interval: -1)
+      assert_invalid(rescue_interval: 0)
+      assert_invalid(rescue_interval: "5")
+      assert_invalid(rescue_interval: 1.0)
 
-      assert %Config{} = Config.new(repo: Repo, rescue_interval: 10)
+      assert_valid(rescue_interval: 10)
     end
 
     test ":shutdown_grace_period is validated as an integer" do
-      assert_raise ArgumentError, fn -> Config.new(repo: Repo, shutdown_grace_period: -1) end
-      assert_raise ArgumentError, fn -> Config.new(repo: Repo, shutdown_grace_period: 0) end
-      assert_raise ArgumentError, fn -> Config.new(repo: Repo, shutdown_grace_period: "5") end
-      assert_raise ArgumentError, fn -> Config.new(repo: Repo, shutdown_grace_period: 1.0) end
+      assert_invalid(shutdown_grace_period: -1)
+      assert_invalid(shutdown_grace_period: 0)
+      assert_invalid(shutdown_grace_period: "5")
+      assert_invalid(shutdown_grace_period: 1.0)
 
-      assert %Config{} = Config.new(repo: Repo, shutdown_grace_period: 10)
+      assert_valid(shutdown_grace_period: 10)
+    end
+
+    test ":timezone is validated as a known timezone" do
+      assert_invalid(timezone: "")
+      assert_invalid(timezone: nil)
+      assert_invalid(timezone: "america")
+      assert_invalid(timezone: "america/chicago")
+
+      assert_valid(timezone: "Etc/UTC")
+      assert_valid(timezone: "Europe/Copenhagen")
+      assert_valid(timezone: "America/Chicago")
     end
 
     test ":verbose is validated as `false` or a valid log level" do
-      assert_raise ArgumentError, fn -> Config.new(repo: Repo, verbose: 1) end
-      assert_raise ArgumentError, fn -> Config.new(repo: Repo, verbose: "false") end
-      assert_raise ArgumentError, fn -> Config.new(repo: Repo, verbose: nil) end
-      assert_raise ArgumentError, fn -> Config.new(repo: Repo, verbose: :warning) end
-      assert_raise ArgumentError, fn -> Config.new(repo: Repo, verbose: true) end
+      assert_invalid(verbose: 1)
+      assert_invalid(verbose: "false")
+      assert_invalid(verbose: nil)
+      assert_invalid(verbose: :warning)
+      assert_invalid(verbose: true)
 
-      assert %Config{verbose: false} = Config.new(repo: Repo, verbose: false)
-      assert %Config{verbose: :warn} = Config.new(repo: Repo, verbose: :warn)
+      assert_valid(verbose: false)
+      assert_valid(verbose: :warn)
     end
   end
 
@@ -167,5 +174,19 @@ defmodule Oban.ConfigTest do
       assert is_binary(hostname)
       assert String.length(hostname) > 1
     end
+  end
+
+  defp assert_invalid(opts) do
+    assert_raise ArgumentError, fn -> conf(opts) end
+  end
+
+  defp assert_valid(opts) do
+    assert %Config{} = conf(opts)
+  end
+
+  defp conf(opts) do
+    opts
+    |> Keyword.put(:repo, Repo)
+    |> Config.new()
   end
 end
