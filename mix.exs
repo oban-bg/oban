@@ -13,6 +13,7 @@ defmodule Oban.MixProject do
       deps: deps(),
       aliases: aliases(),
       preferred_cli_env: [
+        bench: :test,
         ci: :test,
         "test.setup": :test
       ],
@@ -65,6 +66,7 @@ defmodule Oban.MixProject do
       {:telemetry, "~> 0.4"},
       {:stream_data, "~> 0.4", only: [:test, :dev]},
       {:tzdata, "~> 1.0", only: [:test, :dev]},
+      {:benchee, "~> 1.0", only: [:test, :dev], runtime: false},
       {:credo, "~> 1.0", only: [:test, :dev], runtime: false},
       {:dialyxir, "~> 0.5", only: [:test, :dev], runtime: false},
       {:ex_doc, "~> 0.20", only: [:test, :dev], runtime: false},
@@ -74,6 +76,7 @@ defmodule Oban.MixProject do
 
   defp aliases do
     [
+      bench: "run bench/bench_helper.exs",
       "test.setup": ["ecto.create", "ecto.migrate"],
       ci: [
         "format --check-formatted",
