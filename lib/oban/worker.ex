@@ -13,7 +13,7 @@ defmodule Oban.Worker do
       defmodule MyApp.Workers.Business do
         use Oban.Worker, queue: "events", max_attempts: 10, unique: [period: 30]
 
-        @impl Worker
+        @impl Oban.Worker
         def perform(_args, %Oban.Job{attempt: attempt}) when attempt > 3 do
           IO.inspect(attempt)
         end

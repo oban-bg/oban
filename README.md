@@ -216,7 +216,7 @@ and job dispatching altogether when testing:
 
 ```elixir
 # config/test.exs
-config :my_app, Oban, queues: false, prune: :disabled
+config :my_app, Oban, crontab: false, queues: false, prune: :disabled
 ```
 
 Without dispatch and pruning disabled Ecto will raise constant ownership errors

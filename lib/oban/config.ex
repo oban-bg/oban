@@ -12,6 +12,7 @@ defmodule Oban.Config do
   @type t :: %__MODULE__{
           circuit_backoff: timeout(),
           crontab: [cronjob()],
+          dispatch_cooldown: pos_integer(),
           name: atom(),
           node: binary(),
           poll_interval: pos_integer(),
@@ -33,6 +34,7 @@ defmodule Oban.Config do
   @enforce_keys [:node, :repo]
   defstruct circuit_backoff: :timer.seconds(30),
             crontab: [],
+            dispatch_cooldown: 5,
             name: Oban,
             node: nil,
             poll_interval: :timer.seconds(1),
@@ -100,6 +102,12 @@ defmodule Oban.Config do
       raise ArgumentError,
             "expected :crontab to be a list of {expression, worker} or " <>
               "{expression, worker, options} tuples"
+    end
+  end
+
+  defp validate_opt!({:dispatch_cooldown, period}) do
+    unless is_integer(period) and period > 0 do
+      raise ArgumentError, "expected :dispatch_cooldown to be a positive integer"
     end
   end
 
