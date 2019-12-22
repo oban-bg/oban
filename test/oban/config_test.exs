@@ -23,6 +23,15 @@ defmodule Oban.ConfigTest do
       assert_valid(circuit_backoff: 10)
     end
 
+    test ":dispatch_cooldown is validated as a positive integer" do
+      assert_invalid(dispatch_cooldown: -1)
+      assert_invalid(dispatch_cooldown: 0)
+      assert_invalid(dispatch_cooldown: "5")
+      assert_invalid(dispatch_cooldown: 1.0)
+
+      assert_valid(dispatch_cooldown: 500)
+    end
+
     test ":crontab is validated as a list of cron job expressions" do
       assert_invalid(crontab: ["* * * * *"])
       assert_invalid(crontab: [["* * * * *", Fake]])

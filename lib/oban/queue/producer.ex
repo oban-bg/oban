@@ -22,6 +22,8 @@ defmodule Oban.Queue.Producer do
     @enforce_keys [:conf, :foreman, :limit, :nonce, :queue]
     defstruct [
       :conf,
+      :cooldown_ref,
+      :dispatched_at,
       :foreman,
       :limit,
       :name,
@@ -102,27 +104,12 @@ defmodule Oban.Queue.Producer do
   end
 
   @impl GenServer
-  def handle_info(:poll, %State{conf: conf} = state) do
-    conf.repo.checkout(fn ->
-      state
-      |> deschedule()
-      |> pulse()
-      |> send_poll_after()
-      |> dispatch()
-    end)
-  end
-
-  def handle_info(:rescue, %State{conf: conf} = state) do
-    conf.repo.checkout(fn ->
-      state
-      |> rescue_orphans()
-      |> send_rescue_after()
-      |> dispatch()
-    end)
-  end
-
   def handle_info({:DOWN, ref, :process, _pid, _reason}, %State{running: running} = state) do
     dispatch(%{state | running: Map.delete(running, ref)})
+  end
+
+  def handle_info(:dispatch, %State{} = state) do
+    dispatch(state)
   end
 
   def handle_info({:notification, insert(), payload}, %State{queue: queue} = state) do
@@ -160,6 +147,25 @@ defmodule Oban.Queue.Producer do
       end
 
     dispatch(state)
+  end
+
+  def handle_info(:poll, %State{conf: conf} = state) do
+    conf.repo.checkout(fn ->
+      state
+      |> deschedule()
+      |> pulse()
+      |> send_poll_after()
+      |> dispatch()
+    end)
+  end
+
+  def handle_info(:rescue, %State{conf: conf} = state) do
+    conf.repo.checkout(fn ->
+      state
+      |> rescue_orphans()
+      |> send_rescue_after()
+      |> dispatch()
+    end)
   end
 
   def handle_info(:reset_circuit, state) do
@@ -230,12 +236,14 @@ defmodule Oban.Queue.Producer do
     state
   end
 
-  defp pulse(%State{conf: conf} = state) do
+  defp pulse(%State{conf: conf, running: running} = state) do
+    running_ids = for {_ref, {%_{id: id}, _pid}} <- running, do: id
+
     args =
       state
       |> Map.take([:limit, :nonce, :paused, :queue, :started_at])
       |> Map.put(:node, conf.node)
-      |> Map.put(:running, running_job_ids(state))
+      |> Map.put(:running, running_ids)
 
     Query.insert_beat(conf, args)
 
@@ -256,20 +264,41 @@ defmodule Oban.Queue.Producer do
     {:noreply, state}
   end
 
-  defp dispatch(%State{conf: conf, foreman: foreman} = state) do
-    %State{limit: limit, nonce: nonce, queue: queue, running: running} = state
+  defp dispatch(%State{} = state) do
+    cond do
+      dispatch_now?(state) ->
+        %State{conf: conf, limit: limit, nonce: nonce, queue: queue, running: running} = state
 
-    started_jobs =
-      for job <- fetch_jobs(conf, queue, nonce, limit - map_size(running)), into: %{} do
-        {:ok, pid} = DynamicSupervisor.start_child(foreman, Executor.child_spec(job, conf))
+        running =
+          conf
+          |> fetch_jobs(queue, nonce, limit - map_size(running))
+          |> start_jobs(state)
+          |> Map.merge(running)
 
-        {Process.monitor(pid), {job, pid}}
-      end
+        {:noreply, %{state | cooldown_ref: nil, dispatched_at: system_now(), running: running}}
 
-    {:noreply, %{state | running: Map.merge(running, started_jobs)}}
+      cooldown_available?(state) ->
+        %State{conf: conf, dispatched_at: dispatched_at} = state
+
+        dispatch_after = system_now() - dispatched_at + conf.dispatch_cooldown
+        cooldown_ref = Process.send_after(self(), :dispatch, dispatch_after)
+
+        {:noreply, %{state | cooldown_ref: cooldown_ref}}
+
+      true ->
+        {:noreply, state}
+    end
   rescue
     exception in trip_errors() -> {:noreply, trip_circuit(exception, state)}
   end
+
+  defp dispatch_now?(%State{dispatched_at: nil}), do: true
+
+  defp dispatch_now?(%State{conf: conf, dispatched_at: dispatched_at}) do
+    system_now() > dispatched_at + conf.dispatch_cooldown
+  end
+
+  defp cooldown_available?(%State{cooldown_ref: ref}), do: is_nil(ref)
 
   defp fetch_jobs(conf, queue, nonce, count) do
     case Query.fetch_available_jobs(conf, queue, nonce, count) do
@@ -278,7 +307,13 @@ defmodule Oban.Queue.Producer do
     end
   end
 
-  defp running_job_ids(%State{running: running}) do
-    for {_ref, {%_{id: id}, _pid}} <- running, do: id
+  defp start_jobs(jobs, %State{conf: conf, foreman: foreman}) do
+    for job <- jobs, into: %{} do
+      {:ok, pid} = DynamicSupervisor.start_child(foreman, Executor.child_spec(job, conf))
+
+      {Process.monitor(pid), {job, pid}}
+    end
   end
+
+  defp system_now, do: System.monotonic_time(:millisecond)
 end

@@ -71,7 +71,7 @@ defmodule Oban do
   defmodule MyApp.Business do
     use Oban.Worker, queue: "events", max_attempts: 10
 
-    @impl Worker
+    @impl Oban.Worker
     def perform(%{"id" => id}, _job) do
       model = MyApp.Repo.get(MyApp.Business.Man, id)
 
@@ -513,7 +513,10 @@ defmodule Oban do
   alias Oban.Queue.Supervisor, as: QueueSupervisor
 
   @type option ::
-          {:name, module()}
+          {:circuit_backoff, timeout()}
+          | {:crontab, [Config.cronjob()]}
+          | {:dispatch_cooldown, pos_integer()}
+          | {:name, module()}
           | {:node, binary()}
           | {:poll_interval, pos_integer()}
           | {:prefix, binary()}
@@ -522,7 +525,10 @@ defmodule Oban do
           | {:prune_limit, pos_integer()}
           | {:queues, [{atom(), pos_integer()}]}
           | {:repo, module()}
+          | {:rescue_after, pos_integer()}
+          | {:rescue_interval, pos_integer()}
           | {:shutdown_grace_period, timeout()}
+          | {:timezone, Calendar.time_zone()}
           | {:verbose, false | Logger.level()}
 
   @type queue_name :: atom() | binary()
@@ -577,11 +583,20 @@ defmodule Oban do
   ### Twiddly Options
 
   Additional options used to tune system behaviour. These are primarily useful for testing or
-  troubleshooting and shouldn't be changed usually.
+  troubleshooting and don't usually need modification.
 
   * `:circuit_backoff` — the number of milliseconds until queries are attempted after a database
     error. All processes communicating with the database are equipped with circuit breakers and
     will use this for the backoff. Defaults to `30_000ms`.
+  * `:dispatch_cooldown` — the minimum number of milliseconds a producer will wait before fetching
+    and running more jobs. A slight cooldown period prevents a producer from flooding with
+    messages and thrashing the database. The cooldown period _directly impacts_ a producer's
+    throughput: jobs per second for a single queue is calculated by `(1000 / cooldown) * limit`.
+    For example, with a `5ms` cooldown and a queue limit of `25` a single queue can run 2,500
+    jobs/sec.
+
+    The default is `5ms` and the minimum is `1ms`, which is likely faster than the database can
+    return new jobs to run.
   * `:poll_interval` - the number of milliseconds between polling for new jobs in a queue. This
     is directly tied to the resolution of _scheduled_ jobs. For example, with a `poll_interval` of
     `5_000ms`, scheduled jobs are checked every 5 seconds. The default is `1_000ms`.
