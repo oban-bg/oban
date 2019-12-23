@@ -2,9 +2,9 @@ defmodule Oban do
   @external_resource readme = Path.join([__DIR__, "../README.md"])
 
   @moduledoc readme
-           |> File.read!()
-           |> String.split("<!-- MDOC -->")
-           |> Enum.fetch!(1)
+             |> File.read!()
+             |> String.split("<!-- MDOC -->")
+             |> Enum.fetch!(1)
 
   @moduledoc since: "0.1.0"
 
