@@ -65,17 +65,32 @@ defmodule Oban do
   function, which is called first with the full `Oban.Job` struct, and subsequently with the
   `args` map if no clause matches.
 
+  Note that when Oban calls `perform/2`, the `args` map given when enqueueing
+  the job will have been deserialized from the PostgreSQL `jsonb` data type
+  and therefore map keys will have been converted to strings.
+
   Define a worker to process jobs in the `events` queue:
 
   ```elixir
   defmodule MyApp.Business do
-    use Oban.Worker, queue: "events", max_attempts: 10
+    use Oban.Worker, queue: :events, max_attempts: 10
 
     @impl Oban.Worker
-    def perform(%{"id" => id}, _job) do
+    def perform(%{"id" => id} = args, _job) do
       model = MyApp.Repo.get(MyApp.Business.Man, id)
 
-      IO.inspect(model)
+      case args do
+        %{"in_the" => "business"} ->
+          # handle business job
+          IO.inspect(model)
+
+        %{"vote_for" => vote} ->
+          # handle vote job
+          IO.inspect(model)
+
+        _ ->
+          IO.inspect(model)
+      end
     end
   end
   ```
@@ -103,7 +118,7 @@ defmodule Oban do
 
   ```elixir
   %{vote_for: "none of the above"}
-  |> MyApp.Business.new(queue: "special", max_attempts: 5)
+  |> MyApp.Business.new(queue: :special, max_attempts: 5)
   |> Oban.insert()
   ```
 
@@ -213,7 +228,7 @@ defmodule Oban do
     {"* * * * *", MyApp.MinuteWorker},
     {"0 * * * *", MyApp.HourlyWorker, args: %{custom: "arg"}},
     {"0 0 * * *", MyApp.DailyWorker, max_attempts: 1},
-    {"0 12 * * MON", MyApp.MondayWorker, queue: "scheduled"}
+    {"0 12 * * MON", MyApp.MondayWorker, queue: :scheduled}
   ]
   ```
 
@@ -323,7 +338,7 @@ defmodule Oban do
 
   # or
 
-  refute_enqueued queue: "special", args: %{id: 2}
+  refute_enqueued queue: :special, args: %{id: 2}
 
   # or
 
@@ -388,7 +403,7 @@ defmodule Oban do
   `max_attempts` value, which can be set at the Worker or Job level. For example, to instruct a
   worker to discard jobs after three failures:
 
-      use Oban.Worker, queue: "limited", max_attempts: 3
+      use Oban.Worker, queue: :limited, max_attempts: 3
 
   ## Pruning Historic Jobs
 

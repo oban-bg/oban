@@ -249,17 +249,32 @@ concurrently. Here are a few caveats and guidelines:
 Worker modules do the work of processing a job. At a minimum they must define a
 `perform/2` function, which is called with an `args` map and the job struct.
 
+Note that when Oban calls `perform/2`, the `args` map given when enqueueing
+the job will have been deserialized from the PostgreSQL `jsonb` data type
+and therefore map keys will have been converted to strings.
+
 Define a worker to process jobs in the `events` queue:
 
 ```elixir
 defmodule MyApp.Business do
-  use Oban.Worker, queue: "events", max_attempts: 10
+  use Oban.Worker, queue: :events, max_attempts: 10
 
   @impl Oban.Worker
-  def perform(%{"id" => id}, _job) do
+  def perform(%{"id" => id} = args, _job) do
     model = MyApp.Repo.get(MyApp.Business.Man, id)
 
-    IO.inspect(model)
+    case args do
+      %{"in_the" => "business"} ->
+        # handle business job
+        IO.inspect(model)
+
+      %{"vote_for" => vote} ->
+        # handle vote job
+        IO.inspect(model)
+
+      _ ->
+        IO.inspect(model)
+    end
   end
 end
 ```
@@ -274,7 +289,7 @@ of time through the `:unique` option. Here we'll configure it to be unique for
 60 seconds:
 
 ```elixir
-use Oban.Worker, queue: "events", max_attempts: 10, unique: [period: 60]
+use Oban.Worker, queue: :events, max_attempts: 10, unique: [period: 60]
 ```
 
 #### Enqueueing Jobs
@@ -284,7 +299,7 @@ database. For convenience and consistency all workers provide a `new/2`
 function that converts an args map into a job changeset suitable for insertion:
 
 ```elixir
-%{in_the: "business", of_doing: "business"}
+%{id: 1, in_the: "business", of_doing: "business"}
 |> MyApp.Business.new()
 |> Oban.insert()
 ```
@@ -292,8 +307,8 @@ function that converts an args map into a job changeset suitable for insertion:
 The worker's defaults may be overridden by passing options:
 
 ```elixir
-%{vote_for: "none of the above"}
-|> MyApp.Business.new(queue: "special", max_attempts: 5)
+%{id: 1, vote_for: "none of the above"}
+|> MyApp.Business.new(queue: :special, max_attempts: 5)
 |> Oban.insert()
 ```
 
@@ -401,7 +416,7 @@ assert_enqueued worker: MyWorker, args: %{id: 1}
 
 # or
 
-refute_enqueued queue: "special", args: %{id: 2}
+refute_enqueued queue: :special, args: %{id: 2}
 
 # or
 
