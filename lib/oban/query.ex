@@ -42,7 +42,7 @@ defmodule Oban.Query do
     end
   end
 
-  @spec fetch_or_insert_job(Config.t(), Multi.t(), atom(), Changeset.t()) :: Multi.t()
+  @spec fetch_or_insert_job(Config.t(), Multi.t(), term(), Changeset.t()) :: Multi.t()
   def fetch_or_insert_job(config, multi, name, changeset) do
     Multi.run(multi, name, fn repo, _changes ->
       fetch_or_insert_job(%{config | repo: repo}, changeset)

@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Added
+
+- [Oban] Add `timezone` support for scheduling cronjobs using timezones other
+  than "Etc/UTC". Using a custom timezone requires a timezone database such as
+  tzdata.
+
+- [Oban] Add `dispatch_cooldown` option to configure the minimum time between
+  a producer fetching more jobs to execute.
+
+### Changed
+
+- [Oban.Queue.Producer] Introduce "dispatch cooldown" as a way to debounce
+  repeatedly fetching new jobs. Repeated fetching floods the producer's message
+  queue and forces the producer to repeatedly fetch one job at a time, which is
+  not especially efficient. Debounced fetching is much more efficient for the
+  producer and the database, increasing maximum jobs/sec throughput so that it
+  scales linearly with a queue's concurrency settings (up to what the database
+  can handle).
+
 ## [0.12.1] — 2019-12-13
 
 ### Fixed

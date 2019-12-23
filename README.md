@@ -216,7 +216,7 @@ and job dispatching altogether when testing:
 
 ```elixir
 # config/test.exs
-config :my_app, Oban, queues: false, prune: :disabled
+config :my_app, Oban, crontab: false, queues: false, prune: :disabled
 ```
 
 Without dispatch and pruning disabled Ecto will raise constant ownership errors
@@ -454,6 +454,18 @@ end
 See `Oban.drain_queue/1` for additional details.
 
 ## Troubleshooting
+
+### Querying the Jobs Table
+
+`Oban.Job` defines an Ecto schema and the jobs table can therefore be queried as usual, e.g.:
+
+```
+MyApp.Repo.all(
+  from j in Oban.Job,
+    where: j.worker == "MyApp.Business",
+    where: j.state == "discarded"
+)
+```
 
 ### Heroku
 
