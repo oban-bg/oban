@@ -36,8 +36,14 @@
   - [Configuring Queues](#Configuring-Queues)
   - [Defining Workers](#Defining-Workers)
   - [Enqueuing Jobs](#Enqueueing-Jobs)
-  - [Pruning](#Pruning)
+  - [Pruning Historic Jobs](#Pruning-Historic-Jobs)
+  - [Unique Jobs](#Unique-Jobs)
+  - [Periodic Jobs](#Periodic-Jobs)
 - [Testing](#Testing)
+- [Error Handling](#Error-Handling)
+- [Instrumentation & Logging](#Instrumentation-and-Logging)
+- [Isolation](#Isolation)
+- [Pulse Tracking](#Pulse-Tracking)
 - [Troubleshooting](#Troubleshooting)
 - [Contributing](#Contributing)
 
@@ -102,8 +108,8 @@ Advanced features and advantages over other RDBMS based tools:
 ## Requirements
 
 Oban has been developed and actively tested with Elixir 1.8+, Erlang/OTP 21.1+
-and PostgreSQL 11.0+. Running Oban currently requires Elixir 1.8+, Erlang 21+, and PostgreSQL
-9.6+.
+and PostgreSQL 11.0+. Running Oban currently requires Elixir 1.8+, Erlang 21+,
+and PostgreSQL 9.6+.
 
 ## UI
 
@@ -174,15 +180,20 @@ start defining jobs!
 
 If you are using releases you may see Postgrex errors logged during your initial
 deploy (or any deploy requiring an Oban migration). The errors are only
-temporary. After the migration has completed each queue will start producing
+temporary! After the migration has completed each queue will start producing
 jobs normally.
 
 ## Usage
 
-Oban isn't an application and won't be started automatically. It is started by a
-supervisor that must be included in your application's supervision tree. All of
-your configuration is passed into the `Oban` supervisor, allowing you to
-configure Oban like the rest of your application.
+<!-- MDOC -->
+
+Oban is a robust job processing library which uses PostgreSQL for storage and
+coordination.
+
+Each Oban instance is a supervision tree and _not an application_. That means it
+won't be started automatically and must be included in your application's
+supervision tree. All of your configuration is passed into the supervisor,
+allowing you to configure Oban like the rest of your application:
 
 ```elixir
 # config/config.exs
@@ -222,7 +233,7 @@ config :my_app, Oban, crontab: false, queues: false, prune: :disabled
 Without dispatch and pruning disabled Ecto will raise constant ownership errors
 and you won't be able to run tests.
 
-#### Configuring Queues
+### Configuring Queues
 
 Queues are specified as a keyword list where the key is the name of the queue
 and the value is the maximum number of concurrent jobs. The following
@@ -233,25 +244,34 @@ queues: [default: 10, mailers: 20, events: 50, media: 5]
 ```
 
 There isn't a limit to the number of queues or how many jobs may execute
-concurrently. Here are a few caveats and guidelines:
+concurrently in each queue. Here are a few caveats and guidelines:
+
+#### Caveats & Guidelines
 
 * Each queue will run as many jobs as possible concurrently, up to the
   configured limit. Make sure your system has enough resources (i.e. database
   connections) to handle the concurrent load.
-* Only jobs in the configured queues will execute. Jobs in any other queue
-  will stay in the database untouched.
+
+* Queue limits are local (per-node), not global (per-cluster). For example,
+  running a queue with a local limit of one on three separate nodes is
+  effectively a global limit of three. If you require a global limit you must
+  restrict the number of nodes running a particular queue.
+
+* Only jobs in the configured queues will execute. Jobs in any other queue will
+  stay in the database untouched.
+
 * Be careful how many concurrent jobs make expensive system calls (i.e. FFMpeg,
-  ImageMagick). The BEAM ensures that the system stays responsive under load,
+  ImageMagick).  The BEAM ensures that the system stays responsive under load,
   but those guarantees don't apply when using ports or shelling out commands.
 
-#### Defining Workers
+### Defining Workers
 
 Worker modules do the work of processing a job. At a minimum they must define a
 `perform/2` function, which is called with an `args` map and the job struct.
 
-Note that when Oban calls `perform/2`, the `args` map given when enqueueing
-the job will have been deserialized from the PostgreSQL `jsonb` data type
-and therefore map keys will have been converted to strings.
+Note that when Oban calls `perform/2`, the `args` map given when enqueueing the
+job will have been deserialized from the PostgreSQL `jsonb` data type and
+therefore map keys are converted to strings.
 
 Define a worker to process jobs in the `events` queue:
 
@@ -279,20 +299,15 @@ defmodule MyApp.Business do
 end
 ```
 
-The value returned from `perform/2` is ignored, unless it returns an `{:error,
-reason}` tuple. With an error return or when perform has an uncaught exception
-or throw then the error will be reported and the job will be retried (provided
-there are attempts remaining).
+The value returned from `perform/2` is ignored, unless it an `{:error, reason}`
+tuple. With an error return or when perform has an uncaught exception or throw
+then the error is reported and the job is retried (provided there are attempts
+remaining).
 
-The `Business` worker can also be configured to prevent duplicates for a period
-of time through the `:unique` option. Here we'll configure it to be unique for
-60 seconds:
+See the `Oban.Worker` docs for more details on failure conditions and
+`Oban.Telemetry` for details on job reporting.
 
-```elixir
-use Oban.Worker, queue: :events, max_attempts: 10, unique: [period: 60]
-```
-
-#### Enqueueing Jobs
+### Enqueueing Jobs
 
 Jobs are simply Ecto structs and are enqueued by inserting them into the
 database. For convenience and consistency all workers provide a `new/2`
@@ -359,45 +374,186 @@ manually:
 Oban's advanced features (i.e., unique jobs). However, you can use your
 application's `Repo.insert/2` function if necessary.
 
-#### Pruning
+See `Oban.Job.new/2` for a full list of job options.
 
-Although Oban keeps all jobs in the database for durability and observability,
-it's not a great thing if the table grows indefinitely. Job pruning helps us by
-deleting old records from the `oban_jobs` tables. It has 3 modes:
+### Pruning Historic Jobs
 
-* Disabled - No jobs are deleted. Example: `:disabled`
-* Limit-based - Keeps the latest N records. Example: `{:maxlen, 100_000}`
-* Time-based - Keeps records for the last N seconds. Example for 7 days: `{:maxage, 60 * 60 * 24 * 7}`
+Job stats and queue introspection is built on keeping job rows in the database
+after they have completed. This allows administrators to review completed jobs
+and build informative aggregates, but at the expense of storage and an unbounded
+table size. To prevent the `oban_jobs` table from growing indefinitely, Oban
+provides active pruning of `completed` jobs.
 
-If you're using a row-limited database service, like Heroku's hobby plan with 10M rows, and you have pruning
-`:disabled`, you could hit that row limit quickly by filling up the `oban_beats` table. Instead of fully
-disabling pruning, consider setting a far-out time-based limit: `{:maxage, 60 * 60 * 24 * 365}` (1 year).
-You will get the benefit of retaining completed & discarded jobs for a year without an unwieldy beats table.
+By default, pruning is disabled. To enable pruning we configure a supervision
+tree with the `:prune` option. There are three distinct modes of pruning:
 
-**Important**: Pruning is only applied to jobs that are completed or discarded
-(has reached the maximum number of retries or has been manually killed). It'll
-never delete a new job, a scheduled job or a job that failed and will be
-retried.
+* `:disabled` - This is the default, where no pruning happens at all
+* `{:maxlen, count}` - Pruning is based on the number of rows in the table, any
+  rows beyond the configured `count` are deleted
+* `{:maxage, seconds}` - Pruning is based on a row's age, any rows older than
+  the configured number of `seconds` are deleted. The age unit is always
+  specified in seconds, but values on the scale of days, weeks or months are
+  perfectly acceptable.
 
-## Testing
+#### Caveats & Guidelines
 
-As noted in the Usage section above there are some guidelines for running tests:
+* Pruning is best-effort and performed out-of-band. This means that all limits
+  are soft; jobs beyond a specified length or age may not be pruned immediately
+  after jobs complete. Prune timing is based on the configured `prune_interval`,
+  which is one minute by default.
 
-* Disable all job dispatching by setting `queues: false` or `queues: nil` in your `test.exs`
-  config. Keyword configuration is deep merged, so setting `queues: []` won't have any effect.
+* If you're using a row-limited database service, like Heroku's hobby plan with
+  10M rows, and you have pruning `:disabled`, you could hit that row limit
+  quickly by filling up the `oban_beats` table. Instead of fully disabling
+  pruning, consider setting a far-out limit: `{:maxage, 60 * 60 * 24 365}` (1
+  year). You will get the benefit of retaining completed and discarded jobs for
+  a year without an unwieldy beats table.
 
-* Disable pruning via `prune: :disabled`. Pruning isn't necessary in testing mode because jobs
-  created within the sandbox are rolled back at the end of the test. Additionally, the periodic
-  pruning queries will raise `DBConnection.OwnershipError` when the application boots.
+* Pruning is only applied to jobs that are completed or discarded (has reached
+  the maximum number of retries or has been manually killed). It'll never delete
+  a new job, a scheduled job or a job that failed and will be retried.
 
-* Be sure to use the Ecto Sandbox for testing. Oban makes use of database pubsub
-  events to dispatch jobs, but pubsub events never fire within a transaction.
-  Since sandbox tests run within a transaction no events will fire and jobs
-  won't be dispatched.
+### Unique Jobs
+
+The unique jobs feature lets you specify constraints to prevent enqueuing
+duplicate jobs.  Uniquness is based on a combination of `args`, `queue`,
+`worker`, `state` and insertion time. It is configured at the worker or job
+level using the following options:
+
+* `:period` — The number of seconds until a job is no longer considered
+  duplicate. You should always specify a period.
+
+* `:fields` — The fields to compare when evaluating uniqueness. The available
+  fields are `:args`, `:queue` and `:worker`, by default all three are used.
+
+* `:states` — The job states that are checked for duplicates. The available
+  states are `:available`, `:scheduled`, `:executing`, `:retryable` and
+  `:completed`. By default all states are checked, which prevents _any_
+  duplicates, even if the previous job has been completed.
+
+For example, configure a worker to be unique across all fields and states for 60
+seconds:
+
+```elixir
+use Oban.Worker, unique: [period: 60]
+```
+
+Configure the worker to be unique only by `:worker` and `:queue`:
+
+```elixir
+use Oban.Worker, unique: [fields: [:queue, :worker], period: 60]
+```
+
+Or, configure a worker to be unique until it has executed:
+
+```elixir
+use Oban.Worker, unique: [period: 300, states: [:available, :scheduled, :executing]]
+```
+
+#### Stronger Guarantees
+
+Oban's unique job support is built on a client side read/write cycle. That makes
+it subject to duplicate writes if two transactions are started simultaneously.
+If you _absolutely must_ ensure that a duplicate job isn't inserted then you
+will have to make use of unique constraints within the database.
+`Oban.insert/2,4` will handle unique constraints safely through upsert support.
+
+#### Performance Note
+
+If your application makes heavy use of unique jobs you may want to add indexes
+on the `args` and `inserted_at` columns of the `oban_jobs` table. The other
+columns considered for uniqueness are already covered by indexes.
+
+### Periodic Jobs
+
+Oban allows jobs to be registered with a cron-like schedule and enqueued
+automatically. Periodic jobs are registered as a list of `{cron, worker}` or
+`{cron, worker, options}` tuples:
+
+```elixir
+config :my_app, Oban, repo: MyApp.Repo, crontab: [
+  {"* * * * *", MyApp.MinuteWorker},
+  {"0 * * * *", MyApp.HourlyWorker, args: %{custom: "arg"}},
+  {"0 0 * * *", MyApp.DailyWorker, max_attempts: 1},
+  {"0 12 * * MON", MyApp.MondayWorker, queue: :scheduled}
+]
+```
+
+These jobs would be executed as follows:
+
+* `MyApp.MinuteWorker` — Executed once every minute
+* `MyApp.HourlyWorker` — Executed at the first minute of every hour with custom args
+* `MyApp.DailyWorker` — Executed at midnight every day with no retries
+* `MyApp.MondayWorker` — Executed at noon every Monday in the "scheduled" queue
+
+The crontab format respects all [standard rules][cron] and has one minute
+resolution. Jobs are considered unique for most of each minute, which prevents
+duplicate jobs with multiple nodes and across node restarts.
+
+#### Cron Expressions
+
+Standard Cron expressions are composed of rules specifying the minutes, hours,
+days, months and weekdays. Rules for each field are comprised of literal values,
+wildcards, step values or ranges:
+
+* `*` — Wildcard, matches any value (0, 1, 2, ...)
+* `0` — Literal, matches only itself (only 0)
+* `*/15` — Step, matches any value that is a multiple (0, 15, 30, 45)
+* `0-5` — Range, matches any value within the range (0, 1, 2, 3, 4, 5)
+
+Each part may have multiple rules, where rules are separated by a comma. The
+allowed values for each field are as follows:
+
+* `minute` — 0-59
+* `hour` — 0-23
+* `days` — 1-31
+* `month` — 1-12 (or aliases, `JAN`, `FEB`, `MAR`, etc.)
+* `weekdays` — 0-6 (or aliases, `SUN`, `MON`, `TUE`, etc.)
+
+Some specific examples that demonstrate the full range of expressions:
+
+* `0 * * * *` — The first minute of every hour
+* `*/15 9-17 * * *` — Every fifteen minutes during standard business hours
+* `0 0 * DEC *` — Once a day at midnight during december
+* `0 7-9,4-6 13 * FRI` — Once an hour during both rush hours on Friday the 13th
+
+For more in depth information see the man documentation for `cron` and `crontab`
+in your system.  Alternatively you can experiment with various expressions
+online at [Crontab Guru][guru].
+
+#### Caveats & Guidelines
+
+* All schedules are evaluated as UTC unless a different timezone is configured.
+  See `Oban.start_link/1` for information about configuring a timezone.
+
+* Workers can be used for regular and scheduled jobs so long as they accept
+  different arguments.
+
+* Duplicate jobs are prevented through transactional locks and unique
+  constraints. Workers that are used for regular and scheduled jobs _must not_
+  specify `unique` options less than `60s`.
+
+* Long running jobs may execute simultaneously if the scheduling interval is
+  shorter than it takes to execute the job. You can prevent overlap by passing
+  custom `unique` opts in the crontab config:
 
   ```elixir
-  config :my_app, MyApp.Repo, pool: Ecto.Adapters.SQL.Sandbox
+  custom_args = %{scheduled: true}
+
+  unique_opts = [
+    period: 60 * 60 * 24,
+    states: [:available, :scheduled, :executing]
+  ]
+
+  config :my_app, Oban, repo: MyApp.Repo, crontab: [
+    {"* * * * *", MyApp.SlowWorker, args: custom_args, unique: unique_opts},
+  ]
   ```
+
+[cron]: https://en.wikipedia.org/wiki/Cron#Overview
+[guru]: https://crontab.guru
+
+## Testing
 
 Oban provides some helpers to facilitate testing. The helpers handle the
 boilerplate of making assertions on which jobs are enqueued. To use the
@@ -424,6 +580,31 @@ assert [%{args: %{"id" => 1}}] = all_enqueued worker: MyWorker
 ```
 
 See the `Oban.Testing` module for more details.
+
+#### Caveats & Guidelines
+
+As noted in [Usage](#Usage), there are some guidelines for running tests:
+
+* Disable all job dispatching by setting `queues: false` or `queues: nil` in
+  your `test.exs` config. Keyword configuration is deep merged, so setting
+  `queues: []` won't have any effect.
+
+* Disable pruning via `prune: :disabled`. Pruning isn't necessary in testing
+  mode because jobs created within the sandbox are rolled back at the end of the
+  test. Additionally, the periodic pruning queries will raise
+  `DBConnection.OwnershipError` when the application boots.
+
+* Disable cron jobs via `crontab: false`. Periodic jobs aren't useful while
+  testing and scheduling can lead to random ownership issues.
+
+* Be sure to use the Ecto Sandbox for testing. Oban makes use of database pubsub
+  events to dispatch jobs, but pubsub events never fire within a transaction.
+  Since sandbox tests run within a transaction no events will fire and jobs
+  won't be dispatched.
+
+  ```elixir
+  config :my_app, MyApp.Repo, pool: Ecto.Adapters.SQL.Sandbox
+  ```
 
 ### Integration Testing
 
@@ -452,6 +633,183 @@ end
 ```
 
 See `Oban.drain_queue/1` for additional details.
+
+## Error Handling
+
+When a job returns an error value, raises an error or exits during execution the
+details are recorded within the `errors` array on the job. When the number of
+execution attempts is below the configured `max_attempts` limit, the job will
+automatically be retried in the future.
+
+The retry delay has an exponential backoff, meaning the job's second attempt
+will be after 16s, third after 31s, fourth after 1m 36s, etc.
+
+See the `Oban.Worker` documentation on "Customizing Backoff" for alternative
+backoff strategies.
+
+### Error Details
+
+Execution errors are stored as a formatted exception along with metadata about
+when the failure ocurred and which attempt caused it. Each error is stored with
+the following keys:
+
+* `at` The utc timestamp when the error occurred at
+* `attempt` The attempt number when the error ocurred
+* `error` A formatted error message and stacktrace
+
+See the [Instrumentation](#Instrumentation-and-Logging) docs for an example of
+integrating with external error reporting systems.
+
+### Limiting Retries
+
+By default jobs are retried up to 20 times. The number of retries is controlled by the
+`max_attempts` value, which can be set at the Worker or Job level. For example, to instruct a
+worker to discard jobs after three failures:
+
+```elixir
+use Oban.Worker, queue: :limited, max_attempts: 3
+```
+
+## Instrumentation and Logging
+
+Oban provides integration with [Telemetry][tele], a dispatching library for
+metrics. It is easy to report Oban metrics to any backend by attaching to
+`:oban` events.
+
+Here is an example of a sample unstructured log handler:
+
+```elixir
+defmodule MyApp.ObanLogger do
+  require Logger
+
+  def handle_event([:oban, event], measure, meta, nil) when do
+    Logger.warn("[Oban #{event}]: #{meta.worker} ran in #{measure.duration}")
+  end
+end
+```
+
+Attach the handler to success and failure events in `application.ex`:
+
+```elixir
+events = [[:oban, :success], [:oban, :failure]]
+
+:telemetry.attach_many("oban-logger", events, &MyApp.ObanLogger.handle_event/4, nil)
+```
+
+The `Oban.Telemetry` module provides a robust structured logger that handles all
+of Oban's telemetry events. As in the example above, attach it within your
+`application.ex` module:
+
+```elixir
+:ok = Oban.Telemetry.attach_default_logger()
+```
+
+For more details on the default structured logger and information on event
+metadata see docs for the `Oban.Telemetry` module.
+
+### Reporting Errors
+
+Another great use of execution data is error reporting. Here is an example of
+integrating with [Honeybadger][honeybadger] to report job failures:
+
+```elixir
+defmodule ErrorReporter do
+  def handle_event([:oban, :failure], measure, meta, nil) do
+    context =
+      meta
+      |> Map.take([:id, :args, :queue, :worker])
+      |> Map.merge(measure)
+
+    Honeybadger.notify(meta.error, context, meta.stack)
+  end
+end
+
+:telemetry.attach("oban-errors", [:oban, :failure], &ErrorReporter.handle_event/4, nil)
+```
+
+[tele]: https://hexdocs.pm/telemetry
+[honeybadger]: https://honeybadger.io
+
+## Isolation
+
+Oban supports namespacing through PostgreSQL schemas, also called "prefixes" in
+Ecto. With prefixes your jobs table can reside outside of your primary schema
+(usually public) and you can have multiple separate job tables.
+
+To use a prefix you first have to specify it within your migration:
+
+```elixir
+defmodule MyApp.Repo.Migrations.AddPrefixedObanJobsTable do
+  use Ecto.Migration
+
+  def up do
+    Oban.Migrations.up(prefix: "private")
+  end
+
+  def down do
+    Oban.Migrations.down(prefix: "private")
+  end
+end
+```
+
+The migration will create the "private" schema and all tables, functions and
+triggers within that schema. With the database migrated you'll then specify the
+prefix in your configuration:
+
+```elixir
+config :my_app, Oban,
+  prefix: "private",
+  repo: MyApp.Repo,
+  queues: [default: 10]
+```
+
+Now all jobs are inserted and executed using the `private.oban_jobs` table. Note
+that `Oban.insert/2,4` will write jobs in the `private.oban_jobs` table, you'll
+need to specify a prefix manually if you insert jobs directly through a repo.
+
+### Supervisor Isolation
+
+Not only is the `oban_jobs` table isolated within the schema, but all
+notification events are also isolated. That means that insert/update events will
+only dispatch new jobs for their prefix. You can run multiple Oban instances
+with different prefixes on the same system and have them entirely isolated,
+provided you give each supervisor a distinct id.
+
+Here we configure our application to start three Oban supervisors using the
+"public", "special" and "private" prefixes, respectively:
+
+```elixir
+def start(_type, _args) do
+  children = [
+    Repo,
+    Endpoint,
+    Supervisor.child_spec({Oban, name: ObanA, repo: Repo}, id: ObanA),
+    Supervisor.child_spec({Oban, name: ObanB, repo: Repo, prefix: "special"}, id: ObanB),
+    Supervisor.child_spec({Oban, name: ObanC, repo: Repo, prefix: "private"}, id: ObanC)
+  ]
+
+  Supervisor.start_link(children, strategy: :one_for_one, name: MyApp.Supervisor)
+end
+```
+
+## Pulse Tracking
+
+Historic introspection is a defining feature of Oban. In addition to retaining
+completed jobs Oban also generates "heartbeat" records every second for each
+running queue.
+
+Heartbeat records are recorded in the `oban_beats` table and pruned to an hour
+of backlog. The recorded information is used for a couple of purposes:
+
+1. To track active jobs. When a job executes it records the node and queue that
+   ran it in the `attempted_by` column. Zombie jobs (jobs that were left
+   executing when a producer crashes or the node is shut down) are found by
+   comparing the `attempted_by` values with recent heartbeat records and
+   resurrected accordingly.
+2. Each heartbeat records information about a node/queue pair such as whether it
+   is paused, what the execution limit is and exactly which jobs are running.
+   These records can power additional logging or metrics (and are the backbone
+   of the Oban UI).
 
 ## Troubleshooting
 
@@ -483,6 +841,8 @@ erlang_version=22.0.3
 ```
 
 Available Erlang versions are available [here](https://github.com/HashNuke/heroku-buildpack-elixir-otp-builds/blob/master/otp-versions).
+
+<!-- MDOC -->
 
 ## Contributing
 
