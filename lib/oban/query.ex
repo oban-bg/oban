@@ -89,7 +89,7 @@ defmodule Oban.Query do
     |> repo.insert(log: verbose, prefix: prefix)
   end
 
-  @spec rescue_orphaned_jobs(Config.t(), binary()) :: {integer(), nil}
+  @spec rescue_orphaned_jobs(Config.t(), binary()) :: {integer(), integer()}
   def rescue_orphaned_jobs(%Config{} = conf, queue) do
     %Config{prefix: prefix, repo: repo, rescue_after: seconds, verbose: verbose} = conf
 
@@ -104,9 +104,21 @@ defmodule Oban.Query do
       |> where([_, b], is_nil(b.node))
       |> select([:id])
 
-    Job
-    |> join(:inner, [j], x in subquery(subquery, prefix: prefix), on: j.id == x.id)
-    |> repo.update_all([set: [state: "available"]], log: verbose, prefix: prefix)
+    requery = join(Job, :inner, [j], x in subquery(subquery, prefix: prefix), on: j.id == x.id)
+
+    # The state can be set using a case statement, but we can't cast to the oban_job_state enum
+    # easily outside of the public schema.
+    {available_count, _} =
+      requery
+      |> where([j], j.attempt < j.max_attempts)
+      |> repo.update_all([set: [state: "available"]], log: verbose, prefix: prefix)
+
+    {discarded_count, _} =
+      requery
+      |> where([j], j.attempt >= j.max_attempts)
+      |> repo.update_all([set: [state: "discarded"]], log: verbose, prefix: prefix)
+
+    {available_count, discarded_count}
   end
 
   # Deleting truncated or outdated jobs needs to use the same index. We force the queries to use

@@ -1,6 +1,8 @@
 defmodule Oban.Integration.RescuingTest do
   use Oban.Case
 
+  import Ecto.Query, only: [select: 2]
+
   alias Oban.{Config, Query}
 
   @moduletag :integration
@@ -44,6 +46,32 @@ defmodule Oban.Integration.RescuingTest do
     :ok = stop_supervised(Oban)
   end
 
+  test "orphaned jobs that have exhausted attempts are transitioned to discarded" do
+    base = %{queue: "alpha", attempt: 1, max_attempts: 1, attempted_by: [@node, "alpha", @nonce]}
+
+    job_1 = insert_job!([ref: 1, action: "OK"], %{base | attempt: 0})
+    job_2 = insert_job!([ref: 2, action: "OK"], %{base | attempt: 1})
+    job_3 = insert_job!([ref: 3, action: "OK"], %{base | attempt: 2})
+
+    start_supervised({Oban, Keyword.put(@oban_opts, :rescue_interval, 10)})
+
+    assert_receive {:ok, 1}
+    refute_receive {:ok, 2}
+    refute_receive {:ok, 3}
+
+    job_states =
+      Job
+      |> select([:id, :state])
+      |> Repo.all()
+      |> Map.new(fn job -> {job.id, job.state} end)
+
+    assert job_states[job_1.id] == "completed"
+    assert job_states[job_2.id] == "discarded"
+    assert job_states[job_3.id] == "discarded"
+
+    :ok = stop_supervised(Oban)
+  end
+
   test "jobs without recent corresponding beats are transitioned" do
     insert_beat!(node: "web.1", nonce: "aaaaaa", queue: "alpha", inserted_at: seconds_ago(10))
     insert_beat!(node: "web.1", nonce: "bbbbbb", queue: "gamma", inserted_at: seconds_ago(30))
@@ -80,6 +108,7 @@ defmodule Oban.Integration.RescuingTest do
   defp insert_job!(args, opts) do
     opts =
       opts
+      |> Keyword.new()
       |> Keyword.put_new(:queue, "alpha")
       |> Keyword.put_new(:state, "executing")
 

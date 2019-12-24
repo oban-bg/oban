@@ -26,6 +26,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   scales linearly with a queue's concurrency settings (up to what the database
   can handle).
 
+- [Oban.Query] Discard jobs that have exhausted the maximum attempts rather than
+  rescuing them. This prevents repeatedly attempting a job that has consistently
+  crashed the BEAM.
+
 ## [0.12.1] — 2019-12-13
 
 ### Fixed
