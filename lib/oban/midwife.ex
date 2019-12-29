@@ -32,7 +32,7 @@ defmodule Oban.Midwife do
   def handle_continue(:start, %State{conf: conf} = state) do
     conf.name
     |> Module.concat("Notifier")
-    |> Notifier.listen()
+    |> Notifier.listen([:signal])
 
     {:noreply, state}
   end

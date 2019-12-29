@@ -37,6 +37,8 @@ defmodule Oban.Notifier do
     update: "oban_update"
   }
 
+  @channels Map.keys(@mappings)
+
   defmodule State do
     @moduledoc false
 
@@ -55,6 +57,8 @@ defmodule Oban.Notifier do
   defmacro signal, do: @mappings[:signal]
   defmacro update, do: @mappings[:update]
 
+  defguardp is_server(server) when is_pid(server) or is_atom(server)
+
   @spec start_link([option]) :: GenServer.on_start()
   def start_link(opts) do
     name = Keyword.get(opts, :name, __MODULE__)
@@ -63,8 +67,8 @@ defmodule Oban.Notifier do
   end
 
   @spec listen(module()) :: :ok
-  def listen(server) when is_pid(server) or is_atom(server) do
-    GenServer.call(server, :listen)
+  def listen(server, channels \\ @channels) when is_server(server) and is_list(channels) do
+    GenServer.call(server, {:listen, channels})
   end
 
   @impl GenServer
@@ -89,7 +93,9 @@ defmodule Oban.Notifier do
 
     decoded = Jason.decode!(payload)
 
-    for {pid, _ref} <- state.listeners, do: send(pid, {:notification, channel, decoded})
+    for {pid, channels} <- state.listeners, channel in channels do
+      send(pid, {:notification, channel, decoded})
+    end
 
     {:noreply, state}
   end
@@ -114,13 +120,18 @@ defmodule Oban.Notifier do
   end
 
   @impl GenServer
-  def handle_call(:listen, {pid, _}, %State{listeners: listeners} = state) do
+  def handle_call({:listen, channels}, {pid, _}, %State{listeners: listeners} = state) do
     if Map.has_key?(listeners, pid) do
       {:reply, :ok, state}
     else
-      ref = Process.monitor(pid)
+      Process.monitor(pid)
 
-      {:reply, :ok, %{state | listeners: Map.put(listeners, pid, ref)}}
+      full_channels =
+        @mappings
+        |> Map.take(channels)
+        |> Map.values()
+
+      {:reply, :ok, %{state | listeners: Map.put(listeners, pid, full_channels)}}
     end
   end
 
