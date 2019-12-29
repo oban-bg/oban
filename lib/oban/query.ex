@@ -33,19 +33,16 @@ defmodule Oban.Query do
   end
 
   @spec fetch_or_insert_job(Config.t(), Changeset.t()) :: {:ok, Job.t()} | {:error, Changeset.t()}
-  def fetch_or_insert_job(%Config{prefix: prefix, repo: repo, verbose: verbose}, changeset) do
-    with {:ok, query} <- unique_query(changeset),
-         {:ok, job} <- unprepared_one(repo, query, log: verbose, prefix: prefix) do
-      {:ok, job}
-    else
-      nil -> repo.insert(changeset, log: verbose, on_conflict: :nothing, prefix: prefix)
-    end
+  def fetch_or_insert_job(%Config{repo: repo, verbose: verbose} = conf, changeset) do
+    fun = fn -> insert_unique(conf, changeset) end
+
+    with {:ok, result} <- repo.transaction(fun, log: verbose), do: result
   end
 
   @spec fetch_or_insert_job(Config.t(), Multi.t(), term(), Changeset.t()) :: Multi.t()
   def fetch_or_insert_job(config, multi, name, changeset) do
     Multi.run(multi, name, fn repo, _changes ->
-      fetch_or_insert_job(%{config | repo: repo}, changeset)
+      insert_unique(%{config | repo: repo}, changeset)
     end)
   end
 
@@ -237,12 +234,29 @@ defmodule Oban.Query do
 
   defp next_attempt_at(backoff), do: DateTime.add(utc_now(), backoff, :second)
 
+  defp insert_unique(%Config{prefix: prefix, repo: repo, verbose: verbose}, changeset) do
+    query_opts = [log: verbose, on_conflict: :nothing, prefix: prefix]
+
+    with {:ok, query, lock_key} <- unique_query(changeset),
+         :ok <- aquire_lock(repo, lock_key, query_opts),
+         {:ok, job} <- unprepared_one(repo, query, query_opts) do
+      {:ok, job}
+    else
+      {:error, :locked} ->
+        {:ok, Changeset.apply_changes(changeset)}
+
+      nil ->
+        repo.insert(changeset, query_opts)
+    end
+  end
+
   defp unique_query(%{changes: %{unique: %{} = unique}} = changeset) do
     %{fields: fields, period: period, states: states} = unique
 
     since = DateTime.add(utc_now(), period * -1, :second)
     fields = for field <- fields, do: {field, Changeset.get_field(changeset, field)}
     states = for state <- states, do: to_string(state)
+    lock_key = :erlang.phash2([fields, states])
 
     query =
       Job
@@ -252,10 +266,20 @@ defmodule Oban.Query do
       |> order_by(desc: :id)
       |> limit(1)
 
-    {:ok, query}
+    {:ok, query, lock_key}
   end
 
   defp unique_query(_changeset), do: nil
+
+  defp aquire_lock(repo, lock_key, opts) do
+    case repo.query("SELECT pg_try_advisory_xact_lock($1)", [lock_key], opts) do
+      {:ok, %{rows: [[true]]}} ->
+        :ok
+
+      _ ->
+        {:error, :locked}
+    end
+  end
 
   # With certain unique option combinations Postgres will decide to use a `generic plan` instead
   # of a `custom plan`, which *drastically* impacts the unique query performance. Ecto doesn't

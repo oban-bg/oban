@@ -30,6 +30,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   rescuing them. This prevents repeatedly attempting a job that has consistently
   crashed the BEAM.
 
+- [Oban.Query] Use transactional locks to prevent duplicate inserts without
+  relying on unique constraints in the database. This provides strong unique
+  guarantees without requiring migrations.
+
 ## [0.12.1] — 2019-12-13
 
 ### Fixed

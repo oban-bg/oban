@@ -23,8 +23,17 @@ defmodule Oban.Integration.UniquenessTest do
   end
 
   property "preventing the same job from being enqueued multiple times" do
-    check all args <- arg_map(), max_runs: 20 do
-      assert insert_job!(args).id == insert_job!(args).id
+    check all args <- arg_map(), runs <- integer(1..3), max_runs: 20 do
+      fun = fn -> insert_job!(args) end
+
+      ids =
+        1..runs
+        |> Enum.map(fn _ -> Task.async(fun) end)
+        |> Enum.map(&Task.await/1)
+        |> Enum.map(fn %Job{id: id} -> id end)
+        |> Enum.reject(&is_nil/1)
+
+      assert 1 == length(ids)
     end
   end
 

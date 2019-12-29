@@ -450,19 +450,18 @@ Or, configure a worker to be unique until it has executed:
 use Oban.Worker, unique: [period: 300, states: [:available, :scheduled, :executing]]
 ```
 
-#### Stronger Guarantees
+#### Strong Guarantees
 
-Oban's unique job support is built on a client side read/write cycle. That makes
-it subject to duplicate writes if two transactions are started simultaneously.
-If you _absolutely must_ ensure that a duplicate job isn't inserted then you
-will have to make use of unique constraints within the database.
-`Oban.insert/2,4` will handle unique constraints safely through upsert support.
+Unique jobs are guaranteed through transactional locks and database queries:
+they _do not_ rely on unique constraints in the database. This makes uniquness
+entirely configurable by application code, without the need for database
+migrations.
 
 #### Performance Note
 
-If your application makes heavy use of unique jobs you may want to add indexes
-on the `args` and `inserted_at` columns of the `oban_jobs` table. The other
-columns considered for uniqueness are already covered by indexes.
+If your application makes heavy use of unique jobs you may want to add an index
+on the `args` column of the `oban_jobs` table. The other columns considered for
+uniqueness are already covered by indexes.
 
 ### Periodic Jobs
 
