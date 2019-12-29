@@ -27,14 +27,13 @@ defmodule Oban.Notifier do
   alias Postgrex.Notifications
 
   @type option :: {:name, module()} | {:conf, Config.t()}
-  @type channel :: :gossip | :insert | :signal | :update
+  @type channel :: :gossip | :insert | :signal
   @type queue :: atom()
 
   @mappings %{
     gossip: "oban_gossip",
     insert: "oban_insert",
-    signal: "oban_signal",
-    update: "oban_update"
+    signal: "oban_signal"
   }
 
   @channels Map.keys(@mappings)
@@ -55,7 +54,6 @@ defmodule Oban.Notifier do
   defmacro gossip, do: @mappings[:gossip]
   defmacro insert, do: @mappings[:insert]
   defmacro signal, do: @mappings[:signal]
-  defmacro update, do: @mappings[:update]
 
   defguardp is_server(server) when is_pid(server) or is_atom(server)
 
@@ -141,7 +139,6 @@ defmodule Oban.Notifier do
         Notifications.listen(conn, "#{conf.prefix}.#{gossip()}")
         Notifications.listen(conn, "#{conf.prefix}.#{insert()}")
         Notifications.listen(conn, "#{conf.prefix}.#{signal()}")
-        Notifications.listen(conn, "#{conf.prefix}.#{update()}")
 
         %{state | conn: conn}
 

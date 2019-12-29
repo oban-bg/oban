@@ -10,8 +10,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 **Migration Required (V8)**
 
 This is the first required migration since 0.8.0, released in 09/2019. It brings
-with it a new column, `discarded_at`, and hopefully some other improvements as
-well while we're forcing a migration.
+with it a new column, `discarded_at` and a streamlined notifications trigger.
 
 ### Added
 
@@ -45,6 +44,12 @@ well while we're forcing a migration.
 - [Oban.Query] Use transactional locks to prevent duplicate inserts without
   relying on unique constraints in the database. This provides strong unique
   guarantees without requiring migrations.
+
+### Removed
+
+- [Oban.Notifications] An overhauled and simplified insert trigger no longer
+  emits `update` notifications. This was largely an internal implementation
+  detail and wasn't publicly documented, but it does effect the UI.
 
 ## [0.12.1] — 2019-12-13
 
