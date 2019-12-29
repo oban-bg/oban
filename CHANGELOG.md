@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+**Migration Required (V8)**
+
+This is the first required migration since 0.8.0, released in 09/2019. It brings
+with it a new column, `discarded_at`, and hopefully some other improvements as
+well while we're forcing a migration.
+
 ### Added
 
 - [Oban] Add `timezone` support for scheduling cronjobs using timezones other
@@ -15,6 +21,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 - [Oban] Add `dispatch_cooldown` option to configure the minimum time between
   a producer fetching more jobs to execute.
+
+- [Oban.Job] Add `discarded_at` timestamp to help identify jobs that were
+  discarded and not completed. The timestamp is added by the V8 migration and it
+  is also included in the original `create table` from V1 as a minor space
+  saving optimization (packing datetime columns together because they use a
+  predictable 4bytes of space).
 
 ### Changed
 

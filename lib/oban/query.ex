@@ -103,17 +103,19 @@ defmodule Oban.Query do
 
     requery = join(Job, :inner, [j], x in subquery(subquery, prefix: prefix), on: j.id == x.id)
 
-    # The state can be set using a case statement, but we can't cast to the oban_job_state enum
-    # easily outside of the public schema.
+    query_opts = [log: verbose, prefix: prefix]
+
+    # This is done using two queries rather than a single update with a case statement because we
+    # can't cast to the `oban_job_state` enum easily outside of the public schema.
     {available_count, _} =
       requery
       |> where([j], j.attempt < j.max_attempts)
-      |> repo.update_all([set: [state: "available"]], log: verbose, prefix: prefix)
+      |> repo.update_all([set: [state: "available"]], query_opts)
 
     {discarded_count, _} =
       requery
       |> where([j], j.attempt >= j.max_attempts)
-      |> repo.update_all([set: [state: "discarded"]], log: verbose, prefix: prefix)
+      |> repo.update_all([set: [state: "discarded", discarded_at: utc_now()]], query_opts)
 
     {available_count, discarded_count}
   end
@@ -185,7 +187,7 @@ defmodule Oban.Query do
   def discard_job(%Config{prefix: prefix, repo: repo, verbose: verbose}, %Job{id: id}) do
     repo.update_all(
       where(Job, id: ^id),
-      [set: [state: "discarded", completed_at: utc_now()]],
+      [set: [state: "discarded", discarded_at: utc_now()]],
       log: verbose,
       prefix: prefix
     )

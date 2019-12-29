@@ -1,8 +1,6 @@
 defmodule Oban.Integration.RescuingTest do
   use Oban.Case
 
-  import Ecto.Query, only: [select: 2]
-
   alias Oban.{Config, Query}
 
   @moduletag :integration
@@ -59,15 +57,9 @@ defmodule Oban.Integration.RescuingTest do
     refute_receive {:ok, 2}
     refute_receive {:ok, 3}
 
-    job_states =
-      Job
-      |> select([:id, :state])
-      |> Repo.all()
-      |> Map.new(fn job -> {job.id, job.state} end)
-
-    assert job_states[job_1.id] == "completed"
-    assert job_states[job_2.id] == "discarded"
-    assert job_states[job_3.id] == "discarded"
+    assert %Job{state: "completed", discarded_at: nil} = Repo.reload(job_1)
+    assert %Job{state: "discarded", discarded_at: %DateTime{}} = Repo.reload(job_2)
+    assert %Job{state: "discarded", discarded_at: %DateTime{}} = Repo.reload(job_3)
 
     :ok = stop_supervised(Oban)
   end

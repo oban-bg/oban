@@ -4,7 +4,7 @@ defmodule Oban.Migrations do
   use Ecto.Migration
 
   @initial_version 1
-  @current_version 7
+  @current_version 8
   @default_prefix "public"
 
   def up(opts \\ []) when is_list(opts) do
@@ -107,6 +107,7 @@ defmodule Oban.Migrations do
         add :scheduled_at, :utc_datetime_usec, null: false, default: now()
         add :attempted_at, :utc_datetime_usec
         add :completed_at, :utc_datetime_usec
+        add :discarded_at, :utc_datetime_usec
       end
 
       create_if_not_exists index(:oban_jobs, [:queue], prefix: prefix)
@@ -221,7 +222,7 @@ defmodule Oban.Migrations do
 
     def up(prefix) do
       alter table(:oban_jobs, prefix: prefix) do
-        add :attempted_by, {:array, :text}
+        add_if_not_exists :attempted_by, {:array, :text}
       end
 
       create_if_not_exists table(:oban_beats, primary_key: false, prefix: prefix) do
@@ -243,7 +244,7 @@ defmodule Oban.Migrations do
 
     def down(prefix) do
       alter table(:oban_jobs, prefix: prefix) do
-        remove :attempted_by
+        remove_if_exists :attempted_by, {:array, :text}
       end
 
       drop_if_exists table(:oban_beats, prefix: prefix)
@@ -357,6 +358,30 @@ defmodule Oban.Migrations do
       drop_if_exists index(:oban_jobs, [:attempted_at, :id], prefix: prefix)
 
       record_version(prefix, 6)
+    end
+  end
+
+  defmodule V8 do
+    @moduledoc false
+
+    use Ecto.Migration
+
+    import Oban.Migrations.Helper
+
+    def up(prefix) do
+      alter table(:oban_jobs, prefix: prefix) do
+        add_if_not_exists :discarded_at, :utc_datetime_usec
+      end
+
+      record_version(prefix, 8)
+    end
+
+    def down(prefix) do
+      alter table(:oban_jobs, prefix: prefix) do
+        remove_if_exists :discarded_at, :utc_datetime_usec
+      end
+
+      record_version(prefix, 7)
     end
   end
 end

@@ -89,15 +89,15 @@ defmodule Oban.Integration.ControllingTest do
   test "killing an executing job by its id" do
     start_supervised!({Oban, @oban_opts})
 
-    %Job{id: job_id} = insert_job!(ref: 1, sleep: 100)
+    job = insert_job!(ref: 1, sleep: 100)
 
     assert_receive {:started, 1}
 
-    Oban.kill_job(job_id)
+    Oban.kill_job(job.id)
 
     refute_receive {:ok, 1}, 200
 
-    assert Repo.get(Job, job_id).state == "discarded"
+    assert %Job{state: "discarded", discarded_at: %DateTime{}} = Repo.reload(job)
 
     :ok = stop_supervised(Oban)
   end
