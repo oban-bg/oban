@@ -255,7 +255,7 @@ defmodule Oban.Migrations do
 
     def up(prefix) do
       alter table(:oban_jobs, prefix: prefix) do
-        add_if_not_exists :attempted_by, {:array, :text}
+        add_if_not_exists(:attempted_by, {:array, :text})
       end
 
       create_if_not_exists table(:oban_beats, primary_key: false, prefix: prefix) do
@@ -277,7 +277,7 @@ defmodule Oban.Migrations do
 
     def down(prefix) do
       alter table(:oban_jobs, prefix: prefix) do
-        remove_if_exists :attempted_by, {:array, :text}
+        remove_if_exists(:attempted_by, {:array, :text})
       end
 
       drop_if_exists table(:oban_beats, prefix: prefix)
@@ -403,7 +403,7 @@ defmodule Oban.Migrations do
 
     def up(prefix) do
       alter table(:oban_jobs, prefix: prefix) do
-        add_if_not_exists :discarded_at, :utc_datetime_usec
+        add_if_not_exists(:discarded_at, :utc_datetime_usec)
       end
 
       v2_oban_notify(prefix)
@@ -413,7 +413,7 @@ defmodule Oban.Migrations do
 
     def down(prefix) do
       alter table(:oban_jobs, prefix: prefix) do
-        remove_if_exists :discarded_at, :utc_datetime_usec
+        remove_if_exists(:discarded_at, :utc_datetime_usec)
       end
 
       v1_oban_notify(prefix)
