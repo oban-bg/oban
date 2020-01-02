@@ -48,7 +48,8 @@ defmodule Oban.JobTest do
   end
 
   describe "to_map/1" do
-    @keys_with_defaults ~w(args attempt errors max_attempts queue state)a
+    @keys_with_defaults ~w(args attempt errors max_attempts priority queue state)a
+
     defp to_keys(opts) do
       %{}
       |> Job.new(opts)

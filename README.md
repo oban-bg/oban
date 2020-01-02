@@ -39,6 +39,7 @@
   - [Pruning Historic Jobs](#Pruning-Historic-Jobs)
   - [Unique Jobs](#Unique-Jobs)
   - [Periodic Jobs](#Periodic-Jobs)
+  - [Prioritizing Jobs](#Prioritizing-Jobs)
 - [Testing](#Testing)
 - [Error Handling](#Error-Handling)
 - [Instrumentation & Logging](#Instrumentation-and-Logging)
@@ -77,7 +78,7 @@ Advanced features and advantages over other RDBMS based tools:
 - **Job Killing** — Jobs can be killed in the middle of execution regardless of
   which node they are running on. This stops the job at once and flags it as
   `discarded`.
-- **Triggered execution** — Database triggers ensure that jobs are dispatched as
+- **Triggered Execution** — Database triggers ensure that jobs are dispatched as
   soon as they are inserted into the database.
 - **Unique Jobs** — Duplicate work can be avoided through unique job controls.
   Uniqueness can be enforced at the argument, queue and worker level for any
@@ -86,6 +87,7 @@ Advanced features and advantages over other RDBMS based tools:
   the second.
 - **Periodic (CRON) Jobs** — Automatically enqueue jobs on a cron-like schedule.
   Duplicate jobs are never enqueued, no matter how many nodes you're running.
+- **Job Priority** — Prioritize jobs within a queue to run ahead of others.
 - **Job Safety** — When a process crashes or the BEAM is terminated executing
   jobs aren't lost—they are quickly recovered by other running nodes or
   immediately when the node is restarted.
@@ -261,7 +263,7 @@ concurrently in each queue. Here are a few caveats and guidelines:
   stay in the database untouched.
 
 * Be careful how many concurrent jobs make expensive system calls (i.e. FFMpeg,
-  ImageMagick).  The BEAM ensures that the system stays responsive under load,
+  ImageMagick). The BEAM ensures that the system stays responsive under load,
   but those guarantees don't apply when using ports or shelling out commands.
 
 ### Defining Workers
@@ -270,14 +272,14 @@ Worker modules do the work of processing a job. At a minimum they must define a
 `perform/2` function, which is called with an `args` map and the job struct.
 
 Note that when Oban calls `perform/2`, the `args` map given when enqueueing the
-job will have been deserialized from the PostgreSQL `jsonb` data type and
-therefore map keys are converted to strings.
+job is deserialized from the PostgreSQL `jsonb` data type and therefore map keys
+are converted to strings.
 
 Define a worker to process jobs in the `events` queue:
 
 ```elixir
 defmodule MyApp.Business do
-  use Oban.Worker, queue: :events, max_attempts: 10
+  use Oban.Worker, queue: :events
 
   @impl Oban.Worker
   def perform(%{"id" => id} = args, _job) do
@@ -295,6 +297,20 @@ defmodule MyApp.Business do
       _ ->
         IO.inspect(model)
     end
+  end
+end
+```
+
+The `use` macro also accepts options to customize max attempts, priority, and
+uniqueness:
+
+```elixir
+defmodule MyApp.LazyBusiness do
+  use Oban.Worker, queue: :events, priority: 3, max_attempts: 3, unique: [period: 30]
+
+  @impl Oban.Worker
+  def perform(_args, _job) do
+    # do business slowly
   end
 end
 ```
@@ -351,6 +367,15 @@ Unique jobs can be configured in the worker, or when the job is built:
 |> Oban.insert()
 ```
 
+Job priority can be specified using an integer from 0 to 3, with 0 being the
+default and highest priority:
+
+```elixir
+%{id: 1}
+|> MyApp.Backfiller.new(priority: 2)
+|> Oban.insert()
+```
+
 Multiple jobs can be inserted in a single transaction:
 
 ```elixir
@@ -388,8 +413,10 @@ By default, pruning is disabled. To enable pruning we configure a supervision
 tree with the `:prune` option. There are three distinct modes of pruning:
 
 * `:disabled` - This is the default, where no pruning happens at all
+
 * `{:maxlen, count}` - Pruning is based on the number of rows in the table, any
   rows beyond the configured `count` are deleted
+
 * `{:maxage, seconds}` - Pruning is based on a row's age, any rows older than
   the configured number of `seconds` are deleted. The age unit is always
   specified in seconds, but values on the scale of days, weeks or months are
@@ -551,6 +578,22 @@ online at [Crontab Guru][guru].
 
 [cron]: https://en.wikipedia.org/wiki/Cron#Overview
 [guru]: https://crontab.guru
+
+### Prioritizing Jobs
+
+Normally, all available jobs within a queue are executed in the order they were
+scheduled. You can override the normal behavior and prioritize or de-prioritize
+a job by assigning a numerical `priority`.
+
+* Priorities from 0-3 are allowed, where 0 is the highest priority and 3 is the
+  lowest.
+
+* The default priority is 0, unless specified all jobs have an equally high
+  priority.
+
+* All jobs with a higher priority will execute before any jobs with a lower
+  priority. Within a particular priority jobs are executed in their scheduled
+  order.
 
 ## Testing
 

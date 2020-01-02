@@ -167,6 +167,7 @@ defmodule Oban.Migrations do
         add :errors, {:array, :map}, null: false, default: []
         add :attempt, :integer, null: false, default: 0
         add :max_attempts, :integer, null: false, default: 20
+        add :priority, :integer, null: false, default: 0
 
         add :inserted_at, :utc_datetime_usec, null: false, default: now()
         add :scheduled_at, :utc_datetime_usec, null: false, default: now()
@@ -404,7 +405,15 @@ defmodule Oban.Migrations do
     def up(prefix) do
       alter table(:oban_jobs, prefix: prefix) do
         add_if_not_exists(:discarded_at, :utc_datetime_usec)
+        add_if_not_exists(:priority, :integer)
+        modify :priority, :integer, default: 0
       end
+
+      drop_if_exists index(:oban_jobs, [:queue, :state, :scheduled_at, :id], prefix: prefix)
+
+      create_if_not_exists index(:oban_jobs, [:queue, :state, :priority, :scheduled_at, :id],
+                             prefix: prefix
+                           )
 
       v2_oban_notify(prefix)
 
@@ -412,8 +421,15 @@ defmodule Oban.Migrations do
     end
 
     def down(prefix) do
+      drop_if_exists index(:oban_jobs, [:queue, :state, :priority, :scheduled_at, :id],
+                       prefix: prefix
+                     )
+
+      create_if_not_exists index(:oban_jobs, [:queue, :state, :scheduled_at, :id], prefix: prefix)
+
       alter table(:oban_jobs, prefix: prefix) do
         remove_if_exists(:discarded_at, :utc_datetime_usec)
+        remove_if_exists(:priority, :integer)
       end
 
       v1_oban_notify(prefix)
