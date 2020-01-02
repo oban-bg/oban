@@ -240,7 +240,7 @@ defmodule Oban.Query do
     query_opts = [log: verbose, on_conflict: :nothing, prefix: prefix]
 
     with {:ok, query, lock_key} <- unique_query(changeset),
-         :ok <- aquire_lock(repo, lock_key, query_opts),
+         :ok <- acquire_lock(repo, lock_key, query_opts),
          {:ok, job} <- unprepared_one(repo, query, query_opts) do
       {:ok, job}
     else
@@ -273,7 +273,7 @@ defmodule Oban.Query do
 
   defp unique_query(_changeset), do: nil
 
-  defp aquire_lock(repo, lock_key, opts) do
+  defp acquire_lock(repo, lock_key, opts) do
     case repo.query("SELECT pg_try_advisory_xact_lock($1)", [lock_key], opts) do
       {:ok, %{rows: [[true]]}} ->
         :ok
