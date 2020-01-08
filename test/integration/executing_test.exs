@@ -41,16 +41,15 @@ defmodule Oban.Integration.ExecutingTest do
     gen all queue <- member_of(~w(alpha beta gamma delta)),
             action <- member_of(~w(OK FAIL ERROR EXIT)),
             ref <- integer(),
-            max_attempts <- integer(1..20) do
+            max_attempts <- integer(1..20),
+            priority <- integer(0..3) do
       args = %{ref: ref, action: action}
-      opts = [queue: queue, max_attempts: max_attempts]
+      opts = [queue: queue, max_attempts: max_attempts, priority: priority]
 
       Worker.new(args, opts)
     end
   end
 
-  # The `maximum_attempts` option is set to 1 to prevent retries. This ensures that the state for
-  # failed jobs will be `discarded`.
   defp action_to_state("OK", _max), do: "completed"
   defp action_to_state(_state, 1), do: "discarded"
   defp action_to_state(_state, max) when max > 1, do: "retryable"

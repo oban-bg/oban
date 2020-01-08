@@ -14,12 +14,12 @@ defmodule Oban.Query do
 
     subquery =
       Job
+      |> select([:id])
       |> where([j], j.state == "available")
       |> where([j], j.queue == ^queue)
-      |> lock("FOR UPDATE SKIP LOCKED")
+      |> order_by([j], asc: j.priority, asc: j.scheduled_at, asc: j.id)
       |> limit(^demand)
-      |> order_by([j], asc: j.scheduled_at, asc: j.id)
-      |> select([:id])
+      |> lock("FOR UPDATE SKIP LOCKED")
 
     updates = [
       set: [state: "executing", attempted_at: utc_now(), attempted_by: [node, queue, nonce]],

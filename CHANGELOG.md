@@ -10,7 +10,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 **Migration Required (V8)**
 
 This is the first required migration since 0.8.0, released in 09/2019. It brings
-with it a new column, `discarded_at` and a streamlined notifications trigger.
+with it a new column, `discarded_at`, a streamlined notifications trigger, and
+job prioritiy.
 
 ### Added
 
@@ -26,6 +27,10 @@ with it a new column, `discarded_at` and a streamlined notifications trigger.
   is also included in the original `create table` from V1 as a minor space
   saving optimization (packing datetime columns together because they use a
   predictable 4bytes of space).
+
+- [Oban.Job] Add numerical `priority` value to control the order of execution
+  for jobs within a queue. The `priority` can be set between 0 and 3, with 0
+  being the default and the highest priority.
 
 ### Changed
 

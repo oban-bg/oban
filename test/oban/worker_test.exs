@@ -18,6 +18,7 @@ defmodule Oban.WorkerTest do
     use Worker,
       queue: "special",
       max_attempts: @max_attempts,
+      priority: 1,
       unique: [fields: [:queue, :worker], period: 60, states: [:scheduled]]
 
     @impl Worker
@@ -105,7 +106,7 @@ defmodule Oban.WorkerTest do
 
     assert_raise ArgumentError, fn ->
       defmodule BrokenModuleD do
-        use Oban.Worker, unique: 0
+        use Oban.Worker, priority: 11
 
         def perform(_, _), do: :ok
       end
@@ -113,7 +114,7 @@ defmodule Oban.WorkerTest do
 
     assert_raise ArgumentError, fn ->
       defmodule BrokenModuleE do
-        use Oban.Worker, unique: [unknown: []]
+        use Oban.Worker, unique: 0
 
         def perform(_, _), do: :ok
       end
@@ -121,7 +122,7 @@ defmodule Oban.WorkerTest do
 
     assert_raise ArgumentError, fn ->
       defmodule BrokenModuleF do
-        use Oban.Worker, unique: [fields: [:unknown]]
+        use Oban.Worker, unique: [unknown: []]
 
         def perform(_, _), do: :ok
       end
@@ -129,7 +130,7 @@ defmodule Oban.WorkerTest do
 
     assert_raise ArgumentError, fn ->
       defmodule BrokenModuleG do
-        use Oban.Worker, unique: [period: 0]
+        use Oban.Worker, unique: [fields: [:unknown]]
 
         def perform(_, _), do: :ok
       end
@@ -137,6 +138,14 @@ defmodule Oban.WorkerTest do
 
     assert_raise ArgumentError, fn ->
       defmodule BrokenModuleH do
+        use Oban.Worker, unique: [period: 0]
+
+        def perform(_, _), do: :ok
+      end
+    end
+
+    assert_raise ArgumentError, fn ->
+      defmodule BrokenModuleI do
         use Oban.Worker, unique: [states: [:unknown]]
 
         def perform(_, _), do: :ok
