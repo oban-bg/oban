@@ -113,7 +113,7 @@ and PostgreSQL 9.6+.
 
 ## UI
 
-A web-based user interface for monitoring and managing Oban is availabe as a
+A web-based user interface for monitoring and managing Oban is available as a
 private beta. Learn more about it and register for the beta at
 [oban.dev](https://oban.dev).
 
