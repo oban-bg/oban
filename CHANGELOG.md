@@ -32,6 +32,13 @@ job prioritiy.
   for jobs within a queue. The `priority` can be set between 0 and 3, with 0
   being the default and the highest priority.
 
+- [Oban.Worker] Verify at compile time that the first argument to `perform/2` is
+  unbound, an empty map, or a map with string keys. This aims to prevent matches
+  that can never succeed, for example when using atoms as keys.
+
+  Note that only the initial `args` value is checked. Any matches inside the
+  body of `perform/2` are ignored.
+
 ### Changed
 
 - [Oban.Queue.Producer] Introduce "dispatch cooldown" as a way to debounce

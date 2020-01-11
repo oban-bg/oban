@@ -77,6 +77,41 @@ defmodule Oban.WorkerTest do
       assert 5 == CustomWorker.perform(args, %Job{args: args})
       assert 4 == CustomWorker.perform(args, %Job{attempt: 4, args: args})
     end
+
+    test "validating that the first argument is a map with string keys" do
+      assert_raise ArgumentError, fn ->
+        defmodule AtomKeys do
+          use Oban.Worker
+
+          def perform(%{a: 1}, _), do: :ok
+        end
+      end
+
+      assert_raise ArgumentError, fn ->
+        defmodule MixedKeys do
+          use Oban.Worker
+
+          def perform(%{"a" => 1}, _), do: :ok
+          def perform(%{b: 2}, _), do: :ok
+        end
+      end
+
+      assert_raise ArgumentError, fn ->
+        defmodule WrongType do
+          use Oban.Worker
+
+          def perform([a: 1, b: 2], _), do: :ok
+        end
+      end
+
+      assert_raise ArgumentError, fn ->
+        defmodule NestedMaps do
+          use Oban.Worker
+
+          def perform(%{"a" => %{b: 2}}, _), do: :ok
+        end
+      end
+    end
   end
 
   test "validating __using__ macro options" do

@@ -137,9 +137,8 @@ defmodule Oban.Worker do
   @doc """
   The `perform/2` function is called when the job is executed.
 
-  Note that when Oban calls `perform/2`, the `args` map given when enqueueing the job will have
-  been deserialized from the PostgreSQL `jsonb` data type and therefore map keys will have been
-  converted to strings.
+  Note that when Oban calls `perform/2`, the `args` map given when enqueueing the job is
+  deserialized from `jsonb` data and therefore map keys are converted to strings.
 
   The value returned from `perform/2` is ignored, unless it returns an `{:error, reason}` tuple.
   With an error return or when perform has an uncaught exception or throw then the error will be
@@ -152,6 +151,7 @@ defmodule Oban.Worker do
     quote location: :keep do
       alias Oban.{Job, Worker}
 
+      @on_definition Worker
       @after_compile Worker
       @behaviour Worker
 
@@ -178,6 +178,23 @@ defmodule Oban.Worker do
   defmacro __after_compile__(%{module: module}, _) do
     Enum.each(module.__opts__(), &validate_opt!/1)
   end
+
+  @doc false
+  def __on_definition__(_env, :def, :perform, [args, _job], _guard, _body) do
+    args_valid? =
+      case args do
+        {:%{}, _line, list} when is_list(list) -> string_keys?(list)
+        {name, _line, nil} when is_atom(name) -> true
+        _ -> false
+      end
+
+    unless args_valid? do
+      raise ArgumentError,
+            "invalid first argument in perform/2, only a map with string keys is allowed"
+    end
+  end
+
+  def __on_definition__(_env, _kind, _name, _args, _guard, _body), do: :ok
 
   @doc false
   def resolve_opts(:unique, [_ | _] = opts_1, [_ | _] = opts_2) do
@@ -226,5 +243,15 @@ defmodule Oban.Worker do
 
   defp validate_opt!(option) do
     raise ArgumentError, "unknown option provided #{inspect(option)}"
+  end
+
+  defp string_keys?([]), do: true
+
+  defp string_keys?([{key, {:%{}, _, list}} | tail]) do
+    is_binary(key) and string_keys?(list) and string_keys?(tail)
+  end
+
+  defp string_keys?([{key, _val} | tail]) do
+    is_binary(key) and string_keys?(tail)
   end
 end
