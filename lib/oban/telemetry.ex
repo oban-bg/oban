@@ -13,8 +13,8 @@ defmodule Oban.Telemetry do
 
   | event      | measures    | metadata                                                                     |
   | ---------- | ----------- | ---------------------------------------------------------------------------- |
-  | `:success` | `:duration` | `:id, :args, :queue, :worker, :attempt, :max_attempt`                        |
-  | `:failure` | `:duration` | `:id, :args, :queue, :worker, :attempt, :max_attempt, :kind, :error, :stack` |
+  | `:success` | `:duration` | `:id, :args, :queue, :worker, :attempt, :max_attempts`                        |
+  | `:failure` | `:duration` | `:id, :args, :queue, :worker, :attempt, :max_attempts, :kind, :error, :stack` |
 
   For `:failure` events the metadata includes details about what caused the failure. The `:kind`
   value is determined by how an error occurred. Here are the possible kinds:
