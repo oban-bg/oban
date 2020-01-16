@@ -19,7 +19,8 @@ defmodule Oban do
   alias Oban.Queue.Supervisor, as: QueueSupervisor
 
   @type option ::
-          {:circuit_backoff, timeout()}
+          {:beats_maxage, pos_integer()}
+          | {:circuit_backoff, timeout()}
           | {:crontab, [Config.cronjob()]}
           | {:dispatch_cooldown, pos_integer()}
           | {:name, module()}
@@ -93,6 +94,9 @@ defmodule Oban do
   Additional options used to tune system behaviour. These are primarily useful for testing or
   troubleshooting and don't usually need modification.
 
+  * `:beats_maxage` — the number of seconds that heartbeat rows in the `oban_beats` table should
+    be retained. The value must be greater than `60` (the value of `rescue_after`). Defaults to
+    `300s`, or five minutes.
   * `:circuit_backoff` — the number of milliseconds until queries are attempted after a database
     error. All processes communicating with the database are equipped with circuit breakers and
     will use this for the backoff. Defaults to `30_000ms`.

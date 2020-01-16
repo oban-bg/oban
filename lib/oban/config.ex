@@ -10,6 +10,7 @@ defmodule Oban.Config do
   @type prune :: :disabled | {:maxlen, pos_integer()} | {:maxage, pos_integer()}
 
   @type t :: %__MODULE__{
+          beats_maxage: pos_integer(),
           circuit_backoff: timeout(),
           crontab: [cronjob()],
           dispatch_cooldown: pos_integer(),
@@ -32,7 +33,8 @@ defmodule Oban.Config do
   @type option :: {:name, module()} | {:conf, t()}
 
   @enforce_keys [:node, :repo]
-  defstruct circuit_backoff: :timer.seconds(30),
+  defstruct beats_maxage: 60 * 5,
+            circuit_backoff: :timer.seconds(30),
             crontab: [],
             dispatch_cooldown: 5,
             name: Oban,
@@ -88,6 +90,12 @@ defmodule Oban.Config do
         :inet.gethostname()
         |> elem(1)
         |> to_string()
+    end
+  end
+
+  defp validate_opt!({:beats_maxage, maxage}) do
+    unless is_integer(maxage) and maxage > 60 do
+      raise ArgumentError, "expected :beats_maxage to be an integer greater than 60"
     end
   end
 

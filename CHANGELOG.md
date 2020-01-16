@@ -22,6 +22,11 @@ job prioritiy.
 - [Oban] Add `dispatch_cooldown` option to configure the minimum time between
   a producer fetching more jobs to execute.
 
+- [Oban] Add `beats_maxage` option to configure how long heartbeat rows are
+  retained in the `oban_beats` table. Each queue generates one row per second,
+  so rows may accumulate quickly. The default value is now five minutes, down
+  from one hour previously.
+
 - [Oban.Job] Add `discarded_at` timestamp to help identify jobs that were
   discarded and not completed. The timestamp is added by the V8 migration and it
   is also included in the original `create table` from V1 as a minor space
@@ -39,6 +44,10 @@ job prioritiy.
   jobs are lingering in the database. It is rare that anybody would want to keep
   all of their jobs forever, so a conservative default is better than
   `:disabled`.
+
+- [Oban] Change `oban_beats` retention from one hour to five minutes. The value
+  is now configurable, with a default of `300s`. The lower bound is `60s`
+  because we require one minute of heartbeat activity to rescue orphaned jobs.
 
 - [Oban.Queue.Producer] Introduce "dispatch cooldown" as a way to debounce
   repeatedly fetching new jobs. Repeated fetching floods the producer's message

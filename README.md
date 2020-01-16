@@ -99,7 +99,9 @@ Advanced features and advantages over other RDBMS based tools:
   These are used to monitor queue health across nodes and may be used for
   analytics.
 - **Queue Draining** — Queue shutdown is delayed so that slow jobs can finish
-  executing before shutdown.
+  executing before shutdown. When shutdown starts queues are paused and stop
+  executing new jobs. Any jobs left running after the shutdown grace period may
+  be rescued later.
 - **Telemetry Integration** — Job life-cycle events are emitted via
   [Telemetry][tele] integration. This enables simple logging, error reporting
   and health checkups without plug-ins.
@@ -432,7 +434,7 @@ configured with the `:prune` option. There are three distinct modes of pruning:
 * If you're using a row-limited database service, like Heroku's hobby plan with
   10M rows, and you have pruning `:disabled`, you could hit that row limit
   quickly by filling up the `oban_beats` table. Instead of fully disabling
-  pruning, consider setting a far-out limit: `{:maxage, 60 * 60 * 24 365}` (1
+  pruning, consider setting a far-out limit: `{:maxage, 60 * 60 * 24 * 365}` (1
   year). You will get the benefit of retaining completed and discarded jobs for
   a year without an unwieldy beats table.
 
@@ -841,8 +843,8 @@ Historic introspection is a defining feature of Oban. In addition to retaining
 completed jobs Oban also generates "heartbeat" records every second for each
 running queue.
 
-Heartbeat records are recorded in the `oban_beats` table and pruned to an hour
-of backlog. The recorded information is used for a couple of purposes:
+Heartbeat records are recorded in the `oban_beats` table and pruned to five
+minutes of backlog. The recorded information is used for a couple of purposes:
 
 1. To track active jobs. When a job executes it records the node and queue that
    ran it in the `attempted_by` column. Zombie jobs (jobs that were left

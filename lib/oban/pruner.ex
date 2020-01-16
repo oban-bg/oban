@@ -52,15 +52,10 @@ defmodule Oban.Pruner do
     {:noreply, state}
   end
 
-  # Pruning beats needs to respect prune being `:disabled`, but it ignores the length and age
-  # configuration. Each queue generates one beat a second, 3,600 beat records per hour even when
-  # the queue is idle.
-  @beats_maxage_seconds 60 * 60
-
   defp prune_beats(%State{circuit: :disabled} = state), do: state
 
   defp prune_beats(%State{conf: conf} = state) do
-    Query.delete_outdated_beats(conf, @beats_maxage_seconds, conf.prune_limit)
+    Query.delete_outdated_beats(conf, conf.beats_maxage, conf.prune_limit)
 
     state
   rescue

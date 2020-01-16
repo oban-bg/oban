@@ -14,6 +14,16 @@ defmodule Oban.ConfigTest do
   end
 
   describe "new/1" do
+    test ":beats_maxage is validated as an integer greater than 60 seconds" do
+      assert_invalid(beats_maxage: -1)
+      assert_invalid(beats_maxage: 0)
+      assert_invalid(beats_maxage: "60")
+      assert_invalid(beats_maxage: 60)
+
+      assert_valid(beats_maxage: 61)
+      assert_valid(beats_maxage: 300)
+    end
+
     test ":circuit_backoff is validated as an integer" do
       assert_invalid(circuit_backoff: -1)
       assert_invalid(circuit_backoff: 0)
