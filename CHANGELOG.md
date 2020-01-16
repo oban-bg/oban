@@ -34,6 +34,12 @@ job prioritiy.
 
 ### Changed
 
+- [Oban] Change the default `prune` value from `:disabled` to `{:maxlen,
+  1_000}`. Many people don't change the default until they realize that a lot of
+  jobs are lingering in the database. It is rare that anybody would want to keep
+  all of their jobs forever, so a conservative default is better than
+  `:disabled`.
+
 - [Oban.Queue.Producer] Introduce "dispatch cooldown" as a way to debounce
   repeatedly fetching new jobs. Repeated fetching floods the producer's message
   queue and forces the producer to repeatedly fetch one job at a time, which is

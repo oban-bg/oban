@@ -39,7 +39,7 @@ defmodule Oban.Config do
             node: nil,
             poll_interval: :timer.seconds(1),
             prefix: "public",
-            prune: :disabled,
+            prune: {:maxlen, 1_000},
             prune_interval: :timer.minutes(1),
             prune_limit: 5_000,
             queues: [],

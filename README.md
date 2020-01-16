@@ -201,7 +201,7 @@ allowing you to configure Oban like the rest of your application:
 # config/config.exs
 config :my_app, Oban,
   repo: MyApp.Repo,
-  prune: {:maxlen, 100_000},
+  prune: {:maxlen, 10_000},
   queues: [default: 10, events: 50, media: 20]
 
 # lib/my_app/application.ex
@@ -403,19 +403,19 @@ See `Oban.Job.new/2` for a full list of job options.
 
 ### Pruning Historic Jobs
 
-Job stats and queue introspection is built on keeping job rows in the database
+Job stats and queue introspection are built on keeping job rows in the database
 after they have completed. This allows administrators to review completed jobs
-and build informative aggregates, but at the expense of storage and an unbounded
+and build informative aggregates, at the expense of storage and an unbounded
 table size. To prevent the `oban_jobs` table from growing indefinitely, Oban
-provides active pruning of `completed` jobs.
+provides active pruning of `completed` and `discarded` jobs.
 
-By default, pruning is disabled. To enable pruning we configure a supervision
-tree with the `:prune` option. There are three distinct modes of pruning:
+By default, pruning retains a conservatively low 1,000 jobs. Pruning is
+configured with the `:prune` option. There are three distinct modes of pruning:
 
-* `:disabled` - This is the default, where no pruning happens at all
+* `:disabled` - No pruning happens at all, primarily useful for testing.
 
 * `{:maxlen, count}` - Pruning is based on the number of rows in the table, any
-  rows beyond the configured `count` are deleted
+  rows beyond the configured `count` may be deleted. This is the default mode.
 
 * `{:maxage, seconds}` - Pruning is based on a row's age, any rows older than
   the configured number of `seconds` are deleted. The age unit is always
@@ -436,9 +436,10 @@ tree with the `:prune` option. There are three distinct modes of pruning:
   year). You will get the benefit of retaining completed and discarded jobs for
   a year without an unwieldy beats table.
 
-* Pruning is only applied to jobs that are completed or discarded (has reached
-  the maximum number of retries or has been manually killed). It'll never delete
-  a new job, a scheduled job or a job that failed and will be retried.
+* Pruning is only applied to jobs that are `completed` or `discarded` (has
+  reached the maximum number of retries or has been manually killed). It'll
+  never delete a new job, a scheduled job or a job that failed and will be
+  retried.
 
 ### Unique Jobs
 

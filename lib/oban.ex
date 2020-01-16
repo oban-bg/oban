@@ -69,7 +69,9 @@ defmodule Oban do
   * `:prefix` — the query prefix, or schema, to use for inserting and executing jobs. An
     `oban_jobs` table must exist within the prefix. See the "Prefix Support" section in the module
     documentation for more details.
-  * `:prune` - configures job pruning behavior, see "Pruning Historic Jobs" for more information
+  * `:prune` - configures job pruning behavior, see "Pruning Historic Jobs" for more information.
+    Defaults to `{:maxlen, 1_000}`, meaning the jobs table will retain roughly 1,000 completed
+    jobs.
   * `:queues` — a keyword list where the keys are queue names and the values are the concurrency
     setting. For example, setting queues to `[default: 10, exports: 5]` would start the queues
     `default` and `exports` with a combined concurrency level of 20. The concurrency setting
