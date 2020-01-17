@@ -16,11 +16,16 @@ defmodule Oban.Worker do
   * `:unique` — no uniquness set
 
   The following example demonstrates defining a worker module to process jobs in the `events`
-  queue. It also dials down the priority from 0 to 1, limits retrying on failure to 10, and
-  ensures that duplicate jobs aren't enqueued within a 30 second period:
+  queue. It also dials down the priority from 0 to 1, limits retrying on failures to 10, adds a
+  "business" tag, and ensures that duplicate jobs aren't enqueued within a 30 second period:
 
       defmodule MyApp.Workers.Business do
-        use Oban.Worker, queue: :events, max_attempts: 10, priority: 1, unique: [period: 30]
+        use Oban.Worker,
+          queue: :events,
+          max_attempts: 10,
+          priority: 1,
+          tags: ["business"],
+          unique: [period: 30]
 
         @impl Oban.Worker
         def perform(_args, %Oban.Job{attempt: attempt}) when attempt > 3 do
@@ -209,6 +214,12 @@ defmodule Oban.Worker do
   defp validate_opt!({:queue, queue}) do
     unless is_atom(queue) or is_binary(queue) do
       raise ArgumentError, "expected :queue to be an atom or a binary, got: #{inspect(queue)}"
+    end
+  end
+
+  defp validate_opt!({:tags, tags}) do
+    unless is_list(tags) and Enum.all?(tags, &is_binary/1) do
+      raise ArgumentError, "expected :tags to be a list of strings, got: #{inspect(tags)}"
     end
   end
 

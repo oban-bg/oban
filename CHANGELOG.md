@@ -37,6 +37,10 @@ job prioritiy.
   for jobs within a queue. The `priority` can be set between 0 and 3, with 0
   being the default and the highest priority.
 
+- [Oban.Job] Add `tags` field for arbitrarily organizing associated tags. Tags
+  are a list of strings stored as an `array` in the database, making them easy
+  to search and filter by.
+
 ### Changed
 
 - [Oban] Change the default `prune` value from `:disabled` to `{:maxlen,

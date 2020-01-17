@@ -164,6 +164,7 @@ defmodule Oban.Migrations do
         add :queue, :text, null: false, default: "default"
         add :worker, :text, null: false
         add :args, :map, null: false
+        add :tags, {:array, :string}, null: false, default: []
         add :errors, {:array, :map}, null: false, default: []
         add :attempt, :integer, null: false, default: 0
         add :max_attempts, :integer, null: false, default: 20
@@ -406,7 +407,9 @@ defmodule Oban.Migrations do
       alter table(:oban_jobs, prefix: prefix) do
         add_if_not_exists(:discarded_at, :utc_datetime_usec)
         add_if_not_exists(:priority, :integer)
+        add_if_not_exists(:tags, {:array, :string})
         modify :priority, :integer, default: 0
+        modify :tags, {:array, :string}, default: []
       end
 
       drop_if_exists index(:oban_jobs, [:queue, :state, :scheduled_at, :id], prefix: prefix)
