@@ -42,7 +42,6 @@ defmodule Oban.Worker do
   Any of these return values or error events will fail the job:
 
   * return `{:error, error}`
-  * return `:error`
   * an unhandled exception
   * an unhandled exit or throw
 
