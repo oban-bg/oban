@@ -303,12 +303,17 @@ defmodule MyApp.Business do
 end
 ```
 
-The `use` macro also accepts options to customize max attempts, priority, and
-uniqueness:
+The `use` macro also accepts options to customize max attempts, priority, tags,
+and uniqueness:
 
 ```elixir
 defmodule MyApp.LazyBusiness do
-  use Oban.Worker, queue: :events, priority: 3, max_attempts: 3, unique: [period: 30]
+  use Oban.Worker,
+    queue: :events,
+    priority: 3,
+    max_attempts: 3,
+    tags: ["business"],
+    unique: [period: 30]
 
   @impl Oban.Worker
   def perform(_args, _job) do
@@ -375,6 +380,17 @@ default and highest priority:
 ```elixir
 %{id: 1}
 |> MyApp.Backfiller.new(priority: 2)
+|> Oban.insert()
+```
+
+Any number of tags can be added to a job dynamically, at the time it is
+inserted:
+
+```elixir
+id = 1
+
+%{id: id}
+|> MyApp.OnboardMailer.new(tags: ["mailer", "record-#{id}"])
 |> Oban.insert()
 ```
 
@@ -504,7 +520,7 @@ config :my_app, Oban, repo: MyApp.Repo, crontab: [
   {"* * * * *", MyApp.MinuteWorker},
   {"0 * * * *", MyApp.HourlyWorker, args: %{custom: "arg"}},
   {"0 0 * * *", MyApp.DailyWorker, max_attempts: 1},
-  {"0 12 * * MON", MyApp.MondayWorker, queue: :scheduled}
+  {"0 12 * * MON", MyApp.MondayWorker, queue: :scheduled, tags: ["mondays"]}
 ]
 ```
 

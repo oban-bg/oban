@@ -14,6 +14,7 @@ defmodule Oban.Job do
 
   @type args :: map()
   @type errors :: [%{at: DateTime.t(), attempt: pos_integer(), error: binary()}]
+  @type tags :: [binary()]
 
   @type unique_field :: [:args | :queue | :worker]
 
@@ -31,6 +32,7 @@ defmodule Oban.Job do
           | {:queue, atom() | binary()}
           | {:schedule_in, pos_integer()}
           | {:scheduled_at, DateTime.t()}
+          | {:tags, tags()}
           | {:unique, [unique_option()]}
           | {:worker, atom() | binary()}
 
@@ -41,6 +43,7 @@ defmodule Oban.Job do
           worker: binary(),
           args: args(),
           errors: errors(),
+          tags: tags(),
           attempt: non_neg_integer(),
           attempted_by: [binary()],
           max_attempts: pos_integer(),
@@ -59,6 +62,7 @@ defmodule Oban.Job do
     field :worker, :string
     field :args, :map
     field :errors, {:array, :map}, default: []
+    field :tags, {:array, :string}, default: []
     field :attempt, :integer, default: 0
     field :attempted_by, {:array, :string}
     field :max_attempts, :integer, default: 20
@@ -85,6 +89,7 @@ defmodule Oban.Job do
     queue
     scheduled_at
     state
+    tags
     worker
   )a
 
@@ -95,17 +100,19 @@ defmodule Oban.Job do
 
   ## Options
 
-    * `:max_attempts` — the maximum number of times a job can be retried if there are errors during execution
+    * `:max_attempts` — the maximum number of times a job can be retried if there are errors
+      during execution
     * `:priority` — a numerical indicator from 0 to 3 of how important this job is relative to
       other jobs in the same queue. The lower the number, the higher priority the job.
     * `:queue` — a named queue to push the job into. Jobs may be pushed into any queue, regardless
       of whether jobs are currently being processed for the queue.
     * `:schedule_in` - the number of seconds until the job should be executed
     * `:scheduled_at` - a time in the future after which the job should be executed
-    * `:worker` — a module to execute the job in. The module must implement the `Oban.Worker`
-      behaviour.
+    * `:tags` — a list of tags to group and organize related jobs, i.e. to identify scheduled jobs
     * `:unique` — a keyword list of options specifying how uniqueness will be calculated. The
       options define which fields will be used, for how long, and for which states.
+    * `:worker` — a module to execute the job in. The module must implement the `Oban.Worker`
+      behaviour.
 
   ## Examples
 
@@ -145,6 +152,7 @@ defmodule Oban.Job do
       |> Map.new()
       |> coerce_field(:queue)
       |> coerce_field(:worker)
+      |> normalize_tags()
 
     %__MODULE__{}
     |> cast(params, @permitted)
@@ -252,6 +260,25 @@ defmodule Oban.Job do
         add_error(changeset, :unique, "invalid unique options")
     end
   end
+
+  defp normalize_tags(%{tags: [_ | _] = tags} = params) do
+    normalize = fn string ->
+      string
+      |> to_string()
+      |> String.trim()
+      |> String.downcase()
+    end
+
+    tags =
+      tags
+      |> Enum.map(normalize)
+      |> Enum.reject(&(&1 == ""))
+      |> Enum.uniq()
+
+    %{params | tags: tags}
+  end
+
+  defp normalize_tags(params), do: params
 
   defp validate_unique_opts(unique) do
     Enum.reduce_while(unique, :ok, fn {key, val}, _acc ->

@@ -16,6 +16,19 @@ defmodule Oban.JobTest do
     end
   end
 
+  describe "tags with new/2" do
+    test "normalizing and deduping tags" do
+      tag_changes = fn tags ->
+        Job.new(%{}, worker: Fake, tags: tags).changes[:tags]
+      end
+
+      refute tag_changes.(["", " ", "\n"])
+      assert ["alpha"] = tag_changes.([" ", "\nalpha\n"])
+      assert ["alpha"] = tag_changes.(["ALPHA", " alpha "])
+      assert ["1", "2"] = tag_changes.([nil, 1, 2])
+    end
+  end
+
   describe "unique constraints with new/2" do
     test "marking a job as unique by setting the period provides defaults" do
       changeset = Job.new(%{}, worker: Fake, unique: [period: 60])
@@ -48,7 +61,7 @@ defmodule Oban.JobTest do
   end
 
   describe "to_map/1" do
-    @keys_with_defaults ~w(args attempt errors max_attempts priority queue state)a
+    @keys_with_defaults ~w(args attempt errors max_attempts priority queue state tags)a
 
     defp to_keys(opts) do
       %{}

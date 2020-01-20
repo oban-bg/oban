@@ -19,6 +19,7 @@ defmodule Oban.WorkerTest do
       queue: "special",
       max_attempts: @max_attempts,
       priority: 1,
+      tags: ["scheduled", "special"],
       unique: [fields: [:queue, :worker], period: 60, states: [:scheduled]]
 
     @impl Worker
@@ -80,72 +81,98 @@ defmodule Oban.WorkerTest do
   end
 
   test "validating __using__ macro options" do
-    assert_raise ArgumentError, fn ->
-      defmodule BrokenModuleA do
+    assert_raise ArgumentError, ~r/unknown option/, fn ->
+      defmodule UnknownOption do
         use Oban.Worker, state: "youcantsetthis"
 
         def perform(_, _), do: :ok
       end
     end
+  end
 
-    assert_raise ArgumentError, fn ->
-      defmodule BrokenModuleB do
+  test "validating the queue provided to __using__" do
+    assert_raise ArgumentError, ~r/expected :queue to be/, fn ->
+      defmodule InvalidQueue do
         use Oban.Worker, queue: 1234
 
         def perform(_, _), do: :ok
       end
     end
+  end
 
-    assert_raise ArgumentError, fn ->
-      defmodule BrokenModuleC do
+  test "validating the max attempts provided to __using__" do
+    assert_raise ArgumentError, ~r/expected :max_attempts to be/, fn ->
+      defmodule InvalidMaxAttempts do
         use Oban.Worker, max_attempts: 0
 
         def perform(_, _), do: :ok
       end
     end
+  end
 
-    assert_raise ArgumentError, fn ->
-      defmodule BrokenModuleD do
+  test "validating the priority provided to __using__" do
+    assert_raise ArgumentError, ~r/expected :priority to be/, fn ->
+      defmodule InvalidPriority do
         use Oban.Worker, priority: 11
 
         def perform(_, _), do: :ok
       end
     end
+  end
 
-    assert_raise ArgumentError, fn ->
-      defmodule BrokenModuleE do
+  test "validating the tags provided to __using__" do
+    assert_raise ArgumentError, ~r/expected :tags to be a list/, fn ->
+      defmodule InvalidTagsType do
+        use Oban.Worker, tags: nil
+
+        def perform(_, _), do: :ok
+      end
+    end
+
+    assert_raise ArgumentError, ~r/expected :tags to be a list/, fn ->
+      defmodule InvalidTagsValue do
+        use Oban.Worker, tags: ["alpha", :beta]
+
+        def perform(_, _), do: :ok
+      end
+    end
+  end
+
+  test "validating the unique options provided to __using__" do
+    assert_raise ArgumentError, ~r/unexpected unique options/, fn ->
+      defmodule InvalidUniqueType do
         use Oban.Worker, unique: 0
 
         def perform(_, _), do: :ok
       end
     end
 
-    assert_raise ArgumentError, fn ->
-      defmodule BrokenModuleF do
+    assert_raise ArgumentError, ~r/unexpected unique options/, fn ->
+      defmodule InvalidUniqueOption do
         use Oban.Worker, unique: [unknown: []]
 
         def perform(_, _), do: :ok
       end
     end
 
-    assert_raise ArgumentError, fn ->
-      defmodule BrokenModuleG do
+    assert_raise ArgumentError, ~r/unexpected unique options/, fn ->
+      defmodule InvalidUniqueField do
         use Oban.Worker, unique: [fields: [:unknown]]
 
         def perform(_, _), do: :ok
       end
     end
 
-    assert_raise ArgumentError, fn ->
-      defmodule BrokenModuleH do
+    assert_raise ArgumentError, ~r/unexpected unique options/, fn ->
+      defmodule InvalidUniquePeriod do
         use Oban.Worker, unique: [period: 0]
 
         def perform(_, _), do: :ok
       end
     end
 
-    assert_raise ArgumentError, fn ->
-      defmodule BrokenModuleI do
+    assert_raise ArgumentError, ~r/unexpected unique options/, fn ->
+      defmodule InvalidUniqueStates do
         use Oban.Worker, unique: [states: [:unknown]]
 
         def perform(_, _), do: :ok
