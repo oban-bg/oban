@@ -3,7 +3,9 @@ defmodule Oban.Testing do
   This module simplifies making assertions about enqueued jobs during testing.
 
   Assertions may be made on any property of a job, but you'll typically want to check by `args`,
-  `queue` or `worker`.
+  `queue` or `worker`. If you're using namespacing through PostgreSQL schemas, also called
+  "prefixes" in Ecto, you should use the `prefix` option when doing assertions about enqueued
+  jobs during testing. By default the `prefix` option is `public`.
 
   ## Using in Tests
 
@@ -143,10 +145,12 @@ defmodule Oban.Testing do
   @doc since: "0.6.0"
   @spec all_enqueued(repo :: module(), opts :: Keyword.t()) :: [Job.t()]
   def all_enqueued(repo, [_ | _] = opts) do
+    {prefix, opts} = extract_prefix(opts)
+
     opts
     |> base_query()
     |> order_by(desc: :id)
-    |> repo.all()
+    |> repo.all(prefix: prefix)
   end
 
   @doc """
@@ -183,19 +187,23 @@ defmodule Oban.Testing do
   end
 
   defp get_job(repo, opts) do
+    {prefix, opts} = extract_prefix(opts)
+
     opts
     |> base_query()
     |> limit(1)
     |> select([:id])
-    |> repo.one()
+    |> repo.one(prefix: prefix)
   end
 
   defp available_jobs(repo, opts) do
+    {prefix, opts} = extract_prefix(opts)
     fields = Keyword.keys(opts)
 
-    base_query([])
+    []
+    |> base_query()
     |> select(^fields)
-    |> repo.all()
+    |> repo.all(prefix: prefix)
     |> Enum.map(&Map.take(&1, fields))
   end
 
@@ -212,6 +220,10 @@ defmodule Oban.Testing do
     Job
     |> where([j], j.state in ["available", "scheduled"])
     |> apply_where_clauses(fields_with_opts)
+  end
+
+  defp extract_prefix(opts) do
+    Keyword.pop(opts, :prefix, "public")
   end
 
   defp extract_field_opts({key, {value, field_opts}}, field_opts_acc) do
