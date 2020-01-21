@@ -5,7 +5,7 @@ defmodule Oban.Testing do
   Assertions may be made on any property of a job, but you'll typically want to check by `args`,
   `queue` or `worker`. If you're using namespacing through PostgreSQL schemas, also called
   "prefixes" in Ecto, you should use the `prefix` option when doing assertions about enqueued
-  jobs during testing, by default the `prefix` option is `public`.
+  jobs during testing. By default the `prefix` option is `public`.
 
   ## Using in Tests
 
@@ -223,8 +223,7 @@ defmodule Oban.Testing do
   end
 
   defp extract_prefix(opts) do
-    {prefix, opts} = Keyword.pop(opts, :prefix)
-    {prefix || "public", opts}
+    {prefix, opts} = Keyword.pop(opts, :prefix, "public")
   end
 
   defp extract_field_opts({key, {value, field_opts}}, field_opts_acc) do
