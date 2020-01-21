@@ -7,11 +7,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## [1.0.0-rc.1] — 2020-01-21
+
 **Migration Required (V8)**
 
 This is the first required migration since 0.8.0, released in 09/2019. It brings
-with it a new column, `discarded_at`, a streamlined notifications trigger, and
-job prioritiy.
+with it a new column, `discarded_at`, a streamlined notifications trigger, job
+prioritiy and job tags.
 
 ### Added
 
@@ -630,7 +632,8 @@ end
 
 - [Oban] Initial release with base functionality.
 
-[Unreleased]: https://github.com/sorentwo/oban/compare/v0.12.1...HEAD
+[Unreleased]: https://github.com/sorentwo/oban/compare/v1.0.0-rc.1...HEAD
+[1.0.0-rc.1]: https://github.com/sorentwo/oban/compare/v0.12.1...v1.0.0-rc.1
 [0.12.1]: https://github.com/sorentwo/oban/compare/v0.12.0...v0.12.1
 [0.12.0]: https://github.com/sorentwo/oban/compare/v0.11.1...v0.12.0
 [0.11.1]: https://github.com/sorentwo/oban/compare/v0.11.0...v0.11.1
