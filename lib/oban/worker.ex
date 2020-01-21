@@ -139,17 +139,18 @@ defmodule Oban.Worker do
   @callback backoff(attempt :: pos_integer()) :: pos_integer()
 
   @doc """
-  The `perform/2` function is called when the job is executed.
+  The `perform/2` function is called to execute a job.
 
-  Note that when Oban calls `perform/2`, the `args` map given when enqueueing the job will have
-  been deserialized from the PostgreSQL `jsonb` data type and therefore map keys will have been
-  converted to strings.
+  Each `perform/2` function should return `:ok` or a success tuple. When the return is an error
+  tuple, an uncaught exception or a throw then the error is recorded and the job may be retried
+  if there are any attempts remaining.
 
-  The value returned from `perform/2` is ignored, unless it returns an `{:error, reason}` tuple.
-  With an error return or when perform has an uncaught exception or throw then the error will be
-  reported and the job will be retried (provided there are attempts remaining).
+  Note that the `args` map passed to `perform/2` will _always_ have string keys, regardless of the
+  key type when the job was enqueued. The `args` are stored as `jsonb` in PostgreSQL and the
+  serialization process automatically stringifies all keys.
   """
-  @callback perform(args :: Job.args(), job :: Job.t()) :: term()
+  @callback perform(args :: Job.args(), job :: Job.t()) ::
+              :ok | {:ok, ignored :: term()} | {:error, reason :: term()}
 
   @doc false
   defmacro __using__(opts) do
