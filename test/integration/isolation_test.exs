@@ -1,6 +1,8 @@
 defmodule Oban.Integration.IsolationTest do
   use Oban.Case
 
+  use Oban.Testing, repo: Oban.Test.Repo
+
   @moduletag :integration
 
   test "multiple supervisors can be run simultaneously" do
@@ -19,6 +21,8 @@ defmodule Oban.Integration.IsolationTest do
     start_supervised!({Oban, prefix: "private", repo: Repo, queues: [alpha: 5]})
 
     job = insert_job!(ref: 1, action: "OK")
+
+    assert [%Oban.Job{}] = all_enqueued(worker: Worker, prefix: "private")
 
     assert Ecto.get_meta(job, :prefix) == "private"
 
