@@ -223,7 +223,7 @@ defmodule Oban.Testing do
   end
 
   defp extract_prefix(opts) do
-    {prefix, opts} = Keyword.pop(opts, :prefix, "public")
+    Keyword.pop(opts, :prefix, "public")
   end
 
   defp extract_field_opts({key, {value, field_opts}}, field_opts_acc) do
