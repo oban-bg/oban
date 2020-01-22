@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## [1.0.0-rc.2] — 2020-01-22
+
 ### Fixed
 
 - [Oban.Migration] Separate adding and modifying new columns in the V8

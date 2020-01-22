@@ -129,7 +129,7 @@ dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:oban, "1.0.0-rc.1"}
+    {:oban, "1.0.0-rc.2"}
   ]
 end
 ```
