@@ -12,6 +12,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - [Oban.Migration] Separate adding and modifying new columns in the V8
   migration. The columns can't be modified without a `flush`.
 
+### Changed
+
+- [Oban.Testing] Accept a custom prefix when making test assertions.
+
 ## [1.0.0-rc.1] — 2020-01-21
 
 **Migration Required (V8)**
