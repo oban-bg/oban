@@ -164,17 +164,14 @@ defmodule Oban.Migrations do
         add :queue, :text, null: false, default: "default"
         add :worker, :text, null: false
         add :args, :map, null: false
-        add :tags, {:array, :string}, null: false, default: []
         add :errors, {:array, :map}, null: false, default: []
         add :attempt, :integer, null: false, default: 0
         add :max_attempts, :integer, null: false, default: 20
-        add :priority, :integer, null: false, default: 0
 
         add :inserted_at, :utc_datetime_usec, null: false, default: now()
         add :scheduled_at, :utc_datetime_usec, null: false, default: now()
         add :attempted_at, :utc_datetime_usec
         add :completed_at, :utc_datetime_usec
-        add :discarded_at, :utc_datetime_usec
       end
 
       create_if_not_exists index(:oban_jobs, [:queue], prefix: prefix)
@@ -408,6 +405,9 @@ defmodule Oban.Migrations do
         add_if_not_exists(:discarded_at, :utc_datetime_usec)
         add_if_not_exists(:priority, :integer)
         add_if_not_exists(:tags, {:array, :string})
+      end
+
+      alter table(:oban_jobs, prefix: prefix) do
         modify :priority, :integer, default: 0
         modify :tags, {:array, :string}, default: []
       end
@@ -433,6 +433,7 @@ defmodule Oban.Migrations do
       alter table(:oban_jobs, prefix: prefix) do
         remove_if_exists(:discarded_at, :utc_datetime_usec)
         remove_if_exists(:priority, :integer)
+        remove_if_exists(:tags, {:array, :string})
       end
 
       v1_oban_notify(prefix)
