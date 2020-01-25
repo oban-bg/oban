@@ -139,6 +139,13 @@ defmodule Oban.Worker do
   @callback backoff(attempt :: pos_integer()) :: pos_integer()
 
   @doc """
+  Maximimum job execution time limit
+
+  Defaults to `:infinity`
+  """
+  @callback timeout(job :: Job.t()) :: pos_integer() | :infinity
+
+  @doc """
   The `perform/2` function is called when the job is executed.
 
   Note that when Oban calls `perform/2`, the `args` map given when enqueueing the job will have
@@ -173,6 +180,9 @@ defmodule Oban.Worker do
       def backoff(attempt) when is_integer(attempt) do
         Worker.default_backoff(attempt)
       end
+
+      @impl Worker
+      def timeout(_job), do: :infinity
 
       defoverridable Worker
     end

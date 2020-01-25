@@ -22,6 +22,9 @@ defmodule Oban.WorkerTest do
       tags: ["scheduled", "special"],
       unique: [fields: [:queue, :worker], period: 60, states: [:scheduled]]
 
+    def timeout(%{args: %{"timeout" => timeout}}), do: timeout
+    def timeout(_), do: :infinity
+
     @impl Worker
     def backoff(attempt), do: attempt * attempt
 
@@ -68,6 +71,16 @@ defmodule Oban.WorkerTest do
       assert CustomWorker.backoff(1) == 1
       assert CustomWorker.backoff(2) == 4
       assert CustomWorker.backoff(3) == 9
+    end
+  end
+
+  describe "timeout/1" do
+    test "the default timeout is infinity" do
+      assert BasicWorker.timeout(%Job{}) == :infinity
+    end
+
+    test "the timeout can be overridden" do
+      assert CustomWorker.timeout(%Job{args: %{"timeout" => 60_000}}) == 60_000
     end
   end
 

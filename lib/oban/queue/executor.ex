@@ -36,9 +36,35 @@ defmodule Oban.Queue.Executor do
   end
 
   @doc false
-  def safe_call(%Job{args: args, worker: worker} = job) do
+  def safe_call(%Job{} = job) do
+    with {:ok, worker} <- worker_module(job) do
+      case worker.timeout(job) do
+        :infinity ->
+          perform_inline(worker, job)
+
+        timeout when is_integer(timeout) ->
+          perform_task(worker, job, timeout)
+      end
+    end
+  end
+
+  defp perform_task(worker, job, timeout) do
+    task = Task.async(fn -> perform_inline(worker, job) end)
+
+    case Task.yield(task, timeout) || Task.shutdown(task) do
+      # reply here could still be a job failure, or even an exception tuple
+      # it just indicates that the job didn't timeout
+      {:ok, reply} ->
+        reply
+
+      nil ->
+        {:current_stacktrace, stacktrace} = Process.info(self(), :current_stacktrace)
+        {:failure, job, :timeout, timeout, stacktrace}
+    end
+  end
+
+  defp perform_inline(worker, %{args: args} = job) do
     worker
-    |> to_module()
     |> apply(:perform, [args, job])
     |> case do
       {:error, error} ->
@@ -59,29 +85,28 @@ defmodule Oban.Queue.Executor do
 
   # Helpers
 
-  defp to_module(worker) when is_binary(worker) do
-    worker
-    |> String.split(".")
-    |> Module.safe_concat()
+  defp worker_module(%Job{worker: worker} = job) when is_binary(worker) do
+    {:ok,
+     worker
+     |> String.split(".")
+     |> Module.safe_concat()}
+  rescue
+    exception ->
+      {:failure, job, :exception, exception, __STACKTRACE__}
   end
 
-  defp to_module(worker) when is_atom(worker), do: worker
+  defp worker_module(%Job{worker: worker}) when is_atom(worker), do: {:ok, worker}
 
   # While it is slightly wasteful, we have to convert the worker to a module again outside of
   # `safe_call/1`. There is a possibility that the worker module can't be found at all and we
   # need to fall back to a default implementation.
-  defp worker_backoff(%Job{attempt: attempt, worker: worker}) do
-    module =
-      try do
-        to_module(worker)
-      rescue
-        ArgumentError -> nil
-      end
+  defp worker_backoff(%Job{attempt: attempt} = job) do
+    case worker_module(job) do
+      {:ok, module} ->
+        module.backoff(attempt)
 
-    if function_exported?(module, :backoff, 1) do
-      module.backoff(attempt)
-    else
-      Worker.default_backoff(attempt)
+      _ ->
+        Worker.default_backoff(attempt)
     end
   end
 
