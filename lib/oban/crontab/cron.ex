@@ -41,7 +41,10 @@ defmodule Oban.Crontab.Cron do
 
   @spec parse!(input :: binary()) :: t()
   def parse!(input) when is_binary(input) do
-    case Parser.cron(input) do
+    input
+    |> String.trim()
+    |> Parser.cron()
+    |> case do
       {:ok, parsed, _, _, _, _} ->
         struct!(__MODULE__, expand(parsed))
 

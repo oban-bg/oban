@@ -9,9 +9,12 @@ defmodule Oban.Crontab.CronTest do
                 hours <- integer(0..23),
                 days <- integer(1..31),
                 months <- months(),
-                weekdays <- weekdays() do
+                weekdays <- weekdays(),
+                spaces <- spaces() do
+        spacing = :erlang.iolist_to_binary(spaces)
+
         [minutes, hours, days, months, weekdays]
-        |> Enum.join(" ")
+        |> Enum.join(spacing)
         |> Cron.parse!()
       end
     end
@@ -80,6 +83,10 @@ defmodule Oban.Crontab.CronTest do
       constant("SAT"),
       constant("SUN")
     ])
+  end
+
+  defp spaces do
+    list_of(one_of([constant(" "), constant("\t")]), min_length: 1, max_length: 4)
   end
 
   defp expression do

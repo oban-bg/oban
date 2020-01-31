@@ -83,16 +83,18 @@ defmodule Oban.Crontab.Parser do
     |> times(min: 1)
     |> tag(:weekdays)
 
+  whitespace = ascii_string([?\s, ?\t], min: 1)
+
   defparsec(
     :cron,
     minutes
-    |> ignore(string(" "))
+    |> ignore(whitespace)
     |> concat(hours)
-    |> ignore(string(" "))
+    |> ignore(whitespace)
     |> concat(days)
-    |> ignore(string(" "))
+    |> ignore(whitespace)
     |> concat(months)
-    |> ignore(string(" "))
+    |> ignore(whitespace)
     |> concat(weekdays)
   )
 

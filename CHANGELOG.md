@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Fixed
+
+- [Oban.Crontab] Allow any number of spaces and/or tabs in cron expressions.
+
 ## [1.0.0] — 2020-01-29
 
 No changes from [1.0.0-rc.2][].
