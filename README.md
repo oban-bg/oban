@@ -273,9 +273,10 @@ concurrently in each queue. Here are a few caveats and guidelines:
 Worker modules do the work of processing a job. At a minimum they must define a
 `perform/2` function, which is called with an `args` map and the job struct.
 
-Note that when Oban calls `perform/2`, the `args` map given when enqueueing the
-job is deserialized from the PostgreSQL `jsonb` data type and therefore map keys
-are converted to strings.
+Note that the `args` map passed to `perform/2` will _always_ have string keys,
+regardless of the key type when the job was enqueued. The `args` are stored as
+`jsonb` in PostgreSQL and the serialization process automatically stringifies
+all keys.
 
 Define a worker to process jobs in the `events` queue:
 
@@ -289,16 +290,16 @@ defmodule MyApp.Business do
 
     case args do
       %{"in_the" => "business"} ->
-        # handle business job
         IO.inspect(model)
 
       %{"vote_for" => vote} ->
-        # handle vote job
-        IO.inspect(model)
+        IO.inspect([vote, model])
 
       _ ->
         IO.inspect(model)
     end
+
+    :ok
   end
 end
 ```
@@ -318,6 +319,8 @@ defmodule MyApp.LazyBusiness do
   @impl Oban.Worker
   def perform(_args, _job) do
     # do business slowly
+
+    :ok
   end
 end
 ```

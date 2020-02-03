@@ -11,6 +11,16 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 - [Oban.Crontab] Allow any number of spaces and/or tabs in cron expressions.
 
+### Changed
+
+- [Oban.Worker] Tighten the spec for `perform/2`. Now workers are expected to
+  return only `:ok`, `{:ok, result}` or `{:error, reason}`. A warning is logged
+  if any other value is returned—for high throughput systems this may cause
+  performance issues and you should update your worker's return values.
+
+  Returning a success tuple is supported for testing purposes and backward
+  compatibility, while returning `:ok` on success if preferred.
+
 ## [1.0.0] — 2020-01-29
 
 No changes from [1.0.0-rc.2][].

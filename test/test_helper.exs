@@ -25,10 +25,14 @@ defmodule Oban.Integration.Worker do
       "OK" ->
         send(pid, {:ok, ref})
 
+        :ok
+
       "FAIL" ->
         send(pid, {:fail, ref})
 
         raise RuntimeError, "FAILED"
+
+        :ok
 
       "ERROR" ->
         send(pid, {:error, ref})
@@ -39,6 +43,8 @@ defmodule Oban.Integration.Worker do
         send(pid, {:exit, ref})
 
         GenServer.call(FakeServer, :exit)
+
+        :ok
     end
   end
 
@@ -50,6 +56,8 @@ defmodule Oban.Integration.Worker do
     :ok = Process.sleep(sleep)
 
     send(pid, {:ok, ref})
+
+    :ok
   end
 
   def pid_to_bin(pid \\ self()) do

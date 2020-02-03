@@ -1,6 +1,8 @@
 defmodule Oban.Queue.Executor do
   @moduledoc false
 
+  require Logger
+
   alias Oban.{Config, Job, Query, Worker}
 
   @spec child_spec(Job.t(), Config.t()) :: Supervisor.child_spec()
@@ -41,12 +43,29 @@ defmodule Oban.Queue.Executor do
     |> to_module()
     |> apply(:perform, [args, job])
     |> case do
+      :ok ->
+        {:success, job}
+
+      {:ok, _result} ->
+        {:success, job}
+
       {:error, error} ->
         {:current_stacktrace, stacktrace} = Process.info(self(), :current_stacktrace)
 
         {:failure, job, :error, error, stacktrace}
 
-      _ ->
+      returned ->
+        Logger.warn(fn ->
+          """
+          Expected #{worker}.perform/2 to return :ok, `{:ok, value}`, or {:error, reason}. Instead
+          received:
+
+          #{inspect(returned, pretty: true)}
+
+          The job will be considered a success.
+          """
+        end)
+
         {:success, job}
     end
   rescue
