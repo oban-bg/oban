@@ -29,8 +29,8 @@
 ## Table of Contents
 
 - [Features](#Features)
-- [UI](#UI)
 - [Requirements](#Requirements)
+- [Oban Web UI](#Oban-Web-UI)
 - [Installation](#Installation)
 - [Usage](#Usage)
   - [Configuring Queues](#Configuring-Queues)
@@ -46,62 +46,80 @@
 - [Isolation](#Isolation)
 - [Pulse Tracking](#Pulse-Tracking)
 - [Troubleshooting](#Troubleshooting)
+- [Community](#Community)
 - [Contributing](#Contributing)
 
 ## Features
 
 Oban's primary goals are **reliability**, **consistency** and **observability**.
+
 It is fundamentally different from other background job processing tools because
-it retains job data for historic metrics and inspection. You can leave your
+_it retains job data for historic metrics and inspection_. You can leave your
 application running indefinitely without worrying about jobs being lost or
 orphaned due to crashes.
 
-Advantages over in-memory, mnesia, Redis and RabbitMQ based tools:
+#### Advantages Over Other Tools
 
 - **Fewer Dependencies** — If you are running a web app there is a _very good_
   chance that you're running on top of a [RDBMS][rdbms]. Running your job queue
   within PostgreSQL minimizes system dependencies and simplifies data backups.
+
 - **Transactional Control** — Enqueue a job along with other database changes,
   ensuring that everything is committed or rolled back atomically.
+
 - **Database Backups** — Jobs are stored inside of your primary database, which
   means they are backed up together with the data that they relate to.
 
-Advanced features and advantages over other RDBMS based tools:
+#### Advanced Features
 
 - **Isolated Queues** — Jobs are stored in a single table but are executed in
   distinct queues. Each queue runs in isolation, ensuring that a job in a single
   slow queue can't back up other faster queues.
+
 - **Queue Control** — Queues can be started, stopped, paused, resumed and scaled
-  independently at runtime.
+  independently at runtime across _all_ running nodes (even in environments like
+  Heroku, without distributed Erlang).
+
 - **Resilient Queues** — Failing queries won't crash the entire supervision tree,
   instead they trip a circuit breaker and will be retried again in the future.
+
 - **Job Killing** — Jobs can be killed in the middle of execution regardless of
   which node they are running on. This stops the job at once and flags it as
   `discarded`.
+
 - **Triggered Execution** — Database triggers ensure that jobs are dispatched as
   soon as they are inserted into the database.
+
 - **Unique Jobs** — Duplicate work can be avoided through unique job controls.
   Uniqueness can be enforced at the argument, queue and worker level for any
   period of time.
+
 - **Scheduled Jobs** — Jobs can be scheduled at any time in the future, down to
   the second.
+
 - **Periodic (CRON) Jobs** — Automatically enqueue jobs on a cron-like schedule.
   Duplicate jobs are never enqueued, no matter how many nodes you're running.
+
 - **Job Priority** — Prioritize jobs within a queue to run ahead of others.
+
 - **Job Safety** — When a process crashes or the BEAM is terminated executing
   jobs aren't lost—they are quickly recovered by other running nodes or
   immediately when the node is restarted.
+
 - **Historic Metrics** — After a job is processed the row is _not_ deleted.
   Instead, the job is retained in the database to provide metrics. This allows
   users to inspect historic jobs and to see aggregate data at the job, queue or
   argument level.
+
 - **Node Metrics** — Every queue records metrics to the database during runtime.
   These are used to monitor queue health across nodes and may be used for
   analytics.
+
 - **Queue Draining** — Queue shutdown is delayed so that slow jobs can finish
   executing before shutdown. When shutdown starts queues are paused and stop
   executing new jobs. Any jobs left running after the shutdown grace period may
   be rescued later.
+
 - **Telemetry Integration** — Job life-cycle events are emitted via
   [Telemetry][tele] integration. This enables simple logging, error reporting
   and health checkups without plug-ins.
@@ -115,11 +133,12 @@ Oban has been developed and actively tested with Elixir 1.8+, Erlang/OTP 21.1+
 and PostgreSQL 11.0+. Running Oban currently requires Elixir 1.8+, Erlang 21+,
 and PostgreSQL 9.6+.
 
-## UI
+## Oban Web UI
 
 A web-based user interface for monitoring and managing Oban is available as a
-private beta. Learn more about it and register for the beta at
-[oban.dev](https://oban.dev).
+private beta. Learn more about it and register for the beta at [oban.dev][odev].
+
+[odev]: https://oban.dev
 
 ## Installation
 
@@ -129,7 +148,7 @@ dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:oban, "1.0.0"}
+    {:oban, "~> 1.0.0"}
   ]
 end
 ```
@@ -907,6 +926,21 @@ erlang_version=22.0.3
 Available Erlang versions are available [here](https://github.com/HashNuke/heroku-buildpack-elixir-otp-builds/blob/master/otp-versions).
 
 <!-- MDOC -->
+
+## Community
+
+There are a few places to connect and communicate with other Oban users.
+
+- [Request an invitation][invite] and join the *#oban* channel on [Slack][slack]
+- Ask questions and discuss Oban on the [Elixir Forum][forum]
+- Learn about bug reports and upcoming features in the [issue tracker][issues]
+- Follow @sorentwo on [Twitter][twitter]
+
+[invite]: https://elixir-slackin.herokuapp.com/
+[slack]: https://elixir-lang.slack.com/
+[forum]: https://elixirforum.com/
+[issues]: https://github.com/sorentwo/oban/issues
+[twitter]: https://twitter.com/sorentwo
 
 ## Contributing
 
