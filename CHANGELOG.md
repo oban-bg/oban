@@ -44,6 +44,28 @@ This is the first required migration since 0.8.0, released in 09/2019. It brings
 with it a new column, `discarded_at`, a streamlined notifications trigger, job
 prioritiy and job tags.
 
+Upgrading only requires running the new migration.
+
+First, generate a new migration:
+
+```bash
+mix ecto.gen.migration upgrade_oban_jobs_to_v8
+```
+
+Next, call `Oban.Migrations` in the generated migration:
+
+```elixir
+defmodule MyApp.Repo.Migrations.UpdateObanJobsToV8 do
+  use Ecto.Migration
+
+  def up, do: Oban.Migrations.up(version: 8)
+  def down, do: Oban.Migrations.down()
+end
+```
+
+Oban will manage upgrading to V8 regardless of the version your application is
+currently using, and it will roll back a single version.
+
 ### Added
 
 - [Oban] Add `timezone` support for scheduling cronjobs using timezones other
