@@ -4,7 +4,7 @@ jobs:
     parallelism: 1
 
     docker:
-      - image: circleci/elixir:1.8.1
+      - image: circleci/elixir:1.10.0
         environment:
           DATABASE_URL: postgresql://postgres@localhost/oban_test
           MIX_ENV: test
