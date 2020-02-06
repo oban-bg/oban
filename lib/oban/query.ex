@@ -232,6 +232,14 @@ defmodule Oban.Query do
     :ok
   end
 
+  @spec acquire_lock?(Config.t(), pos_integer()) :: boolean()
+  def acquire_lock?(%Config{repo: repo, verbose: verbose}, key) do
+    %{rows: [[locked?]]} =
+      repo.query!("SELECT pg_try_advisory_xact_lock($1)", [key], log: verbose)
+
+    locked?
+  end
+
   # Helpers
 
   defp next_attempt_at(backoff), do: DateTime.add(utc_now(), backoff, :second)

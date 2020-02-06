@@ -13,8 +13,6 @@ defmodule Oban.Crontab.Scheduler do
   # a one second window where a double enqueue can happen.
   @unique [period: 59]
 
-  # Use an extremely large 64bit integer as the key value to prevent any chance of intersecting
-  # with application keyspace.
   @lock_key 1_149_979_440_242_868_330
 
   @type option :: {:name, module()} | {:conf, Config.t()}
@@ -92,7 +90,7 @@ defmodule Oban.Crontab.Scheduler do
     %Config{repo: repo, verbose: verbose} = conf
 
     repo.transaction(
-      fn -> if acquire_lock?(conf), do: enqueue_jobs(conf) end,
+      fn -> if Query.acquire_lock?(conf, @lock_key), do: enqueue_jobs(conf) end,
       log: verbose,
       timeout: timeout
     )
@@ -100,17 +98,6 @@ defmodule Oban.Crontab.Scheduler do
     state
   rescue
     exception in trip_errors() -> trip_circuit(exception, state)
-  end
-
-  defp acquire_lock?(%Config{repo: repo, verbose: verbose}) do
-    %{rows: [[locked?]]} =
-      repo.query!(
-        "SELECT pg_try_advisory_xact_lock($1)",
-        [@lock_key],
-        log: verbose
-      )
-
-    locked?
   end
 
   defp enqueue_jobs(%Config{crontab: crontab, timezone: timezone} = conf) do

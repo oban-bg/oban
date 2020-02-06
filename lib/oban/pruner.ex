@@ -9,6 +9,8 @@ defmodule Oban.Pruner do
 
   @type option :: {:name, module()} | {:conf, Config.t()}
 
+  @lock_key 1_159_969_450_252_858_340
+
   defmodule State do
     @moduledoc false
 
@@ -35,9 +37,7 @@ defmodule Oban.Pruner do
 
   @impl GenServer
   def handle_info(:prune, %State{conf: conf} = state) do
-    state
-    |> prune_beats()
-    |> prune_jobs()
+    prune(state)
 
     send_after(conf.prune_interval)
 
@@ -52,19 +52,29 @@ defmodule Oban.Pruner do
     {:noreply, state}
   end
 
-  defp prune_beats(%State{circuit: :disabled} = state), do: state
+  defp prune(%State{circuit: :disabled} = state), do: state
 
-  defp prune_beats(%State{conf: conf} = state) do
-    Query.delete_outdated_beats(conf, conf.beats_maxage, conf.prune_limit)
+  defp prune(%State{conf: conf} = state) do
+    %Config{repo: repo, verbose: verbose} = conf
 
-    state
+    repo.transaction(
+      fn ->
+        if Query.acquire_lock?(conf, @lock_key) do
+          prune_beats(conf)
+          prune_jobs(conf)
+        end
+      end,
+      log: verbose
+    )
   rescue
     exception in trip_errors() -> trip_circuit(exception, state)
   end
 
-  defp prune_jobs(%State{circuit: :disabled} = state), do: state
+  defp prune_beats(conf) do
+    Query.delete_outdated_beats(conf, conf.beats_maxage, conf.prune_limit)
+  end
 
-  defp prune_jobs(%State{conf: conf} = state) do
+  defp prune_jobs(conf) do
     %Config{prune: prune, prune_limit: prune_limit} = conf
 
     case prune do
@@ -74,10 +84,6 @@ defmodule Oban.Pruner do
       {:maxage, seconds} ->
         Query.delete_outdated_jobs(conf, seconds, prune_limit)
     end
-
-    state
-  rescue
-    exception in trip_errors() -> trip_circuit(exception, state)
   end
 
   defp send_after(interval) do
