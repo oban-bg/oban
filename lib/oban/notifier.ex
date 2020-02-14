@@ -21,7 +21,7 @@ defmodule Oban.Notifier do
 
   use GenServer
 
-  import Oban.Breaker, only: [open_circuit: 1, trip_circuit: 2]
+  import Oban.Breaker, only: [open_circuit: 1, trip_circuit: 3]
 
   alias Oban.Config
   alias Postgrex.Notifications
@@ -99,7 +99,7 @@ defmodule Oban.Notifier do
   end
 
   def handle_info({:EXIT, _pid, error}, %State{} = state) do
-    state = trip_circuit(error, state)
+    state = trip_circuit(error, [], state)
 
     {:noreply, %{state | conn: nil}}
   end
@@ -143,7 +143,7 @@ defmodule Oban.Notifier do
         %{state | conn: conn}
 
       {:error, error} ->
-        trip_circuit(error, state)
+        trip_circuit(error, [], state)
     end
   end
 

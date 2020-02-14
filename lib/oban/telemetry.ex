@@ -11,8 +11,8 @@ defmodule Oban.Telemetry do
   provide the error type, the error itself, and the stacktrace. The following chart shows which
   metadata you can expect for each event:
 
-  | event      | measures    | metadata                                                                     |
-  | ---------- | ----------- | ---------------------------------------------------------------------------- |
+  | event      | measures    | metadata                                                                      |
+  | ---------- | ----------- | ----------------------------------------------------------------------------- |
   | `:success` | `:duration` | `:id, :args, :queue, :worker, :attempt, :max_attempts`                        |
   | `:failure` | `:duration` | `:id, :args, :queue, :worker, :attempt, :max_attempts, :kind, :error, :stack` |
 
@@ -32,15 +32,17 @@ defmodule Oban.Telemetry do
   crashing the entire supervision tree. Processes emit a `[:oban, :trip_circuit]` event when a
   circuit is tripped and `[:oban, :open_circuit]` when the breaker is subsequently opened again.
 
-  | event           | measures | metadata            |
-  | --------------- | -------- | ------------------- |
-  | `:trip_circuit` |          | `:name`, `:message` |
-  | `:open_circuit` |          | `:name`             |
+  | event           | metadata                         |
+  | --------------- | -------------------------------- |
+  | `:trip_circuit` | `:error, :message, :name, stack` |
+  | `:open_circuit` | `:name`                          |
 
   Metadata
 
+  * `:error` — the error that tripped the circuit, see the error kinds breakdown above
   * `:name` — the registered name of the process that tripped a circuit, i.e. `Oban.Notifier`
   * `:message` — a formatted error message describing what went wrong
+  * `:stack` — exception stacktrace, when available
 
   ## Default Logger
 
@@ -141,7 +143,15 @@ defmodule Oban.Telemetry do
 
   def handle_event([:oban, event], _measure, meta, level)
       when event in [:trip_circuit, :open_circuit] do
-    log_message(level, Map.merge(meta, %{source: "oban", event: event}))
+    log_message(
+      level,
+      %{
+        message: meta[:message],
+        name: meta[:name],
+        source: "oban",
+        event: event
+      }
+    )
   end
 
   defp log_message(level, message) do

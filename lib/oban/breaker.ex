@@ -14,12 +14,12 @@ defmodule Oban.Breaker do
 
   defmacro trip_errors, do: [DBConnection.ConnectionError, Postgrex.Error]
 
-  @spec trip_circuit(Exception.t(), state_struct()) :: state_struct()
-  def trip_circuit(exception, %{circuit: _, conf: conf, name: name} = state) do
+  @spec trip_circuit(Exception.t(), list(), state_struct()) :: state_struct()
+  def trip_circuit(exception, stack, %{circuit: _, conf: conf, name: name} = state) do
     :telemetry.execute(
       [:oban, :trip_circuit],
       %{},
-      %{message: error_message(exception), name: name}
+      %{error: exception, message: error_message(exception), name: name, stack: stack}
     )
 
     Process.send_after(self(), :reset_circuit, conf.circuit_backoff)

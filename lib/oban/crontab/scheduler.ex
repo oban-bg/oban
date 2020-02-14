@@ -3,7 +3,7 @@ defmodule Oban.Crontab.Scheduler do
 
   use GenServer
 
-  import Oban.Breaker, only: [open_circuit: 1, trip_errors: 0, trip_circuit: 2]
+  import Oban.Breaker, only: [open_circuit: 1, trip_errors: 0, trip_circuit: 3]
 
   alias Oban.Crontab.Cron
   alias Oban.{Config, Query, Worker}
@@ -71,7 +71,7 @@ defmodule Oban.Crontab.Scheduler do
   end
 
   def handle_info({:EXIT, _pid, error}, %State{} = state) do
-    {:noreply, trip_circuit(error, state)}
+    {:noreply, trip_circuit(error, [], state)}
   end
 
   def handle_info(:reset_circuit, state) do
@@ -97,7 +97,7 @@ defmodule Oban.Crontab.Scheduler do
 
     state
   rescue
-    exception in trip_errors() -> trip_circuit(exception, state)
+    exception in trip_errors() -> trip_circuit(exception, __STACKTRACE__, state)
   end
 
   defp enqueue_jobs(%Config{crontab: crontab, timezone: timezone} = conf) do

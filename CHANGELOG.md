@@ -14,6 +14,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - [Oban.Pruner] Prevent deadlocks while pruning by ensuring that only a single
   node can prune at any given time.
 
+### Added
+
+- [Oban.Telemetry] Add `:error` and `:stack` to `trip_circuit` event metadata.
+
 ### Changed
 
 - [Oban.Worker] Tighten the spec for `perform/2`. Now workers are expected to

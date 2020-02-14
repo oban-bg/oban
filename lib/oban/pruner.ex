@@ -3,7 +3,7 @@ defmodule Oban.Pruner do
 
   use GenServer
 
-  import Oban.Breaker, only: [open_circuit: 1, trip_errors: 0, trip_circuit: 2]
+  import Oban.Breaker, only: [open_circuit: 1, trip_errors: 0, trip_circuit: 3]
 
   alias Oban.{Config, Query}
 
@@ -67,7 +67,7 @@ defmodule Oban.Pruner do
       log: verbose
     )
   rescue
-    exception in trip_errors() -> trip_circuit(exception, state)
+    exception in trip_errors() -> trip_circuit(exception, __STACKTRACE__, state)
   end
 
   defp prune_beats(conf) do
