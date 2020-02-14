@@ -18,6 +18,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 - [Oban.Telemetry] Add `:error` and `:stack` to `trip_circuit` event metadata.
 
+- [Oban.Queue.Executor] Retry success/failure database updates after a job
+  finishes.
+
+  On occasion something may happen to the database connection and updating a
+  job's state would fail. Now we retry writing with a linear backoff to prevent
+  the job from getting stuck in an executing state.
+
 ### Changed
 
 - [Oban.Worker] Tighten the spec for `perform/2`. Now workers are expected to
