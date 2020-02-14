@@ -94,6 +94,7 @@ defmodule Oban.MixProject do
     [
       "README.md",
       "guides/troubleshooting.md",
+      "guides/release_configuration.md",
       "CHANGELOG.md": [filename: "CHANGELOG.md", title: "CHANGELOG"]
     ]
   end
