@@ -34,6 +34,30 @@ defmodule Oban.Breaker do
     %{state | circuit: :enabled}
   end
 
+  @max_retries 10
+  @retry_delay 100
+
+  @spec with_retry(fun(), pos_integer()) :: term()
+  def with_retry(fun, retries \\ 0)
+
+  def with_retry(fun, @max_retries), do: fun.()
+
+  def with_retry(fun, retries) do
+    fun.()
+  rescue
+    _exception -> lazy_retry(fun, retries)
+  catch
+    _kind, _value -> lazy_retry(fun, retries)
+  end
+
+  defp lazy_retry(fun, retries) do
+    (@retry_delay * :math.pow(2, retries))
+    |> trunc()
+    |> Process.sleep()
+
+    with_retry(fun, retries + 1)
+  end
+
   defp error_message(%Postgrex.Error{} = exception) do
     Postgrex.Error.message(exception)
   end

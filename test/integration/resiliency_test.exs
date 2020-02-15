@@ -18,7 +18,7 @@ defmodule Oban.Integration.ResiliencyTest do
   end
 
   test "producer connection errors are logged in resilient mode" do
-    Repo.query!("ALTER TABLE oban_jobs RENAME TO oban_missing")
+    mangle_jobs_table!()
 
     start_supervised!({Oban, @oban_opts})
 
@@ -29,7 +29,7 @@ defmodule Oban.Integration.ResiliencyTest do
 
     :ok = stop_supervised(Oban)
   after
-    Repo.query!("ALTER TABLE oban_missing RENAME TO oban_jobs")
+    reform_jobs_table!()
   end
 
   test "notification connection errors are logged in resilient mode" do
@@ -48,9 +48,38 @@ defmodule Oban.Integration.ResiliencyTest do
     :ok = stop_supervised(Oban)
   end
 
+  test "recording job completion is retried after errors" do
+    start_supervised!({Oban, @oban_opts})
+
+    job = insert_job!(ref: 1, sleep: 10)
+
+    assert_receive {:started, 1}
+
+    mangle_jobs_table!()
+
+    assert_receive {:ok, 1}
+
+    reform_jobs_table!()
+
+    # The retry backoff starts at 1 second (needs improvement)
+    with_backoff([sleep: 50, total: 10], fn ->
+      assert %{state: "completed"} = Repo.reload(job)
+    end)
+
+    :ok = stop_supervised(Oban)
+  end
+
   defp insert_job!(args) do
     args
     |> Worker.new(queue: :alpha)
     |> Oban.insert!()
+  end
+
+  defp mangle_jobs_table! do
+    Repo.query!("ALTER TABLE oban_jobs RENAME TO oban_missing")
+  end
+
+  defp reform_jobs_table! do
+    Repo.query!("ALTER TABLE oban_missing RENAME TO oban_jobs")
   end
 end

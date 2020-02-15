@@ -3,10 +3,7 @@ defmodule Oban.Queue.Executor do
 
   require Logger
 
-  alias Oban.{Config, Job, Query, Worker}
-
-  @max_retries 10
-  @retry_delay 1_000
+  alias Oban.{Breaker, Config, Job, Query, Worker}
 
   @spec child_spec(Job.t(), Config.t()) :: Supervisor.child_spec()
   def child_spec(job, conf) do
@@ -29,14 +26,14 @@ defmodule Oban.Queue.Executor do
 
     case return do
       {:success, ^job} ->
-        with_retry(fn ->
+        Breaker.with_retry(fn ->
           Query.complete_job(conf, job)
 
           report(:success, duration, job, %{})
         end)
 
       {:failure, ^job, kind, error, stack} ->
-        with_retry(fn ->
+        Breaker.with_retry(fn ->
           Query.retry_job(conf, job, worker_backoff(job), format_blamed(kind, error, stack))
 
           report(:failure, duration, job, %{kind: kind, error: error, stack: stack})
@@ -109,29 +106,6 @@ defmodule Oban.Queue.Executor do
     else
       Worker.default_backoff(attempt)
     end
-  end
-
-  # On occasion something may happen to the database connection and updating a job's state will
-  # fail. In that situation we must retry writing to prevent the job from getting stuck in an
-  # executing state.
-  defp with_retry(fun, retries \\ 0)
-
-  defp with_retry(fun, @max_retries), do: fun.()
-
-  defp with_retry(fun, retries) do
-    fun.()
-  rescue
-    _exception -> lazy_retry(fun, retries)
-  catch
-    _kind, _value -> lazy_retry(fun, retries)
-  end
-
-  defp lazy_retry(fun, retries) do
-    retries = retries + 1
-
-    Process.sleep(retries * @retry_delay)
-
-    with_retry(fun, retries)
   end
 
   defp format_blamed(:exception, error, stack), do: format_blamed(:error, error, stack)
