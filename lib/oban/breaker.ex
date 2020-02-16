@@ -51,9 +51,9 @@ defmodule Oban.Breaker do
   end
 
   defp lazy_retry(fun, retries) do
-    (@retry_delay * :math.pow(2, retries))
-    |> trunc()
-    |> Process.sleep()
+    sleep = trunc(@retry_delay * :math.pow(2, retries))
+
+    Process.sleep(sleep)
 
     with_retry(fun, retries + 1)
   end

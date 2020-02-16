@@ -61,7 +61,6 @@ defmodule Oban.Integration.ResiliencyTest do
 
     reform_jobs_table!()
 
-    # The retry backoff starts at 1 second (needs improvement)
     with_backoff([sleep: 50, total: 10], fn ->
       assert %{state: "completed"} = Repo.reload(job)
     end)
