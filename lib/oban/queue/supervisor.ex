@@ -33,7 +33,7 @@ defmodule Oban.Queue.Supervisor do
     fore_name = Module.concat([name, "Foreman"])
     prod_name = Module.concat([name, "Producer"])
 
-    fore_opts = [strategy: :one_for_one, name: fore_name]
+    fore_opts = [name: fore_name]
 
     prod_opts = [
       conf: conf,
@@ -51,7 +51,7 @@ defmodule Oban.Queue.Supervisor do
     ]
 
     children = [
-      {DynamicSupervisor, fore_opts},
+      {Task.Supervisor, fore_opts},
       {Producer, prod_opts},
       {Watchman, watch_opts}
     ]

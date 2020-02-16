@@ -37,7 +37,7 @@ defmodule Oban.Breaker do
   @max_retries 10
   @retry_delay 100
 
-  @spec with_retry(fun(), pos_integer()) :: term()
+  @spec with_retry(fun(), integer()) :: term()
   def with_retry(fun, retries \\ 0)
 
   def with_retry(fun, @max_retries), do: fun.()

@@ -55,7 +55,7 @@ defmodule Oban.Queue.Watchman do
     # another error as part of the shut down process.
     children =
       try do
-        DynamicSupervisor.count_children(foreman)
+        Supervisor.count_children(foreman)
       catch
         _ -> %{active: 0}
       end

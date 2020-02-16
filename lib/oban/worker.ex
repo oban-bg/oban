@@ -126,6 +126,8 @@ defmodule Oban.Worker do
 
   alias Oban.Job
 
+  @type t :: module()
+
   @doc """
   Build a job changeset for this worker with optional overrides.
 

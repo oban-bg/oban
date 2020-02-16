@@ -202,6 +202,22 @@ defmodule Oban.Job do
     end
   end
 
+  @doc false
+  @spec worker_module(t()) ::
+          {:ok, module()} | {:error, Exception.t(), Exception.stacktrace()}
+  def worker_module(%__MODULE__{worker: worker}) when is_binary(worker) do
+    module =
+      worker
+      |> String.split(".")
+      |> Module.safe_concat()
+
+    {:ok, module}
+  rescue
+    error -> {:error, error, __STACKTRACE__}
+  end
+
+  def worker_module(%__MODULE__{worker: worker}) when is_atom(worker), do: {:ok, worker}
+
   @unique_fields ~w(args queue worker)a
   @unique_period 60
   @unique_states ~w(available scheduled executing retryable completed)a

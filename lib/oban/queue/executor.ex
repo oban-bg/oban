@@ -5,20 +5,8 @@ defmodule Oban.Queue.Executor do
 
   alias Oban.{Breaker, Config, Job, Query, Worker}
 
-  @spec child_spec(Job.t(), Config.t()) :: Supervisor.child_spec()
-  def child_spec(job, conf) do
-    %{
-      id: __MODULE__,
-      start: {__MODULE__, :start_link, [job, conf]},
-      type: :worker,
-      restart: :temporary
-    }
-  end
-
-  @spec start_link(Job.t(), Config.t()) :: {:ok, pid()}
-  def start_link(%Job{} = job, %Config{} = conf) do
-    Task.start_link(__MODULE__, :call, [job, conf])
-  end
+  @type success :: {:success, Job.t()}
+  @type failure :: {:failure, Job.t(), Worker.t(), atom(), term(), list()}
 
   @spec call(Job.t(), Config.t()) :: :success | :failure
   def call(%Job{} = job, %Config{} = conf) do
@@ -26,27 +14,49 @@ defmodule Oban.Queue.Executor do
 
     case return do
       {:success, ^job} ->
-        Breaker.with_retry(fn ->
-          Query.complete_job(conf, job)
-
-          report(:success, duration, job, %{})
-        end)
+        Breaker.with_retry(fn -> report_success(conf, job, duration) end)
 
       {:failure, ^job, kind, error, stack} ->
-        Breaker.with_retry(fn ->
-          Query.retry_job(conf, job, worker_backoff(job), format_blamed(kind, error, stack))
-
-          report(:failure, duration, job, %{kind: kind, error: error, stack: stack})
-        end)
+        Breaker.with_retry(fn -> report_failure(conf, job, duration, kind, error, stack) end)
     end
   end
 
-  @doc false
-  def safe_call(%Job{args: args, worker: worker} = job) do
-    worker
-    |> to_module()
-    |> apply(:perform, [args, job])
-    |> case do
+  @spec safe_call(Job.t()) :: success() | failure()
+  def safe_call(%Job{} = job) do
+    case Job.worker_module(job) do
+      {:ok, worker} ->
+        perform(worker, job)
+
+      {:error, error, stacktrace} ->
+        {:failure, job, :error, error, stacktrace}
+    end
+  end
+
+  @spec report_success(Config.t(), Job.t(), integer()) :: :success
+  def report_success(conf, job, duration) do
+    Query.complete_job(conf, job)
+
+    report(:success, duration, job, %{})
+  end
+
+  @spec report_failure(Config.t(), Job.t(), integer(), atom(), any(), list()) :: :failure
+  def report_failure(conf, job, duration, kind, error, stack) do
+    Query.retry_job(conf, job, worker_backoff(job), kind, error, stack)
+
+    report(:failure, duration, job, %{kind: kind, error: error, stack: stack})
+  end
+
+  # Helpers
+
+  defp worker_backoff(%Job{attempt: attempt} = job) do
+    case Job.worker_module(job) do
+      {:ok, worker} -> worker.backoff(attempt)
+      _ -> Worker.default_backoff(attempt)
+    end
+  end
+
+  defp perform(worker, %Job{args: args} = job) do
+    case worker.perform(args, job) do
       :ok ->
         {:success, job}
 
@@ -78,42 +88,6 @@ defmodule Oban.Queue.Executor do
   catch
     kind, value ->
       {:failure, job, kind, value, __STACKTRACE__}
-  end
-
-  # Helpers
-
-  defp to_module(worker) when is_binary(worker) do
-    worker
-    |> String.split(".")
-    |> Module.safe_concat()
-  end
-
-  defp to_module(worker) when is_atom(worker), do: worker
-
-  # While it is slightly wasteful, we have to convert the worker to a module again outside of
-  # `safe_call/1`. There is a possibility that the worker module can't be found at all and we
-  # need to fall back to a default implementation.
-  defp worker_backoff(%Job{attempt: attempt, worker: worker}) do
-    module =
-      try do
-        to_module(worker)
-      rescue
-        ArgumentError -> nil
-      end
-
-    if function_exported?(module, :backoff, 1) do
-      module.backoff(attempt)
-    else
-      Worker.default_backoff(attempt)
-    end
-  end
-
-  defp format_blamed(:exception, error, stack), do: format_blamed(:error, error, stack)
-
-  defp format_blamed(kind, error, stack) do
-    {blamed, stack} = Exception.blame(kind, error, stack)
-
-    Exception.format(kind, blamed, stack)
   end
 
   defp report(event, duration, job, meta) do

@@ -6,7 +6,7 @@ defmodule Oban.Queue.Producer do
   import Oban.Breaker, only: [open_circuit: 1, trip_errors: 0, trip_circuit: 3]
   import Oban.Notifier, only: [insert: 0, signal: 0]
 
-  alias Oban.{Config, Notifier, Query}
+  alias Oban.{Breaker, Config, Notifier, Query}
   alias Oban.Queue.Executor
 
   @type option ::
@@ -95,17 +95,35 @@ defmodule Oban.Queue.Producer do
 
   @impl GenServer
   def terminate(_reason, %State{poll_ref: poll_ref, rescue_ref: rescue_ref}) do
-    # There is a good chance that a message will be received after the process has terminated.
-    # While this doesn't cause any problems, it does cause an unwanted crash report.
-    if not is_nil(poll_ref), do: Process.cancel_timer(poll_ref)
-    if not is_nil(rescue_ref), do: Process.cancel_timer(rescue_ref)
+    if is_reference(poll_ref), do: Process.cancel_timer(poll_ref)
+    if is_reference(rescue_ref), do: Process.cancel_timer(rescue_ref)
 
     :ok
   end
 
   @impl GenServer
-  def handle_info({:DOWN, ref, :process, _pid, _reason}, %State{running: running} = state) do
+  def handle_info({ref, _val}, %State{running: running} = state) do
+    Process.demonitor(ref, [:flush])
+
     dispatch(%{state | running: Map.delete(running, ref)})
+  end
+
+  # This message is only received when the job's task doesn't exit cleanly. This should be rare,
+  # but it can happen when nested processes crash.
+  def handle_info({:DOWN, ref, :process, _pid, {reason, stack}}, %State{} = state) do
+    %State{conf: conf, foreman: foreman, running: running} = state
+
+    {{job, _pid}, running} = Map.pop(running, ref)
+
+    # Without this we may crash the producer if there are any db errors. Alternatively, we would
+    # block the producer while awaiting a retry.
+    Task.Supervisor.async_nolink(foreman, fn ->
+      Breaker.with_retry(fn ->
+        Executor.report_failure(conf, job, 0, :error, reason, stack)
+      end)
+    end)
+
+    dispatch(%{state | running: running})
   end
 
   def handle_info(:dispatch, %State{} = state) do
@@ -309,9 +327,9 @@ defmodule Oban.Queue.Producer do
 
   defp start_jobs(jobs, %State{conf: conf, foreman: foreman}) do
     for job <- jobs, into: %{} do
-      {:ok, pid} = DynamicSupervisor.start_child(foreman, Executor.child_spec(job, conf))
+      %{pid: pid, ref: ref} = Task.Supervisor.async_nolink(foreman, Executor, :call, [job, conf])
 
-      {Process.monitor(pid), {job, pid}}
+      {ref, {job, pid}}
     end
   end
 

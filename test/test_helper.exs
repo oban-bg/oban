@@ -45,6 +45,15 @@ defmodule Oban.Integration.Worker do
         GenServer.call(FakeServer, :exit)
 
         :ok
+
+      "TASK_ERROR" ->
+        send(pid, {:async, ref})
+
+        fn -> apply(FakeServer, :call, []) end
+        |> Task.async()
+        |> Task.await()
+
+        :ok
     end
   end
 

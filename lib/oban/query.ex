@@ -67,8 +67,8 @@ defmodule Oban.Query do
   end
 
   @spec stage_scheduled_jobs(Config.t(), binary(), opts :: keyword()) :: {integer(), nil}
-  def stage_scheduled_jobs(%Config{} = config, queue, opts \\ []) do
-    %Config{prefix: prefix, repo: repo, verbose: verbose} = config
+  def stage_scheduled_jobs(%Config{} = conf, queue, opts \\ []) do
+    %Config{prefix: prefix, repo: repo, verbose: verbose} = conf
 
     max_scheduled_at = Keyword.get(opts, :max_scheduled_at, utc_now())
 
@@ -195,8 +195,9 @@ defmodule Oban.Query do
     :ok
   end
 
-  @spec retry_job(Config.t(), Job.t(), pos_integer(), binary()) :: :ok
-  def retry_job(%Config{repo: repo} = config, %Job{} = job, backoff, formatted_error) do
+  @spec retry_job(Config.t(), Job.t(), pos_integer(), atom(), term(), list()) :: :ok
+  def retry_job(%Config{} = conf, %Job{} = job, backoff, kind, error, stack) do
+    %Config{prefix: prefix, repo: repo, verbose: verbose} = conf
     %Job{attempt: attempt, id: id, max_attempts: max_attempts} = job
 
     set =
@@ -208,15 +209,14 @@ defmodule Oban.Query do
 
     updates = [
       set: set,
-      push: [errors: %{attempt: attempt, at: utc_now(), error: formatted_error}]
+      push: [errors: %{attempt: attempt, at: utc_now(), error: format_blamed(kind, error, stack)}]
     ]
 
-    repo.update_all(
-      where(Job, id: ^id),
-      updates,
-      log: config.verbose,
-      prefix: config.prefix
-    )
+    Job
+    |> where(id: ^id)
+    |> repo.update_all(updates, log: verbose, prefix: prefix)
+
+    :ok
   end
 
   @spec notify(Config.t(), binary(), map()) :: :ok
@@ -243,6 +243,14 @@ defmodule Oban.Query do
   # Helpers
 
   defp next_attempt_at(backoff), do: DateTime.add(utc_now(), backoff, :second)
+
+  defp format_blamed(:exception, error, stack), do: format_blamed(:error, error, stack)
+
+  defp format_blamed(kind, error, stack) do
+    {blamed, stack} = Exception.blame(kind, error, stack)
+
+    Exception.format(kind, blamed, stack)
+  end
 
   defp insert_unique(%Config{prefix: prefix, repo: repo, verbose: verbose}, changeset) do
     query_opts = [log: verbose, on_conflict: :nothing, prefix: prefix]

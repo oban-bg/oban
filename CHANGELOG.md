@@ -14,6 +14,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - [Oban.Pruner] Prevent deadlocks while pruning by ensuring that only a single
   node can prune at any given time.
 
+- [Oban.Queue.Executor] Improve handling of nested/linked process failures.
+  Previously if a job spawned a process that crashed (i.e. through Task.async)
+  then the job was left stuck in an executing state.
+
 ### Added
 
 - [Oban.Telemetry] Add `:error` and `:stack` to `trip_circuit` event metadata.
