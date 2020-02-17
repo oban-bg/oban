@@ -12,6 +12,10 @@ defmodule Oban.Breaker do
           optional(atom()) => any()
         }
 
+  @max_retries 10
+  @min_delay 100
+  @jitter_mult 0.10
+
   defmacro trip_errors, do: [DBConnection.ConnectionError, Postgrex.Error]
 
   @spec trip_circuit(Exception.t(), list(), state_struct()) :: state_struct()
@@ -34,9 +38,6 @@ defmodule Oban.Breaker do
     %{state | circuit: :enabled}
   end
 
-  @max_retries 10
-  @retry_delay 100
-
   @spec with_retry(fun(), integer()) :: term()
   def with_retry(fun, retries \\ 0)
 
@@ -51,7 +52,9 @@ defmodule Oban.Breaker do
   end
 
   defp lazy_retry(fun, retries) do
-    sleep = trunc(@retry_delay * :math.pow(2, retries))
+    base = @min_delay * :math.pow(2, retries)
+    diff = base * @jitter_mult
+    sleep = Enum.random(trunc(base - diff)..trunc(base + diff))
 
     Process.sleep(sleep)
 
