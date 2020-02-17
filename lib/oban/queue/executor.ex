@@ -25,7 +25,13 @@ defmodule Oban.Queue.Executor do
   def safe_call(%Job{} = job) do
     case Job.worker_module(job) do
       {:ok, worker} ->
-        perform(worker, job)
+        case worker.timeout(job) do
+          :infinity ->
+            perform(worker, job)
+
+          timeout when is_integer(timeout) ->
+            perform_timed(worker, job, timeout)
+        end
 
       {:error, error, stacktrace} ->
         {:failure, job, :error, error, stacktrace}
@@ -64,9 +70,7 @@ defmodule Oban.Queue.Executor do
         {:success, job}
 
       {:error, error} ->
-        {:current_stacktrace, stacktrace} = Process.info(self(), :current_stacktrace)
-
-        {:failure, job, :error, error, stacktrace}
+        {:failure, job, :error, error, current_stacktrace()}
 
       returned ->
         Logger.warn(fn ->
@@ -88,6 +92,24 @@ defmodule Oban.Queue.Executor do
   catch
     kind, value ->
       {:failure, job, kind, value, __STACKTRACE__}
+  end
+
+  defp perform_timed(worker, job, timeout) do
+    task = Task.async(fn -> perform(worker, job) end)
+
+    case Task.yield(task, timeout) || Task.shutdown(task) do
+      {:ok, reply} ->
+        reply
+
+      nil ->
+        {:failure, job, :error, :timeout, current_stacktrace()}
+    end
+  end
+
+  defp current_stacktrace do
+    {:current_stacktrace, stacktrace} = Process.info(self(), :current_stacktrace)
+
+    stacktrace
   end
 
   defp report(event, duration, job, meta) do

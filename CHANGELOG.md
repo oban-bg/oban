@@ -20,6 +20,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Added
 
+- [Oban.Worker] Add `timeout/1` callback for limiting how long a job may
+  execute. The default value is `:infinity`, which allows a job to run
+  indefinitely and mirrors the previous behavior.
+
 - [Oban.Telemetry] Add `:error` and `:stack` to `trip_circuit` event metadata.
 
 - [Oban.Queue.Executor] Retry success/failure database updates after a job

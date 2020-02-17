@@ -28,6 +28,10 @@ defmodule Oban.WorkerTest do
     @impl Worker
     def perform(_args, %{attempt: attempt}) when attempt > 1, do: attempt
     def perform(%{"a" => a, "b" => b}, _job), do: a + b
+
+    @impl Worker
+    def timeout(%{args: %{"timeout" => timeout}}), do: timeout
+    def timeout(_), do: :infinity
   end
 
   describe "new/2" do
@@ -68,6 +72,16 @@ defmodule Oban.WorkerTest do
       assert CustomWorker.backoff(1) == 1
       assert CustomWorker.backoff(2) == 4
       assert CustomWorker.backoff(3) == 9
+    end
+  end
+
+  describe "timeout/1" do
+    test "the default timeout is infinity" do
+      assert BasicWorker.timeout(%Job{}) == :infinity
+    end
+
+    test "the timeout can be overridden" do
+      assert CustomWorker.timeout(%Job{args: %{"timeout" => 60_000}}) == 60_000
     end
   end
 

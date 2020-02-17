@@ -69,6 +69,10 @@ defmodule Oban.Integration.Worker do
     :ok
   end
 
+  @impl Worker
+  def timeout(%_{args: %{"timeout" => timeout}}), do: timeout
+  def timeout(_job), do: :infinity
+
   def pid_to_bin(pid \\ self()) do
     pid
     |> :erlang.term_to_binary()

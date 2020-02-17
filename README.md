@@ -745,12 +745,51 @@ integrating with external error reporting systems.
 
 ### Limiting Retries
 
-By default jobs are retried up to 20 times. The number of retries is controlled by the
-`max_attempts` value, which can be set at the Worker or Job level. For example, to instruct a
-worker to discard jobs after three failures:
+By default, jobs are retried up to 20 times. The number of retries is controlled
+by the `max_attempts` value, which can be set at the Worker or Job level. For
+example, to instruct a worker to discard jobs after three failures:
 
 ```elixir
 use Oban.Worker, queue: :limited, max_attempts: 3
+```
+
+### Limiting Execution Time
+
+By default, individual jobs may execute indefinitely. If this is undesirable you
+may define a timeout in milliseconds with the `timeout/1` callback on your
+worker module.
+
+For example, to limit a worker's execution time to 30 seconds:
+
+```elixir
+def MyApp.Worker do
+  use Oban.Worker
+
+  @impl Oban.Worker
+  def perform(_args, _job) do
+    something_that_may_take_a_long_time()
+
+    :ok
+  end
+
+  @impl Oban.Worker
+  def timeout(_job), do: :timer.seconds(30)
+end
+```
+
+The `timeout/1` function accepts an `Oban.Job` struct, so you can customize the
+timeout using any job attributes.
+
+Define the `timeout` value through job args:
+
+```elixir
+def timeout(%_{args: %{"timeout" => timeout}}), do: timeout
+```
+
+Define the `timeout` based on the number of attempts:
+
+```elixir
+def timeout(%_{attempt: attempt}), do: attempt * :timer.seconds(5)
 ```
 
 ## Instrumentation and Logging

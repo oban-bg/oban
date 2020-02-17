@@ -121,6 +121,38 @@ defmodule Oban.Worker do
   * **linear** — delay for the same number of seconds as the current attempt, e.g. 1→1, 2→2, 3→3
   * **squared** — delay by attempt number squared, e.g. 1→1, 2→4, 3→9
   * **sidekiq** — delay by a base amount plus some jitter, e.g. 1→32, 2→61, 3→135
+
+  ## Limiting Execution Time
+
+  By default, individual jobs may execute indefinitely. If this is undesirable you may define a
+  timeout in milliseconds with the `timeout/1` callback on your worker module.
+
+  For example, to limit a worker's execution time to 30 seconds:
+
+      def MyApp.Worker do
+        use Oban.Worker
+
+        @impl Oban.Worker
+        def perform(_args, _job) do
+          something_that_may_take_a_long_time()
+
+          :ok
+        end
+
+        @impl Oban.Worker
+        def timeout(_job), do: :timer.seconds(30)
+      end
+
+  The `timeout/1` function accepts an `Oban.Job` struct, so you can customize the timeout using
+  any job attributes.
+
+  Define the `timeout` value through job args:
+
+      def timeout(%_{args: %{"timeout" => timeout}}), do: timeout
+
+  Define the `timeout` based on the number of attempts:
+
+      def timeout(%_{attempt: attempt}), do: attempt * :timer.seconds(5)
   """
   @moduledoc since: "0.1.0"
 
@@ -137,8 +169,18 @@ defmodule Oban.Worker do
 
   @doc """
   Calculate the execution backoff, or the number of seconds to wait before retrying a failed job.
+
+  Defaults to an exponential algorithm.
   """
-  @callback backoff(attempt :: pos_integer()) :: pos_integer()
+  @callback backoff(attempt :: 1..99) :: pos_integer()
+
+  @doc """
+  Set a job's maximum execution time in milliseconds. Jobs that exceed the time limit are
+  considered a failure and may be retried.
+
+  Defaults to `:infinity`.
+  """
+  @callback timeout(job :: Job.t()) :: :infinity | pos_integer()
 
   @doc """
   The `perform/2` function is called to execute a job.
@@ -175,6 +217,11 @@ defmodule Oban.Worker do
       @impl Worker
       def backoff(attempt) when is_integer(attempt) do
         Worker.default_backoff(attempt)
+      end
+
+      @impl Worker
+      def timeout(%Job{} = _job) do
+        :infinity
       end
 
       defoverridable Worker

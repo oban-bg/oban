@@ -7,6 +7,9 @@ defmodule Oban.Queue.ExecutorTest do
   alias Oban.Queue.Executor
 
   defmodule Worker do
+    use Oban.Worker
+
+    @impl Worker
     def perform(%{"mode" => "ok"}, _job), do: :ok
     def perform(%{"mode" => "warn"}, _job), do: {:bad, :this_will_warn}
     def perform(%{"mode" => "raise"}, _job), do: raise(ArgumentError)
