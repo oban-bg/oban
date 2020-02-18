@@ -231,7 +231,8 @@ defmodule MyApp.Application do
 
   use Application
 
-  alias MyApp.{Endpoint, Repo}
+  alias MyApp.Repo
+  alias MyAppWeb.Endpoint 
 
   def start(_type, _args) do
     children = [
