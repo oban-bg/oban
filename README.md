@@ -796,7 +796,7 @@ metadata see docs for the `Oban.Telemetry` module.
 While having the same `Oban` configuration for every environment might be fine, there are certainly times you might
 want to make changes for a specific environment. Maybe you want to increase or decrease a queue's concurrency, for example.
 
-If you are using Elixir Releases, this is straight forward to do using [Moduel Config Providers](https://hexdocs.pm/mix/Mix.Tasks.Release.html#module-config-providers ).
+If you are using Elixir Releases, this is straight forward to do using [Module Config Providers](https://hexdocs.pm/mix/Mix.Tasks.Release.html#module-config-providers ).
 
 
 ```elixir
