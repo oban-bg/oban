@@ -78,6 +78,10 @@ defmodule Oban.Crontab.Scheduler do
     {:noreply, open_circuit(state)}
   end
 
+  def handle_info(_message, state) do
+    {:noreply, state}
+  end
+
   defp send_poll_after(%State{poll_interval: interval} = state) do
     ref = Process.send_after(self(), :poll, interval)
 
