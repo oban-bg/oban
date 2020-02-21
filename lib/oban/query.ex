@@ -39,7 +39,7 @@ defmodule Oban.Query do
     with {:ok, result} <- repo.transaction(fun, log: verbose), do: result
   end
 
-  @spec fetch_or_insert_job(Config.t(), Multi.t(), term(), Changeset.t()) :: Multi.t()
+  @spec fetch_or_insert_job(Config.t(), Multi.t(), Multi.name(), Changeset.t()) :: Multi.t()
   def fetch_or_insert_job(config, multi, name, changeset) do
     Multi.run(multi, name, fn repo, _changes ->
       insert_unique(%{config | repo: repo}, changeset)
@@ -59,7 +59,7 @@ defmodule Oban.Query do
     end
   end
 
-  @spec insert_all_jobs(Config.t(), Multi.t(), atom(), [Changeset.t()]) :: Multi.t()
+  @spec insert_all_jobs(Config.t(), Multi.t(), Multi.name(), [Changeset.t()]) :: Multi.t()
   def insert_all_jobs(config, multi, name, changesets) when is_list(changesets) do
     Multi.run(multi, name, fn repo, _changes ->
       {:ok, insert_all_jobs(%{config | repo: repo}, changesets)}
