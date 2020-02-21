@@ -18,8 +18,8 @@
   </a>
 </p>
 <p align="center">
-  <a href="https://circleci.com/gh/sorentwo/oban">
-    <img alt="CircleCI Status" src="https://circleci.com/gh/sorentwo/oban.svg?style=svg">
+  <a href="https://github.com/sorentwo/oban/actions">
+    <img alt="CI Status" src="https://github.com/sorentwo/oban/workflows/ci/badge.svg">
   </a>
   <a href="https://opensource.org/licenses/Apache-2.0">
     <img alt="Apache 2 License" src="https://img.shields.io/hexpm/l/oban">
