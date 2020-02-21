@@ -44,6 +44,19 @@ defmodule Oban.TestingTest do
       assert_enqueued worker: Ping, scheduled_at: {seconds_from_now(69), delta: 10}
     end
 
+    test "asserting that jobs are now or will eventually be enqueued" do
+      insert_job!(%{id: 1}, worker: Ping, queue: :alpha)
+
+      Task.async(fn ->
+        Process.sleep(50)
+
+        insert_job!(%{id: 2}, worker: Pong, queue: :alpha)
+      end)
+
+      assert_enqueued [worker: Pong, args: %{id: 2}], 100
+      assert_enqueued [worker: Ping, args: %{id: 1}], 100
+    end
+
     test "printing a helpful error message" do
       insert_job!(%{dest: "some_node"}, worker: Ping)
 
@@ -80,6 +93,16 @@ defmodule Oban.TestingTest do
       refute_enqueued worker: Pong, args: %{id: 4}
       refute_enqueued worker: Ping, queue: :gamma
       refute_enqueued worker: Pong, queue: :gamma, args: %{message: "helo"}
+    end
+
+    test "refuting that jobs are now or will eventually be enqueued" do
+      Task.async(fn ->
+        Process.sleep(50)
+
+        insert_job!(%{id: 1}, worker: Ping, queue: :alpha)
+      end)
+
+      refute_enqueued [worker: Ping, args: %{id: 1}], 20
     end
   end
 

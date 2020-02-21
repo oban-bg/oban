@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Added
+
+- [Oban.Testing] Add `assert_enqueued/2` and `refute_enqueued/2` to allow
+  asserting with a timeout, like `assert_received`.
+
 ## [1.1.0] — 2020-02-17
 
 ### Fixed
