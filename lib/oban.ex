@@ -221,7 +221,7 @@ defmodule Oban do
   @spec insert(
           name :: atom(),
           multi :: Multi.t(),
-          multi_name :: term(),
+          multi_name :: Multi.name(),
           changeset :: Changeset.t(Job.t())
         ) :: Multi.t()
   def insert(name \\ __MODULE__, %Multi{} = multi, multi_name, %Changeset{} = changeset)
@@ -292,7 +292,7 @@ defmodule Oban do
   @spec insert_all(
           name :: atom(),
           multi :: Multi.t(),
-          multi_name :: term(),
+          multi_name :: Multi.name(),
           changeset :: [Changeset.t(Job.t())]
         ) :: Multi.t()
   def insert_all(name \\ __MODULE__, %Multi{} = multi, multi_name, changesets)
