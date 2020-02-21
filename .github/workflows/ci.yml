@@ -1,0 +1,61 @@
+name: ci
+
+on: push
+
+jobs:
+  ci:
+    strategy:
+      matrix:
+        elixir: ['1.8', '1.9', '1.10']
+        otp: ['22.2']
+        postgres: ['11.7-alpine']
+
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:${{ matrix.postgres }}
+        env:
+          POSTGRES_DB: oban_test
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_USER: postgres
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432/tcp
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: actions/cache@v1
+        with:
+          key: test-${{ hashFiles('mix.lock') }}
+          path: _build
+
+      - uses: actions/setup-elixir@v1
+        with:
+          elixir-version: ${{ matrix.elixir }}
+          otp-version: ${{ matrix.otp }}
+
+      - name: Run mix deps.get
+        run: mix deps.get
+
+      - name: Run mix compile
+        env:
+          MIX_ENV: test
+        run: mix compile
+
+      - name: Run mix ecto.migrate
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:${{ job.services.postgres.ports[5432] }}/oban_test
+          MIX_ENV: test
+        run: mix ecto.migrate -r Oban.Test.Repo
+
+      - name: Run mix ci
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:${{ job.services.postgres.ports[5432] }}/oban_test
+          MIX_ENV: test
+        run: mix ci
