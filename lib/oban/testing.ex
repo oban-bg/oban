@@ -13,19 +13,26 @@ defmodule Oban.Testing do
 
       use Oban.Testing, repo: MyApp.Repo
 
-  That will define three helper functions, `assert_enqueued/1`, `refute_enqueued/1` and
+  That will define three helper functions, `assert_enqueued/1,2`, `refute_enqueued/1,2` and
   `all_enqueued/1`. The functions can then be used to make assertions on the jobs that have been
   inserted in the database while testing.
 
+  Some small examples:
+
   ```elixir
+  # Assert that a job was already enqueued
   assert_enqueued worker: MyWorker, args: %{id: 1}
 
-  # or
+  # Assert that a job was enqueued or will be enqueued in the next 100ms
+  assert_enqueued [worker: MyWorker, args: %{id: 1}], 100
 
+  # Refute that a job was already enqueued
   refute_enqueued queue: "special", args: %{id: 2}
 
-  # or
+  # Refute that a job was already enqueued or would be enqueued in the next 100ms
+  refute_enqueued queue: "special", args: %{id: 2}, 100
 
+  # Make assertions on a list of all jobs matching some options
   assert [%{args: %{"id" => 1}}] = all_enqueued(worker: MyWorker)
   ```
 
@@ -62,7 +69,7 @@ defmodule Oban.Testing do
         end
       end
 
-  ## Matching scheduled jobs and timestamps in general
+  ## Matching Scheduled Jobs and Timestamps
 
   In order to assert a job has been scheduled at a certain time, you will need to match against
   the `scheduled_at` attribute of the enqueued job.
@@ -107,6 +114,8 @@ defmodule Oban.Testing do
   alias Ecto.Changeset
   alias Oban.Job
 
+  @wait_interval 10
+
   @doc false
   defmacro __using__(repo: repo) do
     quote do
@@ -116,12 +125,20 @@ defmodule Oban.Testing do
         Testing.all_enqueued(unquote(repo), opts)
       end
 
-      def assert_enqueued(opts) do
-        Testing.assert_enqueued(unquote(repo), opts)
+      def assert_enqueued(opts, timeout \\ :none) do
+        if timeout == :none do
+          Testing.assert_enqueued(unquote(repo), opts)
+        else
+          Testing.assert_enqueued(unquote(repo), opts, timeout)
+        end
       end
 
-      def refute_enqueued(opts) do
-        Testing.refute_enqueued(unquote(repo), opts)
+      def refute_enqueued(opts, timeout \\ :none) do
+        if timeout == :none do
+          Testing.refute_enqueued(unquote(repo), opts)
+        else
+          Testing.refute_enqueued(unquote(repo), opts, timeout)
+        end
       end
     end
   end
@@ -176,6 +193,31 @@ defmodule Oban.Testing do
   end
 
   @doc """
+  Assert that a job with particular options is or will be enqueued within a timeout period.
+
+  See `assert_enqueued/2` for additional details.
+
+  ## Examples
+
+  Assert that a job will be enqueued in the next 100ms:
+
+      assert_enqueued [worker: MyWorker], 100
+  """
+  @doc since: "1.2.0"
+  @spec assert_enqueued(repo :: module(), opts :: Keyword.t(), timeout :: pos_integer()) :: true
+  def assert_enqueued(repo, [_ | _] = opts, timeout) when timeout > 0 do
+    error_message = """
+    Expected a job matching:
+
+    #{inspect(Map.new(opts), pretty: true)}
+
+    to be enqueued within #{timeout}ms
+    """
+
+    assert wait_for_job(repo, opts, timeout), error_message
+  end
+
+  @doc """
   Refute that a job with particular options has been enqueued.
 
   See `assert_enqueued/2` for additional details.
@@ -183,7 +225,42 @@ defmodule Oban.Testing do
   @doc since: "0.3.0"
   @spec refute_enqueued(repo :: module(), opts :: Keyword.t()) :: false
   def refute_enqueued(repo, [_ | _] = opts) do
-    refute get_job(repo, opts), "Expected no jobs matching #{inspect(opts)} to be enqueued"
+    error_message = """
+    Expected no jobs matching:
+
+    #{inspect(opts, pretty: true)}
+
+    to be enqueued
+    """
+
+    refute get_job(repo, opts), error_message
+  end
+
+  @doc """
+  Refute that a job with particular options is or will be enqueued within a timeout period.
+
+  The minimum refute timeout is 10ms.
+
+  See `assert_enqueued/2` for additional details.
+
+  ## Examples
+
+  Refute that a job will not be enqueued in the next 100ms:
+
+      refute_enqueued [worker: MyWorker], 100
+  """
+  @doc since: "1.2.0"
+  @spec refute_enqueued(repo :: module(), opts :: Keyword.t(), timeout :: pos_integer()) :: false
+  def refute_enqueued(repo, [_ | _] = opts, timeout) when timeout >= 10 do
+    error_message = """
+    Expected no jobs matching:
+
+    #{inspect(opts, pretty: true)}
+
+    to be enqueued within #{timeout}ms
+    """
+
+    refute wait_for_job(repo, opts, timeout), error_message
   end
 
   defp get_job(repo, opts) do
@@ -195,6 +272,20 @@ defmodule Oban.Testing do
     |> select([:id])
     |> repo.one(prefix: prefix)
   end
+
+  defp wait_for_job(repo, opts, timeout) when timeout > 0 do
+    case get_job(repo, opts) do
+      nil ->
+        Process.sleep(@wait_interval)
+
+        wait_for_job(repo, opts, timeout - @wait_interval)
+
+      job ->
+        job
+    end
+  end
+
+  defp wait_for_job(_repo, _opts, _timeout), do: nil
 
   defp available_jobs(repo, opts) do
     {prefix, opts} = extract_prefix(opts)
