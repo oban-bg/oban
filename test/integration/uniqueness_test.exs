@@ -32,6 +32,7 @@ defmodule Oban.Integration.UniquenessTest do
         |> Enum.map(&Task.await/1)
         |> Enum.map(fn %Job{id: id} -> id end)
         |> Enum.reject(&is_nil/1)
+        |> Enum.uniq()
 
       assert 1 == length(ids)
     end

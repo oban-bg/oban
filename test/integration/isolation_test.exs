@@ -22,8 +22,6 @@ defmodule Oban.Integration.IsolationTest do
 
     job = insert_job!(ref: 1, action: "OK")
 
-    assert [%Job{}] = all_enqueued(worker: Worker, prefix: "private")
-
     assert Ecto.get_meta(job, :prefix) == "private"
 
     assert_receive {:ok, 1}
