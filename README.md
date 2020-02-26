@@ -232,30 +232,40 @@ defmodule MyApp.Application do
   use Application
 
   alias MyApp.Repo
-  alias MyAppWeb.Endpoint 
+  alias MyAppWeb.Endpoint
 
   def start(_type, _args) do
     children = [
       Repo,
       Endpoint,
-      {Oban, Application.get_env(:my_app, Oban)}
+      {Oban, oban_config()}
     ]
 
     Supervisor.start_link(children, strategy: :one_for_one, name: MyApp.Supervisor)
+  end
+
+  defp oban_config do
+    opts = Application.get_env(:my_app, Oban)
+
+    # Prevent running queues or scheduling jobs from an iex console.
+    if Code.ensure_loaded?(IEx) and IEx.started?() do
+      opts
+      |> Keyword.put(:crontab, false)
+      |> Keyword.put(:queues, false)
+    else
+      opts
+    end
   end
 end
 ```
 
 If you are running tests (which you should be) you'll want to disable pruning
-and job dispatching altogether when testing:
+, enqueuing scheduled jobs and job dispatching altogether when testing:
 
 ```elixir
 # config/test.exs
 config :my_app, Oban, crontab: false, queues: false, prune: :disabled
 ```
-
-Without dispatch and pruning disabled Ecto will raise constant ownership errors
-and you won't be able to run tests.
 
 ### Configuring Queues
 
