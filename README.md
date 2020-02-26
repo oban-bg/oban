@@ -971,6 +971,8 @@ MyApp.Repo.all(
 
 ### Heroku
 
+#### Elixir and Erlang versions
+
 If your app crashes on launch, be sure to confirm you are running the correct
 version of Elixir and Erlang ([view requirements](#Requirements)). If using the
 *hashnuke/elixir* buildpack, you can update the `elixir_buildpack.config` file
@@ -985,6 +987,16 @@ erlang_version=22.0.3
 ```
 
 Available Erlang versions are available [here](https://github.com/HashNuke/heroku-buildpack-elixir-otp-builds/blob/master/otp-versions).
+
+#### Database connections
+
+Make sure that you have enough available database connections when running on
+Heroku. Oban uses a database connection in order to listen for pubsub
+notifications. This is in addition to your Ecto Repo `pool_size` setting.
+
+Heroku's [Hobby tier Postgres plans](https://devcenter.heroku.com/articles/heroku-postgres-plans#hobby-tier)
+have a maximum of 20 connections, so if you're using one of those plan
+accordingly.
 
 <!-- MDOC -->
 
