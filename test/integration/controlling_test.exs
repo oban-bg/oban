@@ -99,6 +99,10 @@ defmodule Oban.Integration.ControllingTest do
 
     assert %Job{state: "discarded", discarded_at: %DateTime{}} = Repo.reload(job)
 
+    %{running: running} = :sys.get_state(Oban.Queue.Alpha.Producer)
+
+    assert Enum.empty?(running)
+
     :ok = stop_supervised(Oban)
   end
 

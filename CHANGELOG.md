@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Fixed
+
+- [Oban] Handle the `:shutdown` message when a job is killed purposefully.
+  Previously the message was ignored, which caused the producer to keep a
+  reference to the discarded job and prevented dispatching additional jobs.
+
 ### Added
 
 - [Oban.Testing] Add `assert_enqueued/2` and `refute_enqueued/2` to allow

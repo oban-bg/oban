@@ -108,6 +108,12 @@ defmodule Oban.Queue.Producer do
     dispatch(%{state | running: Map.delete(running, ref)})
   end
 
+  def handle_info({:DOWN, ref, :process, _pid, :shutdown}, %State{running: running} = state) do
+    Process.demonitor(ref, [:flush])
+
+    dispatch(%{state | running: Map.delete(running, ref)})
+  end
+
   # This message is only received when the job's task doesn't exit cleanly. This should be rare,
   # but it can happen when nested processes crash.
   def handle_info({:DOWN, ref, :process, _pid, {reason, stack}}, %State{} = state) do
