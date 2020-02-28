@@ -10,14 +10,17 @@ defmodule Oban.Queue.Executor do
 
   @spec call(Job.t(), Config.t()) :: :success | :failure
   def call(%Job{} = job, %Config{} = conf) do
-    {duration, return} = :timer.tc(__MODULE__, :safe_call, [job])
+    start_time = System.system_time(:microsecond)
+    start_mono = System.monotonic_time(:microsecond)
 
-    case return do
+    :telemetry.execute([:oban, :started], %{start_time: start_time}, job_meta(job))
+
+    case safe_call(job) do
       {:success, ^job} ->
-        Breaker.with_retry(fn -> report_success(conf, job, duration) end)
+        Breaker.with_retry(fn -> report_success(conf, job, start_mono) end)
 
       {:failure, ^job, kind, error, stack} ->
-        Breaker.with_retry(fn -> report_failure(conf, job, duration, kind, error, stack) end)
+        Breaker.with_retry(fn -> report_failure(conf, job, start_mono, kind, error, stack) end)
     end
   end
 
@@ -27,7 +30,7 @@ defmodule Oban.Queue.Executor do
       {:ok, worker} ->
         case worker.timeout(job) do
           :infinity ->
-            perform(worker, job)
+            perform_inline(worker, job)
 
           timeout when is_integer(timeout) ->
             perform_timed(worker, job, timeout)
@@ -38,30 +41,8 @@ defmodule Oban.Queue.Executor do
     end
   end
 
-  @spec report_success(Config.t(), Job.t(), integer()) :: :success
-  def report_success(conf, job, duration) do
-    Query.complete_job(conf, job)
-
-    report(:success, duration, job, %{})
-  end
-
-  @spec report_failure(Config.t(), Job.t(), integer(), atom(), any(), list()) :: :failure
-  def report_failure(conf, job, duration, kind, error, stack) do
-    Query.retry_job(conf, job, worker_backoff(job), kind, error, stack)
-
-    report(:failure, duration, job, %{kind: kind, error: error, stack: stack})
-  end
-
-  # Helpers
-
-  defp worker_backoff(%Job{attempt: attempt} = job) do
-    case Job.worker_module(job) do
-      {:ok, worker} -> worker.backoff(attempt)
-      _ -> Worker.default_backoff(attempt)
-    end
-  end
-
-  defp perform(worker, %Job{args: args} = job) do
+  @spec perform_inline(Worker.t(), Job.t()) :: success() | failure()
+  def perform_inline(worker, %Job{args: args} = job) do
     case worker.perform(args, job) do
       :ok ->
         {:success, job}
@@ -94,8 +75,9 @@ defmodule Oban.Queue.Executor do
       {:failure, job, kind, value, __STACKTRACE__}
   end
 
-  defp perform_timed(worker, job, timeout) do
-    task = Task.async(fn -> perform(worker, job) end)
+  @spec perform_timed(Worker.t(), Job.t(), timeout()) :: success() | failure()
+  def perform_timed(worker, job, timeout) do
+    task = Task.async(fn -> perform_inline(worker, job) end)
 
     case Task.yield(task, timeout) || Task.shutdown(task) do
       {:ok, reply} ->
@@ -106,20 +88,45 @@ defmodule Oban.Queue.Executor do
     end
   end
 
-  defp current_stacktrace do
-    {:current_stacktrace, stacktrace} = Process.info(self(), :current_stacktrace)
+  @spec report_success(Config.t(), Job.t(), integer()) :: :success
+  def report_success(conf, job, start_mono) do
+    Query.complete_job(conf, job)
 
-    stacktrace
+    :telemetry.execute([:oban, :success], %{duration: duration(start_mono)}, job_meta(job))
+
+    :success
   end
 
-  defp report(event, duration, job, meta) do
+  @spec report_failure(Config.t(), Job.t(), integer(), atom(), any(), list()) :: :failure
+  def report_failure(conf, job, start_mono, kind, error, stack) do
+    Query.retry_job(conf, job, worker_backoff(job), kind, error, stack)
+
     meta =
       job
-      |> Map.take([:id, :args, :queue, :worker, :attempt, :max_attempts])
-      |> Map.merge(meta)
+      |> job_meta()
+      |> Map.merge(%{kind: kind, error: error, stack: stack})
 
-    :telemetry.execute([:oban, event], %{duration: duration}, meta)
+    :telemetry.execute([:oban, :failure], %{duration: duration(start_mono)}, meta)
 
-    event
+    :failure
+  end
+
+  # Helpers
+
+  defp current_stacktrace do
+    self()
+    |> Process.info(:current_stacktrace)
+    |> elem(1)
+  end
+
+  defp duration(start_mono), do: System.monotonic_time(:microsecond) - start_mono
+
+  defp job_meta(job), do: Map.take(job, [:id, :args, :queue, :worker, :attempt, :max_attempts])
+
+  defp worker_backoff(%Job{attempt: attempt} = job) do
+    case Job.worker_module(job) do
+      {:ok, worker} -> worker.backoff(attempt)
+      _ -> Worker.default_backoff(attempt)
+    end
   end
 end

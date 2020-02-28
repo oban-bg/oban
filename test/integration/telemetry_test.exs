@@ -10,13 +10,17 @@ defmodule Oban.Integration.TelemetryTest do
   @oban_opts repo: Repo, queues: [zeta: 3]
 
   defmodule Handler do
+    def handle([:oban, :started], %{start_time: start_time}, meta, pid) do
+      send(pid, {:executed, :started, start_time, meta})
+    end
+
     def handle([:oban, event], %{duration: duration}, meta, pid) do
       send(pid, {:executed, event, duration, meta})
     end
   end
 
   test "telemetry events are emitted for executed jobs" do
-    events = [[:oban, :success], [:oban, :failure]]
+    events = [[:oban, :started], [:oban, :success], [:oban, :failure]]
 
     :telemetry.attach_many("job-handler", events, &Handler.handle/4, self())
 
@@ -26,10 +30,12 @@ defmodule Oban.Integration.TelemetryTest do
     %Job{id: exception_id} = insert_job!(%{ref: 2, action: "FAIL"})
     %Job{id: error_id} = insert_job!(%{ref: 2, action: "ERROR"})
 
+    assert_receive {:executed, :started, started_time, success_meta}
     assert_receive {:executed, :success, success_duration, success_meta}
     assert_receive {:executed, :failure, exception_duration, %{kind: :exception} = exception_meta}
     assert_receive {:executed, :failure, error_duration, %{kind: :error} = error_meta}
 
+    assert started_time > 0
     assert success_duration > 0
     assert exception_duration > 0
     assert error_duration > 0
@@ -85,6 +91,14 @@ defmodule Oban.Integration.TelemetryTest do
 
         Process.sleep(10)
       end)
+
+    # Started
+
+    assert logged =~ ~s("source":"oban")
+    assert logged =~ ~s("event":"started")
+    assert logged =~ ~s("start_time":)
+
+    # Success
 
     assert logged =~ ~s("source":"oban")
     assert logged =~ ~s("event":"success")

@@ -4,17 +4,21 @@ defmodule Oban.Telemetry do
 
   ### Job Events
 
-  Oban emits an event after a job executes: `[:oban, :success]` if the job succeeded or `[:oban,
-  :failure]` if there was an error or the process crashed.
+  Oban emits the following telemetry events for each job:
+
+  * `:started` — at the point a job is fetched from the database and will execute
+  * `:success` — after a job succeeds and the success is recorded in the database
+  * `:failure` — after a job fails and the failure is recorded in the database
 
   All job events share the same details about the job that was executed. In addition, failed jobs
   provide the error type, the error itself, and the stacktrace. The following chart shows which
   metadata you can expect for each event:
 
-  | event      | measures    | metadata                                                                      |
-  | ---------- | ----------- | ----------------------------------------------------------------------------- |
-  | `:success` | `:duration` | `:id, :args, :queue, :worker, :attempt, :max_attempts`                        |
-  | `:failure` | `:duration` | `:id, :args, :queue, :worker, :attempt, :max_attempts, :kind, :error, :stack` |
+  | event      | measures      | metadata                                                                      |
+  | ---------- | -----------   | ----------------------------------------------------------------------------- |
+  | `:started` | `:start_time` | `:id, :args, :queue, :worker, :attempt, :max_attempts`                        |
+  | `:success` | `:duration`   | `:id, :args, :queue, :worker, :attempt, :max_attempts`                        |
+  | `:failure` | `:duration`   | `:id, :args, :queue, :worker, :attempt, :max_attempts, :kind, :error, :stack` |
 
   For `:failure` events the metadata includes details about what caused the failure. The `:kind`
   value is determined by how an error occurred. Here are the possible kinds:
@@ -94,12 +98,13 @@ defmodule Oban.Telemetry do
 
   This function attaches a handler that outputs logs with the following fields:
 
-    * `source` — always "oban"
-    * `event` — either `:success` or `:failure` dependening on whether the job succeeded or errored
-    * `args` — a map of the job's raw arguments
-    * `worker` — the job's worker module
-    * `queue` — the job's queue
-    * `duration` — the job's runtime duration in microseconds
+  * `args` — a map of the job's raw arguments
+  * `duration` — the job's runtime duration, in microseconds
+  * `event` — either `:success` or `:failure` dependening on whether the job succeeded or errored
+  * `queue` — the job's queue
+  * `source` — always "oban"
+  * `start_time` — when the job started, in microseconds
+  * `worker` — the job's worker module
 
   ## Examples
 
@@ -115,6 +120,7 @@ defmodule Oban.Telemetry do
   @spec attach_default_logger() :: :ok | {:error, :already_exists}
   def attach_default_logger(level \\ :info) do
     events = [
+      [:oban, :started],
       [:oban, :success],
       [:oban, :failure],
       [:oban, :trip_circuit],
@@ -124,37 +130,32 @@ defmodule Oban.Telemetry do
     :telemetry.attach_many("oban-default-logger", events, &handle_event/4, level)
   end
 
+  @job_events [:started, :success, :failure]
+  @circuit_events [:trip_circuit, :open_circuit]
+
   @doc false
   @spec handle_event([atom()], map(), map(), Logger.level()) :: :ok
-  def handle_event([:oban, event], measure, meta, level)
-      when event in [:success, :failure] do
-    log_message(
-      level,
-      %{
-        source: "oban",
-        event: event,
-        args: meta[:args],
-        worker: meta[:worker],
-        queue: meta[:queue],
-        duration: measure[:duration]
-      }
-    )
+  def handle_event([:oban, event], measure, meta, level) when event in @job_events do
+    select_meta = Map.take(meta, [:args, :worker, :queue])
+
+    message =
+      measure
+      |> Map.take([:duration, :start_time])
+      |> Map.merge(select_meta)
+
+    log_message(level, event, message)
   end
 
-  def handle_event([:oban, event], _measure, meta, level)
-      when event in [:trip_circuit, :open_circuit] do
-    log_message(
-      level,
-      %{
-        message: meta[:message],
-        name: meta[:name],
-        source: "oban",
-        event: event
-      }
-    )
+  def handle_event([:oban, event], _measure, meta, level) when event in @circuit_events do
+    log_message(level, event, Map.take(meta, [:error, :message, :name]))
   end
 
-  defp log_message(level, message) do
-    Logger.log(level, fn -> Jason.encode!(message) end)
+  defp log_message(level, event, message) do
+    Logger.log(level, fn ->
+      message
+      |> Map.put(:event, event)
+      |> Map.put(:source, "oban")
+      |> Jason.encode!()
+    end)
   end
 end

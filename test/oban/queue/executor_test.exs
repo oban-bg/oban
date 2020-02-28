@@ -17,7 +17,7 @@ defmodule Oban.Queue.ExecutorTest do
     def perform(%{"mode" => "error"}, _job), do: {:error, "no reason"}
   end
 
-  describe "safe_call/1" do
+  describe "perform/1" do
     defp call_with_mode(mode) do
       Executor.safe_call(%Job{args: %{"mode" => mode}, worker: to_string(Worker)})
     end

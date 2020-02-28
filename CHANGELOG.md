@@ -18,6 +18,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - [Oban.Testing] Add `assert_enqueued/2` and `refute_enqueued/2` to allow
   asserting with a timeout, like `assert_received`.
 
+- [Oban.Telemetry] Add `[:oban, :started]` event to report the system time as
+  `start_time` when jobs start. This enables span tracking for jobs, improving
+  integration with monitoring tools like NewRelic.
+
 ## [1.1.0] — 2020-02-17
 
 ### Fixed
