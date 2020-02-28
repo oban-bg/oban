@@ -5,9 +5,13 @@ defmodule Oban.Integration.DrainingTest do
 
   @oban_opts repo: Repo, queues: false
 
-  test "all jobs in a queue can be drained and executed synchronously" do
+  setup do
     start_supervised!({Oban, @oban_opts})
 
+    :ok
+  end
+
+  test "all jobs in a queue can be drained and executed synchronously" do
     insert_job!(ref: 1, action: "OK")
     insert_job!(ref: 2, action: "FAIL")
     insert_job!(ref: 3, action: "OK")
@@ -17,53 +21,38 @@ defmodule Oban.Integration.DrainingTest do
     assert_received {:ok, 3}
     assert_received {:fail, 2}
     assert_received {:ok, 1}
-
-    stop_supervised(Oban)
-  end
-
-  test "scheduled jobs are not executed by default" do
-    start_supervised!({Oban, @oban_opts})
-
-    insert_scheduled_job!()
-
-    assert %{success: 0, failure: 0} = Oban.drain_queue(:draining)
-
-    stop_supervised(Oban)
   end
 
   test "scheduled jobs are executed when given the :with_scheduled flag" do
-    start_supervised!({Oban, @oban_opts})
+    insert_job!(%{ref: 1, action: "OK"}, scheduled_at: seconds_from_now(3600))
 
-    insert_scheduled_job!()
-
+    assert %{success: 0, failure: 0} = Oban.drain_queue(:draining)
     assert %{success: 1, failure: 0} = Oban.drain_queue(:draining, with_scheduled: true)
-
-    stop_supervised(Oban)
   end
 
-  test "drain_queue/2 allows to pass in the config name as first argument" do
-    start_supervised!({Oban, @oban_opts})
+  test "job errors bubble up when :with_safety is false" do
+    insert_job!(ref: 1, action: "FAIL")
 
-    insert_job!()
+    assert_raise RuntimeError, "FAILED", fn ->
+      Oban.drain_queue(:draining, with_safety: false)
+    end
 
-    assert %{success: 1, failure: 0} = Oban.drain_queue(Oban, :draining)
-
-    stop_supervised(Oban)
+    assert_received {:fail, 1}
   end
 
-  defp insert_job! do
-    insert_job!(ref: 1, action: "OK")
+  test "job crashes bubble up when :with_safety is false" do
+    insert_job!(ref: 1, action: "EXIT")
+
+    assert catch_exit(Oban.drain_queue(:draining, with_safety: false))
+
+    assert_received {:exit, 1}
   end
 
-  defp insert_job!(args) do
+  defp insert_job!(args, opts \\ []) do
+    opts = Keyword.put_new(opts, :queue, :draining)
+
     args
-    |> Worker.new(queue: :draining)
-    |> Oban.insert!()
-  end
-
-  defp insert_scheduled_job! do
-    %{ref: 1, action: "OK"}
-    |> Worker.new(queue: :draining, scheduled_at: seconds_from_now(3600))
+    |> Worker.new(opts)
     |> Oban.insert!()
   end
 end

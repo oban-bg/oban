@@ -51,6 +51,11 @@ defmodule Oban.Queue.Executor do
     )
   end
 
+  @spec put(t(), atom(), any()) :: t()
+  def put(%__MODULE__{} = exec, key, value) when is_atom(key) do
+    %{exec | key => value}
+  end
+
   @spec call(t()) :: :success | :failure
   def call(%__MODULE__{} = exec) do
     exec =
@@ -71,6 +76,12 @@ defmodule Oban.Queue.Executor do
   end
 
   @spec resolve_worker(t()) :: t()
+  def resolve_worker(%__MODULE__{safe: true} = exec) do
+    %{resolve_worker(%{exec | safe: false}) | safe: true}
+  rescue
+    error -> %{exec | state: :failure, error: error, stack: __STACKTRACE__}
+  end
+
   def resolve_worker(%__MODULE__{} = exec) do
     worker =
       exec.job.worker
@@ -78,8 +89,6 @@ defmodule Oban.Queue.Executor do
       |> Module.safe_concat()
 
     %{exec | worker: worker}
-  rescue
-    error -> %{exec | state: :failure, error: error, stack: __STACKTRACE__}
   end
 
   @spec perform(t()) :: t()
@@ -121,6 +130,16 @@ defmodule Oban.Queue.Executor do
     exec
   end
 
+  defp perform_inline(%{safe: true} = exec) do
+    perform_inline(%{exec | safe: false})
+  rescue
+    error ->
+      %{exec | state: :failure, kind: :exception, error: error, stack: __STACKTRACE__}
+  catch
+    kind, value ->
+      %{exec | state: :failure, kind: kind, error: value, stack: __STACKTRACE__}
+  end
+
   defp perform_inline(%{worker: worker, job: job} = exec) do
     case worker.perform(job.args, job) do
       :ok ->
@@ -146,12 +165,6 @@ defmodule Oban.Queue.Executor do
 
         %{exec | state: :success}
     end
-  rescue
-    error ->
-      %{exec | state: :failure, kind: :exception, error: error, stack: __STACKTRACE__}
-  catch
-    kind, value ->
-      %{exec | state: :failure, kind: kind, error: value, stack: __STACKTRACE__}
   end
 
   defp perform_timed(exec, timeout) do

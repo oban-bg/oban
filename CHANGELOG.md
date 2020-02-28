@@ -12,6 +12,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - [Oban.Crontab] Fix weekday matching for Sunday, which is represented as `0` in
   crontabs.
 
+### Added
+
+- [Oban] Bubble up errors and exits when draining queues by passing
+  `with_safety: false` as an option to `Oban.drain_queue/3`.
+
 ### Changed
 
 - [Oban.Notifier] Make the module public and clean up the primary function

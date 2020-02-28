@@ -13,7 +13,7 @@ defmodule Oban do
   alias Ecto.{Changeset, Multi}
   alias Oban.{Config, Job, Midwife, Notifier, Pruner, Query}
   alias Oban.Crontab.Scheduler
-  alias Oban.Queue.Producer
+  alias Oban.Queue.Drainer
   alias Oban.Queue.Supervisor, as: QueueSupervisor
 
   @type option ::
@@ -300,16 +300,13 @@ defmodule Oban do
     |> Query.insert_all_jobs(multi, multi_name, changesets)
   end
 
-  @type drain_option :: {:with_scheduled, boolean()}
-  @type drain_result :: %{success: non_neg_integer(), failure: non_neg_integer()}
-
   @doc """
   Synchronously execute all available jobs in a queue.
 
   See `drain_queue/3`.
   """
   @doc since: "0.4.0"
-  @spec drain_queue(queue :: atom() | binary()) :: drain_result()
+  @spec drain_queue(queue :: atom() | binary()) :: Drainer.drain_result()
   def drain_queue(queue) when is_queue(queue) do
     drain_queue(__MODULE__, queue, [])
   end
@@ -329,13 +326,34 @@ defmodule Oban do
   end
 
   @doc """
-  Synchronously execute all available jobs in a queue. All execution happens within the current
-  process and it is guaranteed not to raise an error or exit.
+  Synchronously execute all available jobs in a queue.
+
+  All execution happens within the current process and it is guaranteed not to raise an error or
+  exit.
 
   Draining a queue from within the current process is especially useful for testing. Jobs that are
-  enqueued by a process when Ecto is in sandbox mode are only visible to that process. Calling
+  enqueued by a process when `Ecto` is in sandbox mode are only visible to that process. Calling
   `drain_queue/3` allows you to control when the jobs are executed and to wait synchronously for
   all jobs to complete.
+
+  ## Failures & Retries
+
+  Draining a queue uses the same execution mechanism as regular job dispatch. That means that any
+  job failures or crashes are captured and result in a retry. Retries are scheduled in the future
+  with backoff and won't be retried immediately.
+
+  By default jobs are executed in `safe` mode, just as they are in production. Safe mode catches
+  any errors or exits and records the formatted error in the job's `errors` array.  That means
+  exceptions and crashes are _not_ bubbled up to the calling process.
+
+  If you expect jobs to fail, would like to track failures, or need to check for specific errors
+  you can pass the `with_safety: false` flag.
+
+  ## Scheduled Jobs
+
+  By default, `drain_queue/3` will execute all currently available jobs. In order to execute
+  scheduled jobs, you may pass the `:with_scheduled` flag which will cause scheduled jobs to be
+  marked as `available` beforehand.
 
   ## Example
 
@@ -344,34 +362,22 @@ defmodule Oban do
       Oban.drain_queue(:default)
       %{success: 2, failure: 1}
 
-  ## Failures & Retries
+  Drain a queue including any scheduled jobs:
 
-  Draining a queue uses the same execution mechanism as regular job dispatch. That means that any
-  job failures or crashes are captured and result in a retry. Retries are scheduled in the future
-  with backoff and won't be retried immediately.
-
-  Exceptions are _not_ raised in to the calling process. If you expect jobs to fail, would like to
-  track failures, or need to check for specific errors you can use one of these mechanisms:
-
-  * Check for side effects from job execution
-  * Use telemetry events to track success and failure
-  * Check the database for jobs with errors
-
-  ## Scheduled Jobs
-
-  By default, `drain_queue/3` will execute all currently available jobs. In order to execute scheduled
-  jobs, you may pass the `:with_scheduled` flag which will cause scheduled jobs to be marked as
-  `available` beforehand.
-
-      # This will execute all scheduled jobs.
       Oban.drain_queue(:default, with_scheduled: true)
       %{success: 1, failure: 0}
+
+  Drain a queue and assert an error is raised:
+
+      assert_raise RuntimeError, fn -> Oban.drain_queue(:risky, with_safety: false) end
   """
   @doc since: "0.4.0"
-  @spec drain_queue(name :: atom(), queue :: queue_name(), [drain_option()]) ::
-          drain_result()
+  @spec drain_queue(name :: atom(), queue :: queue_name(), [Drainer.drain_option()]) ::
+          Drainer.drain_result()
   def drain_queue(name, queue, opts) when is_atom(name) and is_queue(queue) and is_list(opts) do
-    Producer.drain(to_string(queue), config(name), opts)
+    name
+    |> config()
+    |> Drainer.drain(to_string(queue), opts)
   end
 
   @doc """
