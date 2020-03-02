@@ -861,7 +861,7 @@ defmodule ErrorReporter do
   end
 
   def handle_event([:oban, :trip_circuit], _measure, meta, _) do
-    context = Meta.take(meta, [:name])
+    context = Map.take(meta, [:name])
 
     Honeybadger.notify(meta.error, context, meta.stack)
   end
