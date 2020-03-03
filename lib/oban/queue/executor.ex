@@ -6,7 +6,7 @@ defmodule Oban.Queue.Executor do
   alias Oban.{Breaker, Config, Job, Query, Worker}
 
   @type success :: {:success, Job.t()}
-  @type failure :: {:failure, Job.t(), Worker.t(), atom(), term(), list()}
+  @type failure :: {:failure, Job.t(), Worker.t(), atom(), term()}
 
   @spec call(Job.t(), Config.t()) :: :success | :failure
   def call(%Job{} = job, %Config{} = conf) do
