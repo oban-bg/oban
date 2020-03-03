@@ -1,6 +1,6 @@
 name: ci
 
-on: [push, pull_request]
+on: push
 
 jobs:
   ci:
@@ -8,7 +8,7 @@ jobs:
       matrix:
         elixir: ['1.8', '1.9', '1.10']
         otp: ['22.2']
-        postgres: ['11.7-alpine']
+        postgres: ['11.7-alpine', '12.2-alpine']
 
     runs-on: ubuntu-latest
 
