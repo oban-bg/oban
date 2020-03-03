@@ -27,6 +27,7 @@ defmodule Oban.MixProject do
       # Dialyzer
       dialyzer: [
         plt_add_apps: [:ex_unit],
+        plt_core_path: "_build/#{Mix.env()}",
         flags: [:error_handling, :race_conditions, :underspecs]
       ],
 
