@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## [1.2.0] — 2020-03-05
+
 ### Fixed
 
 - [Oban] Handle the `:shutdown` message when a job is killed purposefully.
@@ -722,7 +724,8 @@ end
 
 - [Oban] Initial release with base functionality.
 
-[Unreleased]: https://github.com/sorentwo/oban/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/sorentwo/oban/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/sorentwo/oban/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/sorentwo/oban/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/sorentwo/oban/compare/v1.0.0-rc.1...v1.0.0
 [1.0.0-rc.2]: https://github.com/sorentwo/oban/compare/v1.0.0-rc.1...v1.0.0-rc.2
