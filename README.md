@@ -819,7 +819,7 @@ defmodule MyApp.ObanLogger do
     Logger.warn("[Oban] :started #{meta.worker} at #{measure.start_time}")
   end
 
-  def handle_event([:oban, event], measure, meta, _) when do
+  def handle_event([:oban, event], measure, meta, _) do
     Logger.warn("[Oban] #{event} #{meta.worker} ran in #{measure.duration}")
   end
 end
