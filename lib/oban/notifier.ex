@@ -238,11 +238,7 @@ defmodule Oban.Notifier do
   defp connect_and_listen(%State{conf: conf, conn: nil} = state) do
     case Notifications.start_link(conf.repo.config()) do
       {:ok, conn} ->
-        for {_atom, full} <- @mappings do
-          Notifications.listen(conn, "#{conf.prefix}.#{full}")
-          Notifications.listen(conn, "#{conf.prefix}.#{full}")
-          Notifications.listen(conn, "#{conf.prefix}.#{full}")
-        end
+        for {_, full} <- @mappings, do: Notifications.listen(conn, "#{conf.prefix}.#{full}")
 
         %{state | conn: conn}
 
