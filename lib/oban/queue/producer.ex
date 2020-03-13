@@ -4,7 +4,6 @@ defmodule Oban.Queue.Producer do
   use GenServer
 
   import Oban.Breaker, only: [open_circuit: 1, trip_errors: 0, trip_circuit: 3]
-  import Oban.Notifier, only: [insert: 0, signal: 0]
 
   alias Oban.{Breaker, Config, Notifier, Query}
   alias Oban.Queue.Executor
@@ -136,14 +135,14 @@ defmodule Oban.Queue.Producer do
     dispatch(state)
   end
 
-  def handle_info({:notification, insert(), payload}, %State{queue: queue} = state) do
+  def handle_info({:notification, :insert, payload}, %State{queue: queue} = state) do
     case payload do
       %{"queue" => ^queue} -> dispatch(state)
       _ -> {:noreply, state}
     end
   end
 
-  def handle_info({:notification, signal(), payload}, state) do
+  def handle_info({:notification, :signal, payload}, state) do
     %State{conf: conf, foreman: foreman, queue: queue, running: running} = state
 
     state =

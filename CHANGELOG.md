@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Changed
+
+- [Oban.Notifier] Make the module public and clean up the primary function
+  interfaces. Listening for and delivering notifications is simplified and no
+  longer requires macros for pattern matching.
+
+  Notifier dispatching performance is slightly improved as well. It is now a
+  no-op if no processes are listening to a notification's channel.
+
 ## [1.2.0] — 2020-03-05
 
 ### Fixed

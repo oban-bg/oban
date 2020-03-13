@@ -1,34 +1,80 @@
 defmodule Oban.Notifier do
-  @moduledoc false
+  @moduledoc """
+  The `Notifier` coordinates listening for and publishing notifications for events in predefined
+  channels.
 
-  # The notifier has several different responsibilities and some nuanced behavior:
-  #
-  # On Start:
-  # 1. Create a connection
-  # 2. Listen for insert/signal events
-  # 3. If connection fails then log the error, break the circuit, and attempt to connect later
-  #
-  # On Exit:
-  # 1. Trip the circuit breaker
-  # 2. Schedule a reconnect with backoff
-  #
-  # On Listen:
-  # 1. Put the producer into the listeners map
-  # 2. Monitor the pid so that we can clean up if the producer dies
-  #
-  # On Notification:
-  # 1. Iterate through the listeners and forward the message
+  Every Oban supervision tree contains a notifier process, registered as `Oban.Notifier`, which
+  itself maintains a single connection with an app's database. All incoming notifications are
+  relayed through that connection to other processes.
+
+  ## Channels
+
+  The notifier recognizes three predefined channels, each with a distinct responsibility:
+
+  * `gossip` — arbitrary communication between nodes or jobs are sent on the `gossip` channel
+  * `insert` — as jobs are inserted into the database an event is published on the `insert`
+    channel. Processes such as queue producers use this as a signal to dispatch new jobs.
+  * `signal` — instructions to take action, such as scale a queue or kill a running job, are sent
+    through the `signal` channel.
+
+  The `insert` and `signal` channels are primarily for internal use. Use the `gossip` channel to
+  send notifications between jobs or processes in your application.
+
+  ## Caveats
+
+  The notificiations system is built on PostgreSQL's `LISTEN/NOTIFY` functionality. Notifications
+  are only delivered **after a transaction completes** and are de-duplicated before publishing.
+
+  Most applications run Ecto in sandbox mode while testing. Sandbox mode wraps each test in a
+  separate transaction which is rolled back after the test completes. That means the transaction
+  is never comitted, which prevents delivering any notifications.
+
+  To test using notifications you must run Ecto without sandbox mode enabled.
+
+  ## Examples
+
+  Broadcasting after a job is completed:
+
+      defmodule MyApp.Worker do
+        use Oban.Worker
+
+        @impl Oban.Worker
+        def perform(args, job) do
+          :ok = MyApp.do_work(args)
+
+          Oban.Notifier.notify(Oban.config(), :gossip, %{complete: job.id})
+
+          :ok
+        end
+      end
+
+  Listening for job complete events from another process:
+
+      def insert_and_listen(args) do
+        {:ok, job} =
+          args
+          |> MyApp.Worker.new()
+          |> Oban.insert()
+
+        receive do
+          {:notification, :gossip, %{"complete" => ^job.id}} ->
+            IO.puts("Other job complete!")
+        after
+          30_000 ->
+            IO.puts("Other job didn't finish in 30 seconds!")
+        end
+      end
+  """
 
   use GenServer
 
   import Oban.Breaker, only: [open_circuit: 1, trip_circuit: 3]
 
-  alias Oban.Config
+  alias Oban.{Config, Query}
   alias Postgrex.Notifications
 
   @type option :: {:name, module()} | {:conf, Config.t()}
   @type channel :: :gossip | :insert | :signal
-  @type queue :: atom()
 
   @mappings %{
     gossip: "oban_gossip",
@@ -51,12 +97,11 @@ defmodule Oban.Notifier do
     ]
   end
 
-  defmacro gossip, do: @mappings[:gossip]
-  defmacro insert, do: @mappings[:insert]
-  defmacro signal, do: @mappings[:signal]
-
   defguardp is_server(server) when is_pid(server) or is_atom(server)
 
+  defguardp is_channel(channel) when channel in @channels
+
+  @doc false
   @spec start_link([option]) :: GenServer.on_start()
   def start_link(opts) do
     name = Keyword.get(opts, :name, __MODULE__)
@@ -64,9 +109,48 @@ defmodule Oban.Notifier do
     GenServer.start_link(__MODULE__, Map.new(opts), name: name)
   end
 
-  @spec listen(module()) :: :ok
-  def listen(server, channels \\ @channels) when is_server(server) and is_list(channels) do
+  @doc """
+  Register the current process to receive relayed messages for the provided channels.
+
+  All messages are received as `JSON` and decoded _before_ they are relayed to registered
+  processes. Each registered process receives a three element notification tuple in the following
+  format:
+
+      {:notification, channel :: channel(), decoded :: map()}
+
+  ## Example
+
+  Register to listen for all `:gossip` channel messages:
+
+      Oban.Notifier.listen([:gossip])
+
+  Listen for messages on all channels:
+
+      Oban.Notifier.listen([:gossip, :insert, :signal])
+  """
+  @spec listen(GenServer.server(), channels :: list(channel())) :: :ok
+  def listen(server \\ __MODULE__, channels) when is_server(server) and is_list(channels) do
+    :ok = validate_channels!(channels)
+
     GenServer.call(server, {:listen, channels})
+  end
+
+  @doc """
+  Broadcast a notification to listeners on all nodes.
+
+  Notifications are scoped to the configured `prefix`. For example, if there are instances running
+  with the `public` and `private` prefixes, a notification published in the `public` prefix won't
+  be picked up by processes listening with the `private` prefix.
+
+  ## Example
+
+  Broadcast a gossip message:
+
+      Oban.Notifier.notify(Oban.config(), :gossip, %{message: "hi!"})
+  """
+  @spec notify(Config.t(), channel :: channel(), payload :: map()) :: :ok
+  def notify(%Config{} = conf, channel, %{} = payload) when is_channel(channel) do
+    Query.notify(conf, @mappings[channel], payload)
   end
 
   @impl GenServer
@@ -87,11 +171,15 @@ defmodule Oban.Notifier do
   end
 
   def handle_info({:notification, _, _, prefixed_channel, payload}, state) do
-    [_prefix, channel] = String.split(prefixed_channel, ".")
+    full_channel =
+      prefixed_channel
+      |> String.split(".")
+      |> List.last()
 
-    decoded = Jason.decode!(payload)
+    channel = reverse_channel(full_channel)
+    decoded = if any_listeners?(state.listeners, full_channel), do: Jason.decode!(payload)
 
-    for {pid, channels} <- state.listeners, channel in channels do
+    for {pid, channels} <- state.listeners, full_channel in channels do
       send(pid, {:notification, channel, decoded})
     end
 
@@ -133,12 +221,28 @@ defmodule Oban.Notifier do
     end
   end
 
+  # Helpers
+
+  for {atom, name} <- @mappings do
+    defp reverse_channel(unquote(name)), do: unquote(atom)
+  end
+
+  defp validate_channels!([]), do: :ok
+  defp validate_channels!([head | tail]) when is_channel(head), do: validate_channels!(tail)
+  defp validate_channels!([head | _]), do: raise(ArgumentError, "unexpected channel: #{head}")
+
+  defp any_listeners?(listeners, full_channel) do
+    Enum.any?(listeners, fn {_pid, channels} -> full_channel in channels end)
+  end
+
   defp connect_and_listen(%State{conf: conf, conn: nil} = state) do
     case Notifications.start_link(conf.repo.config()) do
       {:ok, conn} ->
-        Notifications.listen(conn, "#{conf.prefix}.#{gossip()}")
-        Notifications.listen(conn, "#{conf.prefix}.#{insert()}")
-        Notifications.listen(conn, "#{conf.prefix}.#{signal()}")
+        for {_atom, full} <- @mappings do
+          Notifications.listen(conn, "#{conf.prefix}.#{full}")
+          Notifications.listen(conn, "#{conf.prefix}.#{full}")
+          Notifications.listen(conn, "#{conf.prefix}.#{full}")
+        end
 
         %{state | conn: conn}
 

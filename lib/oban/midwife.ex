@@ -3,8 +3,6 @@ defmodule Oban.Midwife do
 
   use GenServer
 
-  import Oban.Notifier, only: [signal: 0]
-
   alias Oban.{Config, Notifier}
   alias Oban.Queue.Supervisor, as: QueueSupervisor
 
@@ -38,7 +36,7 @@ defmodule Oban.Midwife do
   end
 
   @impl GenServer
-  def handle_info({:notification, signal(), payload}, %State{conf: conf} = state) do
+  def handle_info({:notification, :signal, payload}, %State{conf: conf} = state) do
     case payload do
       %{"action" => "start", "queue" => queue, "limit" => limit} ->
         Supervisor.start_child(conf.name, queue_spec(queue, limit, conf))

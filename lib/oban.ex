@@ -10,8 +10,6 @@ defmodule Oban do
 
   use Supervisor
 
-  import Oban.Notifier, only: [signal: 0]
-
   alias Ecto.{Changeset, Multi}
   alias Oban.{Config, Job, Midwife, Notifier, Pruner, Query}
   alias Oban.Crontab.Scheduler
@@ -391,7 +389,7 @@ defmodule Oban do
   def start_queue(name \\ __MODULE__, queue, limit) when is_queue(queue) and is_limit(limit) do
     name
     |> config()
-    |> Query.notify(signal(), %{action: :start, queue: queue, limit: limit})
+    |> Notifier.notify(:signal, %{action: :start, queue: queue, limit: limit})
   end
 
   @doc """
@@ -412,7 +410,7 @@ defmodule Oban do
   def pause_queue(name \\ __MODULE__, queue) when is_queue(queue) do
     name
     |> config()
-    |> Query.notify(signal(), %{action: :pause, queue: queue})
+    |> Notifier.notify(:signal, %{action: :pause, queue: queue})
   end
 
   @doc """
@@ -430,7 +428,7 @@ defmodule Oban do
   def resume_queue(name \\ __MODULE__, queue) when is_queue(queue) do
     name
     |> config()
-    |> Query.notify(signal(), %{action: :resume, queue: queue})
+    |> Notifier.notify(:signal, %{action: :resume, queue: queue})
   end
 
   @doc """
@@ -453,7 +451,7 @@ defmodule Oban do
   def scale_queue(name \\ __MODULE__, queue, scale) when is_queue(queue) and is_limit(scale) do
     name
     |> config()
-    |> Query.notify(signal(), %{action: :scale, queue: queue, scale: scale})
+    |> Notifier.notify(:signal, %{action: :scale, queue: queue, scale: scale})
   end
 
   @doc """
@@ -473,7 +471,7 @@ defmodule Oban do
   def stop_queue(name \\ __MODULE__, queue) when is_atom(name) and is_queue(queue) do
     name
     |> config()
-    |> Query.notify(signal(), %{action: :stop, queue: queue})
+    |> Notifier.notify(:signal, %{action: :stop, queue: queue})
   end
 
   @doc """
@@ -494,7 +492,7 @@ defmodule Oban do
   def kill_job(name \\ __MODULE__, job_id) when is_integer(job_id) do
     name
     |> config()
-    |> Query.notify(signal(), %{action: :pkill, job_id: job_id})
+    |> Notifier.notify(:signal, %{action: :pkill, job_id: job_id})
   end
 
   defp child_name(name, child), do: Module.concat(name, child)
