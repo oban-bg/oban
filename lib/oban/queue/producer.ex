@@ -248,7 +248,11 @@ defmodule Oban.Queue.Producer do
   end
 
   defp deschedule(%State{conf: conf, queue: queue} = state) do
+    start_mono = System.monotonic_time(:microsecond)
+
     Query.stage_scheduled_jobs(conf, queue)
+
+    :telemetry.execute([:oban, :deschedule], %{duration: duration(start_mono)})
 
     state
   rescue
@@ -339,4 +343,5 @@ defmodule Oban.Queue.Producer do
   end
 
   defp system_now, do: System.monotonic_time(:millisecond)
+  defp duration(start_mono), do: System.monotonic_time(:microsecond) - start_mono
 end
