@@ -219,6 +219,36 @@ defmodule Oban.Query do
     :ok
   end
 
+  @spec force_retry(Config.t(), Job.t()) :: :ok
+  def force_retry(%Config{} = conf, %Job{} = job) do
+    %Config{prefix: prefix, repo: repo, verbose: verbose} = conf
+    %Job{attempt: attempt, id: id, max_attempts: max_attempts} = job
+
+    set =
+      if attempt >= max_attempts do
+        [state: "available", max_attempts: attempt + 1]
+      else
+        [state: "available"]
+      end
+
+    updates = [
+      set: set
+    ]
+
+    Job
+    |> where(id: ^id)
+    |> repo.update_all(updates, log: verbose, prefix: prefix)
+
+    :ok
+  end
+
+  @spec fetch_job(Config.t(), pos_integer()) :: Job.t()
+  def fetch_job(%Config{prefix: prefix, repo: repo}, id) do
+    Job
+    |> where(id: ^id)
+    |> repo.one!(prefix: prefix)
+  end
+
   @spec notify(Config.t(), binary(), map()) :: :ok
   def notify(%Config{} = conf, channel, %{} = payload) when is_binary(channel) do
     %Config{prefix: prefix, repo: repo, verbose: verbose} = conf

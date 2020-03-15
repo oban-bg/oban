@@ -495,5 +495,22 @@ defmodule Oban do
     |> Notifier.notify(:signal, %{action: :pkill, job_id: job_id})
   end
 
+  @doc """
+  Retries a discarded or scheduled job 
+
+  If the job has already maxed its attempts, will increase max_attempts
+  """
+  @spec retry_job(name :: atom(), job_id :: pos_integer()) :: :ok
+  def retry_job(name, job_id) do
+    job =
+      name
+      |> config()
+      |> Query.fetch_job(job_id)
+
+    name
+    |> config()
+    |> Query.force_retry(job)
+  end
+
   defp child_name(name, child), do: Module.concat(name, child)
 end
