@@ -252,7 +252,7 @@ defmodule Oban.Queue.Producer do
 
     Query.stage_scheduled_jobs(conf, queue)
 
-    :telemetry.execute([:oban, :deschedule], %{duration: duration(start_mono)})
+    :telemetry.execute([:oban, :deschedule], %{duration: duration(start_mono)}, %{queue: queue})
 
     state
   rescue
