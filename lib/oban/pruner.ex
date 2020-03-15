@@ -56,32 +56,29 @@ defmodule Oban.Pruner do
 
   defp prune(%State{conf: conf} = state) do
     %Config{repo: repo, verbose: verbose} = conf
-    start_mono = System.monotonic_time(:microsecond)
 
-    resp =
-      repo.transaction(
-        fn ->
-          if Query.acquire_lock?(conf, @lock_key) do
-            prune_beats(conf)
-            prune_jobs(conf)
-          end
-        end,
-        log: verbose
-      )
-
-    :telemetry.execute([:oban, :prune], %{duration: duration(start_mono)})
-
-    resp
+    repo.transaction(
+      fn ->
+        if Query.acquire_lock?(conf, @lock_key) do
+          prune_beats(conf)
+          prune_jobs(conf)
+        end
+      end,
+      log: verbose
+    )
   rescue
     exception in trip_errors() -> trip_circuit(exception, __STACKTRACE__, state)
   end
 
   defp prune_beats(conf) do
+    start_mono = System.monotonic_time(:microsecond)
     Query.delete_outdated_beats(conf, conf.beats_maxage, conf.prune_limit)
+    :telemetry.execute([:oban, :prune_beats], %{duration: duration(start_mono)})
   end
 
   defp prune_jobs(conf) do
     %Config{prune: prune, prune_limit: prune_limit} = conf
+    start_mono = System.monotonic_time(:microsecond)
 
     case prune do
       {:maxlen, length} ->
@@ -90,6 +87,8 @@ defmodule Oban.Pruner do
       {:maxage, seconds} ->
         Query.delete_outdated_jobs(conf, seconds, prune_limit)
     end
+
+    :telemetry.execute([:oban, :prune_jobs], %{duration: duration(start_mono)})
   end
 
   defp send_after(interval) do
