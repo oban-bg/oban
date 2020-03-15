@@ -224,16 +224,12 @@ defmodule Oban.Query do
     %Config{prefix: prefix, repo: repo, verbose: verbose} = conf
     %Job{attempt: attempt, id: id, max_attempts: max_attempts} = job
 
-    set =
+    updates =
       if attempt >= max_attempts do
-        [state: "available", max_attempts: attempt + 1]
+        [set: [state: "available", max_attempts: attempt + 1]]
       else
-        [state: "available"]
+        [set: [state: "available"]]
       end
-
-    updates = [
-      set: set
-    ]
 
     Job
     |> where(id: ^id)
