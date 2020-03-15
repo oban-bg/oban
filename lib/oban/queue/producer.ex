@@ -295,12 +295,17 @@ defmodule Oban.Queue.Producer do
     cond do
       dispatch_now?(state) ->
         %State{conf: conf, limit: limit, nonce: nonce, queue: queue, running: running} = state
+        start_mono = System.monotonic_time(:microsecond)
 
         running =
           conf
           |> fetch_jobs(queue, nonce, limit - map_size(running))
           |> start_jobs(state)
           |> Map.merge(running)
+
+        :telemetry.execute([:oban, :dispatched], %{duration: duration(start_mono)}, %{
+          queue: queue
+        })
 
         {:noreply, %{state | cooldown_ref: nil, dispatched_at: system_now(), running: running}}
 
