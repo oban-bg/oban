@@ -501,7 +501,7 @@ defmodule Oban do
   If the job has already maxed its attempts, will increase max_attempts
   """
   @spec retry_job(name :: atom(), job_id :: pos_integer()) :: :ok
-  def retry_job(name, job_id) do
+  def retry_job(name \\ __MODULE__, job_id) do
     job =
       name
       |> config()
