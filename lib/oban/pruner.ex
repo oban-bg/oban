@@ -56,16 +56,22 @@ defmodule Oban.Pruner do
 
   defp prune(%State{conf: conf} = state) do
     %Config{repo: repo, verbose: verbose} = conf
+    start_mono = System.monotonic_time(:microsecond)
 
-    repo.transaction(
-      fn ->
-        if Query.acquire_lock?(conf, @lock_key) do
-          prune_beats(conf)
-          prune_jobs(conf)
-        end
-      end,
-      log: verbose
-    )
+    resp =
+      repo.transaction(
+        fn ->
+          if Query.acquire_lock?(conf, @lock_key) do
+            prune_beats(conf)
+            prune_jobs(conf)
+          end
+        end,
+        log: verbose
+      )
+
+    :telemetry.execute([:oban, :prune], %{duration: duration(start_mono)})
+
+    resp
   rescue
     exception in trip_errors() -> trip_circuit(exception, __STACKTRACE__, state)
   end
@@ -89,4 +95,6 @@ defmodule Oban.Pruner do
   defp send_after(interval) do
     Process.send_after(self(), :prune, interval)
   end
+
+  defp duration(start_mono), do: System.monotonic_time() - start_mono
 end
