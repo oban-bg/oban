@@ -60,7 +60,7 @@ defmodule Oban.Crontab.CronTest do
     end
 
     test "literal days of the week match the current datetime" do
-      sunday_base = ~U[2020-03-15 22:00:00Z]
+      sunday_base = DateTime.from_naive!(~N[2020-03-15 22:00:00], "Etc/UTC")
 
       for day_of_week <- 0..6 do
         crontab = %Cron{weekdays: [day_of_week]}
