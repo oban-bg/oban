@@ -58,6 +58,17 @@ defmodule Oban.Crontab.CronTest do
         refute Cron.now?(crontab, %{datetime | month: month - 1})
       end
     end
+
+    test "literal days of the week match the current datetime" do
+      sunday_base = ~U[2020-03-15 22:00:00Z]
+
+      for day_of_week <- 0..6 do
+        crontab = %Cron{weekdays: [day_of_week]}
+        datetime = %{sunday_base | day: sunday_base.day + day_of_week}
+
+        assert Cron.now?(crontab, datetime)
+      end
+    end
   end
 
   defp months do

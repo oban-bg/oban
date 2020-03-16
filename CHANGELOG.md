@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Fixed
+
+- [Oban.Crontab] Fix weekday matching for Sunday, which is represented as `0` in
+  crontabs.
+
 ### Changed
 
 - [Oban.Notifier] Make the module public and clean up the primary function

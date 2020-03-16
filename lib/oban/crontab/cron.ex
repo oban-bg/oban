@@ -37,7 +37,13 @@ defmodule Oban.Crontab.Cron do
   defp matches_rule?(:hours, hour, datetime), do: hour == datetime.hour
   defp matches_rule?(:days, day, datetime), do: day == datetime.day
   defp matches_rule?(:months, month, datetime), do: month == datetime.month
-  defp matches_rule?(:weekdays, weekday, datetime), do: weekday == Date.day_of_week(datetime)
+  defp matches_rule?(:weekdays, weekday, datetime), do: weekday == day_of_week(datetime)
+
+  defp day_of_week(datetime) do
+    datetime
+    |> Date.day_of_week()
+    |> Integer.mod(7)
+  end
 
   @spec parse!(input :: binary()) :: t()
   def parse!(input) when is_binary(input) do
