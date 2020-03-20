@@ -216,7 +216,7 @@ defmodule Oban.Worker do
 
       @impl Worker
       def backoff(attempt) when is_integer(attempt) do
-        Worker.default_backoff(attempt)
+        Worker.backoff(attempt)
       end
 
       @impl Worker
@@ -241,8 +241,8 @@ defmodule Oban.Worker do
   def resolve_opts(_key, _opts, opts), do: opts
 
   @doc false
-  @spec default_backoff(pos_integer(), non_neg_integer()) :: pos_integer()
-  def default_backoff(attempt, base_backoff \\ 15) when is_integer(attempt) do
+  @spec backoff(pos_integer(), non_neg_integer()) :: pos_integer()
+  def backoff(attempt, base_backoff \\ 15) when is_integer(attempt) do
     trunc(:math.pow(2, attempt) + base_backoff)
   end
 

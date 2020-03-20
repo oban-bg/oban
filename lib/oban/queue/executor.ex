@@ -8,50 +8,129 @@ defmodule Oban.Queue.Executor do
   @type success :: {:success, Job.t()}
   @type failure :: {:failure, Job.t(), Worker.t(), atom(), term()}
 
-  @spec call(Job.t(), Config.t()) :: :success | :failure
-  def call(%Job{} = job, %Config{} = conf) do
-    start_time = System.system_time(:microsecond)
-    start_mono = System.monotonic_time(:microsecond)
+  @type t :: %__MODULE__{
+          conf: Config.t(),
+          duration: pos_integer(),
+          job: Job.t(),
+          kind: any(),
+          meta: map(),
+          start_mono: integer(),
+          start_time: integer(),
+          stop_mono: integer(),
+          worker: Worker.t(),
+          safe: boolean(),
+          stack: list(),
+          state: :unset | :failure | :success
+        }
 
-    :telemetry.execute([:oban, :started], %{start_time: start_time}, job_meta(job))
+  @enforce_keys [:conf, :job]
+  defstruct [
+    :conf,
+    :error,
+    :job,
+    :kind,
+    :meta,
+    :start_mono,
+    :start_time,
+    :stop_mono,
+    :worker,
+    safe: true,
+    duration: 0,
+    stack: [],
+    state: :unset
+  ]
 
-    case safe_call(job) do
-      {:success, ^job} ->
-        Breaker.with_retry(fn -> report_success(conf, job, start_mono) end)
+  @spec new(Config.t(), Job.t()) :: t()
+  def new(%Config{} = conf, %Job{} = job) do
+    struct!(__MODULE__,
+      conf: conf,
+      job: job,
+      meta: Map.take(job, [:id, :args, :queue, :worker, :attempt, :max_attempts]),
+      start_mono: System.monotonic_time(:microsecond),
+      start_time: System.system_time(:microsecond)
+    )
+  end
 
-      {:failure, ^job, kind, error, stack} ->
-        Breaker.with_retry(fn -> report_failure(conf, job, start_mono, kind, error, stack) end)
+  @spec call(t()) :: :success | :failure
+  def call(%__MODULE__{} = exec) do
+    exec =
+      exec
+      |> record_started()
+      |> resolve_worker()
+      |> perform()
+      |> record_finished()
+
+    Breaker.with_retry(fn -> report_finished(exec).state end)
+  end
+
+  @spec record_started(t()) :: t()
+  def record_started(%__MODULE__{} = exec) do
+    :telemetry.execute([:oban, :started], %{start_time: exec.start_time}, exec.meta)
+
+    exec
+  end
+
+  @spec resolve_worker(t()) :: t()
+  def resolve_worker(%__MODULE__{} = exec) do
+    worker =
+      exec.job.worker
+      |> String.split(".")
+      |> Module.safe_concat()
+
+    %{exec | worker: worker}
+  rescue
+    error -> %{exec | state: :failure, error: error, stack: __STACKTRACE__}
+  end
+
+  @spec perform(t()) :: t()
+  def perform(%__MODULE__{state: :unset} = exec) do
+    case exec.worker.timeout(exec.job) do
+      :infinity ->
+        perform_inline(exec)
+
+      timeout when is_integer(timeout) ->
+        perform_timed(exec, timeout)
     end
   end
 
-  @spec safe_call(Job.t()) :: success() | failure()
-  def safe_call(%Job{} = job) do
-    case Job.worker_module(job) do
-      {:ok, worker} ->
-        case worker.timeout(job) do
-          :infinity ->
-            perform_inline(worker, job)
+  def perform(%__MODULE__{} = exec), do: exec
 
-          timeout when is_integer(timeout) ->
-            perform_timed(worker, job, timeout)
-        end
+  @spec record_finished(t()) :: t()
+  def record_finished(%__MODULE__{} = exec) do
+    stop_mono = System.monotonic_time(:microsecond)
 
-      {:error, error, stacktrace} ->
-        {:failure, job, :error, error, stacktrace}
-    end
+    %{exec | duration: stop_mono - exec.start_mono, stop_mono: stop_mono}
   end
 
-  @spec perform_inline(Worker.t(), Job.t()) :: success() | failure()
-  def perform_inline(worker, %Job{args: args} = job) do
-    case worker.perform(args, job) do
+  @spec report_finished(t()) :: t()
+  def report_finished(%__MODULE__{} = exec) do
+    case exec.state do
+      :success ->
+        Query.complete_job(exec.conf, exec.job)
+
+        :telemetry.execute([:oban, :success], %{duration: exec.duration}, exec.meta)
+
+      :failure ->
+        Query.retry_job(exec.conf, exec.job, backoff(exec), exec.kind, exec.error, exec.stack)
+
+        meta = Map.merge(exec.meta(), %{kind: exec.kind, error: exec.error, stack: exec.stack})
+
+        :telemetry.execute([:oban, :failure], %{duration: exec.duration}, meta)
+    end
+
+    exec
+  end
+
+  defp perform_inline(%{worker: worker, job: job} = exec) do
+    case worker.perform(job.args, job) do
       :ok ->
-        {:success, job}
+        %{exec | state: :success}
 
       {:ok, _result} ->
-        {:success, job}
+        %{exec | state: :success}
 
       {:error, error} ->
-        {:failure, job, :error, error, current_stacktrace()}
+        %{exec | state: :failure, kind: :error, error: error, stack: current_stacktrace()}
 
       returned ->
         Logger.warn(fn ->
@@ -65,68 +144,34 @@ defmodule Oban.Queue.Executor do
           """
         end)
 
-        {:success, job}
+        %{exec | state: :success}
     end
   rescue
-    exception ->
-      {:failure, job, :exception, exception, __STACKTRACE__}
+    error ->
+      %{exec | state: :failure, kind: :exception, error: error, stack: __STACKTRACE__}
   catch
     kind, value ->
-      {:failure, job, kind, value, __STACKTRACE__}
+      %{exec | state: :failure, kind: kind, error: value, stack: __STACKTRACE__}
   end
 
-  @spec perform_timed(Worker.t(), Job.t(), timeout()) :: success() | failure()
-  def perform_timed(worker, job, timeout) do
-    task = Task.async(fn -> perform_inline(worker, job) end)
+  defp perform_timed(exec, timeout) do
+    task = Task.async(fn -> perform_inline(exec) end)
 
     case Task.yield(task, timeout) || Task.shutdown(task) do
       {:ok, reply} ->
         reply
 
       nil ->
-        {:failure, job, :error, :timeout, current_stacktrace()}
+        %{exec | state: :failure, kind: :error, error: :timeout, stack: current_stacktrace()}
     end
   end
 
-  @spec report_success(Config.t(), Job.t(), integer()) :: :success
-  def report_success(conf, job, start_mono) do
-    Query.complete_job(conf, job)
-
-    :telemetry.execute([:oban, :success], %{duration: duration(start_mono)}, job_meta(job))
-
-    :success
-  end
-
-  @spec report_failure(Config.t(), Job.t(), integer(), atom(), any(), list()) :: :failure
-  def report_failure(conf, job, start_mono, kind, error, stack) do
-    Query.retry_job(conf, job, worker_backoff(job), kind, error, stack)
-
-    meta =
-      job
-      |> job_meta()
-      |> Map.merge(%{kind: kind, error: error, stack: stack})
-
-    :telemetry.execute([:oban, :failure], %{duration: duration(start_mono)}, meta)
-
-    :failure
-  end
-
-  # Helpers
+  defp backoff(%{worker: nil, job: job}), do: Worker.backoff(job.attempt)
+  defp backoff(%{worker: worker, job: job}), do: worker.backoff(job.attempt)
 
   defp current_stacktrace do
     self()
     |> Process.info(:current_stacktrace)
     |> elem(1)
-  end
-
-  defp duration(start_mono), do: System.monotonic_time(:microsecond) - start_mono
-
-  defp job_meta(job), do: Map.take(job, [:id, :args, :queue, :worker, :attempt, :max_attempts])
-
-  defp worker_backoff(%Job{attempt: attempt} = job) do
-    case Job.worker_module(job) do
-      {:ok, worker} -> worker.backoff(attempt)
-      _ -> Worker.default_backoff(attempt)
-    end
   end
 end

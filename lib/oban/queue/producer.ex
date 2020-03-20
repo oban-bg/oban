@@ -64,7 +64,10 @@ defmodule Oban.Queue.Producer do
     conf
     |> fetch_jobs(queue, nonce(), @unlimited)
     |> Enum.reduce(%{failure: 0, success: 0}, fn job, acc ->
-      result = Executor.call(job, conf)
+      result =
+        conf
+        |> Executor.new(job)
+        |> Executor.call()
 
       Map.update(acc, result, 1, &(&1 + 1))
     end)
@@ -116,15 +119,17 @@ defmodule Oban.Queue.Producer do
   # This message is only received when the job's task doesn't exit cleanly. This should be rare,
   # but it can happen when nested processes crash.
   def handle_info({:DOWN, ref, :process, _pid, {reason, stack}}, %State{} = state) do
-    %State{conf: conf, foreman: foreman, running: running} = state
+    %State{foreman: foreman, running: running} = state
 
-    {{job, _pid}, running} = Map.pop(running, ref)
+    {{exec, _pid}, running} = Map.pop(running, ref)
 
     # Without this we may crash the producer if there are any db errors. Alternatively, we would
     # block the producer while awaiting a retry.
     Task.Supervisor.async_nolink(foreman, fn ->
       Breaker.with_retry(fn ->
-        Executor.report_failure(conf, job, 0, :error, reason, stack)
+        %{exec | kind: :error, error: reason, stack: stack, state: :failure}
+        |> Executor.record_finished()
+        |> Executor.report_finished()
       end)
     end)
 
@@ -157,9 +162,9 @@ defmodule Oban.Queue.Producer do
           %{state | limit: scale}
 
         %{"action" => "pkill", "job_id" => kid} ->
-          for {_ref, {job, pid}} <- running, job.id == kid do
+          for {_ref, {exec, pid}} <- running, exec.job.id == kid do
             with :ok <- DynamicSupervisor.terminate_child(foreman, pid) do
-              Query.discard_job(conf, job)
+              Query.discard_job(conf, exec.job)
             end
           end
 
@@ -260,7 +265,7 @@ defmodule Oban.Queue.Producer do
   end
 
   defp pulse(%State{conf: conf, running: running} = state) do
-    running_ids = for {_ref, {%_{id: id}, _pid}} <- running, do: id
+    running_ids = for {_ref, {exec, _pid}} <- running, do: exec.job.id
 
     args =
       state
@@ -332,9 +337,11 @@ defmodule Oban.Queue.Producer do
 
   defp start_jobs(jobs, %State{conf: conf, foreman: foreman}) do
     for job <- jobs, into: %{} do
-      %{pid: pid, ref: ref} = Task.Supervisor.async_nolink(foreman, Executor, :call, [job, conf])
+      exec = Executor.new(conf, job)
 
-      {ref, {job, pid}}
+      %{pid: pid, ref: ref} = Task.Supervisor.async_nolink(foreman, Executor, :call, [exec])
+
+      {ref, {exec, pid}}
     end
   end
 

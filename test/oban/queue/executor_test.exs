@@ -1,9 +1,8 @@
 defmodule Oban.Queue.ExecutorTest do
-  use ExUnit.Case, async: true
+  use Oban.Case, async: true
 
   import ExUnit.CaptureLog
 
-  alias Oban.Job
   alias Oban.Queue.Executor
 
   defmodule Worker do
@@ -19,21 +18,26 @@ defmodule Oban.Queue.ExecutorTest do
 
   describe "perform/1" do
     defp call_with_mode(mode) do
-      Executor.safe_call(%Job{args: %{"mode" => mode}, worker: to_string(Worker)})
+      job = %Job{args: %{"mode" => mode}, worker: to_string(Worker)}
+
+      Config.new(repo: Repo)
+      |> Executor.new(job)
+      |> Executor.resolve_worker()
+      |> Executor.perform()
     end
 
     test "accepting :ok as a success" do
-      assert {:success, %Job{}} = call_with_mode("ok")
+      assert %{state: :success} = call_with_mode("ok")
     end
 
     test "raising, catching and error tuples are failures" do
-      assert {:failure, %Job{}, :exception, _, [_ | _]} = call_with_mode("raise")
-      assert {:failure, %Job{}, :throw, :no_reason, [_ | _]} = call_with_mode("catch")
-      assert {:failure, %Job{}, :error, "no reason", [_ | _]} = call_with_mode("error")
+      assert %{state: :failure} = call_with_mode("raise")
+      assert %{state: :failure, error: :no_reason} = call_with_mode("catch")
+      assert %{state: :failure, error: "no reason"} = call_with_mode("error")
     end
 
     test "warning on unexpected return values" do
-      message = capture_log(fn -> {:success, %Job{}} = call_with_mode("warn") end)
+      message = capture_log(fn -> %{state: :success} = call_with_mode("warn") end)
 
       assert message =~ "Expected #{__MODULE__}.Worker.perform/2"
       assert message =~ "{:bad, :this_will_warn}"

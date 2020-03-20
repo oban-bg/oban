@@ -101,7 +101,7 @@ defmodule Oban.Case do
       import Oban.Case
 
       alias Oban.Integration.Worker
-      alias Oban.{Beat, Job}
+      alias Oban.{Beat, Config, Job}
       alias Repo
 
       def with_backoff(opts \\ [], fun) do
