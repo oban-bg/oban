@@ -19,8 +19,9 @@ defmodule Oban.Queue.Executor do
           stop_mono: integer(),
           worker: Worker.t(),
           safe: boolean(),
+          snooze: pos_integer(),
           stack: list(),
-          state: :unset | :failure | :success
+          state: :unset | :failure | :success | :snoozed
         }
 
   @enforce_keys [:conf, :job]
@@ -30,6 +31,7 @@ defmodule Oban.Queue.Executor do
     :job,
     :kind,
     :meta,
+    :snooze,
     :start_mono,
     :start_time,
     :stop_mono,
@@ -125,6 +127,11 @@ defmodule Oban.Queue.Executor do
         meta = Map.merge(exec.meta(), %{kind: exec.kind, error: exec.error, stack: exec.stack})
 
         :telemetry.execute([:oban, :failure], %{duration: exec.duration}, meta)
+
+      :snoozed ->
+        Query.snooze_job(exec.conf, exec.job, exec.snooze)
+
+        :telemetry.execute([:oban, :success], %{duration: exec.duration}, exec.meta)
     end
 
     exec
@@ -150,6 +157,9 @@ defmodule Oban.Queue.Executor do
 
       {:error, error} ->
         %{exec | state: :failure, kind: :error, error: error, stack: current_stacktrace()}
+
+      {:snooze, seconds} ->
+        %{exec | state: :snoozed, snooze: seconds}
 
       returned ->
         Logger.warn(fn ->

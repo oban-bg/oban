@@ -17,6 +17,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - [Oban] Bubble up errors and exits when draining queues by passing
   `with_safety: false` as an option to `Oban.drain_queue/3`.
 
+- [Oban.Worker] Support returning `{:snooze, seconds}` from `perform/2` to
+  re-schedule a job some number of seconds in the future. This is useful for
+  recycling jobs that aren't ready to run yet, e.g. because of rate limiting.
+
 ### Changed
 
 - [Oban.Notifier] Make the module public and clean up the primary function

@@ -15,9 +15,9 @@ defmodule Oban.Worker do
   * `:queue` — `:default`
   * `:unique` — no uniquness set
 
-  The following example demonstrates defining a worker module to process jobs in the `events`
-  queue. It also dials down the priority from 0 to 1, limits retrying on failures to 10, adds a
-  "business" tag, and ensures that duplicate jobs aren't enqueued within a 30 second period:
+  The following example defines a worker module to process jobs in the `events` queue. It then
+  dials down the priority from 0 to 1, limits retrying on failures to 10, adds a "business" tag,
+  and ensures that duplicate jobs aren't enqueued within a 30 second period:
 
       defmodule MyApp.Workers.Business do
         use Oban.Worker,
@@ -37,11 +37,11 @@ defmodule Oban.Worker do
         end
       end
 
-  The `perform/2` function receives an args map and an `Oban.Job` struct as arguments.  This
-  allows workers to change the behavior of `perform/2` based on attributes of the Job, e.g. the
-  number of attempts or when it was inserted.
+  The `perform/2` function receives an args map and an `Oban.Job` struct as arguments. This allows
+  workers to change the behavior of `perform/2` based on attributes of the job, e.g. the number of
+  execution attempts or when it was inserted.
 
-  A job is considered complete if `perform/2` returns a non-error value, and it doesn't raise an
+  Jobs are considered complete when `perform/2` returns `:ok` or `{:ok, value}`, and it doesn't raise an
   exception or have an unhandled exit.
 
   Any of these return values or error events will fail the job:
@@ -50,8 +50,8 @@ defmodule Oban.Worker do
   * an unhandled exception
   * an unhandled exit or throw
 
-  As an example of error tuple handling, this worker may return an error tuple when the value is
-  less than one:
+  As an example of error tuple handling, this worker will return an error tuple when the `value`
+  is less than one:
 
       defmodule MyApp.Workers.ErrorExample do
         use Oban.Worker
@@ -194,7 +194,10 @@ defmodule Oban.Worker do
   serialization process automatically stringifies all keys.
   """
   @callback perform(args :: Job.args(), job :: Job.t()) ::
-              :ok | {:ok, ignored :: term()} | {:error, reason :: term()}
+              :ok
+              | {:ok, ignored :: term()}
+              | {:error, reason :: term()}
+              | {:snooze, seconds :: pos_integer()}
 
   @doc false
   defmacro __using__(opts) do

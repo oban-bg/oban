@@ -5,7 +5,7 @@ defmodule Oban.Integration.ExecutingTest do
 
   @moduletag :integration
 
-  @oban_opts repo: Repo, queues: [alpha: 3, beta: 3, gamma: 3, delta: 3], poll_interval: 20
+  @oban_opts repo: Repo, queues: [alpha: 3, beta: 3, gamma: 3, delta: 3]
 
   setup do
     start_supervised!({Oban, @oban_opts})
@@ -28,12 +28,21 @@ defmodule Oban.Integration.ExecutingTest do
 
             assert job.attempt == 1
             assert job.attempted_at
-            assert job.completed_at
             assert job.state == action_to_state(action, max)
 
-            if job.state != "completed" do
-              assert length(job.errors) > 0
-              assert [%{"attempt" => 1, "at" => _, "error" => _} | _] = job.errors
+            case job.state do
+              "completed" ->
+                assert job.completed_at
+
+              "scheduled" ->
+                refute job.completed_at
+                assert job.scheduled_at > NaiveDateTime.utc_now()
+                assert job.max_attempts > 1
+
+              _ ->
+                assert job.completed_at
+                assert length(job.errors) > 0
+                assert [%{"attempt" => 1, "at" => _, "error" => _} | _] = job.errors
             end
           end)
         end
@@ -43,7 +52,7 @@ defmodule Oban.Integration.ExecutingTest do
 
   defp job do
     gen all queue <- member_of(~w(alpha beta gamma delta)),
-            action <- member_of(~w(OK FAIL ERROR EXIT TASK_ERROR)),
+            action <- member_of(~w(OK ERROR EXIT FAIL SNOOZE TASK_ERROR)),
             ref <- integer(),
             max_attempts <- integer(1..20),
             priority <- integer(0..3),
@@ -56,6 +65,7 @@ defmodule Oban.Integration.ExecutingTest do
   end
 
   defp action_to_state("OK", _max), do: "completed"
+  defp action_to_state("SNOOZE", _), do: "scheduled"
   defp action_to_state(_state, 1), do: "discarded"
   defp action_to_state(_state, max) when max > 1, do: "retryable"
 end
