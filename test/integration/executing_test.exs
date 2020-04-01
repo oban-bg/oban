@@ -34,15 +34,20 @@ defmodule Oban.Integration.ExecutingTest do
               "completed" ->
                 assert job.completed_at
 
+              "discarded" ->
+                refute job.completed_at
+                assert job.discarded_at
+
+              "retryable" ->
+                refute job.completed_at
+                assert job.scheduled_at > NaiveDateTime.utc_now()
+                assert length(job.errors) > 0
+                assert [%{"attempt" => 1, "at" => _, "error" => _} | _] = job.errors
+
               "scheduled" ->
                 refute job.completed_at
                 assert job.scheduled_at > NaiveDateTime.utc_now()
                 assert job.max_attempts > 1
-
-              _ ->
-                assert job.completed_at
-                assert length(job.errors) > 0
-                assert [%{"attempt" => 1, "at" => _, "error" => _} | _] = job.errors
             end
           end)
         end
@@ -52,7 +57,7 @@ defmodule Oban.Integration.ExecutingTest do
 
   defp job do
     gen all queue <- member_of(~w(alpha beta gamma delta)),
-            action <- member_of(~w(OK ERROR EXIT FAIL SNOOZE TASK_ERROR)),
+            action <- member_of(~w(OK DISCARD ERROR EXIT FAIL SNOOZE TASK_ERROR)),
             ref <- integer(),
             max_attempts <- integer(1..20),
             priority <- integer(0..3),
@@ -64,6 +69,7 @@ defmodule Oban.Integration.ExecutingTest do
     end
   end
 
+  defp action_to_state("DISCARD", _), do: "discarded"
   defp action_to_state("OK", _max), do: "completed"
   defp action_to_state("SNOOZE", _), do: "scheduled"
   defp action_to_state(_state, 1), do: "discarded"

@@ -216,9 +216,9 @@ defmodule Oban.Query do
 
     set =
       if attempt >= max_attempts do
-        [state: "discarded", completed_at: utc_now()]
+        [state: "discarded", discarded_at: utc_now()]
       else
-        [state: "retryable", completed_at: utc_now(), scheduled_at: next_attempt_at(backoff)]
+        [state: "retryable", scheduled_at: next_attempt_at(backoff)]
       end
 
     updates = [

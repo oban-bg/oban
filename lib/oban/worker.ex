@@ -195,6 +195,7 @@ defmodule Oban.Worker do
   """
   @callback perform(args :: Job.args(), job :: Job.t()) ::
               :ok
+              | :discard
               | {:ok, ignored :: term()}
               | {:error, reason :: term()}
               | {:snooze, seconds :: pos_integer()}

@@ -21,7 +21,7 @@ defmodule Oban.Queue.Executor do
           safe: boolean(),
           snooze: pos_integer(),
           stack: list(),
-          state: :unset | :failure | :success | :snoozed
+          state: :unset | :discard | :failure | :success | :snoozed
         }
 
   @enforce_keys [:conf, :job]
@@ -132,6 +132,11 @@ defmodule Oban.Queue.Executor do
         Query.snooze_job(exec.conf, exec.job, exec.snooze)
 
         :telemetry.execute([:oban, :success], %{duration: exec.duration}, exec.meta)
+
+      :discard ->
+        Query.discard_job(exec.conf, exec.job)
+
+        :telemetry.execute([:oban, :success], %{duration: exec.duration}, exec.meta)
     end
 
     exec
@@ -154,6 +159,9 @@ defmodule Oban.Queue.Executor do
 
       {:ok, _result} ->
         %{exec | state: :success}
+
+      :discard ->
+        %{exec | state: :discard}
 
       {:error, error} ->
         %{exec | state: :failure, kind: :error, error: error, stack: current_stacktrace()}
