@@ -4,20 +4,11 @@ defmodule Oban.Integration.TelemetryTest do
   import ExUnit.CaptureLog
 
   alias Oban.Telemetry
+  alias Oban.Test.TelemetryHandler, as: Handler
 
   @moduletag :integration
 
   @oban_opts repo: Repo, queues: [zeta: 3]
-
-  defmodule Handler do
-    def handle([:oban, :started], %{start_time: start_time}, meta, pid) do
-      send(pid, {:executed, :started, start_time, meta})
-    end
-
-    def handle([:oban, event], %{duration: duration}, meta, pid) do
-      send(pid, {:executed, event, duration, meta})
-    end
-  end
 
   test "telemetry events are emitted for executed jobs" do
     events = [[:oban, :started], [:oban, :success], [:oban, :failure]]
@@ -135,10 +126,11 @@ defmodule Oban.Integration.TelemetryTest do
     :telemetry.attach("span-handler", [:oban, :test_metric], &Handler.handle/4, self())
 
     assert :example_return = Telemetry.span(:test_metric, fn -> :example_return end)
-    assert :ok = Telemetry.span(:test_metric, fn -> :timer.sleep(1) end, %{example_metadata: 1})
+    assert :ok = Telemetry.span(:test_metric, fn -> :timer.sleep(5) end, %{example_metadata: 1})
 
     assert_receive {:executed, :test_metric, _duration, %{}}
-    assert_receive {:executed, :test_metric, _duration, %{example_metadata: 1}}
+    assert_receive {:executed, :test_metric, duration, %{example_metadata: 1}}
+    assert duration > 5
   after
     :telemetry.detach("span-handler")
   end
