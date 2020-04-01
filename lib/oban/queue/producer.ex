@@ -5,7 +5,7 @@ defmodule Oban.Queue.Producer do
 
   import Oban.Breaker, only: [open_circuit: 1, trip_errors: 0, trip_circuit: 3]
 
-  alias Oban.{Breaker, Config, Notifier, Query}
+  alias Oban.{Breaker, Config, Notifier, Query, Telemetry}
   alias Oban.Queue.Executor
 
   @type option ::
@@ -248,11 +248,11 @@ defmodule Oban.Queue.Producer do
   end
 
   defp deschedule(%State{conf: conf, queue: queue} = state) do
-    start_mono = System.monotonic_time(:microsecond)
-
-    Query.stage_scheduled_jobs(conf, queue)
-
-    :telemetry.execute([:oban, :deschedule], %{duration: duration(start_mono)}, %{queue: queue})
+    Telemetry.span(
+      :deschedule,
+      fn -> Query.stage_scheduled_jobs(conf, queue) end,
+      %{queue: queue}
+    )
 
     state
   rescue
@@ -295,17 +295,18 @@ defmodule Oban.Queue.Producer do
     cond do
       dispatch_now?(state) ->
         %State{conf: conf, limit: limit, nonce: nonce, queue: queue, running: running} = state
-        start_mono = System.monotonic_time(:microsecond)
 
         running =
-          conf
-          |> fetch_jobs(queue, nonce, limit - map_size(running))
-          |> start_jobs(state)
-          |> Map.merge(running)
-
-        :telemetry.execute([:oban, :dispatched], %{duration: duration(start_mono)}, %{
-          queue: queue
-        })
+          Telemetry.span(
+            :dispatched,
+            fn ->
+              conf
+              |> fetch_jobs(queue, nonce, limit - map_size(running))
+              |> start_jobs(state)
+              |> Map.merge(running)
+            end,
+            %{queue: queue}
+          )
 
         {:noreply, %{state | cooldown_ref: nil, dispatched_at: system_now(), running: running}}
 
@@ -348,5 +349,4 @@ defmodule Oban.Queue.Producer do
   end
 
   defp system_now, do: System.monotonic_time(:millisecond)
-  defp duration(start_mono), do: System.monotonic_time(:microsecond) - start_mono
 end
