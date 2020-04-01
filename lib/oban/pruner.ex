@@ -5,7 +5,7 @@ defmodule Oban.Pruner do
 
   import Oban.Breaker, only: [open_circuit: 1, trip_errors: 0, trip_circuit: 3]
 
-  alias Oban.{Config, Query}
+  alias Oban.{Config, Query, Telemetry}
 
   @type option :: {:name, module()} | {:conf, Config.t()}
 
@@ -71,29 +71,26 @@ defmodule Oban.Pruner do
   end
 
   defp prune_beats(conf) do
-    start_mono = System.monotonic_time(:microsecond)
-    Query.delete_outdated_beats(conf, conf.beats_maxage, conf.prune_limit)
-    :telemetry.execute([:oban, :prune_beats], %{duration: duration(start_mono)})
+    Telemetry.span(:prune_beats, fn ->
+      Query.delete_outdated_beats(conf, conf.beats_maxage, conf.prune_limit)
+    end)
   end
 
   defp prune_jobs(conf) do
     %Config{prune: prune, prune_limit: prune_limit} = conf
-    start_mono = System.monotonic_time(:microsecond)
 
-    case prune do
-      {:maxlen, length} ->
-        Query.delete_truncated_jobs(conf, length, prune_limit)
+    Telemetry.span(:prune_jobs, fn ->
+      case prune do
+        {:maxlen, length} ->
+          Query.delete_truncated_jobs(conf, length, prune_limit)
 
-      {:maxage, seconds} ->
-        Query.delete_outdated_jobs(conf, seconds, prune_limit)
-    end
-
-    :telemetry.execute([:oban, :prune_jobs], %{duration: duration(start_mono)})
+        {:maxage, seconds} ->
+          Query.delete_outdated_jobs(conf, seconds, prune_limit)
+      end
+    end)
   end
 
   defp send_after(interval) do
     Process.send_after(self(), :prune, interval)
   end
-
-  defp duration(start_mono), do: System.monotonic_time() - start_mono
 end
