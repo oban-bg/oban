@@ -158,4 +158,19 @@ defmodule Oban.Telemetry do
       |> Jason.encode!()
     end)
   end
+
+  @doc """
+  Measure the time it took to run a function and publishes a telemetry
+  """
+  @spec span(name :: atom(), fun :: (() -> term()), metadata :: map()) :: term()
+  def span(name, fun, metadata \\ %{}) do
+    start_mono = System.monotonic_time(:microsecond)
+    result = fun.()
+
+    :telemetry.execute([:oban, name], %{duration: duration(start_mono)}, metadata)
+
+    result
+  end
+
+  defp duration(start_mono), do: System.monotonic_time(:microsecond) - start_mono
 end

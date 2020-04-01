@@ -131,6 +131,18 @@ defmodule Oban.Integration.TelemetryTest do
     :telemetry.detach("oban-default-logger")
   end
 
+  test "span publishes given metric and metadata" do
+    :telemetry.attach("span-handler", [:oban, :test_metric], &Handler.handle/4, self())
+
+    assert :example_return = Telemetry.span(:test_metric, fn -> :example_return end)
+    assert :ok = Telemetry.span(:test_metric, fn -> :timer.sleep(1) end, %{example_metadata: 1})
+
+    assert_receive {:executed, :test_metric, _duration, %{}}
+    assert_receive {:executed, :test_metric, _duration, %{example_metadata: 1}}
+  after
+    :telemetry.detach("span-handler")
+  end
+
   defp insert_job!(args) do
     args
     |> Worker.new(queue: "zeta")
