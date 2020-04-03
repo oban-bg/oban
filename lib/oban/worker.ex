@@ -15,9 +15,9 @@ defmodule Oban.Worker do
   * `:queue` — `:default`
   * `:unique` — no uniquness set
 
-  The following example demonstrates defining a worker module to process jobs in the `events`
-  queue. It also dials down the priority from 0 to 1, limits retrying on failures to 10, adds a
-  "business" tag, and ensures that duplicate jobs aren't enqueued within a 30 second period:
+  The following example defines a worker module to process jobs in the `events` queue. It then
+  dials down the priority from 0 to 1, limits retrying on failures to 10, adds a "business" tag,
+  and ensures that duplicate jobs aren't enqueued within a 30 second period:
 
       defmodule MyApp.Workers.Business do
         use Oban.Worker,
@@ -37,21 +37,24 @@ defmodule Oban.Worker do
         end
       end
 
-  The `perform/2` function receives an args map and an `Oban.Job` struct as arguments.  This
-  allows workers to change the behavior of `perform/2` based on attributes of the Job, e.g. the
-  number of attempts or when it was inserted.
+  The `perform/2` function receives an args map and an `Oban.Job` struct as arguments. This allows
+  workers to change the behavior of `perform/2` based on attributes of the job, e.g. the number of
+  execution attempts or when it was inserted.
 
-  A job is considered complete if `perform/2` returns a non-error value, and it doesn't raise an
-  exception or have an unhandled exit.
+  The value returned from `perform/2` can control whether the job is a success or a failure:
 
-  Any of these return values or error events will fail the job:
+  * `:ok` or `{:ok, value}` — the job is successful; for success tuples the `value` is ignored
+  * `:discard` — discard the job and prevent it from being retried again
+  * `{:error, error}` — the job failed, record the error and schedule a retry if possible
+  * `{:snooze, seconds}` — consider the job a success and schedule it to run `seconds` in the
+    future. Snoozing will also increase the `max_attempts` by one to ensure that the job isn't
+    accidentally discarded before it can run.
 
-  * return `{:error, error}`
-  * an unhandled exception
-  * an unhandled exit or throw
+  In addition to explicit return values, any _unhandled exception_, _exit_ or _throw_ will fail
+  the job and schedule a retry if possible.
 
-  As an example of error tuple handling, this worker may return an error tuple when the value is
-  less than one:
+  As an example of error tuple handling, this worker will return an error tuple when the `value`
+  is less than one:
 
       defmodule MyApp.Workers.ErrorExample do
         use Oban.Worker
@@ -194,7 +197,11 @@ defmodule Oban.Worker do
   serialization process automatically stringifies all keys.
   """
   @callback perform(args :: Job.args(), job :: Job.t()) ::
-              :ok | {:ok, ignored :: term()} | {:error, reason :: term()}
+              :ok
+              | :discard
+              | {:ok, ignored :: term()}
+              | {:error, reason :: term()}
+              | {:snooze, seconds :: pos_integer()}
 
   @doc false
   defmacro __using__(opts) do

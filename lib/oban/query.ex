@@ -195,6 +195,20 @@ defmodule Oban.Query do
     :ok
   end
 
+  @spec snooze_job(Config.t(), Job.t(), pos_integer()) :: :ok
+  def snooze_job(%Config{prefix: prefix, repo: repo, verbose: verbose}, %Job{id: id}, seconds) do
+    scheduled_at = DateTime.add(utc_now(), seconds)
+
+    updates = [
+      set: [state: "scheduled", scheduled_at: scheduled_at],
+      inc: [max_attempts: 1]
+    ]
+
+    repo.update_all(where(Job, id: ^id), updates, log: verbose, prefix: prefix)
+
+    :ok
+  end
+
   @spec retry_job(Config.t(), Job.t(), pos_integer(), atom(), term(), list()) :: :ok
   def retry_job(%Config{} = conf, %Job{} = job, backoff, kind, error, stack) do
     %Config{prefix: prefix, repo: repo, verbose: verbose} = conf
@@ -202,9 +216,9 @@ defmodule Oban.Query do
 
     set =
       if attempt >= max_attempts do
-        [state: "discarded", completed_at: utc_now()]
+        [state: "discarded", discarded_at: utc_now()]
       else
-        [state: "retryable", completed_at: utc_now(), scheduled_at: next_attempt_at(backoff)]
+        [state: "retryable", scheduled_at: next_attempt_at(backoff)]
       end
 
     updates = [

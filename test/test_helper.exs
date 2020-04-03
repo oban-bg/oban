@@ -27,12 +27,10 @@ defmodule Oban.Integration.Worker do
 
         :ok
 
-      "FAIL" ->
-        send(pid, {:fail, ref})
+      "DISCARD" ->
+        send(pid, {:discard, ref})
 
-        raise RuntimeError, "FAILED"
-
-        :ok
+        :discard
 
       "ERROR" ->
         send(pid, {:error, ref})
@@ -44,7 +42,17 @@ defmodule Oban.Integration.Worker do
 
         GenServer.call(FakeServer, :exit)
 
+      "FAIL" ->
+        send(pid, {:fail, ref})
+
+        raise RuntimeError, "FAILED"
+
         :ok
+
+      "SNOOZE" ->
+        send(pid, {:snooze, ref})
+
+        {:snooze, 60}
 
       "TASK_ERROR" ->
         send(pid, {:async, ref})

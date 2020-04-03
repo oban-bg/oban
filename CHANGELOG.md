@@ -17,6 +17,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - [Oban] Bubble up errors and exits when draining queues by passing
   `with_safety: false` as an option to `Oban.drain_queue/3`.
 
+- [Oban.Worker] Support returning `{:snooze, seconds}` from `perform/2` to
+  re-schedule a job some number of seconds in the future. This is useful for
+  recycling jobs that aren't ready to run yet, e.g. because of rate limiting.
+
+- [Oban.Worker] Support returning `:discard` from `perform/2` to immediately
+  discard a job. This is useful when a job encounters an error that won't
+  resolve with time, e.g. invalid arguments or a missing record.
+
 ### Changed
 
 - [Oban.Notifier] Make the module public and clean up the primary function
@@ -25,6 +33,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
   Notifier dispatching performance is slightly improved as well. It is now a
   no-op if no processes are listening to a notification's channel.
+
+- [Oban.Query] The `completed_at` timestamp is no longer set for failed jobs,
+  whether they are put in the `discarded` or `retryable` state. However, the
+  information is still available and is recorded in the `errors` array as the
+  `at` value with the error for that attempt.
+
+  This corrects a long standing inconsistency between discarding a job manually
+  or automatically when it exhausts retries.
 
 ## [1.2.0] — 2020-03-05
 
