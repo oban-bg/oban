@@ -41,14 +41,17 @@ defmodule Oban.Worker do
   workers to change the behavior of `perform/2` based on attributes of the job, e.g. the number of
   execution attempts or when it was inserted.
 
-  Jobs are considered complete when `perform/2` returns `:ok` or `{:ok, value}`, and it doesn't raise an
-  exception or have an unhandled exit.
+  The value returned from `perform/2` can control whether the job is a success or a failure:
 
-  Any of these return values or error events will fail the job:
+  * `:ok` or `{:ok, value}` — the job is successful; for success tuples the `value` is ignored
+  * `:discard` — discard the job and prevent it from being retried again
+  * `{:error, error}` — the job failed, record the error and schedule a retry if possible
+  * `{:snooze, seconds}` — consider the job a success and schedule it to run `seconds` in the
+    future. Snoozing will also increase the `max_attempts` by one to ensure that the job isn't
+    accidentally discarded before it can run.
 
-  * return `{:error, error}`
-  * an unhandled exception
-  * an unhandled exit or throw
+  In addition to explicit return values, any _unhandled exception_, _exit_ or _throw_ will fail
+  the job and schedule a retry if possible.
 
   As an example of error tuple handling, this worker will return an error tuple when the `value`
   is less than one:

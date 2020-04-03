@@ -42,8 +42,6 @@ defmodule Oban.Integration.Worker do
 
         GenServer.call(FakeServer, :exit)
 
-        :ok
-
       "FAIL" ->
         send(pid, {:fail, ref})
 

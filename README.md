@@ -355,10 +355,9 @@ defmodule MyApp.LazyBusiness do
 end
 ```
 
-The value returned from `perform/2` is ignored, unless it an `{:error, reason}`
-tuple. With an error return or when perform has an uncaught exception or throw
-then the error is reported and the job is retried (provided there are attempts
-remaining).
+Successful jobs should return `:ok` or an `{:ok, value}` tuple. The value
+returned from `perform/2` is used to control whether the job is treated as a
+success, a failure, discarded completely or deferred until later.
 
 See the `Oban.Worker` docs for more details on failure conditions and
 `Oban.Telemetry` for details on job reporting.
