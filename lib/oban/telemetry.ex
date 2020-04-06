@@ -160,7 +160,7 @@ defmodule Oban.Telemetry do
   end
 
   @doc """
-  Measure the time it took to run a function and publishes a telemetry
+  Measure the time it takes to run a function and publish corresponding telemetry events.
   """
   @spec span(name :: atom(), fun :: (() -> term()), metadata :: map()) :: term()
   def span(name, fun, metadata \\ %{}) do
