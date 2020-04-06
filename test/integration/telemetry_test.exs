@@ -126,7 +126,7 @@ defmodule Oban.Integration.TelemetryTest do
     :telemetry.attach("span-handler", [:oban, :test_metric], &Handler.handle/4, self())
 
     assert :example_return = Telemetry.span(:test_metric, fn -> :example_return end)
-    assert :ok = Telemetry.span(:test_metric, fn -> :timer.sleep(5) end, %{example_metadata: 1})
+    assert :ok = Telemetry.span(:test_metric, fn -> Process.sleep(5) end, %{example_metadata: 1})
 
     assert_receive {:executed, :test_metric, _duration, %{}}
     assert_receive {:executed, :test_metric, duration, %{example_metadata: 1}}
