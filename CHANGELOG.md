@@ -12,6 +12,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - [Oban.Crontab] Fix weekday matching for Sunday, which is represented as `0` in
   crontabs.
 
+- [Oban.Pruner] Use the return value from pruning to retain circuit breaker
+  status.
+
 ### Added
 
 - [Oban] Bubble up errors and exits when draining queues by passing

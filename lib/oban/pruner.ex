@@ -37,7 +37,7 @@ defmodule Oban.Pruner do
 
   @impl GenServer
   def handle_info(:prune, %State{conf: conf} = state) do
-    prune(state)
+    state = prune(state)
 
     send_after(conf.prune_interval)
 
@@ -66,6 +66,8 @@ defmodule Oban.Pruner do
       end,
       log: verbose
     )
+
+    state
   rescue
     exception in trip_errors() -> trip_circuit(exception, __STACKTRACE__, state)
   end

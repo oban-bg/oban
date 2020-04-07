@@ -53,7 +53,7 @@ defmodule Oban.Integration.PruningTest do
 
     # The `prune` value must not be :disabled, but the value doesn't matter
     start_supervised!(
-      {Oban, repo: Repo, prune: {:maxage, 60 * 4}, prune_interval: 10, prune_limit: 1}
+      {Oban, repo: Repo, prune: {:maxage, 60 * 4}, prune_interval: 100, prune_limit: 1}
     )
 
     with_backoff(fn ->
