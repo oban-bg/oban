@@ -195,6 +195,19 @@ defmodule Oban.Query do
     :ok
   end
 
+  @cancellable_states ~w(available scheduled retryable)
+
+  @spec cancel_job(Config.t(), pos_integer()) :: :ok | :ignored
+  def cancel_job(%Config{prefix: prefix, repo: repo, verbose: verbose}, job_id) do
+    query = where(Job, [j], j.id == ^job_id and j.state in @cancellable_states)
+    update = [set: [state: "discarded", discarded_at: utc_now()]]
+
+    case repo.update_all(query, update, log: verbose, prefix: prefix) do
+      {1, nil} -> :ok
+      {0, nil} -> :ignored
+    end
+  end
+
   @spec snooze_job(Config.t(), Job.t(), pos_integer()) :: :ok
   def snooze_job(%Config{prefix: prefix, repo: repo, verbose: verbose}, %Job{id: id}, seconds) do
     scheduled_at = DateTime.add(utc_now(), seconds)

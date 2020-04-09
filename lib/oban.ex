@@ -494,11 +494,36 @@ defmodule Oban do
       :ok
   """
   @doc since: "0.2.0"
+  @doc deprecated: "Use Oban.cancel_job/1 instead"
   @spec kill_job(name :: atom(), job_id :: pos_integer()) :: :ok
   def kill_job(name \\ __MODULE__, job_id) when is_integer(job_id) do
     name
     |> config()
     |> Notifier.notify(:signal, %{action: :pkill, job_id: job_id})
+  end
+
+  @doc """
+  Cancel an `available`, `scheduled` or `retryable` job and mark it as `discarded` to prevent it
+  from running. If the job is currently `executing` it will be killed and otherwise it is ignored.
+
+  If an executing job happens to fail before it can be cancelled the state is set to `discarded`.
+  However, if it manages to complete successfully then the state will still be `completed`.
+
+  ## Example
+
+  Cancel a scheduled job with the id `1`:
+
+      Oban.cancel_job(1)
+      :ok
+  """
+  @doc since: "1.3.0"
+  @spec cancel_job(name :: atom(), job_id :: pos_integer()) :: :ok
+  def cancel_job(name \\ __MODULE__, job_id) when is_integer(job_id) do
+    conf = config(name)
+
+    with :ignored <- Query.cancel_job(conf, job_id) do
+      Notifier.notify(conf, :signal, %{action: :pkill, job_id: job_id})
+    end
   end
 
   defp child_name(name, child), do: Module.concat(name, child)

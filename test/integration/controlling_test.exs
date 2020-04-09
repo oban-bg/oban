@@ -106,6 +106,31 @@ defmodule Oban.Integration.ControllingTest do
     :ok = stop_supervised(Oban)
   end
 
+  test "cancelling jobs that may or may not be executing" do
+    start_supervised!({Oban, @oban_opts})
+
+    job_a = insert_job!(%{ref: 1}, schedule_in: 10)
+    job_b = insert_job!(%{ref: 2}, schedule_in: 10, state: "retryable")
+    job_c = insert_job!(%{ref: 3}, state: "completed")
+    job_d = insert_job!(%{ref: 4, sleep: 100})
+
+    assert_receive {:started, 4}
+
+    assert :ok = Oban.cancel_job(job_a.id)
+    assert :ok = Oban.cancel_job(job_b.id)
+    assert :ok = Oban.cancel_job(job_c.id)
+    assert :ok = Oban.cancel_job(job_d.id)
+
+    assert %Job{state: "discarded", discarded_at: %DateTime{}} = Repo.reload(job_a)
+    assert %Job{state: "discarded", discarded_at: %DateTime{}} = Repo.reload(job_b)
+    assert %Job{state: "completed", discarded_at: nil} = Repo.reload(job_c)
+    assert %Job{state: "discarded", discarded_at: %DateTime{}} = Repo.reload(job_d)
+
+    refute_receive {:ok, 4}, 200
+
+    :ok = stop_supervised(Oban)
+  end
+
   test "dispatching jobs from a queue via database trigger" do
     start_supervised!({Oban, Keyword.put(@oban_opts, :poll_interval, :timer.minutes(5))})
 
