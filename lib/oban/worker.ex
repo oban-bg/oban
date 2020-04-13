@@ -108,7 +108,7 @@ defmodule Oban.Worker do
         use Oban.Worker
 
         @impl Worker
-        def backoff(attempt) do
+        def backoff(%Job{attempt: attempt}) do
           :math.pow(attempt, 4) + 15 + :rand.uniform(30) * attempt
         end
 
@@ -173,9 +173,9 @@ defmodule Oban.Worker do
   @doc """
   Calculate the execution backoff, or the number of seconds to wait before retrying a failed job.
 
-  Defaults to an exponential algorithm.
+  Defaults to an exponential algorithm with a minimum delay of 15 seconds.
   """
-  @callback backoff(attempt :: 1..99) :: pos_integer()
+  @callback backoff(job :: Job.t()) :: pos_integer()
 
   @doc """
   Set a job's maximum execution time in milliseconds. Jobs that exceed the time limit are
@@ -208,6 +208,7 @@ defmodule Oban.Worker do
     quote location: :keep do
       alias Oban.{Job, Worker}
 
+      @before_compile Worker
       @after_compile Worker
       @behaviour Worker
 
@@ -222,11 +223,6 @@ defmodule Oban.Worker do
       end
 
       @impl Worker
-      def backoff(attempt) when is_integer(attempt) do
-        Worker.backoff(attempt)
-      end
-
-      @impl Worker
       def timeout(%Job{} = _job) do
         :infinity
       end
@@ -236,7 +232,18 @@ defmodule Oban.Worker do
   end
 
   @doc false
-  defmacro __after_compile__(%{module: module}, _) do
+  defmacro __before_compile__(_env) do
+    quote do
+      @impl Oban.Worker
+      def backoff(attempt) when is_integer(attempt), do: Oban.Worker.backoff(attempt)
+      def backoff(%Oban.Job{attempt: attempt}), do: backoff(attempt)
+
+      defoverridable backoff: 1
+    end
+  end
+
+  @doc false
+  defmacro __after_compile__(%{module: module}, _env) do
     Enum.each(module.__opts__(), &validate_opt!/1)
   end
 

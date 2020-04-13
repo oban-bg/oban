@@ -48,6 +48,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   This corrects a long standing inconsistency between discarding a job manually
   or automatically when it exhausts retries.
 
+- [Oban.Worker] The `backoff/1` callback now expects a job struct instead of an
+  integer. That allows applications to finely control backoff based on more than
+  just the current attempt number. Use of `backoff/1` with an integer is
+  deprecated and no longer documented, though it is supported for backward
+  compatibility.
+
 ## [1.2.0] — 2020-03-05
 
 ### Fixed

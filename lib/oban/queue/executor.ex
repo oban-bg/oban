@@ -198,7 +198,7 @@ defmodule Oban.Queue.Executor do
   end
 
   defp backoff(%{worker: nil, job: job}), do: Worker.backoff(job.attempt)
-  defp backoff(%{worker: worker, job: job}), do: worker.backoff(job.attempt)
+  defp backoff(%{worker: worker, job: job}), do: worker.backoff(job)
 
   defp current_stacktrace do
     self()
