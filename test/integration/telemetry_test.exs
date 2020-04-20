@@ -10,44 +10,44 @@ defmodule Oban.Integration.TelemetryTest do
   @oban_opts repo: Repo, queues: [zeta: 3]
 
   defmodule Handler do
-    def handle([:oban, :started], %{start_time: start_time}, meta, pid) do
-      send(pid, {:executed, :started, start_time, meta})
+    def handle([:oban, :job, :start], %{start_time: start_time}, meta, pid) do
+      send(pid, {:event, :start, start_time, meta})
     end
 
-    def handle([:oban, event], %{duration: duration}, meta, pid) do
-      send(pid, {:executed, event, duration, meta})
+    def handle([:oban, :job, event], %{duration: duration}, meta, pid) do
+      send(pid, {:event, event, duration, meta})
     end
   end
 
   test "telemetry events are emitted for executed jobs" do
-    events = [[:oban, :started], [:oban, :success], [:oban, :failure]]
+    events = [[:oban, :job, :start], [:oban, :job, :stop], [:oban, :job, :exception]]
 
     :telemetry.attach_many("job-handler", events, &Handler.handle/4, self())
 
     start_supervised!({Oban, @oban_opts})
 
-    %Job{id: success_id} = insert_job!(%{ref: 1, action: "OK"})
+    %Job{id: stop_id} = insert_job!(%{ref: 1, action: "OK"})
     %Job{id: exception_id} = insert_job!(%{ref: 2, action: "FAIL"})
     %Job{id: error_id} = insert_job!(%{ref: 2, action: "ERROR"})
 
-    assert_receive {:executed, :started, started_time, success_meta}
-    assert_receive {:executed, :success, success_duration, success_meta}
-    assert_receive {:executed, :failure, exception_duration, %{kind: :exception} = exception_meta}
-    assert_receive {:executed, :failure, error_duration, %{kind: :error} = error_meta}
+    assert_receive {:event, :start, started_time, stop_meta}
+    assert_receive {:event, :stop, stop_duration, stop_meta}
+    assert_receive {:event, :exception, exception_duration, %{kind: :exception} = exception_meta}
+    assert_receive {:event, :exception, error_duration, %{kind: :error} = error_meta}
 
     assert started_time > 0
-    assert success_duration > 0
+    assert stop_duration > 0
     assert exception_duration > 0
     assert error_duration > 0
 
     assert %{
-             id: ^success_id,
+             id: ^stop_id,
              args: %{},
              queue: "zeta",
              worker: "Oban.Integration.Worker",
              attempt: 1,
              max_attempts: 20
-           } = success_meta
+           } = stop_meta
 
     assert %{
              id: ^exception_id,
@@ -58,7 +58,7 @@ defmodule Oban.Integration.TelemetryTest do
              max_attempts: 20,
              kind: :exception,
              error: _,
-             stack: [_ | _]
+             stacktrace: [_ | _]
            } = exception_meta
 
     assert %{
@@ -70,7 +70,7 @@ defmodule Oban.Integration.TelemetryTest do
              max_attempts: 20,
              kind: :error,
              error: "ERROR",
-             stack: [_ | _]
+             stacktrace: [_ | _]
            } = error_meta
 
     :ok = stop_supervised(Oban)
@@ -92,16 +92,16 @@ defmodule Oban.Integration.TelemetryTest do
         Process.sleep(10)
       end)
 
-    # Started
+    # Start
 
     assert logged =~ ~s("source":"oban")
-    assert logged =~ ~s("event":"started")
+    assert logged =~ ~s("event":"start")
     assert logged =~ ~s("start_time":)
 
-    # Success
+    # Stop
 
     assert logged =~ ~s("source":"oban")
-    assert logged =~ ~s("event":"success")
+    assert logged =~ ~s("event":"stop")
     assert logged =~ ~s("args":)
     assert logged =~ ~s("worker":"Oban.Integration.Worker")
     assert logged =~ ~s("queue":"zeta")

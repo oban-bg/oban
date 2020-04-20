@@ -6,19 +6,19 @@ defmodule Oban.Telemetry do
 
   Oban emits the following telemetry events for each job:
 
-  * `:started` — at the point a job is fetched from the database and will execute
-  * `:success` — after a job succeeds and the success is recorded in the database
-  * `:failure` — after a job fails and the failure is recorded in the database
+  * `[:oban, :job, :start]` — at the point a job is fetched from the database and will execute
+  * `[:oban, :job, :stop]` — after a job succeeds and the success is recorded in the database
+  * `[:oban, :job, :exeception]` — after a job fails and the failure is recorded in the database
 
   All job events share the same details about the job that was executed. In addition, failed jobs
   provide the error type, the error itself, and the stacktrace. The following chart shows which
   metadata you can expect for each event:
 
-  | event      | measures      | metadata                                                                      |
-  | ---------- | -----------   | ----------------------------------------------------------------------------- |
-  | `:started` | `:start_time` | `:id, :args, :queue, :worker, :attempt, :max_attempts`                        |
-  | `:success` | `:duration`   | `:id, :args, :queue, :worker, :attempt, :max_attempts`                        |
-  | `:failure` | `:duration`   | `:id, :args, :queue, :worker, :attempt, :max_attempts, :kind, :error, :stack` |
+  | event        | measures      | metadata                                                                           |
+  | ------------ | -----------   | ---------------------------------------------------------------------------------- |
+  | `:start`     | `:start_time` | `:id, :args, :queue, :worker, :attempt, :max_attempts`                             |
+  | `:stop`      | `:duration`   | `:id, :args, :queue, :worker, :attempt, :max_attempts`                             |
+  | `:exception` | `:duration`   | `:id, :args, :queue, :worker, :attempt, :max_attempts, :kind, :error, :stacktrace` |
 
   For `:failure` events the metadata includes details about what caused the failure. The `:kind`
   value is determined by how an error occurred. Here are the possible kinds:
@@ -62,7 +62,7 @@ defmodule Oban.Telemetry do
   defmodule MicroLogger do
     require Logger
 
-    def handle_event([:oban, :failure], %{duration: duration}, meta, nil) do
+    def handle_event([:oban, :job, :exception], %{duration: duration}, meta, nil) do
       Logger.warn("[#\{meta.queue}] #\{meta.worker} failed in #\{duration}")
     end
   end
@@ -75,7 +75,7 @@ defmodule Oban.Telemetry do
 
   ```elixir
   defmodule ErrorReporter do
-    def handle_event([:oban, :failure], _timing, %{attempt: attempt} = meta, nil) do
+    def handle_event([:oban, :job, :exception], _, %{attempt: attempt} = meta, _) do
       if attempt >= 3 do
         context = Map.take(meta, [:id, :args, :queue, :worker])
 
@@ -84,7 +84,7 @@ defmodule Oban.Telemetry do
     end
   end
 
-  :telemetry.attach("oban-errors", [:oban, :failure], &ErrorReporter.handle_event/4, nil)
+  :telemetry.attach("oban-errors", [:oban, :job, :exception], &ErrorReporter.handle_event/4, [])
   ```
 
   [honey]: https://honeybadger.io
@@ -120,9 +120,9 @@ defmodule Oban.Telemetry do
   @spec attach_default_logger() :: :ok | {:error, :already_exists}
   def attach_default_logger(level \\ :info) do
     events = [
-      [:oban, :started],
-      [:oban, :success],
-      [:oban, :failure],
+      [:oban, :job, :start],
+      [:oban, :job, :stop],
+      [:oban, :job, :exception],
       [:oban, :trip_circuit],
       [:oban, :open_circuit]
     ]
@@ -130,12 +130,11 @@ defmodule Oban.Telemetry do
     :telemetry.attach_many("oban-default-logger", events, &handle_event/4, level)
   end
 
-  @job_events [:started, :success, :failure]
   @circuit_events [:trip_circuit, :open_circuit]
 
   @doc false
   @spec handle_event([atom()], map(), map(), Logger.level()) :: :ok
-  def handle_event([:oban, event], measure, meta, level) when event in @job_events do
+  def handle_event([:oban, :job, event], measure, meta, level) do
     select_meta = Map.take(meta, [:args, :worker, :queue])
 
     message =

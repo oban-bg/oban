@@ -48,8 +48,8 @@ defmodule Oban.Queue.Executor do
       conf: conf,
       job: job,
       meta: Map.take(job, [:id, :args, :queue, :worker, :attempt, :max_attempts]),
-      start_mono: System.monotonic_time(:microsecond),
-      start_time: System.system_time(:microsecond)
+      start_mono: System.monotonic_time(),
+      start_time: System.system_time()
     )
   end
 
@@ -72,7 +72,7 @@ defmodule Oban.Queue.Executor do
 
   @spec record_started(t()) :: t()
   def record_started(%__MODULE__{} = exec) do
-    :telemetry.execute([:oban, :started], %{start_time: exec.start_time}, exec.meta)
+    :telemetry.execute([:oban, :job, :start], %{start_time: exec.start_time}, exec.meta)
 
     exec
   end
@@ -119,24 +119,22 @@ defmodule Oban.Queue.Executor do
       :success ->
         Query.complete_job(exec.conf, exec.job)
 
-        :telemetry.execute([:oban, :success], %{duration: exec.duration}, exec.meta)
+        execute_stop(exec)
 
       :failure ->
         Query.retry_job(exec.conf, exec.job, backoff(exec), exec.kind, exec.error, exec.stack)
 
-        meta = Map.merge(exec.meta(), %{kind: exec.kind, error: exec.error, stack: exec.stack})
-
-        :telemetry.execute([:oban, :failure], %{duration: exec.duration}, meta)
+        execute_exception(exec)
 
       :snoozed ->
         Query.snooze_job(exec.conf, exec.job, exec.snooze)
 
-        :telemetry.execute([:oban, :success], %{duration: exec.duration}, exec.meta)
+        execute_stop(exec)
 
       :discard ->
         Query.discard_job(exec.conf, exec.job)
 
-        :telemetry.execute([:oban, :success], %{duration: exec.duration}, exec.meta)
+        execute_stop(exec)
     end
 
     exec
@@ -199,6 +197,16 @@ defmodule Oban.Queue.Executor do
 
   defp backoff(%{worker: nil, job: job}), do: Worker.backoff(job.attempt)
   defp backoff(%{worker: worker, job: job}), do: worker.backoff(job)
+
+  defp execute_stop(exec) do
+    :telemetry.execute([:oban, :job, :stop], %{duration: exec.duration}, exec.meta)
+  end
+
+  defp execute_exception(exec) do
+    meta = Map.merge(exec.meta(), %{kind: exec.kind, error: exec.error, stacktrace: exec.stack})
+
+    :telemetry.execute([:oban, :job, :exception], %{duration: exec.duration}, meta)
+  end
 
   defp current_stacktrace do
     self()
