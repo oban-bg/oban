@@ -23,7 +23,7 @@ defmodule Oban.WorkerTest do
       unique: [fields: [:queue, :worker], period: 60, states: [:scheduled]]
 
     @impl Worker
-    def backoff(attempt) when is_integer(attempt), do: attempt * attempt
+    def backoff(%{attempt: attempt}), do: attempt * attempt
 
     @impl Worker
     def perform(_args, %{attempt: attempt}) when attempt > 1, do: attempt
@@ -62,21 +62,16 @@ defmodule Oban.WorkerTest do
 
   describe "backoff/1" do
     test "using aan exponential algorithm with a fixed padding by default" do
-      assert BasicWorker.backoff(1) == 17
-      assert BasicWorker.backoff(2) == 19
-      assert BasicWorker.backoff(4) == 31
-      assert BasicWorker.backoff(5) == 47
+      assert BasicWorker.backoff(%Job{attempt: 1}) == 17
+      assert BasicWorker.backoff(%Job{attempt: 2}) == 19
+      assert BasicWorker.backoff(%Job{attempt: 4}) == 31
+      assert BasicWorker.backoff(%Job{attempt: 5}) == 47
     end
 
     test "overriding the backoff computation" do
-      assert CustomWorker.backoff(1) == 1
-      assert CustomWorker.backoff(2) == 4
-      assert CustomWorker.backoff(3) == 9
-    end
-
-    test "accepting a job struct instead of an integer attempt" do
-      assert BasicWorker.backoff(%Job{attempt: 1}) == 17
       assert CustomWorker.backoff(%Job{attempt: 1}) == 1
+      assert CustomWorker.backoff(%Job{attempt: 2}) == 4
+      assert CustomWorker.backoff(%Job{attempt: 3}) == 9
     end
   end
 

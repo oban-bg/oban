@@ -208,7 +208,6 @@ defmodule Oban.Worker do
     quote location: :keep do
       alias Oban.{Job, Worker}
 
-      @before_compile Worker
       @after_compile Worker
       @behaviour Worker
 
@@ -223,22 +222,16 @@ defmodule Oban.Worker do
       end
 
       @impl Worker
+      def backoff(%Job{attempt: attempt}) do
+        Worker.backoff(attempt)
+      end
+
+      @impl Worker
       def timeout(%Job{} = _job) do
         :infinity
       end
 
       defoverridable Worker
-    end
-  end
-
-  @doc false
-  defmacro __before_compile__(_env) do
-    quote do
-      @impl Oban.Worker
-      def backoff(attempt) when is_integer(attempt), do: Oban.Worker.backoff(attempt)
-      def backoff(%Oban.Job{attempt: attempt}), do: backoff(attempt)
-
-      defoverridable backoff: 1
     end
   end
 

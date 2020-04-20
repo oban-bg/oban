@@ -33,16 +33,6 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Changed
 
-- [Oban.Telemetry] The format for job telemetry has changed to match the new
-  telemetry `span` convention.
-
-    * `[:oban, :started]` -> `[:oban, :job, :start]`
-    * `[:oban, :success]` -> `[:oban, :job, :stop]`
-    * `[:oban, :failure]` -> `[:oban, :job, :exception]`
-
-  In addition, for exceptions the stacktrace meta key has changed from `:stack`
-  to the standardized `:stactrace`.
-
 - [Oban.Notifier] Make the module public and clean up the primary function
   interfaces. Listening for and delivering notifications is simplified and no
   longer requires macros for pattern matching.
@@ -58,11 +48,34 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   This corrects a long standing inconsistency between discarding a job manually
   or automatically when it exhausts retries.
 
+### Breaking Changes
+
+- [Oban.Telemetry] The format for job telemetry has changed to match the new
+  telemetry `span` convention.
+
+    * `[:oban, :started]` -> `[:oban, :job, :start]`
+    * `[:oban, :success]` -> `[:oban, :job, :stop]`
+    * `[:oban, :failure]` -> `[:oban, :job, :exception]`
+
+  In addition, for exceptions the stacktrace meta key has changed from `:stack`
+  to the standardized `:stactrace`.
+
 - [Oban.Worker] The `backoff/1` callback now expects a job struct instead of an
   integer. That allows applications to finely control backoff based on more than
   just the current attempt number. Use of `backoff/1` with an integer is
-  deprecated and no longer documented, though it is supported for backward
-  compatibility.
+  no longer supported.
+
+  To migrate change any worker definitions that used a raw `attempt` like this:
+
+    ```elixir
+    def backoff(attempt), do: attempt * 60
+    ```
+
+  To match on a job struct instead, like this:
+
+    ```elixir
+    def backoff(%Job{attempt: attempt}), do: attempt * 60
+    ```
 
 ## [1.2.0] — 2020-03-05
 
