@@ -138,8 +138,7 @@ defmodule Oban.Migrations do
     import Oban.Migrations.Helper
 
     def up(prefix) do
-      if prefix != "public", do:
-        execute "CREATE SCHEMA IF NOT EXISTS #{prefix}"
+      if prefix != "public", do: execute("CREATE SCHEMA IF NOT EXISTS #{prefix}")
 
       execute """
       DO $$
