@@ -101,7 +101,7 @@ defmodule Oban.Queue.Producer do
     # block the producer while awaiting a retry.
     Task.Supervisor.async_nolink(foreman, fn ->
       Breaker.with_retry(fn ->
-        %{exec | kind: :error, error: reason, stack: stack, state: :failure}
+        %{exec | kind: :error, error: reason, stacktrace: stack, state: :failure}
         |> Executor.record_finished()
         |> Executor.report_finished()
       end)

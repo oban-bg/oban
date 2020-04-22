@@ -32,7 +32,7 @@ defmodule Oban.Integration.TelemetryTest do
 
     assert_receive {:event, :start, started_time, stop_meta}
     assert_receive {:event, :stop, stop_duration, stop_meta}
-    assert_receive {:event, :exception, exception_duration, %{kind: :exception} = exception_meta}
+    assert_receive {:event, :exception, exception_duration, %{kind: :error} = exception_meta}
     assert_receive {:event, :exception, error_duration, %{kind: :error} = error_meta}
 
     assert started_time > 0
@@ -56,7 +56,7 @@ defmodule Oban.Integration.TelemetryTest do
              worker: "Oban.Integration.Worker",
              attempt: 1,
              max_attempts: 20,
-             kind: :exception,
+             kind: :error,
              error: _,
              stacktrace: [_ | _]
            } = exception_meta

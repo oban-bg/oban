@@ -125,6 +125,34 @@ defmodule Oban.Worker do
   * **squared** — delay by attempt number squared, e.g. 1→1, 2→4, 3→9
   * **sidekiq** — delay by a base amount plus some jitter, e.g. 1→32, 2→61, 3→135
 
+  ### Contextual Backoff
+
+  Any error, catch or throw is temporarily recorded in the job's `unsaved_error` map. The unsaved
+  error map can be used by `backoff/1` to calculate a custom backoff based on the exact error that
+  failed the job. In this example the `backoff/1` callback checks to see if the error was due to
+  rate limiting and adjusts the backoff accordingly:
+
+      defmodule MyApp.ApiWorker do
+        use Oban.Worker
+
+        @five_minutes 5 * 60
+
+        @impl Worker
+        def perform(args, _job) do
+          MyApp.make_external_api_call(args)
+        end
+
+        @impl Worker
+        def backoff(%Job{attempt: attempt, unsaved_error: unsaved_error}) do
+          %{kind: _, error: error, stacktrace: _} = unsaved_error
+
+          case error do
+            %MyApp.ApiError{status: 429} -> @five_minutes
+            _ -> :math.pow(attempt, 4)
+          end
+        end
+      end
+
   ## Limiting Execution Time
 
   By default, individual jobs may execute indefinitely. If this is undesirable you may define a

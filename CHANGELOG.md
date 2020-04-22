@@ -31,6 +31,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   discard a job. This is useful when a job encounters an error that won't
   resolve with time, e.g. invalid arguments or a missing record.
 
+- [Oban.Job] Introduce a virtual `unsaved_error` field, which is populated with
+  an error map after failed execution. The `unsaved_error` field is set before
+  any calls to the worker's `backoff/1` callback, allowing workers to calculate
+  a custom backoff depending on the error that failed the job.
+
 ### Changed
 
 - [Oban.Notifier] Make the module public and clean up the primary function

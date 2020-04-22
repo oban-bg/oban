@@ -25,7 +25,6 @@ defmodule Oban.Telemetry do
 
   * `:error` — from an `{:error, error}` return value. Some Erlang functions may also throw an
     `:error` tuple, which will be reported as `:error`.
-  * `:exception` — from a rescued exception
   * `:exit` — from a caught process exit
   * `:throw` — from a caught value, this doesn't necessarily mean that an error occurred and the
     error value is unpredictable
@@ -46,7 +45,7 @@ defmodule Oban.Telemetry do
   * `:error` — the error that tripped the circuit, see the error kinds breakdown above
   * `:name` — the registered name of the process that tripped a circuit, i.e. `Oban.Notifier`
   * `:message` — a formatted error message describing what went wrong
-  * `:stack` — exception stacktrace, when available
+  * `:stacktrace` — exception stacktrace, when available
 
   ## Default Logger
 

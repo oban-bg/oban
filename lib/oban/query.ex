@@ -222,8 +222,8 @@ defmodule Oban.Query do
     :ok
   end
 
-  @spec retry_job(Config.t(), Job.t(), pos_integer(), atom(), term(), list()) :: :ok
-  def retry_job(%Config{} = conf, %Job{} = job, backoff, kind, error, stack) do
+  @spec retry_job(Config.t(), Job.t(), pos_integer()) :: :ok
+  def retry_job(%Config{} = conf, %Job{} = job, backoff) do
     %Config{prefix: prefix, repo: repo, verbose: verbose} = conf
     %Job{attempt: attempt, id: id, max_attempts: max_attempts} = job
 
@@ -236,7 +236,7 @@ defmodule Oban.Query do
 
     updates = [
       set: set,
-      push: [errors: %{attempt: attempt, at: utc_now(), error: format_blamed(kind, error, stack)}]
+      push: [errors: %{attempt: attempt, at: utc_now(), error: format_blamed(job.unsaved_error)}]
     ]
 
     Job
@@ -271,12 +271,10 @@ defmodule Oban.Query do
 
   defp next_attempt_at(backoff), do: DateTime.add(utc_now(), backoff, :second)
 
-  defp format_blamed(:exception, error, stack), do: format_blamed(:error, error, stack)
+  defp format_blamed(%{kind: kind, error: error, stacktrace: stacktrace}) do
+    {blamed, stacktrace} = Exception.blame(kind, error, stacktrace)
 
-  defp format_blamed(kind, error, stack) do
-    {blamed, stack} = Exception.blame(kind, error, stack)
-
-    Exception.format(kind, blamed, stack)
+    Exception.format(kind, blamed, stacktrace)
   end
 
   defp insert_unique(%Config{prefix: prefix, repo: repo, verbose: verbose}, changeset) do

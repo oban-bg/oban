@@ -53,7 +53,8 @@ defmodule Oban.Job do
           attempted_at: DateTime.t(),
           completed_at: DateTime.t(),
           discarded_at: DateTime.t(),
-          unique: %{fields: [unique_field()], period: pos_integer(), states: [unique_state()]}
+          unique: %{fields: [unique_field()], period: pos_integer(), states: [unique_state()]},
+          unsaved_error: %{kind: atom(), error: term(), stacktrace: Exception.stacktrace()}
         }
 
   schema "oban_jobs" do
@@ -73,6 +74,7 @@ defmodule Oban.Job do
     field :inserted_at, :utc_datetime_usec
     field :scheduled_at, :utc_datetime_usec
     field :unique, :map, virtual: true
+    field :unsaved_error, :map, virtual: true
   end
 
   @permitted ~w(
