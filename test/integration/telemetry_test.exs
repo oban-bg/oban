@@ -95,13 +95,13 @@ defmodule Oban.Integration.TelemetryTest do
     # Start
 
     assert logged =~ ~s("source":"oban")
-    assert logged =~ ~s("event":"start")
+    assert logged =~ ~s("event":"job:start")
     assert logged =~ ~s("start_time":)
 
     # Stop
 
     assert logged =~ ~s("source":"oban")
-    assert logged =~ ~s("event":"stop")
+    assert logged =~ ~s("event":"job:stop")
     assert logged =~ ~s("args":)
     assert logged =~ ~s("worker":"Oban.Integration.Worker")
     assert logged =~ ~s("queue":"zeta")
@@ -124,7 +124,7 @@ defmodule Oban.Integration.TelemetryTest do
         Process.sleep(50)
       end)
 
-    assert logged =~ ~s("event":"trip_circuit")
+    assert logged =~ ~s("event":"circuit:trip")
     assert logged =~ ~s("message":":forced_exit")
     assert logged =~ ~s("name":"Elixir.Oban.Notifier")
   after

@@ -50,12 +50,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Breaking Changes
 
-- [Oban.Telemetry] The format for job telemetry has changed to match the new
-  telemetry `span` convention.
+- [Oban.Telemetry] The format for telemetry events has changed to match the new
+  telemetry `span` convention. This listing maps the old event to the new one:
 
     * `[:oban, :started]` -> `[:oban, :job, :start]`
     * `[:oban, :success]` -> `[:oban, :job, :stop]`
     * `[:oban, :failure]` -> `[:oban, :job, :exception]`
+    * `[:oban, :trip_circuit]` -> `[:oban, :circuit, :trip]`
+    * `[:oban, :open_circuit]` -> `[:oban, :circuit, :open]`
 
   In addition, for exceptions the stacktrace meta key has changed from `:stack`
   to the standardized `:stactrace`.

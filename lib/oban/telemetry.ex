@@ -36,10 +36,10 @@ defmodule Oban.Telemetry do
   crashing the entire supervision tree. Processes emit a `[:oban, :trip_circuit]` event when a
   circuit is tripped and `[:oban, :open_circuit]` when the breaker is subsequently opened again.
 
-  | event           | metadata                         |
-  | --------------- | -------------------------------- |
-  | `:trip_circuit` | `:error, :message, :name, stack` |
-  | `:open_circuit` | `:name`                          |
+  | event                      | metadata                               |
+  | -------------------------- | -------------------------------------- |
+  | `[:oban, :circuit, :trip]` | `:error, :message, :name, :stacktrace` |
+  | `[:open, :circuit, :open]` | `:name`                                |
 
   Metadata
 
@@ -99,7 +99,7 @@ defmodule Oban.Telemetry do
   This function attaches a handler that outputs logs with the following fields:
 
   * `args` — a map of the job's raw arguments
-  * `duration` — the job's runtime duration, in microseconds
+  * `duration` — the job's runtime duration, in the native time unit
   * `event` — either `:success` or `:failure` dependening on whether the job succeeded or errored
   * `queue` — the job's queue
   * `source` — always "oban"
@@ -123,14 +123,12 @@ defmodule Oban.Telemetry do
       [:oban, :job, :start],
       [:oban, :job, :stop],
       [:oban, :job, :exception],
-      [:oban, :trip_circuit],
-      [:oban, :open_circuit]
+      [:oban, :circuit, :trip],
+      [:oban, :circuit, :open]
     ]
 
     :telemetry.attach_many("oban-default-logger", events, &handle_event/4, level)
   end
-
-  @circuit_events [:trip_circuit, :open_circuit]
 
   @doc false
   @spec handle_event([atom()], map(), map(), Logger.level()) :: :ok
@@ -142,11 +140,11 @@ defmodule Oban.Telemetry do
       |> Map.take([:duration, :start_time])
       |> Map.merge(select_meta)
 
-    log_message(level, event, message)
+    log_message(level, "job:#{event}", message)
   end
 
-  def handle_event([:oban, event], _measure, meta, level) when event in @circuit_events do
-    log_message(level, event, Map.take(meta, [:error, :message, :name]))
+  def handle_event([:oban, :circuit, event], _measure, meta, level) do
+    log_message(level, "circuit:#{event}", Map.take(meta, [:error, :message, :name]))
   end
 
   defp log_message(level, event, message) do

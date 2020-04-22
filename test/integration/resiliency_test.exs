@@ -6,18 +6,18 @@ defmodule Oban.Integration.ResiliencyTest do
   @oban_opts repo: Repo, queues: [alpha: 1], poll_interval: 10
 
   defmodule Handler do
-    def handle([:oban, :trip_circuit], %{}, meta, pid) do
+    def handle([:oban, :circuit, :trip], %{}, meta, pid) do
       send(pid, {:tripped, meta})
     end
   end
 
   setup do
-    :telemetry.attach("circuit-handler", [:oban, :trip_circuit], &Handler.handle/4, self())
+    :telemetry.attach("circuit-handler", [:oban, :circuit, :trip], &Handler.handle/4, self())
 
     on_exit(fn -> :telemetry.detach("circuit-handler") end)
   end
 
-  test "producer connection errors are logged in resilient mode" do
+  test "logging producer connection errors" do
     mangle_jobs_table!()
 
     start_supervised!({Oban, @oban_opts})
@@ -32,7 +32,7 @@ defmodule Oban.Integration.ResiliencyTest do
     reform_jobs_table!()
   end
 
-  test "notification connection errors are logged in resilient mode" do
+  test "reporting notification connection errors" do
     start_supervised!({Oban, @oban_opts})
 
     assert %{conn: conn} = :sys.get_state(Oban.Notifier)
@@ -48,7 +48,7 @@ defmodule Oban.Integration.ResiliencyTest do
     :ok = stop_supervised(Oban)
   end
 
-  test "recording job completion is retried after errors" do
+  test "retrying recording job completion after errors" do
     start_supervised!({Oban, @oban_opts})
 
     job = insert_job!(ref: 1, sleep: 10)

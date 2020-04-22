@@ -21,9 +21,9 @@ defmodule Oban.Breaker do
   @spec trip_circuit(Exception.t(), list(), state_struct()) :: state_struct()
   def trip_circuit(exception, stack, %{circuit: _, conf: conf, name: name} = state) do
     :telemetry.execute(
-      [:oban, :trip_circuit],
+      [:oban, :circuit, :trip],
       %{},
-      %{error: exception, message: error_message(exception), name: name, stack: stack}
+      %{error: exception, message: error_message(exception), name: name, stacktrace: stack}
     )
 
     Process.send_after(self(), :reset_circuit, conf.circuit_backoff)
@@ -33,7 +33,7 @@ defmodule Oban.Breaker do
 
   @spec open_circuit(state_struct()) :: state_struct()
   def open_circuit(%{circuit: _, name: name} = state) do
-    :telemetry.execute([:oban, :open_circuit], %{}, %{name: name})
+    :telemetry.execute([:oban, :circuit, :open], %{}, %{name: name})
 
     %{state | circuit: :enabled}
   end
@@ -45,8 +45,6 @@ defmodule Oban.Breaker do
 
   def with_retry(fun, retries) do
     fun.()
-  rescue
-    _exception -> lazy_retry(fun, retries)
   catch
     _kind, _value -> lazy_retry(fun, retries)
   end
