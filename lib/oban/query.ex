@@ -120,40 +120,6 @@ defmodule Oban.Query do
     {available_count, discarded_count}
   end
 
-  # Deleting truncated or outdated jobs needs to use the same index. We force the queries to use
-  # the same partial composite index by providing an `attempted_at` value for both.
-  @spec delete_truncated_jobs(Config.t(), pos_integer(), pos_integer()) :: {integer(), nil}
-  def delete_truncated_jobs(%Config{prefix: prefix, repo: repo, verbose: verbose}, length, limit) do
-    subquery =
-      Job
-      |> where([j], j.state in ["completed", "discarded"])
-      |> where([j], j.attempted_at < ^utc_now())
-      |> order_by(desc: :attempted_at)
-      |> select([:id])
-      |> offset(^length)
-      |> limit(^limit)
-
-    Job
-    |> join(:inner, [j], x in subquery(subquery, prefix: prefix), on: j.id == x.id)
-    |> repo.delete_all(log: verbose, prefix: prefix)
-  end
-
-  @spec delete_outdated_jobs(Config.t(), pos_integer(), pos_integer()) :: {integer(), nil}
-  def delete_outdated_jobs(%Config{prefix: prefix, repo: repo, verbose: verbose}, seconds, limit) do
-    outdated_at = DateTime.add(utc_now(), -seconds)
-
-    subquery =
-      Job
-      |> where([j], j.state in ["completed", "discarded"])
-      |> where([j], j.attempted_at < ^outdated_at)
-      |> select([:id])
-      |> limit(^limit)
-
-    Job
-    |> join(:inner, [j], x in subquery(subquery, prefix: prefix), on: j.id == x.id)
-    |> repo.delete_all(log: verbose, prefix: prefix)
-  end
-
   @spec delete_outdated_beats(Config.t(), pos_integer(), pos_integer()) :: {integer(), nil}
   def delete_outdated_beats(%Config{prefix: prefix, repo: repo, verbose: verbose}, seconds, limit) do
     outdated_at = DateTime.add(utc_now(), -seconds)

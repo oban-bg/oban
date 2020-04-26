@@ -11,7 +11,7 @@ defmodule Oban do
   use Supervisor
 
   alias Ecto.{Changeset, Multi}
-  alias Oban.{Config, Job, Midwife, Notifier, Pruner, Query}
+  alias Oban.{Config, Job, Midwife, Notifier, Query}
   alias Oban.Crontab.Scheduler
   alias Oban.Queue.Drainer
   alias Oban.Queue.Supervisor, as: QueueSupervisor
@@ -23,11 +23,9 @@ defmodule Oban do
           | {:dispatch_cooldown, pos_integer()}
           | {:name, module()}
           | {:node, binary()}
+          | {:plugins, [module() | {module() | Keyword.t()}]}
           | {:poll_interval, pos_integer()}
           | {:prefix, binary()}
-          | {:prune, :disabled | {:maxlen, pos_integer()} | {:maxage, pos_integer()}}
-          | {:prune_interval, pos_integer()}
-          | {:prune_limit, pos_integer()}
           | {:queues, [{atom(), pos_integer()}]}
           | {:repo, module()}
           | {:rescue_after, pos_integer()}
@@ -68,9 +66,6 @@ defmodule Oban do
   * `:prefix` — the query prefix, or schema, to use for inserting and executing jobs. An
     `oban_jobs` table must exist within the prefix. See the "Prefix Support" section in the module
     documentation for more details.
-  * `:prune` - configures job pruning behavior, see "Pruning Historic Jobs" for more information.
-    Defaults to `{:maxlen, 1_000}`, meaning the jobs table will retain roughly 1,000 completed
-    jobs.
   * `:queues` — a keyword list where the keys are queue names and the values are the concurrency
     setting. For example, setting queues to `[default: 10, exports: 5]` would start the queues
     `default` and `exports` with a combined concurrency level of 20. The concurrency setting
@@ -110,10 +105,6 @@ defmodule Oban do
   * `:poll_interval` - the number of milliseconds between polling for new jobs in a queue. This
     is directly tied to the resolution of _scheduled_ jobs. For example, with a `poll_interval` of
     `5_000ms`, scheduled jobs are checked every 5 seconds. The default is `1_000ms`.
-  * `:prune_interval` — the number of milliseconds between calls to prune historic jobs. The
-    default is `60_000ms`, or one minute.
-  * `:prune_limit` – the maximum number of jobs that can be pruned at each prune interval. The
-    default is `5_000`.
   * `:rescue_after` — the number of seconds after an executing job without any pulse activity may
     be rescued. This value _must_ be greater than the `poll_interval`. The default is `60s`.
   * `:rescue_interval` — the number of milliseconds between calls to rescue orphaned jobs, the
@@ -148,18 +139,29 @@ defmodule Oban do
   end
 
   @impl Supervisor
-  def init(%Config{name: name, queues: queues} = conf) do
+  def init(%Config{name: name, plugins: plugins, queues: queues} = conf) do
     children = [
       {Config, conf: conf, name: child_name(name, "Config")},
-      {Pruner, conf: conf, name: child_name(name, "Pruner")},
       {Notifier, conf: conf, name: child_name(name, "Notifier")},
       {Midwife, conf: conf, name: child_name(name, "Midwife")},
       {Scheduler, conf: conf, name: child_name(name, "Scheduler")}
     ]
 
+    children = children ++ Enum.map(plugins, &plugin_child_spec(&1, conf))
     children = children ++ Enum.map(queues, &QueueSupervisor.child_spec(&1, conf))
 
     Supervisor.init(children, strategy: :one_for_one)
+  end
+
+  defp plugin_child_spec({module, opts}, conf) do
+    opts = Keyword.put(opts, :conf, conf)
+    name = Module.concat([conf.name, module])
+
+    Supervisor.child_spec({module, opts}, id: name)
+  end
+
+  defp plugin_child_spec(module, conf) do
+    plugin_child_spec({module, []}, conf)
   end
 
   @doc """

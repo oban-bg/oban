@@ -2,6 +2,7 @@ defmodule Oban.ConfigTest do
   use Oban.Case, async: true
 
   alias Oban.Config
+  alias Oban.Plugins.FixedPruner
 
   describe "start_link/1" do
     test "a config struct is stored for retreival" do
@@ -72,6 +73,20 @@ defmodule Oban.ConfigTest do
       assert_valid(node: "MyNode")
     end
 
+    test ":plugins are validated as modules or module/keyword tuples" do
+      assert_invalid(plugins: ["Module"])
+      assert_invalid(plugins: [FakeModule])
+      assert_invalid(plugins: [FixedPruner, FakeModule])
+      assert_invalid(plugins: [{Worker, nil}])
+      assert_invalid(plugins: [{Worker, %{}}])
+
+      assert_valid(plugins: false)
+      assert_valid(plugins: [])
+      assert_valid(plugins: [FixedPruner])
+      assert_valid(plugins: [{FixedPruner, []}])
+      assert_valid(plugins: [{FixedPruner, [name: "Something"]}])
+    end
+
     test ":poll_interval is validated as an integer" do
       assert_invalid(poll_interval: -1)
       assert_invalid(poll_interval: 0)
@@ -87,38 +102,6 @@ defmodule Oban.ConfigTest do
       assert_invalid(prefix: "")
 
       assert_valid(prefix: "private")
-    end
-
-    test ":prune is validated as disabled or a max* option" do
-      assert_invalid(prune: :unknown)
-      assert_invalid(prune: 5)
-      assert_invalid(prune: "disabled")
-      assert_invalid(prune: {:maxlen, "1"})
-      assert_invalid(prune: {:maxlen, -5})
-      assert_invalid(prune: {:maxage, "1"})
-      assert_invalid(prune: {:maxage, -5})
-
-      assert_valid(prune: :disabled)
-      assert_valid(prune: {:maxlen, 10})
-      assert_valid(prune: {:maxage, 10})
-    end
-
-    test ":prune_interval is validated as a positive integer" do
-      assert_invalid(prune_interval: -1)
-      assert_invalid(prune_interval: 0)
-      assert_invalid(prune_interval: "5")
-      assert_invalid(prune_interval: 1.0)
-
-      assert_valid(prune_interval: 500)
-    end
-
-    test ":prune_limit is validated as a positive integer" do
-      assert_invalid(prune_limit: -1)
-      assert_invalid(prune_limit: 0)
-      assert_invalid(prune_limit: "5")
-      assert_invalid(prune_limit: 1.0)
-
-      assert_valid(prune_limit: 5_000)
     end
 
     test ":queues are validated as atom, integer pairs" do

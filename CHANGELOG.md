@@ -12,9 +12,6 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - [Oban.Crontab] Fix weekday matching for Sunday, which is represented as `0` in
   crontabs.
 
-- [Oban.Pruner] Use the return value from pruning to retain circuit breaker
-  status.
-
 ### Added
 
 - [Oban] Bubble up errors and exits when draining queues by passing
@@ -83,6 +80,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
     ```elixir
     def backoff(%Job{attempt: attempt}), do: attempt * 60
     ```
+
+- [Oban.Prune] Configurable pruning is no longer available. Instead, pruning is
+  handled by the new plugin system. A fixed period pruning module is enabled as
+  a default plugin. Th plugin always retains "prunable" (discarded or complete)
+  jobs for 60 seconds.
+
+  If set, remove `:prune`, `:prune_interval` and `prune_limit` from your config.
 
 ## [1.2.0] — 2020-03-05
 

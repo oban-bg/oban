@@ -222,7 +222,6 @@ allowing you to configure Oban like the rest of your application:
 # config/config.exs
 config :my_app, Oban,
   repo: MyApp.Repo,
-  prune: {:maxlen, 10_000},
   queues: [default: 10, events: 50, media: 20]
 
 # lib/my_app/application.ex
@@ -264,7 +263,7 @@ If you are running tests (which you should be) you'll want to disable pruning
 
 ```elixir
 # config/test.exs
-config :my_app, Oban, crontab: false, queues: false, prune: :disabled
+config :my_app, Oban, crontab: false, queues: false, plugins: false
 ```
 
 ### Configuring Queues
@@ -459,32 +458,13 @@ and build informative aggregates, at the expense of storage and an unbounded
 table size. To prevent the `oban_jobs` table from growing indefinitely, Oban
 provides active pruning of `completed` and `discarded` jobs.
 
-By default, pruning retains a conservatively low 1,000 jobs. Pruning is
-configured with the `:prune` option. There are three distinct modes of pruning:
-
-* `:disabled` - No pruning happens at all, primarily useful for testing.
-
-* `{:maxlen, count}` - Pruning is based on the number of rows in the table, any
-  rows beyond the configured `count` may be deleted. This is the default mode.
-
-* `{:maxage, seconds}` - Pruning is based on a row's age, any rows older than
-  the configured number of `seconds` are deleted. The age unit is always
-  specified in seconds, but values on the scale of days, weeks or months are
-  perfectly acceptable.
+By default, pruning retains jobs for 60 seconds.
 
 #### Caveats & Guidelines
 
 * Pruning is best-effort and performed out-of-band. This means that all limits
-  are soft; jobs beyond a specified length or age may not be pruned immediately
-  after jobs complete. Prune timing is based on the configured `prune_interval`,
-  which is one minute by default.
-
-* If you're using a row-limited database service, like Heroku's hobby plan with
-  10M rows, and you have pruning `:disabled`, you could hit that row limit
-  quickly by filling up the `oban_beats` table. Instead of fully disabling
-  pruning, consider setting a far-out limit: `{:maxage, 60 * 60 * 24 * 365}` (1
-  year). You will get the benefit of retaining completed and discarded jobs for
-  a year without an unwieldy beats table.
+  are soft; jobs beyond a specified age may not be pruned immediately after jobs
+  complete.
 
 * Pruning is only applied to jobs that are `completed` or `discarded` (has
   reached the maximum number of retries or has been manually killed). It'll
@@ -682,10 +662,11 @@ As noted in [Usage](#Usage), there are some guidelines for running tests:
   your `test.exs` config. Keyword configuration is deep merged, so setting
   `queues: []` won't have any effect.
 
-* Disable pruning via `prune: :disabled`. Pruning isn't necessary in testing
-  mode because jobs created within the sandbox are rolled back at the end of the
-  test. Additionally, the periodic pruning queries will raise
-  `DBConnection.OwnershipError` when the application boots.
+* Disable plugins via `plugins: false`. Default plugins, such as the fixed
+  pruner, aren't necessary in testing mode because jobs created within the
+  sandbox are rolled back at the end of the test. Additionally, the periodic
+  pruning queries will raise `DBConnection.OwnershipError` when the application
+  boots.
 
 * Disable cron jobs via `crontab: false`. Periodic jobs aren't useful while
   testing and scheduling can lead to random ownership issues.

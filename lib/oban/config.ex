@@ -7,8 +7,6 @@ defmodule Oban.Config do
 
   @type cronjob :: {Cron.t(), module(), Keyword.t()}
 
-  @type prune :: :disabled | {:maxlen, pos_integer()} | {:maxage, pos_integer()}
-
   @type t :: %__MODULE__{
           beats_maxage: pos_integer(),
           circuit_backoff: timeout(),
@@ -16,11 +14,9 @@ defmodule Oban.Config do
           dispatch_cooldown: pos_integer(),
           name: atom(),
           node: binary(),
+          plugins: [module() | {module() | Keyword.t()}],
           poll_interval: pos_integer(),
           prefix: binary(),
-          prune: prune(),
-          prune_interval: pos_integer(),
-          prune_limit: pos_integer(),
           queues: [{atom(), pos_integer()}],
           repo: module(),
           rescue_after: pos_integer(),
@@ -39,11 +35,9 @@ defmodule Oban.Config do
             dispatch_cooldown: 5,
             name: Oban,
             node: nil,
+            plugins: [Oban.Plugins.FixedPruner],
             poll_interval: :timer.seconds(1),
             prefix: "public",
-            prune: {:maxlen, 1_000},
-            prune_interval: :timer.minutes(1),
-            prune_limit: 5_000,
             queues: [],
             repo: nil,
             rescue_after: 60,
@@ -64,8 +58,9 @@ defmodule Oban.Config do
     opts =
       opts
       |> Keyword.put_new(:node, node_name())
-      |> Keyword.put(:queues, Keyword.get(opts, :queues) || [])
-      |> Keyword.put(:crontab, Keyword.get(opts, :crontab) || [])
+      |> Keyword.put(:crontab, opts[:crontab] || [])
+      |> Keyword.put(:plugins, opts[:plugins] || [])
+      |> Keyword.put(:queues, opts[:queues] || [])
 
     Enum.each(opts, &validate_opt!/1)
 
@@ -131,6 +126,12 @@ defmodule Oban.Config do
     end
   end
 
+  defp validate_opt!({:plugins, plugins}) do
+    unless is_list(plugins) and Enum.all?(plugins, &valid_plugin?/1) do
+      raise ArgumentError, "expected a list of modules or {module, keyword} tuples"
+    end
+  end
+
   defp validate_opt!({:poll_interval, interval}) do
     unless is_integer(interval) and interval > 0 do
       raise ArgumentError, "expected :poll_interval to be a positive integer"
@@ -140,27 +141,6 @@ defmodule Oban.Config do
   defp validate_opt!({:prefix, prefix}) do
     unless is_binary(prefix) and Regex.match?(~r/^[a-z0-9_]+$/i, prefix) do
       raise ArgumentError, "expected :prefix to be a binary with alphanumeric characters"
-    end
-  end
-
-  defp validate_opt!({:prune, mode}) do
-    case mode do
-      :disabled -> :ok
-      {:maxlen, len} when is_integer(len) and len > 0 -> :ok
-      {:maxage, age} when is_integer(age) and age > 0 -> :ok
-      _ -> raise ArgumentError, "unexpected :prune mode, #{inspect(mode)}"
-    end
-  end
-
-  defp validate_opt!({:prune_interval, interval}) do
-    unless is_integer(interval) and interval > 0 do
-      raise ArgumentError, "expected :prune_interval to be a positive integer"
-    end
-  end
-
-  defp validate_opt!({:prune_limit, limit}) do
-    unless is_integer(limit) and limit > 0 do
-      raise ArgumentError, "expected :prune_interval to be a positive integer"
     end
   end
 
@@ -214,16 +194,25 @@ defmodule Oban.Config do
     valid_crontab?({expression, worker, []})
   end
 
-  defp valid_crontab?({expression, worker, options}) do
+  defp valid_crontab?({expression, worker, opts}) do
     is_binary(expression) and
       Code.ensure_loaded?(worker) and
       function_exported?(worker, :perform, 2) and
-      Keyword.keyword?(options)
+      Keyword.keyword?(opts)
   end
 
   defp valid_crontab?(_crontab), do: false
 
   defp valid_queue?({_name, limit}), do: is_integer(limit) and limit > 0
+
+  defp valid_plugin?({plugin, opts}) do
+    is_atom(plugin) and
+      Code.ensure_loaded?(plugin) and
+      function_exported?(plugin, :init, 1) and
+      Keyword.keyword?(opts)
+  end
+
+  defp valid_plugin?(plugin), do: valid_plugin?({plugin, []})
 
   defp parse_crontab(crontab) do
     for tuple <- crontab do
@@ -231,8 +220,8 @@ defmodule Oban.Config do
         {expression, worker} ->
           {Cron.parse!(expression), worker, []}
 
-        {expression, worker, options} ->
-          {Cron.parse!(expression), worker, options}
+        {expression, worker, opts} ->
+          {Cron.parse!(expression), worker, opts}
       end
     end
   end
