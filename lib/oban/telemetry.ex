@@ -20,7 +20,7 @@ defmodule Oban.Telemetry do
   | `:stop`      | `:duration`   | `:id, :args, :queue, :worker, :attempt, :max_attempts`                             |
   | `:exception` | `:duration`   | `:id, :args, :queue, :worker, :attempt, :max_attempts, :kind, :error, :stacktrace` |
 
-  For `:failure` events the metadata includes details about what caused the failure. The `:kind`
+  For `:exception` events the metadata includes details about what caused the failure. The `:kind`
   value is determined by how an error occurred. Here are the possible kinds:
 
   * `:error` — from an `{:error, error}` return value. Some Erlang functions may also throw an
@@ -66,7 +66,7 @@ defmodule Oban.Telemetry do
     end
   end
 
-  :telemetry.attach("oban-logger", [:oban, :failure], &MicroLogger.handle_event/4, nil)
+  :telemetry.attach("oban-logger", [:oban, :exception], &MicroLogger.handle_event/4, nil)
   ```
 
   Another great use of execution data is error reporting. Here is an example of integrating with
