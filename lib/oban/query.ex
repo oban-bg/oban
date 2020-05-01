@@ -237,7 +237,7 @@ defmodule Oban.Query do
 
   defp next_attempt_at(backoff), do: DateTime.add(utc_now(), backoff, :second)
 
-  defp format_blamed(%{kind: kind, error: error, stacktrace: stacktrace}) do
+  defp format_blamed(%{kind: kind, reason: error, stacktrace: stacktrace}) do
     {blamed, stacktrace} = Exception.blame(kind, error, stacktrace)
 
     Exception.format(kind, blamed, stacktrace)

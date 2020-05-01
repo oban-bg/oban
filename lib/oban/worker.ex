@@ -144,9 +144,9 @@ defmodule Oban.Worker do
 
         @impl Worker
         def backoff(%Job{attempt: attempt, unsaved_error: unsaved_error}) do
-          %{kind: _, error: error, stacktrace: _} = unsaved_error
+          %{kind: _, reason: reason, stacktrace: _} = unsaved_error
 
-          case error do
+          case reason do
             %MyApp.ApiError{status: 429} -> @five_minutes
             _ -> :math.pow(attempt, 4)
           end

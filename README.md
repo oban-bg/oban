@@ -795,11 +795,11 @@ Here is an example of a sample unstructured log handler:
 defmodule MyApp.ObanLogger do
   require Logger
 
-  def handle_event([:oban, :started], measure, meta, _) do
-    Logger.warn("[Oban] :started #{meta.worker} at #{measure.start_time}")
+  def handle_event([:oban, :job, :start], measure, meta, _) do
+    Logger.warn("[Oban] :started #{meta.worker} at #{measure.system_time}")
   end
 
-  def handle_event([:oban, event], measure, meta, _) do
+  def handle_event([:oban, :job, event], measure, meta, _) do
     Logger.warn("[Oban] #{event} #{meta.worker} ran in #{measure.duration}")
   end
 end
@@ -808,7 +808,7 @@ end
 Attach the handler to success and failure events in `application.ex`:
 
 ```elixir
-events = [[:oban, :started], [:oban, :success], [:oban, :failure]]
+events = [[:oban, :job, :start], [:oban, :job, :stop], [:oban, :job, :exception]]
 
 :telemetry.attach_many("oban-logger", events, &MyApp.ObanLogger.handle_event/4, [])
 ```

@@ -3,7 +3,7 @@ defmodule Oban.Plugins.FixedPruner do
 
   use GenServer
 
-  alias Oban.{Config, Job, Query}
+  alias Oban.{Config, Job, Query, Telemetry}
 
   import Ecto.Query
 
@@ -41,7 +41,9 @@ defmodule Oban.Plugins.FixedPruner do
   def handle_info(:prune, %State{conf: conf} = state) do
     %Config{repo: repo, verbose: verbose} = conf
 
-    repo.transaction(fn -> acquire_and_prune(conf) end, log: verbose)
+    Telemetry.span(:prune, fn ->
+      repo.transaction(fn -> acquire_and_prune(conf) end, log: verbose)
+    end)
 
     Process.send_after(self(), :prune, state.interval)
 

@@ -33,6 +33,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   any calls to the worker's `backoff/1` callback, allowing workers to calculate
   a custom backoff depending on the error that failed the job.
 
+- [Oban.Telemetry] Add `span/3` for reporting normalized `:start`, `:stop` and
+  `:exception` events with timing information.
+
 ### Changed
 
 - [Oban.Notifier] Make the module public and clean up the primary function

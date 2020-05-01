@@ -14,11 +14,11 @@ defmodule Oban.Telemetry do
   provide the error type, the error itself, and the stacktrace. The following chart shows which
   metadata you can expect for each event:
 
-  | event        | measures      | metadata                                                                           |
-  | ------------ | -----------   | ---------------------------------------------------------------------------------- |
-  | `:start`     | `:start_time` | `:id, :args, :queue, :worker, :attempt, :max_attempts`                             |
-  | `:stop`      | `:duration`   | `:id, :args, :queue, :worker, :attempt, :max_attempts`                             |
-  | `:exception` | `:duration`   | `:id, :args, :queue, :worker, :attempt, :max_attempts, :kind, :error, :stacktrace` |
+  | event        | measures       | metadata                                                                           |
+  | ------------ | -------------- | ---------------------------------------------------------------------------------- |
+  | `:start`     | `:system_time` | `:id, :args, :queue, :worker, :attempt, :max_attempts`                             |
+  | `:stop`      | `:duration`    | `:id, :args, :queue, :worker, :attempt, :max_attempts`                             |
+  | `:exception` | `:duration`    | `:id, :args, :queue, :worker, :attempt, :max_attempts, :kind, :error, :stacktrace` |
 
   For `:exception` events the metadata includes details about what caused the failure. The `:kind`
   value is determined by how an error occurred. Here are the possible kinds:
@@ -102,7 +102,7 @@ defmodule Oban.Telemetry do
   * `event` — either `:success` or `:failure` dependening on whether the job succeeded or errored
   * `queue` — the job's queue
   * `source` — always "oban"
-  * `start_time` — when the job started, in microseconds
+  * `system_time` — when the job started, in microseconds
   * `worker` — the job's worker module
 
   ## Examples
@@ -129,6 +129,48 @@ defmodule Oban.Telemetry do
     :telemetry.attach_many("oban-default-logger", events, &handle_event/4, level)
   end
 
+  @doc """
+  Measure and report `:start`, `:stop` and `:exception` events for a function.
+
+  ## Examples
+
+  Emit span timing events for a prune function:
+
+      :ok = Oban.Telemetry.span(:prune, &MyApp.Pruner.prune/0, %{extra: :data})
+
+  That will emit the following events:
+
+  * `[:oban, :prune, :start]` — before the function is invoked
+  * `[:oban, :prune, :stop]` — when the function completes successfully
+  * `[:oban, :prune, :exception]` — reported if the function throws, crashes or raises an error
+  """
+  @spec span(name :: atom(), fun :: (() -> term()), meta :: map()) :: term()
+  def span(name, fun, meta \\ %{}) when is_atom(name) and is_function(fun, 0) do
+    start_time = System.system_time()
+    start_mono = System.monotonic_time()
+
+    :telemetry.execute([:oban, name, :start], %{system_time: start_time}, meta)
+
+    try do
+      result = fun.()
+
+      :telemetry.execute([:oban, name, :stop], %{duration: duration(start_mono)}, meta)
+
+      result
+    catch
+      kind, reason ->
+        :telemetry.execute(
+          [:oban, name, :exception],
+          %{duration: duration(start_mono)},
+          Map.merge(meta, %{kind: kind, reason: reason, stacktrace: __STACKTRACE__})
+        )
+
+        :erlang.raise(kind, reason, __STACKTRACE__)
+    end
+  end
+
+  defp duration(start_mono), do: System.monotonic_time() - start_mono
+
   @doc false
   @spec handle_event([atom()], map(), map(), Logger.level()) :: :ok
   def handle_event([:oban, :job, event], measure, meta, level) do
@@ -136,7 +178,7 @@ defmodule Oban.Telemetry do
 
     message =
       measure
-      |> Map.take([:duration, :start_time])
+      |> Map.take([:duration, :system_time])
       |> Map.merge(select_meta)
 
     log_message(level, "job:#{event}", message)

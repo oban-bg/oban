@@ -54,7 +54,7 @@ defmodule Oban.Job do
           completed_at: DateTime.t(),
           discarded_at: DateTime.t(),
           unique: %{fields: [unique_field()], period: pos_integer(), states: [unique_state()]},
-          unsaved_error: %{kind: atom(), error: term(), stacktrace: Exception.stacktrace()}
+          unsaved_error: %{kind: atom(), reason: term(), stacktrace: Exception.stacktrace()}
         }
 
   schema "oban_jobs" do

@@ -10,7 +10,7 @@ defmodule Oban.Integration.TelemetryTest do
   @oban_opts repo: Repo, queues: [zeta: 3]
 
   defmodule Handler do
-    def handle([:oban, :job, :start], %{start_time: start_time}, meta, pid) do
+    def handle([:oban, :job, :start], %{system_time: start_time}, meta, pid) do
       send(pid, {:event, :start, start_time, meta})
     end
 
@@ -96,7 +96,7 @@ defmodule Oban.Integration.TelemetryTest do
 
     assert logged =~ ~s("source":"oban")
     assert logged =~ ~s("event":"job:start")
-    assert logged =~ ~s("start_time":)
+    assert logged =~ ~s("system_time":)
 
     # Stop
 

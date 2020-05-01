@@ -72,7 +72,7 @@ defmodule Oban.Queue.Executor do
 
   @spec record_started(t()) :: t()
   def record_started(%__MODULE__{} = exec) do
-    :telemetry.execute([:oban, :job, :start], %{start_time: exec.start_time}, exec.meta)
+    :telemetry.execute([:oban, :job, :start], %{system_time: exec.start_time}, exec.meta)
 
     exec
   end
@@ -81,7 +81,7 @@ defmodule Oban.Queue.Executor do
   def resolve_worker(%__MODULE__{safe: true} = exec) do
     %{resolve_worker(%{exec | safe: false}) | safe: true}
   rescue
-    error -> %{exec | state: :failure, error: error, stacktrace: __STACKTRACE__}
+    error -> %{exec | state: :failure, reason: error, stacktrace: __STACKTRACE__}
   end
 
   def resolve_worker(%__MODULE__{} = exec) do
@@ -124,7 +124,7 @@ defmodule Oban.Queue.Executor do
       :failure ->
         job = %{
           exec.job
-          | unsaved_error: %{kind: exec.kind, error: exec.error, stacktrace: exec.stacktrace}
+          | unsaved_error: %{kind: exec.kind, reason: exec.error, stacktrace: exec.stacktrace}
         }
 
         Query.retry_job(exec.conf, job, backoff(exec.worker, job))
