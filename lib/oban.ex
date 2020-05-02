@@ -17,8 +17,7 @@ defmodule Oban do
   alias Oban.Queue.Supervisor, as: QueueSupervisor
 
   @type option ::
-          {:beats_maxage, pos_integer()}
-          | {:circuit_backoff, timeout()}
+          {:circuit_backoff, timeout()}
           | {:crontab, [Config.cronjob()]}
           | {:dispatch_cooldown, pos_integer()}
           | {:name, module()}
@@ -28,8 +27,6 @@ defmodule Oban do
           | {:prefix, binary()}
           | {:queues, [{atom(), pos_integer()}]}
           | {:repo, module()}
-          | {:rescue_after, pos_integer()}
-          | {:rescue_interval, pos_integer()}
           | {:shutdown_grace_period, timeout()}
           | {:timezone, Calendar.time_zone()}
           | {:verbose, false | Logger.level()}
@@ -49,12 +46,11 @@ defmodule Oban do
   These options are required; without them the supervisor won't start
 
   * `:name` — used for supervisor registration, defaults to `Oban`
-  * `:repo` — specifies the Ecto repo used to insert and retrieve jobs.
+  * `:repo` — specifies the Ecto repo used to insert and retrieve jobs
 
   ### Primary Options
 
-  These options determine what the system does at a high level, i.e. which queues to run or how
-  vigorously to prune.
+  These options determine what the system does at a high level, i.e. which queues to run.
 
   * `:crontab` — a list of cron expressions that enqueue jobs on a periodic basis. See "Periodic
     (CRON) Jobs" in the module docs.
@@ -87,9 +83,6 @@ defmodule Oban do
   Additional options used to tune system behaviour. These are primarily useful for testing or
   troubleshooting and don't usually need modification.
 
-  * `:beats_maxage` — the number of seconds that heartbeat rows in the `oban_beats` table should
-    be retained. The value must be greater than `60` (the value of `rescue_after`). Defaults to
-    `300s`, or five minutes.
   * `:circuit_backoff` — the number of milliseconds until queries are attempted after a database
     error. All processes communicating with the database are equipped with circuit breakers and
     will use this for the backoff. Defaults to `30_000ms`.
@@ -105,10 +98,6 @@ defmodule Oban do
   * `:poll_interval` - the number of milliseconds between polling for new jobs in a queue. This
     is directly tied to the resolution of _scheduled_ jobs. For example, with a `poll_interval` of
     `5_000ms`, scheduled jobs are checked every 5 seconds. The default is `1_000ms`.
-  * `:rescue_after` — the number of seconds after an executing job without any pulse activity may
-    be rescued. This value _must_ be greater than the `poll_interval`. The default is `60s`.
-  * `:rescue_interval` — the number of milliseconds between calls to rescue orphaned jobs, the
-    default is `60_000ms`, or one minute.
   * `:shutdown_grace_period` - the amount of time a queue will wait for executing jobs to complete
     before hard shutdown, specified in milliseconds. The default is `15_000`, or 15 seconds.
 

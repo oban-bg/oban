@@ -29,7 +29,6 @@ defmodule Oban.Queue.Producer do
       :nonce,
       :queue,
       :poll_ref,
-      :rescue_ref,
       :started_at,
       circuit: :enabled,
       paused: false,
@@ -62,17 +61,14 @@ defmodule Oban.Queue.Producer do
   @impl GenServer
   def handle_continue(:start, state) do
     state
-    |> rescue_orphans()
     |> start_listener()
     |> send_poll_after()
-    |> send_rescue_after()
     |> dispatch()
   end
 
   @impl GenServer
-  def terminate(_reason, %State{poll_ref: poll_ref, rescue_ref: rescue_ref}) do
+  def terminate(_reason, %State{poll_ref: poll_ref}) do
     if is_reference(poll_ref), do: Process.cancel_timer(poll_ref)
-    if is_reference(rescue_ref), do: Process.cancel_timer(rescue_ref)
 
     :ok
   end
@@ -155,17 +151,7 @@ defmodule Oban.Queue.Producer do
     conf.repo.checkout(fn ->
       state
       |> deschedule()
-      |> pulse()
       |> send_poll_after()
-      |> dispatch()
-    end)
-  end
-
-  def handle_info(:rescue, %State{conf: conf} = state) do
-    conf.repo.checkout(fn ->
-      state
-      |> rescue_orphans()
-      |> send_rescue_after()
       |> dispatch()
     end)
   end
@@ -179,6 +165,18 @@ defmodule Oban.Queue.Producer do
   end
 
   @impl GenServer
+  def handle_call(:pulse, _from, %State{conf: conf, running: running} = state) do
+    running_ids = for {_ref, {exec, _pid}} <- running, do: exec.job.id
+
+    args =
+      state
+      |> Map.take([:limit, :nonce, :paused, :queue, :started_at])
+      |> Map.put(:node, conf.node)
+      |> Map.put(:running, running_ids)
+
+    {:reply, args, state}
+  end
+
   def handle_call(:pause, _from, state) do
     {:reply, :ok, %{state | paused: true}}
   end
@@ -190,14 +188,6 @@ defmodule Oban.Queue.Producer do
     |> :crypto.strong_rand_bytes()
     |> Base.hex_encode32(case: :lower)
     |> String.slice(0..(size - 1))
-  end
-
-  defp rescue_orphans(%State{conf: conf, queue: queue} = state) do
-    Query.rescue_orphaned_jobs(conf, queue)
-
-    state
-  rescue
-    exception in trip_errors() -> trip_circuit(exception, __STACKTRACE__, state)
   end
 
   defp start_listener(%State{conf: conf} = state) do
@@ -214,12 +204,6 @@ defmodule Oban.Queue.Producer do
     %{state | poll_ref: ref}
   end
 
-  defp send_rescue_after(%State{conf: conf} = state) do
-    ref = Process.send_after(self(), :rescue, conf.rescue_interval)
-
-    %{state | rescue_ref: ref}
-  end
-
   # Dispatching
 
   defp deschedule(%State{circuit: :disabled} = state) do
@@ -228,26 +212,6 @@ defmodule Oban.Queue.Producer do
 
   defp deschedule(%State{conf: conf, queue: queue} = state) do
     Query.stage_scheduled_jobs(conf, queue)
-
-    state
-  rescue
-    exception in trip_errors() -> trip_circuit(exception, __STACKTRACE__, state)
-  end
-
-  defp pulse(%State{circuit: :disabled} = state) do
-    state
-  end
-
-  defp pulse(%State{conf: conf, running: running} = state) do
-    running_ids = for {_ref, {exec, _pid}} <- running, do: exec.job.id
-
-    args =
-      state
-      |> Map.take([:limit, :nonce, :paused, :queue, :started_at])
-      |> Map.put(:node, conf.node)
-      |> Map.put(:running, running_ids)
-
-    Query.insert_beat(conf, args)
 
     state
   rescue

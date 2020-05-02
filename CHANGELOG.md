@@ -89,7 +89,17 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   a default plugin. Th plugin always retains "prunable" (discarded or complete)
   jobs for 60 seconds.
 
-  If set, remove `:prune`, `:prune_interval` and `prune_limit` from your config.
+  Remove any `:prune`, `:prune_interval` or `prune_limit` settings from your
+  config. To disable the pruning plugin in test mode set `plugins: false`
+  instead.
+
+- [Oban.Beat] Pulse tracking and periodic job rescue are no longer available.
+  Pulse tracking and rescuing will be handled by an external plugin. This is
+  primarily an implementation detail, but it means that jobs may be left in the
+  `executing` state after a crash or forced shutdown.
+
+  Remove any `:beats_maxage`, `:rescue_after` or `:rescue_interval` settings
+  from your config.
 
 ## [1.2.0] — 2020-03-05
 

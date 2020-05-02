@@ -8,7 +8,6 @@ defmodule Oban.Config do
   @type cronjob :: {Cron.t(), module(), Keyword.t()}
 
   @type t :: %__MODULE__{
-          beats_maxage: pos_integer(),
           circuit_backoff: timeout(),
           crontab: [cronjob()],
           dispatch_cooldown: pos_integer(),
@@ -19,8 +18,6 @@ defmodule Oban.Config do
           prefix: binary(),
           queues: [{atom(), pos_integer()}],
           repo: module(),
-          rescue_after: pos_integer(),
-          rescue_interval: pos_integer(),
           shutdown_grace_period: timeout(),
           timezone: Calendar.time_zone(),
           verbose: false | Logger.level()
@@ -29,8 +26,7 @@ defmodule Oban.Config do
   @type option :: {:name, module()} | {:conf, t()}
 
   @enforce_keys [:node, :repo]
-  defstruct beats_maxage: 60 * 5,
-            circuit_backoff: :timer.seconds(30),
+  defstruct circuit_backoff: :timer.seconds(30),
             crontab: [],
             dispatch_cooldown: 5,
             name: Oban,
@@ -40,8 +36,6 @@ defmodule Oban.Config do
             prefix: "public",
             queues: [],
             repo: nil,
-            rescue_after: 60,
-            rescue_interval: :timer.minutes(1),
             shutdown_grace_period: :timer.seconds(15),
             timezone: "Etc/UTC",
             verbose: false
@@ -85,12 +79,6 @@ defmodule Oban.Config do
         :inet.gethostname()
         |> elem(1)
         |> to_string()
-    end
-  end
-
-  defp validate_opt!({:beats_maxage, maxage}) do
-    unless is_integer(maxage) and maxage > 60 do
-      raise ArgumentError, "expected :beats_maxage to be an integer greater than 60"
     end
   end
 
@@ -153,18 +141,6 @@ defmodule Oban.Config do
   defp validate_opt!({:repo, repo}) do
     unless Code.ensure_loaded?(repo) and function_exported?(repo, :__adapter__, 0) do
       raise ArgumentError, "expected :repo to be an Ecto.Repo"
-    end
-  end
-
-  defp validate_opt!({:rescue_after, interval}) do
-    unless is_integer(interval) and interval > 0 do
-      raise ArgumentError, "expected :rescue_after to be a positive integer"
-    end
-  end
-
-  defp validate_opt!({:rescue_interval, interval}) do
-    unless is_integer(interval) and interval > 0 do
-      raise ArgumentError, "expected :rescue_interval to be a positive integer"
     end
   end
 

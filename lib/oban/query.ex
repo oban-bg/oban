@@ -5,7 +5,7 @@ defmodule Oban.Query do
   import DateTime, only: [utc_now: 0]
 
   alias Ecto.{Changeset, Multi}
-  alias Oban.{Beat, Config, Job}
+  alias Oban.{Config, Job}
 
   @spec fetch_available_jobs(Config.t(), binary(), binary(), pos_integer()) ::
           {integer(), nil | [Job.t()]}
@@ -77,64 +77,6 @@ defmodule Oban.Query do
     |> where([j], j.queue == ^queue)
     |> where([j], j.scheduled_at <= ^max_scheduled_at)
     |> repo.update_all([set: [state: "available"]], log: verbose, prefix: prefix)
-  end
-
-  @spec insert_beat(Config.t(), map()) :: {:ok, Beat.t()} | {:error, Changeset.t()}
-  def insert_beat(%Config{prefix: prefix, repo: repo, verbose: verbose}, params) do
-    params
-    |> Beat.new()
-    |> repo.insert(log: verbose, prefix: prefix)
-  end
-
-  @spec rescue_orphaned_jobs(Config.t(), binary()) :: {integer(), integer()}
-  def rescue_orphaned_jobs(%Config{} = conf, queue) do
-    %Config{prefix: prefix, repo: repo, rescue_after: seconds, verbose: verbose} = conf
-
-    orphaned_at = DateTime.add(utc_now(), -seconds)
-
-    subquery =
-      Job
-      |> where([j], j.state == "executing" and j.queue == ^queue)
-      |> join(:left, [j], b in Beat,
-        on: j.attempted_by == [b.node, b.queue, b.nonce] and b.inserted_at > ^orphaned_at
-      )
-      |> where([_, b], is_nil(b.node))
-      |> select([:id])
-
-    requery = join(Job, :inner, [j], x in subquery(subquery, prefix: prefix), on: j.id == x.id)
-
-    query_opts = [log: verbose, prefix: prefix]
-
-    # This is done using two queries rather than a single update with a case statement because we
-    # can't cast to the `oban_job_state` enum easily outside of the public schema.
-    {available_count, _} =
-      requery
-      |> where([j], j.attempt < j.max_attempts)
-      |> repo.update_all([set: [state: "available"]], query_opts)
-
-    {discarded_count, _} =
-      requery
-      |> where([j], j.attempt >= j.max_attempts)
-      |> repo.update_all([set: [state: "discarded", discarded_at: utc_now()]], query_opts)
-
-    {available_count, discarded_count}
-  end
-
-  @spec delete_outdated_beats(Config.t(), pos_integer(), pos_integer()) :: {integer(), nil}
-  def delete_outdated_beats(%Config{prefix: prefix, repo: repo, verbose: verbose}, seconds, limit) do
-    outdated_at = DateTime.add(utc_now(), -seconds)
-
-    subquery =
-      Beat
-      |> where([b], b.inserted_at < ^outdated_at)
-      |> order_by(asc: :inserted_at)
-      |> limit(^limit)
-
-    Beat
-    |> join(:inner, [b], x in subquery(subquery, prefix: prefix),
-      on: b.inserted_at == x.inserted_at
-    )
-    |> repo.delete_all(log: verbose, prefix: prefix)
   end
 
   @spec complete_job(Config.t(), Job.t()) :: :ok

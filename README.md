@@ -44,7 +44,6 @@
 - [Error Handling](#Error-Handling)
 - [Instrumentation & Logging](#Instrumentation-and-Logging)
 - [Isolation](#Isolation)
-- [Pulse Tracking](#Pulse-Tracking)
 - [Troubleshooting](#Troubleshooting)
 - [Community](#Community)
 - [Contributing](#Contributing)
@@ -92,8 +91,8 @@ orphaned due to crashes.
 - **Resilient Queues** — Failing queries won't crash the entire supervision tree,
   instead they trip a circuit breaker and will be retried again in the future.
 
-- **Job Killing** — Jobs can be killed in the middle of execution regardless of
-  which node they are running on. This stops the job at once and flags it as
+- **Job Canceling** — Jobs can be canceled in the middle of execution regardless
+  of which node they are running on. This stops the job at once and flags it as
   `discarded`.
 
 - **Triggered Execution** — Database triggers ensure that jobs are dispatched as
@@ -111,11 +110,7 @@ orphaned due to crashes.
 
 - **Job Priority** — Prioritize jobs within a queue to run ahead of others.
 
-- **Job Safety** — When a process crashes or the BEAM is terminated executing
-  jobs aren't lost—they are quickly recovered by other running nodes or
-  immediately when the node is restarted.
-
-- **Historic Metrics** — After a job is processed the row is _not_ deleted.
+- **Historic Metrics** — After a job is processed the row isn't deleted.
   Instead, the job is retained in the database to provide metrics. This allows
   users to inspect historic jobs and to see aggregate data at the job, queue or
   argument level.
@@ -928,25 +923,6 @@ def start(_type, _args) do
   Supervisor.start_link(children, strategy: :one_for_one, name: MyApp.Supervisor)
 end
 ```
-
-## Pulse Tracking
-
-Historic introspection is a defining feature of Oban. In addition to retaining
-completed jobs Oban also generates "heartbeat" records every second for each
-running queue.
-
-Heartbeat records are recorded in the `oban_beats` table and pruned to five
-minutes of backlog. The recorded information is used for a couple of purposes:
-
-1. To track active jobs. When a job executes it records the node and queue that
-   ran it in the `attempted_by` column. Zombie jobs (jobs that were left
-   executing when a producer crashes or the node is shut down) are found by
-   comparing the `attempted_by` values with recent heartbeat records and
-   resurrected accordingly.
-2. Each heartbeat records information about a node/queue pair such as whether it
-   is paused, what the execution limit is and exactly which jobs are running.
-   These records can power additional logging or metrics (and are the backbone
-   of the Oban UI).
 
 ## Troubleshooting
 
