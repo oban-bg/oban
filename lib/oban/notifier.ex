@@ -39,8 +39,8 @@ defmodule Oban.Notifier do
         use Oban.Worker
 
         @impl Oban.Worker
-        def perform(args, job) do
-          :ok = MyApp.do_work(args)
+        def perform(job) do
+          :ok = MyApp.do_work(job.args)
 
           Oban.Notifier.notify(Oban.config(), :gossip, %{complete: job.id})
 

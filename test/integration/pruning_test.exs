@@ -9,7 +9,7 @@ defmodule Oban.Integration.PruningTest do
     use Oban.Worker, queue: :default
 
     @impl Worker
-    def perform(_args, _job), do: :ok
+    def perform(_job), do: :ok
   end
 
   test "historic jobs are pruned when they are older than 60 seconds" do

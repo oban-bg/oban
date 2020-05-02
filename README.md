@@ -318,7 +318,7 @@ defmodule MyApp.Business do
   use Oban.Worker, queue: :events
 
   @impl Oban.Worker
-  def perform(%{"id" => id} = args, _job) do
+  def perform(%_{args: %{"id" => id}}) do
     model = MyApp.Repo.get(MyApp.Business.Man, id)
 
     case args do
@@ -350,7 +350,7 @@ defmodule MyApp.LazyBusiness do
     unique: [period: 30]
 
   @impl Oban.Worker
-  def perform(_args, _job) do
+  def perform(_job) do
     # do business slowly
 
     :ok
@@ -359,7 +359,7 @@ end
 ```
 
 Successful jobs should return `:ok` or an `{:ok, value}` tuple. The value
-returned from `perform/2` is used to control whether the job is treated as a
+returned from `perform/1` is used to control whether the job is treated as a
 success, a failure, discarded completely or deferred until later.
 
 See the `Oban.Worker` docs for more details on failure conditions and

@@ -9,11 +9,11 @@ defmodule Oban.Queue.ExecutorTest do
     use Oban.Worker
 
     @impl Worker
-    def perform(%{"mode" => "ok"}, _job), do: :ok
-    def perform(%{"mode" => "warn"}, _job), do: {:bad, :this_will_warn}
-    def perform(%{"mode" => "raise"}, _job), do: raise(ArgumentError)
-    def perform(%{"mode" => "catch"}, _job), do: throw(:no_reason)
-    def perform(%{"mode" => "error"}, _job), do: {:error, "no reason"}
+    def perform(%{args: %{"mode" => "ok"}}), do: :ok
+    def perform(%{args: %{"mode" => "warn"}}), do: {:bad, :this_will_warn}
+    def perform(%{args: %{"mode" => "raise"}}), do: raise(ArgumentError)
+    def perform(%{args: %{"mode" => "catch"}}), do: throw(:no_reason)
+    def perform(%{args: %{"mode" => "error"}}), do: {:error, "no reason"}
   end
 
   describe "perform/1" do

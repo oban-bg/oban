@@ -153,7 +153,7 @@ defmodule Oban.Queue.Executor do
   end
 
   defp perform_inline(%{worker: worker, job: job} = exec) do
-    case worker.perform(job.args, job) do
+    case worker.perform(job) do
       :ok ->
         %{exec | state: :success}
 

@@ -4,7 +4,7 @@ defmodule BenchWorker do
   use Oban.Worker
 
   @impl Oban.Worker
-  def perform(%{"max" => max, "bin_pid" => bin_pid, "bin_cnt" => bin_cnt}, _job) do
+  def perform(%{args: %{"max" => max, "bin_pid" => bin_pid, "bin_cnt" => bin_cnt}}) do
     pid = BenchHelper.base64_to_term(bin_pid)
     ctn = BenchHelper.base64_to_term(bin_cnt)
 
