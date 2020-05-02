@@ -49,6 +49,15 @@
 - [Community](#Community)
 - [Contributing](#Contributing)
 
+---
+
+_Note: This README is for the unreleased master branch, please reference the
+[official documentation on hexdocs][hexdoc] for the latest stable release._
+
+[hexdoc]: https://hexdocs.pm/oban/Oban.html
+
+---
+
 ## Features
 
 Oban's primary goals are **reliability**, **consistency** and **observability**.
@@ -136,7 +145,7 @@ and PostgreSQL 9.6+.
 ## Oban Web UI
 
 A web-based user interface for monitoring and managing Oban is available as a
-private beta. Learn more about it and register for the beta at [oban.dev][odev].
+private package. Learn more about the UI at [oban.dev][odev].
 
 [odev]: https://oban.dev
 
