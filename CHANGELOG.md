@@ -12,6 +12,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - [Oban.Crontab] Fix weekday matching for Sunday, which is represented as `0` in
   crontabs.
 
+- [Oban.Scheduler] Ensure isolation between transaction locks in different
+  prefixes. A node with multiple prefix-isolated instances (i.e. "public" and
+  "private") would always attempt to schedule cron jobs at the same moment. The
+  first scheduler would acquire a lock and block out the second, preventing the
+  second scheduler from ever scheduling jobs.
+
 ### Added
 
 - [Oban] Bubble up errors and exits when draining queues by passing

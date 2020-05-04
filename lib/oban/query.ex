@@ -168,11 +168,11 @@ defmodule Oban.Query do
   end
 
   @spec acquire_lock?(Config.t(), pos_integer()) :: boolean()
-  def acquire_lock?(%Config{repo: repo, verbose: verbose}, key) do
-    %{rows: [[locked?]]} =
-      repo.query!("SELECT pg_try_advisory_xact_lock($1)", [key], log: verbose)
-
-    locked?
+  def acquire_lock?(%Config{prefix: prefix, repo: repo, verbose: verbose}, lock_key) do
+    case acquire_lock(repo, lock_key, [log: verbose, prefix: prefix]) do
+      :ok -> true
+      {:error, :locked} -> false
+    end
   end
 
   # Helpers
@@ -222,7 +222,10 @@ defmodule Oban.Query do
 
   defp unique_query(_changeset), do: nil
 
-  defp acquire_lock(repo, lock_key, opts) do
+  defp acquire_lock(repo, base_key, opts) do
+    pref_key = :erlang.phash2(opts[:prefix])
+    lock_key = pref_key + base_key
+
     case repo.query("SELECT pg_try_advisory_xact_lock($1)", [lock_key], opts) do
       {:ok, %{rows: [[true]]}} ->
         :ok

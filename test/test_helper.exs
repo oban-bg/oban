@@ -143,9 +143,11 @@ defmodule Oban.Case do
     # happens in a transaction, which prevents the use of LISTEN/NOTIFY messages.
     if tags[:integration] do
       Repo.delete_all(Job)
+      Repo.delete_all(Job, prefix: "private")
 
       on_exit(fn ->
         Repo.delete_all(Job)
+        Repo.delete_all(Job, prefix: "private")
       end)
     end
 
