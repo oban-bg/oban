@@ -817,6 +817,12 @@ events = [[:oban, :job, :start], [:oban, :job, :stop], [:oban, :job, :exception]
 :telemetry.attach_many("oban-logger", events, &MyApp.ObanLogger.handle_event/4, [])
 ```
 
+NOTE: the above event signatures are from master, not the latest 1.2 hex release.  
+These signatures will work starting with the 1.3 release, and 1.2 and prior releases use
+`[:oban, :started]` in place of ` [:oban, :job, :start]` and
+`[:oban, :success]` in place of `[:oban, :job, :stop]` and
+`[:oban, :failure]` in place of ` [:oban, :job, :exception]`
+
 The `Oban.Telemetry` module provides a robust structured logger that handles all
 of Oban's telemetry events. As in the example above, attach it within your
 `application.ex` module:
