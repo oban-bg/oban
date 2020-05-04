@@ -15,16 +15,6 @@ defmodule Oban.ConfigTest do
   end
 
   describe "new/1" do
-    test ":beats_maxage is validated as an integer greater than 60 seconds" do
-      assert_invalid(beats_maxage: -1)
-      assert_invalid(beats_maxage: 0)
-      assert_invalid(beats_maxage: "60")
-      assert_invalid(beats_maxage: 60)
-
-      assert_valid(beats_maxage: 61)
-      assert_valid(beats_maxage: 300)
-    end
-
     test ":circuit_backoff is validated as an integer" do
       assert_invalid(circuit_backoff: -1)
       assert_invalid(circuit_backoff: 0)
@@ -113,24 +103,6 @@ defmodule Oban.ConfigTest do
       assert_valid(queues: [default: 1])
 
       assert %Config{queues: []} = conf(queues: false)
-    end
-
-    test ":rescue_after is validated as an integer" do
-      assert_invalid(rescue_after: -1)
-      assert_invalid(rescue_after: 0)
-      assert_invalid(rescue_after: "5")
-      assert_invalid(rescue_after: 1.0)
-
-      assert_valid(rescue_after: 30)
-    end
-
-    test ":rescue_interval is validated as an integer" do
-      assert_invalid(rescue_interval: -1)
-      assert_invalid(rescue_interval: 0)
-      assert_invalid(rescue_interval: "5")
-      assert_invalid(rescue_interval: 1.0)
-
-      assert_valid(rescue_interval: 10)
     end
 
     test ":shutdown_grace_period is validated as an integer" do
