@@ -65,7 +65,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
     * `[:oban, :open_circuit]` -> `[:oban, :circuit, :open]`
 
   In addition, for exceptions the stacktrace meta key has changed from `:stack`
-  to the standardized `:stactrace`.
+  to the standardized `:stacktrace`.
 
 - [Oban.Worker] The `backoff/1` callback now expects a job struct instead of an
   integer. That allows applications to finely control backoff based on more than
