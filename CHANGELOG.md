@@ -18,6 +18,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   first scheduler would acquire a lock and block out the second, preventing the
   second scheduler from ever scheduling jobs.
 
+- [Oban.Query] Correctly prefix unprepared unique queries. Unique queries always
+  targeted the "public" prefix, which either caused incorrect results when there
+  were both "public" and an alternate prefix. In situations where there wasn't
+  a public `oban_jobs` table at all it would cause cryptic transaction errors.
+
 ### Added
 
 - [Oban] Bubble up errors and exits when draining queues by passing

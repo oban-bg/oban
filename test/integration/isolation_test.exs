@@ -20,17 +20,34 @@ defmodule Oban.Integration.IsolationTest do
   test "inserting and executing jobs with a custom prefix" do
     start_supervised!({Oban, prefix: "private", repo: Repo, queues: [alpha: 5]})
 
-    job = insert_job!(ref: 1, action: "OK")
+    job = insert_job!(Oban, ref: 1, action: "OK")
 
     assert Ecto.get_meta(job, :prefix) == "private"
 
     assert_receive {:ok, 1}
 
-    :ok = stop_supervised(Oban)
+    stop_supervised(Oban)
   end
 
-  defp insert_job!(oban \\ Oban, args) do
-    job = Worker.new(args, queue: :alpha)
+  test "inserting and executing unique jobs with a custom prefix" do
+    # Make sure the public table isn't available when we're attempting to query
+    mangle_jobs_table!()
+
+    start_supervised!({Oban, prefix: "private", repo: Repo, queues: [alpha: 5]})
+
+    insert_job!(Oban, %{ref: 1, action: "OK"}, unique: [period: 60, fields: [:worker]])
+    insert_job!(Oban, %{ref: 2, action: "OK"}, unique: [period: 60, fields: [:worker]])
+
+    assert_receive {:ok, 1}
+    refute_receive {:ok, 2}
+
+    stop_supervised(Oban)
+  after
+    reform_jobs_table!()
+  end
+
+  defp insert_job!(oban, args, opts \\ []) do
+    job = Worker.new(args, Keyword.put_new(opts, :queue, :alpha))
 
     Oban.insert!(oban, job)
   end
