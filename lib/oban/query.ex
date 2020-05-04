@@ -169,7 +169,7 @@ defmodule Oban.Query do
 
   @spec acquire_lock?(Config.t(), pos_integer()) :: boolean()
   def acquire_lock?(%Config{prefix: prefix, repo: repo, verbose: verbose}, lock_key) do
-    case acquire_lock(repo, lock_key, [log: verbose, prefix: prefix]) do
+    case acquire_lock(repo, lock_key, log: verbose, prefix: prefix) do
       :ok -> true
       {:error, :locked} -> false
     end
