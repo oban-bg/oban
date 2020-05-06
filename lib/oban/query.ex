@@ -204,7 +204,6 @@ defmodule Oban.Query do
   defp unique_query(%{changes: %{unique: %{} = unique}} = changeset) do
     %{fields: fields, period: period, states: states} = unique
 
-    since = DateTime.add(utc_now(), period * -1, :second)
     fields = for field <- fields, do: {field, Changeset.get_field(changeset, field)}
     states = for state <- states, do: to_string(state)
     lock_key = :erlang.phash2([fields, states])
@@ -212,7 +211,7 @@ defmodule Oban.Query do
     query =
       Job
       |> where([j], j.state in ^states)
-      |> where([j], j.inserted_at > ^since)
+      |> since_period(period)
       |> where(^fields)
       |> order_by(desc: :id)
       |> limit(1)
@@ -221,6 +220,14 @@ defmodule Oban.Query do
   end
 
   defp unique_query(_changeset), do: nil
+
+  defp since_period(query, :infinity), do: query
+
+  defp since_period(query, period) do
+    since = DateTime.add(utc_now(), period * -1, :second)
+
+    where(query, [j], j.inserted_at > ^since)
+  end
 
   defp acquire_lock(repo, base_key, opts) do
     pref_key = :erlang.phash2(opts[:prefix])

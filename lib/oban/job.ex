@@ -18,11 +18,13 @@ defmodule Oban.Job do
 
   @type unique_field :: [:args | :queue | :worker]
 
+  @type unique_period :: pos_integer() | :infinity
+
   @type unique_state :: [:available | :scheduled | :executing | :retryable | :completed]
 
   @type unique_option ::
           {:fields, [unique_field()]}
-          | {:period, pos_integer()}
+          | {:period, unique_period()}
           | {:states, [unique_state()]}
 
   @type option ::
@@ -53,7 +55,7 @@ defmodule Oban.Job do
           attempted_at: DateTime.t(),
           completed_at: DateTime.t(),
           discarded_at: DateTime.t(),
-          unique: %{fields: [unique_field()], period: pos_integer(), states: [unique_state()]},
+          unique: %{fields: [unique_field()], period: unique_period(), states: [unique_state()]},
           unsaved_error: %{kind: atom(), reason: term(), stacktrace: Exception.stacktrace()}
         }
 
@@ -211,6 +213,7 @@ defmodule Oban.Job do
   @doc false
   @spec valid_unique_opt?({:fields | :period | :states, [atom()] | integer()}) :: boolean()
   def valid_unique_opt?({:fields, [_ | _] = fields}), do: fields -- @unique_fields == []
+  def valid_unique_opt?({:period, :infinity}), do: true
   def valid_unique_opt?({:period, period}), do: is_integer(period) and period > 0
   def valid_unique_opt?({:states, [_ | _] = states}), do: states -- @unique_states == []
   def valid_unique_opt?(_option), do: false
