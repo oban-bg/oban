@@ -55,7 +55,7 @@ defmodule Oban.JobTest do
       assert Job.new(%{}, worker: Fake, unique: []).errors[:unique]
       assert Job.new(%{}, worker: Fake, unique: [special: :value]).errors[:unique]
       assert Job.new(%{}, worker: Fake, unique: [fields: [:bogus]]).errors[:unique]
-      assert Job.new(%{}, worker: Fake, unique: [period: :infinity]).errors[:unique]
+      assert Job.new(%{}, worker: Fake, unique: [period: :bogus]).errors[:unique]
       assert Job.new(%{}, worker: Fake, unique: [states: [:random]]).errors[:unique]
     end
   end

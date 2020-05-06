@@ -67,15 +67,20 @@ defmodule Oban.Integration.UniquenessTest do
     now = DateTime.utc_now()
     two_minutes_ago = DateTime.add(now, -120, :second)
     five_minutes_ago = DateTime.add(now, -300, :second)
+    one_thousand_years_ago = Map.put(now, :year, now.year - 1000)
+    one_hundred_years_in_seconds = 100 * 365 * 24 * 60 * 60
 
     assert %Job{id: _id} = insert_job!(%{id: 1}, inserted_at: two_minutes_ago)
     assert %Job{id: _id} = insert_job!(%{id: 2}, inserted_at: five_minutes_ago)
+    assert %Job{id: _id} = insert_job!(%{id: 3}, inserted_at: one_thousand_years_ago)
     assert %Job{id: id_1} = insert_job!(%{id: 1}, unique: [period: 110])
     assert %Job{id: id_2} = insert_job!(%{id: 2}, unique: [period: 290])
+    assert %Job{id: id_3} = insert_job!(%{id: 3}, unique: [period: one_hundred_years_in_seconds])
     assert %Job{id: ^id_1} = insert_job!(%{id: 1}, unique: [period: 180])
     assert %Job{id: ^id_2} = insert_job!(%{id: 2}, unique: [period: 400])
+    assert %Job{id: ^id_3} = insert_job!(%{id: 3}, unique: [period: :infinity])
 
-    assert count_jobs() == 4
+    assert count_jobs() == 6
   end
 
   test "inserting unique jobs within a multi transaction" do
