@@ -47,7 +47,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - [Oban.Telemetry] Add `span/3` for reporting normalized `:start`, `:stop` and
   `:exception` events with timing information.
 
-- [Oban.Query] Add `:infinity` option for unique period.
+- [Oban.Worker] Add `:infinity` option for unique period.
 
 ### Changed
 
