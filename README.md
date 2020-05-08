@@ -478,7 +478,7 @@ By default, pruning retains jobs for 60 seconds.
 ### Unique Jobs
 
 The unique jobs feature lets you specify constraints to prevent enqueuing
-duplicate jobs.  Uniquness is based on a combination of `args`, `queue`,
+duplicate jobs.  Uniqueness is based on a combination of `args`, `queue`,
 `worker`, `state` and insertion time. It is configured at the worker or job
 level using the following options:
 
@@ -516,7 +516,7 @@ use Oban.Worker, unique: [period: 300, states: [:available, :scheduled, :executi
 #### Strong Guarantees
 
 Unique jobs are guaranteed through transactional locks and database queries:
-they _do not_ rely on unique constraints in the database. This makes uniquness
+they _do not_ rely on unique constraints in the database. This makes uniqueness
 entirely configurable by application code, without the need for database
 migrations.
 
