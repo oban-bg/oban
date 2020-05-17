@@ -7,7 +7,7 @@ defmodule Oban.WorkerTest do
     use Worker
 
     @impl Worker
-    def perform(_args, _job), do: :ok
+    def perform(_job), do: :ok
   end
 
   defmodule CustomWorker do
@@ -26,8 +26,8 @@ defmodule Oban.WorkerTest do
     def backoff(%{attempt: attempt}), do: attempt * attempt
 
     @impl Worker
-    def perform(_args, %{attempt: attempt}) when attempt > 1, do: attempt
-    def perform(%{"a" => a, "b" => b}, _job), do: a + b
+    def perform(%{attempt: attempt}) when attempt > 1, do: attempt
+    def perform(%{args: %{"a" => a, "b" => b}}), do: a + b
 
     @impl Worker
     def timeout(%{args: %{"timeout" => timeout}}), do: timeout
@@ -89,8 +89,8 @@ defmodule Oban.WorkerTest do
     test "arguments from the complete job struct are extracted" do
       args = %{"a" => 2, "b" => 3}
 
-      assert 5 == CustomWorker.perform(args, %Job{args: args})
-      assert 4 == CustomWorker.perform(args, %Job{attempt: 4, args: args})
+      assert 5 == CustomWorker.perform(%Job{args: args})
+      assert 4 == CustomWorker.perform(%Job{attempt: 4, args: args})
     end
   end
 
@@ -99,7 +99,7 @@ defmodule Oban.WorkerTest do
       defmodule UnknownOption do
         use Oban.Worker, state: "youcantsetthis"
 
-        def perform(_, _), do: :ok
+        def perform(_), do: :ok
       end
     end
   end
@@ -109,7 +109,7 @@ defmodule Oban.WorkerTest do
       defmodule InvalidQueue do
         use Oban.Worker, queue: 1234
 
-        def perform(_, _), do: :ok
+        def perform(_), do: :ok
       end
     end
   end
@@ -119,7 +119,7 @@ defmodule Oban.WorkerTest do
       defmodule InvalidMaxAttempts do
         use Oban.Worker, max_attempts: 0
 
-        def perform(_, _), do: :ok
+        def perform(_), do: :ok
       end
     end
   end
@@ -129,7 +129,7 @@ defmodule Oban.WorkerTest do
       defmodule InvalidPriority do
         use Oban.Worker, priority: 11
 
-        def perform(_, _), do: :ok
+        def perform(_), do: :ok
       end
     end
   end
@@ -139,7 +139,7 @@ defmodule Oban.WorkerTest do
       defmodule InvalidTagsType do
         use Oban.Worker, tags: nil
 
-        def perform(_, _), do: :ok
+        def perform(_), do: :ok
       end
     end
 
@@ -147,7 +147,7 @@ defmodule Oban.WorkerTest do
       defmodule InvalidTagsValue do
         use Oban.Worker, tags: ["alpha", :beta]
 
-        def perform(_, _), do: :ok
+        def perform(_), do: :ok
       end
     end
   end
@@ -157,7 +157,7 @@ defmodule Oban.WorkerTest do
       defmodule InvalidUniqueType do
         use Oban.Worker, unique: 0
 
-        def perform(_, _), do: :ok
+        def perform(_), do: :ok
       end
     end
 
@@ -165,7 +165,7 @@ defmodule Oban.WorkerTest do
       defmodule InvalidUniqueOption do
         use Oban.Worker, unique: [unknown: []]
 
-        def perform(_, _), do: :ok
+        def perform(_), do: :ok
       end
     end
 
@@ -173,7 +173,7 @@ defmodule Oban.WorkerTest do
       defmodule InvalidUniqueField do
         use Oban.Worker, unique: [fields: [:unknown]]
 
-        def perform(_, _), do: :ok
+        def perform(_), do: :ok
       end
     end
 
@@ -181,7 +181,7 @@ defmodule Oban.WorkerTest do
       defmodule InvalidUniquePeriod do
         use Oban.Worker, unique: [period: 0]
 
-        def perform(_, _), do: :ok
+        def perform(_), do: :ok
       end
     end
 
@@ -189,7 +189,7 @@ defmodule Oban.WorkerTest do
       defmodule InvalidUniqueStates do
         use Oban.Worker, unique: [states: [:unknown]]
 
-        def perform(_, _), do: :ok
+        def perform(_), do: :ok
       end
     end
   end

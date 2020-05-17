@@ -28,12 +28,12 @@ defmodule Oban.Worker do
           unique: [period: 30]
 
         @impl Oban.Worker
-        def perform(_args, %Oban.Job{attempt: attempt}) when attempt > 3 do
+        def perform(%{attempt: attempt}) when attempt > 3 do
           IO.inspect(attempt)
         end
 
-        def perform(args, _job) do
-          IO.inspect(args)
+        def perform(job) do
+          IO.inspect(job.args)
         end
       end
 
@@ -60,7 +60,7 @@ defmodule Oban.Worker do
         use Oban.Worker
 
         @impl Worker
-        def perform(%{"value" => value}, _job) do
+        def perform(%{args: %{"value" => value}}) do
           if value > 1 do
             :ok
           else
@@ -113,7 +113,7 @@ defmodule Oban.Worker do
         end
 
         @impl Worker
-        def perform(_args, _job) do
+        def perform(_job) do
           :do_business
         end
       end
@@ -138,7 +138,7 @@ defmodule Oban.Worker do
         @five_minutes 5 * 60
 
         @impl Worker
-        def perform(args, _job) do
+        def perform(%{args: args}) do
           MyApp.make_external_api_call(args)
         end
 
@@ -164,7 +164,7 @@ defmodule Oban.Worker do
         use Oban.Worker
 
         @impl Oban.Worker
-        def perform(_args, _job) do
+        def perform(_job) do
           something_that_may_take_a_long_time()
 
           :ok
@@ -214,17 +214,17 @@ defmodule Oban.Worker do
   @callback timeout(job :: Job.t()) :: :infinity | pos_integer()
 
   @doc """
-  The `perform/2` function is called to execute a job.
+  The `perform/1` function is called to execute a job.
 
-  Each `perform/2` function should return `:ok` or a success tuple. When the return is an error
+  Each `perform/1` function should return `:ok` or a success tuple. When the return is an error
   tuple, an uncaught exception or a throw then the error is recorded and the job may be retried
   if there are any attempts remaining.
 
-  Note that the `args` map passed to `perform/2` will _always_ have string keys, regardless of the
-  key type when the job was enqueued. The `args` are stored as `jsonb` in PostgreSQL and the
+  Note that the `args` map provided to `perform/1` will _always_ have string keys, regardless of
+  the key type when the job was enqueued. The `args` are stored as `jsonb` in PostgreSQL and the
   serialization process automatically stringifies all keys.
   """
-  @callback perform(args :: Job.args(), job :: Job.t()) ::
+  @callback perform(job :: Job.t()) ::
               :ok
               | :discard
               | {:ok, ignored :: term()}

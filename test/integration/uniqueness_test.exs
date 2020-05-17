@@ -13,7 +13,7 @@ defmodule Oban.Integration.UniquenessTest do
     use Oban.Worker, queue: :upsilon, unique: [period: 30]
 
     @impl Worker
-    def perform(_args, _job), do: :ok
+    def perform(_job), do: :ok
   end
 
   setup do

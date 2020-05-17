@@ -173,7 +173,7 @@ defmodule Oban.Config do
   defp valid_crontab?({expression, worker, opts}) do
     is_binary(expression) and
       Code.ensure_loaded?(worker) and
-      function_exported?(worker, :perform, 2) and
+      function_exported?(worker, :perform, 1) and
       Keyword.keyword?(opts)
   end
 
