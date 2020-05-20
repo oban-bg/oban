@@ -24,7 +24,7 @@ defmodule Oban.Integration.UniquenessTest do
 
   property "preventing the same job from being enqueued multiple times" do
     check all args <- arg_map(), runs <- integer(1..3), max_runs: 20 do
-      fun = fn -> insert_job!(args) end
+      fun = fn -> unique_insert!(args) end
 
       ids =
         1..runs
@@ -39,26 +39,26 @@ defmodule Oban.Integration.UniquenessTest do
   end
 
   test "scoping uniqueness to particular fields" do
-    assert %Job{id: id_1} = insert_job!(%{id: 1}, queue: "default")
-    assert %Job{id: id_2} = insert_job!(%{id: 2}, queue: "delta")
-    assert %Job{id: ^id_2} = insert_job!(%{id: 1}, unique: [fields: [:worker]])
+    assert %Job{id: id_1} = unique_insert!(%{id: 1}, queue: "default")
+    assert %Job{id: id_2} = unique_insert!(%{id: 2}, queue: "delta")
+    assert %Job{id: ^id_2} = unique_insert!(%{id: 1}, unique: [fields: [:worker]])
 
     assert %Job{id: ^id_1} =
-             insert_job!(%{id: 3}, queue: "default", unique: [fields: [:queue, :worker]])
+             unique_insert!(%{id: 3}, queue: "default", unique: [fields: [:queue, :worker]])
 
     assert %Job{id: ^id_2} =
-             insert_job!(%{id: 3}, queue: "delta", unique: [fields: [:queue, :worker]])
+             unique_insert!(%{id: 3}, queue: "delta", unique: [fields: [:queue, :worker]])
 
     assert count_jobs() == 2
   end
 
   test "scoping uniqueness by state" do
-    assert %Job{id: id_1} = insert_job!(%{id: 1}, state: "available")
-    assert %Job{id: id_2} = insert_job!(%{id: 2}, state: "completed")
-    assert %Job{id: id_3} = insert_job!(%{id: 3}, state: "executing")
-    assert %Job{id: ^id_1} = insert_job!(%{id: 1}, unique: [states: [:available]])
-    assert %Job{id: ^id_2} = insert_job!(%{id: 2}, unique: [states: [:available, :completed]])
-    assert %Job{id: ^id_3} = insert_job!(%{id: 3}, unique: [states: [:completed, :executing]])
+    assert %Job{id: id_1} = unique_insert!(%{id: 1}, state: "available")
+    assert %Job{id: id_2} = unique_insert!(%{id: 2}, state: "completed")
+    assert %Job{id: id_3} = unique_insert!(%{id: 3}, state: "executing")
+    assert %Job{id: ^id_1} = unique_insert!(%{id: 1}, unique: [states: [:available]])
+    assert %Job{id: ^id_2} = unique_insert!(%{id: 2}, unique: [states: [:available, :completed]])
+    assert %Job{id: ^id_3} = unique_insert!(%{id: 3}, unique: [states: [:completed, :executing]])
 
     assert count_jobs() == 3
   end
@@ -70,15 +70,15 @@ defmodule Oban.Integration.UniquenessTest do
     one_thousand_years_ago = Map.put(now, :year, now.year - 1000)
     one_hundred_years_in_seconds = 100 * 365 * 24 * 60 * 60
 
-    assert %Job{id: _id} = insert_job!(%{id: 1}, inserted_at: two_minutes_ago)
-    assert %Job{id: _id} = insert_job!(%{id: 2}, inserted_at: five_minutes_ago)
-    assert %Job{id: _id} = insert_job!(%{id: 3}, inserted_at: one_thousand_years_ago)
-    assert %Job{id: id_1} = insert_job!(%{id: 1}, unique: [period: 110])
-    assert %Job{id: id_2} = insert_job!(%{id: 2}, unique: [period: 290])
-    assert %Job{id: id_3} = insert_job!(%{id: 3}, unique: [period: one_hundred_years_in_seconds])
-    assert %Job{id: ^id_1} = insert_job!(%{id: 1}, unique: [period: 180])
-    assert %Job{id: ^id_2} = insert_job!(%{id: 2}, unique: [period: 400])
-    assert %Job{id: ^id_3} = insert_job!(%{id: 3}, unique: [period: :infinity])
+    assert %Job{id: _id} = unique_insert!(%{id: 1}, inserted_at: two_minutes_ago)
+    assert %Job{id: _id} = unique_insert!(%{id: 2}, inserted_at: five_minutes_ago)
+    assert %Job{id: _id} = unique_insert!(%{id: 3}, inserted_at: one_thousand_years_ago)
+    assert %Job{id: id_1} = unique_insert!(%{id: 1}, unique: [period: 110])
+    assert %Job{id: id_2} = unique_insert!(%{id: 2}, unique: [period: 290])
+    assert %Job{id: id_3} = unique_insert!(%{id: 3}, unique: [period: one_hundred_years_in_seconds])
+    assert %Job{id: ^id_1} = unique_insert!(%{id: 1}, unique: [period: 180])
+    assert %Job{id: ^id_2} = unique_insert!(%{id: 2}, unique: [period: 400])
+    assert %Job{id: ^id_3} = unique_insert!(%{id: 3}, unique: [period: :infinity])
 
     assert count_jobs() == 6
   end
@@ -101,7 +101,7 @@ defmodule Oban.Integration.UniquenessTest do
   def arg_key, do: one_of([integer(), string(:ascii)])
   def arg_val, do: one_of([integer(), string(:ascii), list_of(integer())])
 
-  defp insert_job!(args, opts \\ []) do
+  defp unique_insert!(args, opts \\ []) do
     args
     |> UniqueWorker.new(opts)
     |> Oban.insert!()

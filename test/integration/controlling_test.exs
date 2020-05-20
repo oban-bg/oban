@@ -8,8 +8,8 @@ defmodule Oban.Integration.ControllingTest do
   test "starting individual queues dynamically" do
     start_supervised!({Oban, @oban_opts})
 
-    insert_job!(%{ref: 1, action: "OK"}, queue: :gamma)
-    insert_job!(%{ref: 2, action: "OK"}, queue: :delta)
+    insert!(%{ref: 1, action: "OK"}, queue: :gamma)
+    insert!(%{ref: 2, action: "OK"}, queue: :delta)
 
     refute_receive {:ok, 1}
     refute_receive {:ok, 2}
@@ -30,8 +30,8 @@ defmodule Oban.Integration.ControllingTest do
     assert supervised_queue?(Oban.Queue.Delta)
     assert supervised_queue?(Oban.Queue.Gamma)
 
-    insert_job!(%{ref: 1, action: "OK"}, queue: :delta)
-    insert_job!(%{ref: 2, action: "OK"}, queue: :gamma)
+    insert!(%{ref: 1, action: "OK"}, queue: :delta)
+    insert!(%{ref: 2, action: "OK"}, queue: :gamma)
 
     assert_receive {:ok, 1}
     assert_receive {:ok, 2}
@@ -44,9 +44,9 @@ defmodule Oban.Integration.ControllingTest do
       refute supervised_queue?(Oban.Queue.Gamma)
     end)
 
-    insert_job!(%{ref: 3, action: "OK"}, queue: :alpha)
-    insert_job!(%{ref: 4, action: "OK"}, queue: :delta)
-    insert_job!(%{ref: 5, action: "OK"}, queue: :gamma)
+    insert!(%{ref: 3, action: "OK"}, queue: :alpha)
+    insert!(%{ref: 4, action: "OK"}, queue: :delta)
+    insert!(%{ref: 5, action: "OK"}, queue: :gamma)
 
     assert_receive {:ok, 3}
     refute_receive {:ok, 4}
@@ -63,7 +63,7 @@ defmodule Oban.Integration.ControllingTest do
 
     assert :ok = Oban.pause_queue(:alpha)
 
-    insert_job!(ref: 1, action: "OK")
+    insert!(ref: 1, action: "OK")
 
     refute_receive {:ok, 1}
 
@@ -77,7 +77,7 @@ defmodule Oban.Integration.ControllingTest do
   test "scaling individual queues" do
     start_supervised!({Oban, Keyword.put(@oban_opts, :queues, alpha: 1)})
 
-    for ref <- 1..20, do: insert_job!(ref: ref, sleep: 50)
+    for ref <- 1..20, do: insert!(ref: ref, sleep: 50)
 
     Oban.scale_queue(:alpha, 20)
 
@@ -89,7 +89,7 @@ defmodule Oban.Integration.ControllingTest do
   test "killing an executing job by its id" do
     start_supervised!({Oban, @oban_opts})
 
-    job = insert_job!(ref: 1, sleep: 100)
+    job = insert!(ref: 1, sleep: 100)
 
     assert_receive {:started, 1}
 
@@ -109,10 +109,10 @@ defmodule Oban.Integration.ControllingTest do
   test "cancelling jobs that may or may not be executing" do
     start_supervised!({Oban, @oban_opts})
 
-    job_a = insert_job!(%{ref: 1}, schedule_in: 10)
-    job_b = insert_job!(%{ref: 2}, schedule_in: 10, state: "retryable")
-    job_c = insert_job!(%{ref: 3}, state: "completed")
-    job_d = insert_job!(%{ref: 4, sleep: 100})
+    job_a = insert!(%{ref: 1}, schedule_in: 10)
+    job_b = insert!(%{ref: 2}, schedule_in: 10, state: "retryable")
+    job_c = insert!(%{ref: 3}, state: "completed")
+    job_d = insert!(%{ref: 4, sleep: 100})
 
     assert_receive {:started, 4}
 
@@ -138,19 +138,11 @@ defmodule Oban.Integration.ControllingTest do
     # startup.
     Process.sleep(50)
 
-    insert_job!(ref: 1, action: "OK")
+    insert!(ref: 1, action: "OK")
 
     assert_receive {:ok, 1}
 
     :ok = stop_supervised(Oban)
-  end
-
-  defp insert_job!(args, opts \\ []) do
-    opts = Keyword.put_new(opts, :queue, :alpha)
-
-    args
-    |> Worker.new(opts)
-    |> Oban.insert!()
   end
 
   defp supervised_queue?(queue_name) do

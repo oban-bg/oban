@@ -7,7 +7,7 @@ defmodule Oban.Integration.TelemetryTest do
 
   @moduletag :integration
 
-  @oban_opts repo: Repo, queues: [zeta: 3]
+  @oban_opts repo: Repo, queues: [alpha: 3]
 
   defmodule Handler do
     def handle([:oban, :job, :start], %{system_time: start_time}, meta, pid) do
@@ -26,9 +26,9 @@ defmodule Oban.Integration.TelemetryTest do
 
     start_supervised!({Oban, @oban_opts})
 
-    %Job{id: stop_id} = insert_job!(%{ref: 1, action: "OK"})
-    %Job{id: exception_id} = insert_job!(%{ref: 2, action: "FAIL"})
-    %Job{id: error_id} = insert_job!(%{ref: 2, action: "ERROR"})
+    %Job{id: stop_id} = insert!(ref: 1, action: "OK")
+    %Job{id: exception_id} = insert!(ref: 2, action: "FAIL")
+    %Job{id: error_id} = insert!(ref: 2, action: "ERROR")
 
     assert_receive {:event, :start, started_time, stop_meta}
     assert_receive {:event, :stop, stop_duration, stop_meta}
@@ -43,7 +43,7 @@ defmodule Oban.Integration.TelemetryTest do
     assert %{
              id: ^stop_id,
              args: %{},
-             queue: "zeta",
+             queue: "alpha",
              worker: "Oban.Integration.Worker",
              attempt: 1,
              max_attempts: 20
@@ -52,7 +52,7 @@ defmodule Oban.Integration.TelemetryTest do
     assert %{
              id: ^exception_id,
              args: %{},
-             queue: "zeta",
+             queue: "alpha",
              worker: "Oban.Integration.Worker",
              attempt: 1,
              max_attempts: 20,
@@ -64,7 +64,7 @@ defmodule Oban.Integration.TelemetryTest do
     assert %{
              id: ^error_id,
              args: %{},
-             queue: "zeta",
+             queue: "alpha",
              worker: "Oban.Integration.Worker",
              attempt: 1,
              max_attempts: 20,
@@ -85,7 +85,7 @@ defmodule Oban.Integration.TelemetryTest do
 
     logged =
       capture_log(fn ->
-        insert_job!(%{ref: 1, action: "OK"})
+        insert!(ref: 1, action: "OK")
 
         assert_receive {:ok, 1}
 
@@ -104,7 +104,7 @@ defmodule Oban.Integration.TelemetryTest do
     assert logged =~ ~s("event":"job:stop")
     assert logged =~ ~s("args":)
     assert logged =~ ~s("worker":"Oban.Integration.Worker")
-    assert logged =~ ~s("queue":"zeta")
+    assert logged =~ ~s("queue":"alpha")
     assert logged =~ ~s("duration":)
   after
     :telemetry.detach("oban-default-logger")
@@ -129,11 +129,5 @@ defmodule Oban.Integration.TelemetryTest do
     assert logged =~ ~s("name":"Elixir.Oban.Notifier")
   after
     :telemetry.detach("oban-default-logger")
-  end
-
-  defp insert_job!(args) do
-    args
-    |> Worker.new(queue: "zeta")
-    |> Repo.insert!()
   end
 end

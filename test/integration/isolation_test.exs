@@ -9,7 +9,7 @@ defmodule Oban.Integration.IsolationTest do
     start_supervised!({Oban, name: ObanA, repo: Repo, queues: [alpha: 1]}, id: ObanA)
     start_supervised!({Oban, name: ObanB, repo: Repo, queues: [gamma: 1]}, id: ObanB)
 
-    insert_job!(ObanA, ref: 1, action: "OK")
+    insert!(ObanA, %{ref: 1, action: "OK"}, [])
 
     assert_receive {:ok, 1}
 
@@ -20,7 +20,7 @@ defmodule Oban.Integration.IsolationTest do
   test "inserting and executing jobs with a custom prefix" do
     start_supervised!({Oban, prefix: "private", repo: Repo, queues: [alpha: 5]})
 
-    job = insert_job!(Oban, ref: 1, action: "OK")
+    job = insert!(Oban, %{ref: 1, action: "OK"}, [])
 
     assert Ecto.get_meta(job, :prefix) == "private"
 
@@ -35,8 +35,8 @@ defmodule Oban.Integration.IsolationTest do
 
     start_supervised!({Oban, prefix: "private", repo: Repo, queues: [alpha: 5]})
 
-    insert_job!(Oban, %{ref: 1, action: "OK"}, unique: [period: 60, fields: [:worker]])
-    insert_job!(Oban, %{ref: 2, action: "OK"}, unique: [period: 60, fields: [:worker]])
+    insert!(Oban, %{ref: 1, action: "OK"}, unique: [period: 60, fields: [:worker]])
+    insert!(Oban, %{ref: 2, action: "OK"}, unique: [period: 60, fields: [:worker]])
 
     assert_receive {:ok, 1}
     refute_receive {:ok, 2}
@@ -46,9 +46,9 @@ defmodule Oban.Integration.IsolationTest do
     reform_jobs_table!()
   end
 
-  defp insert_job!(oban, args, opts \\ []) do
-    job = Worker.new(args, Keyword.put_new(opts, :queue, :alpha))
+  defp insert!(oban, args, opts) do
+    changeset = build(args, opts)
 
-    Oban.insert!(oban, job)
+    Oban.insert!(oban, changeset)
   end
 end

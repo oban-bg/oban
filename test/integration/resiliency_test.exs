@@ -39,7 +39,7 @@ defmodule Oban.Integration.ResiliencyTest do
     assert Process.exit(conn, :forced_exit)
 
     # This verifies that producer's are isolated from the notifier
-    insert_job!(ref: 1, action: "OK")
+    insert!(ref: 1, action: "OK")
 
     assert_receive {:ok, 1}
 
@@ -51,7 +51,7 @@ defmodule Oban.Integration.ResiliencyTest do
   test "retrying recording job completion after errors" do
     start_supervised!({Oban, @oban_opts})
 
-    job = insert_job!(ref: 1, sleep: 10)
+    job = insert!(ref: 1, sleep: 10)
 
     assert_receive {:started, 1}
 
@@ -66,11 +66,5 @@ defmodule Oban.Integration.ResiliencyTest do
     end)
 
     :ok = stop_supervised(Oban)
-  end
-
-  defp insert_job!(args) do
-    args
-    |> Worker.new(queue: :alpha)
-    |> Oban.insert!()
   end
 end

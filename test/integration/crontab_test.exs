@@ -8,12 +8,12 @@ defmodule Oban.Integration.CrontabTest do
   test "cron jobs are enqueued on startup" do
     oban_opts = [
       repo: Repo,
-      queues: [default: 5],
+      queues: [alpha: 5],
       crontab: [
         {"* * * * *", Worker, args: worker_args(1)},
         {"59 23 31 12 0", Worker, args: worker_args(2)},
         {"* * * * *", Worker, args: worker_args(3)},
-        {"* * * * *", Worker, args: worker_args(4), queue: "alpha"}
+        {"* * * * *", Worker, args: worker_args(4), queue: "gamma"}
       ]
     ]
 
@@ -30,7 +30,7 @@ defmodule Oban.Integration.CrontabTest do
   test "cron jobs are not enqueued twice within the same minute" do
     oban_opts = [
       repo: Repo,
-      queues: [default: 5],
+      queues: [alpha: 5],
       crontab: [{"* * * * *", Worker, args: worker_args(1)}]
     ]
 
@@ -50,7 +50,7 @@ defmodule Oban.Integration.CrontabTest do
   test "cron jobs are only enqueued once between nodes" do
     base_opts = [
       repo: Repo,
-      queues: [default: 5],
+      queues: [alpha: 5],
       crontab: [{"* * * * *", Worker, args: worker_args(1)}]
     ]
 
@@ -68,7 +68,7 @@ defmodule Oban.Integration.CrontabTest do
   test "cron jobs are scheduled within a prefix" do
     base_opts = [
       repo: Repo,
-      queues: [default: 5],
+      queues: [alpha: 5],
       crontab: [{"* * * * *", Worker, args: worker_args(1)}]
     ]
 
@@ -91,7 +91,7 @@ defmodule Oban.Integration.CrontabTest do
 
     oban_opts = [
       repo: Repo,
-      queues: [default: 5],
+      queues: [alpha: 5],
       timezone: "America/Chicago",
       crontab: [
         {"* #{chi_hour} * * *", Worker, args: worker_args(1)},
