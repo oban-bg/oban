@@ -28,8 +28,8 @@ defmodule Oban.Queue.Producer do
       :name,
       :nonce,
       :queue,
-      :poll_ref,
       :started_at,
+      :timer,
       circuit: :enabled,
       paused: false,
       running: %{}
@@ -60,15 +60,17 @@ defmodule Oban.Queue.Producer do
 
   @impl GenServer
   def handle_continue(:start, state) do
-    state
-    |> start_listener()
-    |> send_poll_after()
-    |> dispatch()
+    state =
+      state
+      |> start_listener()
+      |> schedule_poll()
+
+    {:noreply, state}
   end
 
   @impl GenServer
-  def terminate(_reason, %State{poll_ref: poll_ref}) do
-    if is_reference(poll_ref), do: Process.cancel_timer(poll_ref)
+  def terminate(_reason, %State{timer: timer}) do
+    if is_reference(timer), do: Process.cancel_timer(timer)
 
     :ok
   end
@@ -151,7 +153,7 @@ defmodule Oban.Queue.Producer do
     conf.repo.checkout(fn ->
       state
       |> deschedule()
-      |> send_poll_after()
+      |> schedule_poll()
       |> dispatch()
     end)
   end
@@ -198,10 +200,8 @@ defmodule Oban.Queue.Producer do
     state
   end
 
-  defp send_poll_after(%State{conf: conf} = state) do
-    ref = Process.send_after(self(), :poll, conf.poll_interval)
-
-    %{state | poll_ref: ref}
+  defp schedule_poll(%State{conf: conf} = state) do
+    %{state | timer: Process.send_after(self(), :poll, conf.poll_interval)}
   end
 
   # Dispatching

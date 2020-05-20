@@ -3,10 +3,8 @@ defmodule Oban.Integration.InsertingTest do
 
   alias Ecto.Multi
 
-  @oban_opts repo: Repo, queues: false
-
   test "inserting multiple jobs within a multi using insert/3" do
-    start_supervised!({Oban, @oban_opts})
+    start_supervised_oban!(queues: false)
 
     assert {:ok, results} =
              Multi.new()
@@ -23,7 +21,7 @@ defmodule Oban.Integration.InsertingTest do
   end
 
   test "inserting multiple jobs with insert_all/2" do
-    start_supervised!({Oban, @oban_opts})
+    start_supervised_oban!(queues: false)
 
     jobs =
       0..4
@@ -43,7 +41,7 @@ defmodule Oban.Integration.InsertingTest do
   end
 
   test "inserting multiple jobs within a multi using insert_all/4" do
-    start_supervised!({Oban, @oban_opts})
+    start_supervised_oban!(queues: false)
 
     changesets_1 = Enum.map(1..2, &Worker.new(%{ref: &1}))
     changesets_2 = Enum.map(3..4, &Worker.new(%{ref: &1}))

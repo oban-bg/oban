@@ -7,8 +7,6 @@ defmodule Oban.Integration.TelemetryTest do
 
   @moduletag :integration
 
-  @oban_opts repo: Repo, queues: [alpha: 3]
-
   defmodule Handler do
     def handle([:oban, :job, :start], %{system_time: start_time}, meta, pid) do
       send(pid, {:event, :start, start_time, meta})
@@ -24,7 +22,7 @@ defmodule Oban.Integration.TelemetryTest do
 
     :telemetry.attach_many("job-handler", events, &Handler.handle/4, self())
 
-    start_supervised!({Oban, @oban_opts})
+    start_supervised_oban!(queues: [alpha: 3])
 
     %Job{id: stop_id} = insert!(ref: 1, action: "OK")
     %Job{id: exception_id} = insert!(ref: 2, action: "FAIL")
@@ -79,7 +77,7 @@ defmodule Oban.Integration.TelemetryTest do
   end
 
   test "the default handler logs detailed event information" do
-    start_supervised!({Oban, @oban_opts})
+    start_supervised_oban!(queues: [alpha: 3])
 
     :ok = Telemetry.attach_default_logger(:warn)
 
@@ -111,7 +109,7 @@ defmodule Oban.Integration.TelemetryTest do
   end
 
   test "the default handler logs circuit breaker information" do
-    start_supervised!({Oban, @oban_opts})
+    start_supervised_oban!(queues: [alpha: 3])
 
     :ok = Telemetry.attach_default_logger(:warn)
 

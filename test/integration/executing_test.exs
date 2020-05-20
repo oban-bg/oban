@@ -5,10 +5,8 @@ defmodule Oban.Integration.ExecutingTest do
 
   @moduletag :integration
 
-  @oban_opts repo: Repo, queues: [alpha: 3, beta: 3, gamma: 3, delta: 3]
-
   setup do
-    start_supervised!({Oban, @oban_opts})
+    start_supervised_oban!(queues: [alpha: 3, beta: 3, gamma: 3, delta: 3])
 
     :ok
   end

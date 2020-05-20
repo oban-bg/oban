@@ -3,8 +3,6 @@ defmodule Oban.Integration.ResiliencyTest do
 
   @moduletag :integration
 
-  @oban_opts repo: Repo, queues: [alpha: 1], poll_interval: 10
-
   defmodule Handler do
     def handle([:oban, :circuit, :trip], %{}, meta, pid) do
       send(pid, {:tripped, meta})
@@ -20,20 +18,18 @@ defmodule Oban.Integration.ResiliencyTest do
   test "logging producer connection errors" do
     mangle_jobs_table!()
 
-    start_supervised!({Oban, @oban_opts})
+    start_supervised_oban!(queues: [alpha: 1])
 
     assert_receive {:tripped, %{message: message, name: name}}
 
     assert message =~ ~s|ERROR 42P01 (undefined_table)|
     assert name == Oban.Queue.Alpha.Producer
-
-    :ok = stop_supervised(Oban)
   after
     reform_jobs_table!()
   end
 
   test "reporting notification connection errors" do
-    start_supervised!({Oban, @oban_opts})
+    start_supervised_oban!(queues: [alpha: 1])
 
     assert %{conn: conn} = :sys.get_state(Oban.Notifier)
     assert Process.exit(conn, :forced_exit)
@@ -44,12 +40,10 @@ defmodule Oban.Integration.ResiliencyTest do
     assert_receive {:ok, 1}
 
     assert_receive {:tripped, %{message: ":forced_exit"}}
-
-    :ok = stop_supervised(Oban)
   end
 
   test "retrying recording job completion after errors" do
-    start_supervised!({Oban, @oban_opts})
+    start_supervised_oban!(queues: [alpha: 1])
 
     job = insert!(ref: 1, sleep: 10)
 
@@ -64,7 +58,5 @@ defmodule Oban.Integration.ResiliencyTest do
     with_backoff([sleep: 50, total: 10], fn ->
       assert %{state: "completed"} = Repo.reload(job)
     end)
-
-    :ok = stop_supervised(Oban)
   end
 end

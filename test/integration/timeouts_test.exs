@@ -3,15 +3,9 @@ defmodule Oban.Integration.TimeoutsTest do
 
   @moduletag :integration
 
-  @oban_opts repo: Repo, queues: [alpha: 5]
-
-  setup do
-    start_supervised!({Oban, @oban_opts})
-
-    :ok
-  end
-
   test "jobs that exceed the worker's timeout are failed" do
+    start_supervised_oban!(queues: [alpha: 5])
+
     job = insert!(ref: 1, sleep: 50, timeout: 20)
 
     assert_receive {:started, 1}

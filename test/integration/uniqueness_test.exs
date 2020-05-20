@@ -7,8 +7,6 @@ defmodule Oban.Integration.UniquenessTest do
 
   @moduletag :integration
 
-  @oban_opts repo: Repo, queues: [alpha: 5]
-
   defmodule UniqueWorker do
     use Oban.Worker, queue: :upsilon, unique: [period: 30]
 
@@ -17,7 +15,7 @@ defmodule Oban.Integration.UniquenessTest do
   end
 
   setup do
-    start_supervised!({Oban, @oban_opts})
+    start_supervised_oban!(queues: [alpha: 5])
 
     :ok
   end
@@ -68,14 +66,15 @@ defmodule Oban.Integration.UniquenessTest do
     two_minutes_ago = DateTime.add(now, -120, :second)
     five_minutes_ago = DateTime.add(now, -300, :second)
     one_thousand_years_ago = Map.put(now, :year, now.year - 1000)
-    one_hundred_years_in_seconds = 100 * 365 * 24 * 60 * 60
+    ten_years_in_seconds = 100 * 365 * 24 * 60 * 60
 
     assert %Job{id: _id} = unique_insert!(%{id: 1}, inserted_at: two_minutes_ago)
     assert %Job{id: _id} = unique_insert!(%{id: 2}, inserted_at: five_minutes_ago)
     assert %Job{id: _id} = unique_insert!(%{id: 3}, inserted_at: one_thousand_years_ago)
     assert %Job{id: id_1} = unique_insert!(%{id: 1}, unique: [period: 110])
     assert %Job{id: id_2} = unique_insert!(%{id: 2}, unique: [period: 290])
-    assert %Job{id: id_3} = unique_insert!(%{id: 3}, unique: [period: one_hundred_years_in_seconds])
+    assert %Job{id: id_3} = unique_insert!(%{id: 3}, unique: [period: ten_years_in_seconds])
+
     assert %Job{id: ^id_1} = unique_insert!(%{id: 1}, unique: [period: 180])
     assert %Job{id: ^id_2} = unique_insert!(%{id: 2}, unique: [period: 400])
     assert %Job{id: ^id_3} = unique_insert!(%{id: 3}, unique: [period: :infinity])

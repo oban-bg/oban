@@ -41,6 +41,17 @@ defmodule Oban.Case do
     {:ok, %{}}
   end
 
+  def start_supervised_oban!(opts) do
+    opts =
+      opts
+      |> Keyword.put_new(:name, Oban)
+      |> Keyword.put_new(:repo, Repo)
+      |> Keyword.put_new(:poll_interval, 25)
+      |> Keyword.put_new(:shutdown_grace_period, 1)
+
+    start_supervised!({Oban, opts}, id: opts[:name])
+  end
+
   def build(args, opts \\ []) do
     if opts[:worker] do
       Job.new(args, opts)

@@ -66,6 +66,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   This corrects a long standing inconsistency between discarding a job manually
   or automatically when it exhausts retries.
 
+- [Oban.Producer] Stop dispatching jobs immediately on queue startup. Instead,
+  only dispatch on the first poll. This makes it possible to send the producer
+  a message or allow sandboxed connection access before the initial dispatch.
+
 ### Breaking Changes
 
 - [Oban.Telemetry] The format for telemetry events has changed to match the new
