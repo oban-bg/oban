@@ -109,12 +109,12 @@ defmodule Oban.Integration.ControllingTest do
     assert :ok = Oban.cancel_job(job_c.id)
     assert :ok = Oban.cancel_job(job_d.id)
 
+    refute_receive {:ok, 4}, 200
+
     assert %Job{state: "discarded", discarded_at: %DateTime{}} = Repo.reload(job_a)
     assert %Job{state: "discarded", discarded_at: %DateTime{}} = Repo.reload(job_b)
     assert %Job{state: "completed", discarded_at: nil} = Repo.reload(job_c)
     assert %Job{state: "discarded", discarded_at: %DateTime{}} = Repo.reload(job_d)
-
-    refute_receive {:ok, 4}, 200
   end
 
   test "dispatching jobs from a queue via database trigger" do
