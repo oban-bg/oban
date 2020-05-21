@@ -14,10 +14,8 @@ defmodule Oban.Integration.ExecutingTest do
   property "individual jobs inserted into running queues are executed" do
     check all jobs <- list_of(job()), max_runs: 20 do
       capture_log(fn ->
-        jobs = Enum.map(jobs, &Oban.insert!/1)
-
-        for job <- jobs do
-          %{args: %{ref: ref, action: action}, id: id, max_attempts: max} = job
+        for job <- Oban.insert_all(jobs) do
+          %{args: %{"ref" => ref, "action" => action}, id: id, max_attempts: max} = job
 
           assert_receive {_, ^ref}
 
@@ -63,7 +61,7 @@ defmodule Oban.Integration.ExecutingTest do
       args = %{ref: ref, action: action}
       opts = [queue: queue, max_attempts: max_attempts, priority: priority, tags: tags]
 
-      Worker.new(args, opts)
+      build(args, opts)
     end
   end
 
