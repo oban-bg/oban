@@ -50,13 +50,10 @@ defmodule Oban.Crontab.CronTest do
         weekdays: [:*]
       }
 
-      # @yearly
       assert yearly == Cron.parse!("@yearly")
 
-      ## @annually
       assert yearly == Cron.parse!("@annually")
 
-      ## @monthly
       assert %Cron{
                minutes: [0],
                hours: [0],
@@ -65,7 +62,6 @@ defmodule Oban.Crontab.CronTest do
                weekdays: [:*]
              } == Cron.parse!("@monthly")
 
-      ## @weekly
       assert %Cron{
                minutes: [0],
                hours: [0],
@@ -74,7 +70,6 @@ defmodule Oban.Crontab.CronTest do
                weekdays: [0]
              } == Cron.parse!("@weekly")
 
-      ## @daily
       assert %Cron{
                minutes: [0],
                hours: [0],
@@ -83,7 +78,6 @@ defmodule Oban.Crontab.CronTest do
                weekdays: [:*]
              } == Cron.parse!("@daily")
 
-      ## @hourly
       assert %Cron{
                minutes: [0],
                hours: [:*],
