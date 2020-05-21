@@ -28,11 +28,13 @@ defmodule Oban.Queue.Producer do
       :name,
       :nonce,
       :queue,
+      :reset_timer,
       :started_at,
       :timer,
       circuit: :enabled,
-      reset_timer: nil,
+      dispatch_cooldown: 5,
       paused: false,
+      poll_interval: :timer.seconds(1),
       running: %{}
     ]
   end
@@ -255,9 +257,7 @@ defmodule Oban.Queue.Producer do
         {:noreply, %{state | cooldown_ref: nil, dispatched_at: system_now(), running: running}}
 
       cooldown_available?(state) ->
-        %State{conf: conf, dispatched_at: dispatched_at} = state
-
-        dispatch_after = system_now() - dispatched_at + conf.dispatch_cooldown
+        dispatch_after = system_now() - state.dispatched_at + state.dispatch_cooldown
         cooldown_ref = Process.send_after(self(), :dispatch, dispatch_after)
 
         {:noreply, %{state | cooldown_ref: cooldown_ref}}
@@ -271,8 +271,8 @@ defmodule Oban.Queue.Producer do
 
   defp dispatch_now?(%State{dispatched_at: nil}), do: true
 
-  defp dispatch_now?(%State{conf: conf, dispatched_at: dispatched_at}) do
-    system_now() > dispatched_at + conf.dispatch_cooldown
+  defp dispatch_now?(%State{} = state) do
+    system_now() > state.dispatched_at + state.dispatch_cooldown
   end
 
   defp cooldown_available?(%State{cooldown_ref: ref}), do: is_nil(ref)

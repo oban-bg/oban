@@ -59,6 +59,6 @@ defmodule Oban.Midwife do
   end
 
   defp queue_spec(queue, limit, conf) do
-    QueueSupervisor.child_spec({queue, limit}, conf)
+    QueueSupervisor.child_spec({queue, limit: limit}, conf)
   end
 end

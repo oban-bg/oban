@@ -16,7 +16,7 @@ defmodule Oban.Config do
           plugins: [module() | {module() | Keyword.t()}],
           poll_interval: pos_integer(),
           prefix: binary(),
-          queues: [{atom(), pos_integer()}],
+          queues: [{atom(), Keyword.t()}],
           repo: module(),
           shutdown_grace_period: timeout(),
           timezone: Calendar.time_zone(),
@@ -58,7 +58,10 @@ defmodule Oban.Config do
 
     Enum.each(opts, &validate_opt!/1)
 
-    opts = Keyword.update(opts, :crontab, [], &parse_crontab/1)
+    opts =
+      opts
+      |> Keyword.update!(:crontab, &parse_crontab/1)
+      |> Keyword.update!(:queues, &parse_queues/1)
 
     struct!(__MODULE__, opts)
   end
@@ -191,7 +194,9 @@ defmodule Oban.Config do
 
   defp valid_crontab?(_crontab), do: false
 
-  defp valid_queue?({_name, limit}), do: is_integer(limit) and limit > 0
+  defp valid_queue?({_name, opts}) do
+    (is_integer(opts) and opts > 0) or Keyword.keyword?(opts)
+  end
 
   defp valid_plugin?({plugin, opts}) do
     is_atom(plugin) and
@@ -211,6 +216,14 @@ defmodule Oban.Config do
         {expression, worker, opts} ->
           {Cron.parse!(expression), worker, opts}
       end
+    end
+  end
+
+  defp parse_queues(queues) do
+    for {name, value} <- queues do
+      opts = if is_integer(value), do: [limit: value], else: value
+
+      {name, opts}
     end
   end
 end

@@ -16,6 +16,13 @@ defmodule Oban do
   alias Oban.Queue.Drainer
   alias Oban.Queue.Supervisor, as: QueueSupervisor
 
+  @type queue_name :: atom() | binary()
+
+  @type queue_option ::
+          {:queue, queue_name()}
+          | {:limit, pos_integer()}
+          | {:local_only, boolean()}
+
   @type option ::
           {:circuit_backoff, timeout()}
           | {:crontab, [Config.cronjob()]}
@@ -25,18 +32,11 @@ defmodule Oban do
           | {:plugins, [module() | {module() | Keyword.t()}]}
           | {:poll_interval, pos_integer()}
           | {:prefix, binary()}
-          | {:queues, [{atom(), pos_integer()}]}
+          | {:queues, [{queue_name(), pos_integer() | Keyword.t()}]}
           | {:repo, module()}
           | {:shutdown_grace_period, timeout()}
           | {:timezone, Calendar.time_zone()}
           | {:log, false | Logger.level()}
-
-  @type queue_name :: atom() | binary()
-
-  @type queue_option ::
-          {:queue, queue_name()}
-          | {:limit, pos_integer()}
-          | {:local_only, boolean()}
 
   @version Mix.Project.config()[:version]
 
@@ -68,9 +68,12 @@ defmodule Oban do
     `oban_jobs` table must exist within the prefix. See the "Prefix Support" section in the module
     documentation for more details.
   * `:queues` — a keyword list where the keys are queue names and the values are the concurrency
-    setting. For example, setting queues to `[default: 10, exports: 5]` would start the queues
-    `default` and `exports` with a combined concurrency level of 15. The concurrency setting
-    specifies how many jobs _each queue_ will run concurrently.
+    setting or a keyword list of queue options. For example, setting queues to `[default: 10,
+    exports: 5]` would start the queues `default` and `exports` with a combined concurrency level
+    of 15. The concurrency setting specifies how many jobs _each queue_ will run concurrently.
+
+    Queues accept additional override options to customize their behavior, e.g. by setting the
+    `poll_invertal` and the `dispatch_cooldown` for a specific queue.
 
     For testing purposes `:queues` may be set to `false` or `nil`, which effectively disables all
     job dispatching.

@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## Unreleased
 
+### Added
+
+- [Oban] In addition to the standard queue-name / limit keyword syntax it is now
+  possible to define per-queue options such as `:poll_limit`,
+  `:dispatch_cooldown`, and even override the `:producer` module.
+
 ## [2.0.0] — 2020-07-10
 
 No changes from [2.0.0-rc.3][].

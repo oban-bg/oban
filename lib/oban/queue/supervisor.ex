@@ -16,43 +16,48 @@ defmodule Oban.Queue.Supervisor do
   def start_link(opts) when is_list(opts) do
     name = Keyword.get(opts, :name, __MODULE__)
 
-    Supervisor.start_link(__MODULE__, Map.new(opts), name: name)
+    Supervisor.start_link(__MODULE__, opts, name: name)
   end
 
   @spec child_spec({atom(), integer()}, Config.t()) :: Supervisor.child_spec()
-  def child_spec({queue, limit}, conf) do
+  def child_spec({queue, opts}, conf) do
     queue = to_string(queue)
     name = Module.concat([conf.name, "Queue", Macro.camelize(queue)])
-    opts = [conf: conf, queue: queue, limit: limit, name: name]
+    opts = Keyword.merge(opts, [conf: conf, queue: queue, name: name])
 
     Supervisor.child_spec({__MODULE__, opts}, id: name)
   end
 
   @impl Supervisor
-  def init(%{conf: conf, limit: limit, name: name, queue: queue}) do
-    fore_name = Module.concat([name, "Foreman"])
-    prod_name = Module.concat([name, "Producer"])
+  def init(opts) do
+    conf = Keyword.fetch!(opts, :conf)
+    name = Keyword.fetch!(opts, :name)
+
+    fore_name = Module.concat(name, "Foreman")
+    prod_name = Module.concat(name, "Producer")
+    watch_name = Module.concat(name, "Watchman")
 
     fore_opts = [name: fore_name]
 
-    prod_opts = [
-      conf: conf,
-      foreman: fore_name,
-      limit: limit,
-      queue: queue,
-      name: prod_name
-    ]
+    prod_opts =
+      opts
+      |> Keyword.take([:conf, :dispatch_cooldown, :limit, :poll_interval, :queue])
+      |> Keyword.merge(foreman: fore_name, name: prod_name)
+      |> Keyword.put_new(:dispatch_cooldown, conf.dispatch_cooldown)
+      |> Keyword.put_new(:poll_interval, conf.poll_interval)
 
     watch_opts = [
       foreman: fore_name,
-      name: Module.concat([name, "Watchman"]),
+      name: watch_name,
       producer: prod_name,
       shutdown: conf.shutdown_grace_period
     ]
 
+    prod_mod = Keyword.get(opts, :producer, Producer)
+
     children = [
       {Task.Supervisor, fore_opts},
-      {Producer, prod_opts},
+      {prod_mod, prod_opts},
       {Watchman, watch_opts}
     ]
 
