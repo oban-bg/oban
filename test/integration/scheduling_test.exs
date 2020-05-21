@@ -1,29 +1,31 @@
 defmodule Oban.Integration.SchedulingTest do
-  use Oban.Case, async: true
-
-  alias Oban.{Config, Query}
+  use Oban.Case
 
   @moduletag :integration
 
-  test "jobs scheduled in the future are unavailable for execution" do
-    %Job{scheduled_at: at, state: "scheduled"} = insert!(%{}, schedule_in: 10)
+  test "descheduling jobs to make them available for execution" do
+    _job_ = insert!([ref: 1, sleep: 500], schedule_in: -9, queue: :alpha)
+    _job_ = insert!([ref: 2, sleep: 500], schedule_in: -5, queue: :alpha)
+    job_3 = insert!([ref: 3, sleep: 500], schedule_in: -1, queue: :alpha)
+    job_4 = insert!([ref: 4, sleep: 500], schedule_in: -1, queue: :gamma)
+    job_5 = insert!([ref: 5, sleep: 500], schedule_in: 10, queue: :alpha)
 
-    assert 0 < DateTime.diff(at, DateTime.utc_now())
-    assert {0, nil} == Query.stage_scheduled_jobs(Config.new(repo: Repo), "alpha")
-  end
+    start_supervised_oban!(queues: [alpha: 2])
 
-  test "jobs scheduled in the past are available for execution" do
-    %Job{scheduled_at: at, state: "scheduled"} = insert!(%{}, schedule_in: -10)
+    assert_receive {:started, 1}
+    assert_receive {:started, 2}
 
-    assert 0 > DateTime.diff(at, DateTime.utc_now())
-    assert {1, nil} = Query.stage_scheduled_jobs(Config.new(repo: Repo), "alpha")
-  end
+    # Not started because the queue limit is 2
+    refute_received {:started, 3}
 
-  test "jobs scheduled at a specific time are unavailable for execution" do
-    at = DateTime.add(DateTime.utc_now(), 60)
+    # Not descheduled because it is in a different queue
+    refute_received {:started, 4}
 
-    %Job{scheduled_at: ^at, state: "scheduled"} = insert!(%{}, scheduled_at: at)
+    # Not descheduled because it is in the future
+    refute_received {:started, 5}
 
-    assert {0, nil} == Query.stage_scheduled_jobs(Config.new(repo: Repo), "alpha")
+    assert %{state: "available"} = Repo.reload(job_3)
+    assert %{state: "scheduled"} = Repo.reload(job_4)
+    assert %{state: "scheduled"} = Repo.reload(job_5)
   end
 end
