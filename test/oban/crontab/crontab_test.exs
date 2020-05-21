@@ -40,6 +40,58 @@ defmodule Oban.Crontab.CronTest do
       assert_raise ArgumentError, fn -> Cron.parse!("* * * jan *") end
       assert_raise ArgumentError, fn -> Cron.parse!("* * * * sun") end
     end
+
+    test "parsing non-standard expressions" do
+      yearly = %Cron{
+        minutes: [0],
+        hours: [0],
+        days: [1],
+        months: [1],
+        weekdays: [:*]
+      }
+
+      # @yearly
+      assert yearly == Cron.parse!("@yearly")
+
+      ## @annually
+      assert yearly == Cron.parse!("@annually")
+
+      ## @monthly
+      assert %Cron{
+               minutes: [0],
+               hours: [0],
+               days: [1],
+               months: [:*],
+               weekdays: [:*]
+             } == Cron.parse!("@monthly")
+
+      ## @weekly
+      assert %Cron{
+               minutes: [0],
+               hours: [0],
+               days: [:*],
+               months: [:*],
+               weekdays: [0]
+             } == Cron.parse!("@weekly")
+
+      ## @daily
+      assert %Cron{
+               minutes: [0],
+               hours: [0],
+               days: [:*],
+               months: [:*],
+               weekdays: [:*]
+             } == Cron.parse!("@daily")
+
+      ## @hourly
+      assert %Cron{
+               minutes: [0],
+               hours: [:*],
+               days: [:*],
+               months: [:*],
+               weekdays: [:*]
+             } == Cron.parse!("@hourly")
+    end
   end
 
   describe "now?/2" do
