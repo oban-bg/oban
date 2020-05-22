@@ -47,51 +47,11 @@ defmodule Oban.Crontab.Cron do
 
   @spec parse!(input :: binary()) :: t()
   def parse!("@annually"), do: parse!("@yearly")
-
-  def parse!("@yearly"),
-    do: %__MODULE__{
-      minutes: [0],
-      hours: [0],
-      days: [1],
-      months: [1],
-      weekdays: [:*]
-    }
-
-  def parse!("@monthly"),
-    do: %__MODULE__{
-      minutes: [0],
-      hours: [0],
-      days: [1],
-      months: [:*],
-      weekdays: [:*]
-    }
-
-  def parse!("@weekly"),
-    do: %__MODULE__{
-      minutes: [0],
-      hours: [0],
-      days: [:*],
-      months: [:*],
-      weekdays: [0]
-    }
-
-  def parse!("@daily"),
-    do: %__MODULE__{
-      minutes: [0],
-      hours: [0],
-      days: [:*],
-      months: [:*],
-      weekdays: [:*]
-    }
-
-  def parse!("@hourly"),
-    do: %__MODULE__{
-      minutes: [0],
-      hours: [:*],
-      days: [:*],
-      months: [:*],
-      weekdays: [:*]
-    }
+  def parse!("@yearly"), do: parse!("0 0 1 1 *")
+  def parse!("@monthly"), do: parse!("0 0 1 * *")
+  def parse!("@weekly"), do: parse!("0 0 * * 0")
+  def parse!("@daily"), do: parse!("0 0 * * *")
+  def parse!("@hourly"), do: parse!("0 * * * *")
 
   def parse!(input) when is_binary(input) do
     input
