@@ -50,6 +50,7 @@ defmodule Oban.Crontab.Cron do
   def parse!("@yearly"), do: parse!("0 0 1 1 *")
   def parse!("@monthly"), do: parse!("0 0 1 * *")
   def parse!("@weekly"), do: parse!("0 0 * * 0")
+  def parse!("@midnight"), do: parse!("@daily")
   def parse!("@daily"), do: parse!("0 0 * * *")
   def parse!("@hourly"), do: parse!("0 * * * *")
 

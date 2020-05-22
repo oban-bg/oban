@@ -70,13 +70,16 @@ defmodule Oban.Crontab.CronTest do
                weekdays: [0]
              } == Cron.parse!("@weekly")
 
-      assert %Cron{
-               minutes: [0],
-               hours: [0],
-               days: [:*],
-               months: [:*],
-               weekdays: [:*]
-             } == Cron.parse!("@daily")
+      daily = %Cron{
+        minutes: [0],
+        hours: [0],
+        days: [:*],
+        months: [:*],
+        weekdays: [:*]
+      }
+
+      assert daily == Cron.parse!("@daily")
+      assert daily == Cron.parse!("@midnight")
 
       assert %Cron{
                minutes: [0],
