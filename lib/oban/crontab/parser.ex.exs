@@ -42,19 +42,20 @@ defmodule Oban.Crontab.Parser do
     |> integer(min: 1, max: 2)
     |> tag(:range)
 
+  wild = string("*") |> unwrap_and_tag(:wild)
+
   step =
-    string("*/")
-    |> ignore()
+    [wild, range]
+    |> choice()
+    |> ignore(string("/"))
     |> integer(min: 1, max: 2)
-    |> unwrap_and_tag(:step)
+    |> tag(:step)
 
   literal = integer(min: 1, max: 2) |> unwrap_and_tag(:literal)
 
-  wild = string("*") |> unwrap_and_tag(:wild)
-
   separator = string(",") |> ignore()
 
-  expression = choice([range, literal, step, wild, separator])
+  expression = choice([step, range, literal, wild, separator])
 
   minutes =
     expression
