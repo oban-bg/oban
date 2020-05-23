@@ -55,7 +55,7 @@ defmodule Oban.Crontab.Scheduler do
 
   @impl GenServer
   def terminate(_reason, %State{poll_ref: poll_ref}) do
-    if not is_nil(poll_ref), do: Process.cancel_timer(poll_ref)
+    if is_reference(poll_ref), do: Process.cancel_timer(poll_ref)
 
     :ok
   end
