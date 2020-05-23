@@ -192,8 +192,7 @@ defmodule Oban.Job do
     |> Map.new()
   end
 
-  @doc false
-  def coerce_field(params, field) do
+  defp coerce_field(params, field) do
     case Map.get(params, field) do
       value when is_atom(value) and not is_nil(value) ->
         update_in(params, [field], &to_clean_string/1)
