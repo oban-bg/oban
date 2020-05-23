@@ -729,11 +729,11 @@ backoff strategies.
 ### Error Details
 
 Execution errors are stored as a formatted exception along with metadata about
-when the failure ocurred and which attempt caused it. Each error is stored with
+when the failure occurred and which attempt caused it. Each error is stored with
 the following keys:
 
 * `at` The utc timestamp when the error occurred at
-* `attempt` The attempt number when the error ocurred
+* `attempt` The attempt number when the error occurred
 * `error` A formatted error message and stacktrace
 
 See the [Instrumentation](#Instrumentation-and-Logging) docs for an example of
