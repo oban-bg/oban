@@ -14,7 +14,7 @@ MyApp.Repo.all(
 
 ## Heroku
 
-## Elixir and Erlang versions
+### Elixir and Erlang versions
 
 If your app crashes on launch, be sure to confirm you are running the correct
 version of Elixir and Erlang ([view requirements](#Requirements)). If using the
@@ -31,7 +31,7 @@ erlang_version=22.0.3
 
 Available Erlang versions are available [here](https://github.com/HashNuke/heroku-buildpack-elixir-otp-builds/blob/master/otp-versions).
 
-## Database connections
+### Database connections
 
 Make sure that you have enough available database connections when running on
 Heroku. Oban uses a database connection in order to listen for pubsub
