@@ -83,7 +83,7 @@ defmodule Oban.Integration.ControllingTest do
 
     assert_receive {:started, 1}
 
-    Oban.kill_job(job.id)
+    Oban.cancel_job(job.id)
 
     refute_receive {:ok, 1}, 200
 

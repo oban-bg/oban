@@ -64,7 +64,7 @@ defmodule Oban do
     documentation for more details.
   * `:queues` — a keyword list where the keys are queue names and the values are the concurrency
     setting. For example, setting queues to `[default: 10, exports: 5]` would start the queues
-    `default` and `exports` with a combined concurrency level of 20. The concurrency setting
+    `default` and `exports` with a combined concurrency level of 15. The concurrency setting
     specifies how many jobs _each queue_ will run concurrently.
 
     For testing purposes `:queues` may be set to `false` or `nil`, which effectively disables all
@@ -471,22 +471,9 @@ defmodule Oban do
     |> Notifier.notify(:signal, %{action: :stop, queue: queue})
   end
 
-  @doc """
-  Kill an actively executing job and mark it as `discarded`, ensuring that it won't be retried.
-
-  If the job happens to fail before it can be killed the state is set to `discarded`. However,
-  if it manages to complete successfully then the state will still be `completed`.
-
-  ## Example
-
-  Kill a long running job with an id of `1`:
-
-      Oban.kill_job(1)
-      :ok
-  """
-  @doc since: "0.2.0"
-  @doc deprecated: "Use Oban.cancel_job/1 instead"
-  @spec kill_job(name :: atom(), job_id :: pos_integer()) :: :ok
+  @doc false
+  @deprecated "Use Oban.cancel_job/1 instead"
+  @spec kill_job(name :: module(), job_id :: pos_integer()) :: :ok
   def kill_job(name \\ __MODULE__, job_id) when is_integer(job_id) do
     name
     |> config()
