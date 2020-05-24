@@ -127,6 +127,12 @@ defmodule Oban.Crontab.CronTest do
       constant("FEB"),
       constant("MAR"),
       constant("APR"),
+      constant("MAY"),
+      constant("JUN"),
+      constant("JUL"),
+      constant("AUG"),
+      constant("SEP"),
+      constant("OCT"),
       constant("NOV"),
       constant("DEC")
     ])
@@ -154,6 +160,7 @@ defmodule Oban.Crontab.CronTest do
       constant("*"),
       map(integer(1..59), &"*/#{&1}"),
       map(integer(1..58), &"#{&1}-#{&1 + 1}"),
+      map(integer(1..57), &"#{&1}-#{&1 + 2}/2"),
       list_of(integer(0..59), length: 1..10)
     ])
   end
