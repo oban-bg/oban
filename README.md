@@ -537,7 +537,8 @@ config :my_app, Oban, repo: MyApp.Repo, crontab: [
   {"* * * * *", MyApp.MinuteWorker},
   {"0 * * * *", MyApp.HourlyWorker, args: %{custom: "arg"}},
   {"0 0 * * *", MyApp.DailyWorker, max_attempts: 1},
-  {"0 12 * * MON", MyApp.MondayWorker, queue: :scheduled, tags: ["mondays"]}
+  {"0 12 * * MON", MyApp.MondayWorker, queue: :scheduled, tags: ["mondays"]},
+  {"@daily", MyApp.AnotherDailyWorker}
 ]
 ```
 
@@ -571,6 +572,14 @@ allowed values for each field are as follows:
 * `days` — 1-31
 * `month` — 1-12 (or aliases, `JAN`, `FEB`, `MAR`, etc.)
 * `weekdays` — 0-6 (or aliases, `SUN`, `MON`, `TUE`, etc.)
+
+The following Cron extensions are supported:
+
+* `@hourly` — `0 * * * *`
+* `@daily` (as well as `@midnight`) — `0 0 * * *`
+* `@weekly` — `0 0 * * 0`
+* `@monthly` — `0 0 1 * *`
+* `@yearly` (as well as `@annually`) — `0 0 1 1 *`
 
 Some specific examples that demonstrate the full range of expressions:
 

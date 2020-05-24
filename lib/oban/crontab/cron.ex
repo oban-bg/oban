@@ -45,7 +45,44 @@ defmodule Oban.Crontab.Cron do
     |> Integer.mod(7)
   end
 
+  @doc """
+  Parses a crontab expression into a %Cron{} struct.
+
+  The parser can handle common expressions that use minutes, hours, days, months and weekdays,
+  along with ranges and steps. It also supports common extensions, also called nicknames.
+
+  Raises an `ArgumentError` if the expression cannot be parsed.
+
+  ## Nicknames
+
+  - @yearly: Run once a year, "0 0 1 1 *".
+  - @annually: same as @yearly
+  - @monthly: Run once a month, "0 0 1 * *".
+  - @weekly: Run once a week, "0 0 * * 0".
+  - @daily: Run once a day, "0 0 * * *".
+  - @midnight: same as @daily
+  - @hourly: Run once an hour, "0 * * * *".
+
+  ## Examples
+
+      iex> parse!("@hourly")
+      %Cron{}
+
+      iex> parse!("0 * * * *")
+      %Cron{}
+
+      iex> parse!("60 * * * *")
+      ** (ArgumentError)
+  """
   @spec parse!(input :: binary()) :: t()
+  def parse!("@annually"), do: parse!("@yearly")
+  def parse!("@yearly"), do: parse!("0 0 1 1 *")
+  def parse!("@monthly"), do: parse!("0 0 1 * *")
+  def parse!("@weekly"), do: parse!("0 0 * * 0")
+  def parse!("@midnight"), do: parse!("@daily")
+  def parse!("@daily"), do: parse!("0 0 * * *")
+  def parse!("@hourly"), do: parse!("0 * * * *")
+
   def parse!(input) when is_binary(input) do
     input
     |> String.trim()
