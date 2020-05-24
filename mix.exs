@@ -37,7 +37,9 @@ defmodule Oban.MixProject do
         main: "Oban",
         source_ref: "v#{@version}",
         source_url: "https://github.com/sorentwo/oban",
-        extras: ["README.md", "CHANGELOG.md": [filename: "CHANGELOG.md", title: "CHANGELOG"]]
+        extra_section: "GUIDES",
+        extras: extras(),
+        groups_for_extras: groups_for_extras()
       ]
     ]
   end
@@ -85,6 +87,21 @@ defmodule Oban.MixProject do
         "test --raise",
         "dialyzer --halt-exit-status"
       ]
+    ]
+  end
+
+  defp extras do
+    [
+      "README.md",
+      "guides/troubleshooting.md",
+      "CHANGELOG.md": [filename: "CHANGELOG.md", title: "CHANGELOG"]
+    ]
+  end
+
+  defp groups_for_extras do
+    [
+      Guides: ~r{guides/[^\/]+\.md},
+      Extras: ~r{(README|CHANGELOG).md}
     ]
   end
 end
