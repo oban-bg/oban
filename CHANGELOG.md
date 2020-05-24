@@ -49,6 +49,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 - [Oban.Worker] Add `:infinity` option for unique period.
 
+- [Oban.Crontab] Add support for non-standard expressions such as `@daily`,
+  `@hourly`, `@midnight`, etc.
+
+- [Oban.Crontab] Add support for using step values in conjunction with ranges,
+  enabling expressions like `10-30/2`, `15-45/3`, etc.
+
 ### Changed
 
 - [Oban.Notifier] Make the module public and clean up the primary function
