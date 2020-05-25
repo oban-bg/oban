@@ -645,15 +645,16 @@ a job by assigning a numerical `priority`.
 
 Oban provides some helpers to facilitate testing. The helpers handle the
 boilerplate of making assertions on which jobs are enqueued. To use the
-`assert_enqueued/1` and `refute_enqueued/1` helpers in your tests you must
-include them in your testing module and specify your app's Ecto repo:
+`perform_job/2,3`, `assert_enqueued/1` and `refute_enqueued/1` helpers in your
+tests you must include them in your testing module and specify your app's Ecto
+repo:
 
 ```elixir
 use Oban.Testing, repo: MyApp.Repo
 ```
 
 Now you can assert, refute or list jobs that have been enqueued within your
-tests:
+integration tests:
 
 ```elixir
 assert_enqueued worker: MyWorker, args: %{id: 1}
@@ -665,6 +666,22 @@ refute_enqueued queue: :special, args: %{id: 2}
 # or
 
 assert [%{args: %{"id" => 1}}] = all_enqueued worker: MyWorker
+```
+
+You can also easily unit test workers with the `perform_job/2,3` function, which
+automates validating job args, options, and worker results from a single
+function call:
+
+```elixir
+assert :ok = perform_job(MyWorker, %{id: 1})
+
+# or
+
+assert :ok = perform_job(MyWorker, %{id: 1}, attempt: 3, max_attempts: 3)
+
+# or
+
+assert {:error, _} = perform_job(MyWorker, %{bad: :arg})
 ```
 
 See the `Oban.Testing` module for more details.

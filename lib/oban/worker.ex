@@ -190,6 +190,12 @@ defmodule Oban.Worker do
   alias Oban.Job
 
   @type t :: module()
+  @type result ::
+          :ok
+          | :discard
+          | {:ok, ignored :: term()}
+          | {:error, reason :: term()}
+          | {:snooze, seconds :: pos_integer()}
 
   @doc """
   Build a job changeset for this worker with optional overrides.
@@ -224,12 +230,7 @@ defmodule Oban.Worker do
   the key type when the job was enqueued. The `args` are stored as `jsonb` in PostgreSQL and the
   serialization process automatically stringifies all keys.
   """
-  @callback perform(job :: Job.t()) ::
-              :ok
-              | :discard
-              | {:ok, ignored :: term()}
-              | {:error, reason :: term()}
-              | {:snooze, seconds :: pos_integer()}
+  @callback perform(job :: Job.t()) :: result()
 
   @doc false
   defmacro __using__(opts) do

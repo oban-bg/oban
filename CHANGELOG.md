@@ -44,6 +44,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   any calls to the worker's `backoff/1` callback, allowing workers to calculate
   a custom backoff depending on the error that failed the job.
 
+- [Oban.Worker] Add `:infinity` option for unique period.
+
 - [Oban.Telemetry] Add `span/3` for reporting normalized `:start`, `:stop` and
   `:exception` events with timing information.
 
@@ -55,7 +57,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   `exception` events. This is a measurement in milliseconds of the amount of
   time between when a job was scheduled to run and when it was last attempted.
 
-- [Oban.Worker] Add `:infinity` option for unique period.
+- [Oban.Testing] Add `perform_job/2,3` helper to automate validating,
+  normalizing and performing jobs while unit testing. This is now the preferred
+  way to unit test workers.
 
 - [Oban.Crontab] Add support for non-standard expressions such as `@daily`,
   `@hourly`, `@midnight`, etc.

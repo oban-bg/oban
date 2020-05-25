@@ -121,6 +121,8 @@ defmodule Oban.Testing do
     quote do
       alias Oban.Testing
 
+      import Oban.Testing, only: [perform_job: 2, perform_job: 3]
+
       def all_enqueued(opts) do
         Testing.all_enqueued(unquote(repo), opts)
       end
@@ -141,6 +143,63 @@ defmodule Oban.Testing do
         end
       end
     end
+  end
+
+  @doc """
+  Construct a job and execute it with a worker module.
+
+  This reduces boiler plate when constructing jobs for unit tests and checks for common pitfalls.
+  For example, it automatically converts `args` to string keys before calling `perform/1`,
+  ensuring that perform clauses aren't erroneously trying to match atom keys.
+
+  The helper makes the following assertions:
+
+  * That the worker implements the `Oban.Worker` behaviour
+  * That the options provided build a valid job
+  * That the return is valid, e.g. `:ok`, `{:ok, value}`, `{:error, value}` etc.
+
+  If all of the assertions pass then the function returns the result of `perform/1` for you to
+  make additional assertions on.
+
+  ## Examples
+
+  Successfully execute a job with some string arguments:
+
+      assert :ok = perform_job(MyWorker, %{"id" => 1})
+
+  Successfully execute a job and assert that it returns an error tuple:
+
+      assert {:error, _} = perform_job(MyWorker, %{"bad" => "arg"})
+
+  Exercise custom attempt handling within a worker by passing options:
+
+      assert :ok = perform_job(MyWorker, %{}, attempt: 42)
+
+  Cause a test failure because the provided worker isn't real:
+
+      assert :ok = perform_job(Vorker, %{"id" => 1})
+  """
+  @doc since: "2.0.0"
+  @spec perform_job(worker :: Worker.t(), args :: Job.args(), opts :: [Job.option()]) ::
+          Worker.result()
+  def perform_job(worker, args, opts \\ []) when is_atom(worker) and is_map(args) do
+    assert_valid_worker(worker)
+
+    changeset =
+      args
+      |> worker.new(opts)
+      |> Changeset.update_change(:args, &json_encode_decode/1)
+
+    assert_valid_changeset(changeset)
+
+    result =
+      changeset
+      |> Changeset.apply_action!(:insert)
+      |> worker.perform()
+
+    assert_valid_result(result)
+
+    result
   end
 
   @doc """
@@ -262,6 +321,71 @@ defmodule Oban.Testing do
 
     refute wait_for_job(repo, opts, timeout), error_message
   end
+
+  # Perform Helpers
+
+  def assert_valid_worker(worker) do
+    assert Code.ensure_loaded?(worker) and implements_worker?(worker), """
+     Expected worker to be a module that implements the Oban.Worker behaviour, got:
+
+    #{inspect(worker)}
+    """
+  end
+
+  defp implements_worker?(worker) do
+    :attributes
+    |> worker.__info__()
+    |> Keyword.get(:behaviour, [])
+    |> Enum.member?(Oban.Worker)
+  end
+
+  defp assert_valid_changeset(changeset) do
+    assert changeset.valid?, """
+    Expected args and opts to build a valid job, got validation errors:
+
+    #{traverse_errors(changeset)}
+    """
+  end
+
+  defp traverse_errors(changeset) do
+    traverser = fn {message, opts} ->
+      Enum.reduce(opts, message, fn {key, value}, acc ->
+        String.replace(acc, "%{#{key}}", to_string(value))
+      end)
+    end
+
+    changeset
+    |> Changeset.traverse_errors(traverser)
+    |> Enum.map(fn {key, val} -> "#{key}: #{val}" end)
+    |> Enum.join("\n")
+  end
+
+  defp json_encode_decode(map) do
+    map
+    |> Jason.encode!()
+    |> Jason.decode!()
+  end
+
+  defp assert_valid_result(result) do
+    valid? =
+      case result do
+        :ok -> true
+        {:ok, _value} -> true
+        {:error, _value} -> true
+        {:snooze, snooze} when is_integer(snooze) -> true
+        :discard -> true
+        _ -> false
+      end
+
+    assert valid?, """
+    Expected result to be one of `:ok`, `{:ok, value}`, `{:error, reason}`, `{:snooze, duration}
+    or `:discard`, got:
+
+    #{inspect(result, pretty: true)}
+    """
+  end
+
+  # Enqueued Helpers
 
   defp get_job(repo, opts) do
     {prefix, opts} = extract_prefix(opts)
