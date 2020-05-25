@@ -200,7 +200,12 @@ defmodule Oban.Queue.Executor do
   defp backoff(worker, job), do: worker.backoff(job)
 
   defp execute_stop(exec) do
-    :telemetry.execute([:oban, :job, :stop], %{duration: exec.duration}, exec.meta)
+    event_measurements = %{
+      duration: exec.duration,
+      enqueue_time: DateTime.diff(exec.job.attempted_at, exec.job.scheduled_at, :microsecond)
+    }
+
+    :telemetry.execute([:oban, :job, :stop], event_measurements, exec.meta)
   end
 
   defp execute_exception(exec) do
