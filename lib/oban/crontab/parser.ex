@@ -1,5 +1,5 @@
 # Generated from lib/oban/crontab/parser.ex.exs, do not edit.
-# Generated at 2020-05-23 07:07:21Z.
+# Generated at 2020-05-25 15:18:25Z.
 
 defmodule Oban.Crontab.Parser do
   @moduledoc false
@@ -55,7 +55,7 @@ defmodule Oban.Crontab.Parser do
 
   defp cron__3(rest, _acc, _stack, context, line, offset) do
     {:error,
-     "expected string \"*\" or byte in the range ?0..?9, followed by byte in the range ?0..?9, followed by string \"-\", followed by byte in the range ?0..?9, followed by byte in the range ?0..?9, followed by string \"/\", followed by byte in the range ?0..?9, followed by byte in the range ?0..?9 or byte in the range ?0..?9, followed by byte in the range ?0..?9, followed by string \"-\", followed by byte in the range ?0..?9, followed by byte in the range ?0..?9 or byte in the range ?0..?9, followed by byte in the range ?0..?9 or string \"*\" or string \",\"",
+     "expected string \"*\" or ASCII character in the range '0' to '9', followed by ASCII character in the range '0' to '9', followed by string \"-\", followed by ASCII character in the range '0' to '9', followed by ASCII character in the range '0' to '9', followed by string \"/\", followed by ASCII character in the range '0' to '9', followed by ASCII character in the range '0' to '9' or ASCII character in the range '0' to '9', followed by ASCII character in the range '0' to '9', followed by string \"-\", followed by ASCII character in the range '0' to '9', followed by ASCII character in the range '0' to '9' or ASCII character in the range '0' to '9', followed by ASCII character in the range '0' to '9' or string \"*\" or string \",\"",
      rest, context, line, offset}
   end
 
@@ -127,6 +127,8 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__16(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
+
     cron__17(
       rest,
       (
@@ -141,6 +143,8 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__17(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
+
     cron__18(
       rest,
       [
@@ -212,6 +216,8 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__27(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
+
     cron__28(
       rest,
       (
@@ -274,6 +280,8 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__35(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
+
     cron__36(
       rest,
       (
@@ -288,6 +296,7 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__36(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
     cron__37(rest, [range: :lists.reverse(user_acc)] ++ acc, stack, context, line, offset)
   end
 
@@ -351,6 +360,8 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__49(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
+
     cron__50(
       rest,
       (
@@ -413,6 +424,8 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__57(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
+
     cron__58(
       rest,
       (
@@ -427,6 +440,7 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__58(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
     cron__59(rest, [range: :lists.reverse(user_acc)] ++ acc, stack, context, line, offset)
   end
 
@@ -499,6 +513,8 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__69(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
+
     cron__70(
       rest,
       (
@@ -513,6 +529,7 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__70(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
     cron__71(rest, [step: :lists.reverse(user_acc)] ++ acc, stack, context, line, offset)
   end
 
@@ -605,6 +622,8 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__88(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
+
     cron__89(
       rest,
       (
@@ -619,6 +638,8 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__89(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
+
     cron__90(
       rest,
       [
@@ -690,6 +711,8 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__99(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
+
     cron__100(
       rest,
       (
@@ -752,6 +775,8 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__107(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
+
     cron__108(
       rest,
       (
@@ -766,6 +791,7 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__108(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
     cron__109(rest, [range: :lists.reverse(user_acc)] ++ acc, stack, context, line, offset)
   end
 
@@ -829,6 +855,8 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__121(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
+
     cron__122(
       rest,
       (
@@ -891,6 +919,8 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__129(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
+
     cron__130(
       rest,
       (
@@ -905,6 +935,7 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__130(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
     cron__131(rest, [range: :lists.reverse(user_acc)] ++ acc, stack, context, line, offset)
   end
 
@@ -977,6 +1008,8 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__141(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
+
     cron__142(
       rest,
       (
@@ -991,6 +1024,7 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__142(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
     cron__143(rest, [step: :lists.reverse(user_acc)] ++ acc, stack, context, line, offset)
   end
 
@@ -1040,7 +1074,8 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__147(rest, _acc, _stack, context, line, offset) do
-    {:error, "expected byte equal to ?  or equal to 9", rest, context, line, offset}
+    {:error, "expected ASCII character equal to ' ' or equal to '\\t'", rest, context, line,
+     offset}
   end
 
   defp cron__148(<<x0::integer, rest::binary>>, acc, stack, context, comb__line, comb__offset)
@@ -1057,10 +1092,12 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__149(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
     cron__151(rest, acc, stack, context, line, offset)
   end
 
   defp cron__151(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
     cron__152(rest, [] ++ acc, stack, context, line, offset)
   end
 
@@ -1078,7 +1115,7 @@ defmodule Oban.Crontab.Parser do
 
   defp cron__155(rest, _acc, _stack, context, line, offset) do
     {:error,
-     "expected string \"*\" or byte in the range ?0..?9, followed by byte in the range ?0..?9, followed by string \"-\", followed by byte in the range ?0..?9, followed by byte in the range ?0..?9, followed by string \"/\", followed by byte in the range ?0..?9, followed by byte in the range ?0..?9 or byte in the range ?0..?9, followed by byte in the range ?0..?9, followed by string \"-\", followed by byte in the range ?0..?9, followed by byte in the range ?0..?9 or byte in the range ?0..?9, followed by byte in the range ?0..?9 or string \"*\" or string \",\"",
+     "expected string \"*\" or ASCII character in the range '0' to '9', followed by ASCII character in the range '0' to '9', followed by string \"-\", followed by ASCII character in the range '0' to '9', followed by ASCII character in the range '0' to '9', followed by string \"/\", followed by ASCII character in the range '0' to '9', followed by ASCII character in the range '0' to '9' or ASCII character in the range '0' to '9', followed by ASCII character in the range '0' to '9', followed by string \"-\", followed by ASCII character in the range '0' to '9', followed by ASCII character in the range '0' to '9' or ASCII character in the range '0' to '9', followed by ASCII character in the range '0' to '9' or string \"*\" or string \",\"",
      rest, context, line, offset}
   end
 
@@ -1150,6 +1187,8 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__168(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
+
     cron__169(
       rest,
       (
@@ -1164,6 +1203,8 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__169(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
+
     cron__170(
       rest,
       [
@@ -1235,6 +1276,8 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__179(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
+
     cron__180(
       rest,
       (
@@ -1297,6 +1340,8 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__187(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
+
     cron__188(
       rest,
       (
@@ -1311,6 +1356,7 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__188(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
     cron__189(rest, [range: :lists.reverse(user_acc)] ++ acc, stack, context, line, offset)
   end
 
@@ -1374,6 +1420,8 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__201(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
+
     cron__202(
       rest,
       (
@@ -1436,6 +1484,8 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__209(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
+
     cron__210(
       rest,
       (
@@ -1450,6 +1500,7 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__210(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
     cron__211(rest, [range: :lists.reverse(user_acc)] ++ acc, stack, context, line, offset)
   end
 
@@ -1522,6 +1573,8 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__221(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
+
     cron__222(
       rest,
       (
@@ -1536,6 +1589,7 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__222(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
     cron__223(rest, [step: :lists.reverse(user_acc)] ++ acc, stack, context, line, offset)
   end
 
@@ -1628,6 +1682,8 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__240(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
+
     cron__241(
       rest,
       (
@@ -1642,6 +1698,8 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__241(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
+
     cron__242(
       rest,
       [
@@ -1713,6 +1771,8 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__251(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
+
     cron__252(
       rest,
       (
@@ -1775,6 +1835,8 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__259(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
+
     cron__260(
       rest,
       (
@@ -1789,6 +1851,7 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__260(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
     cron__261(rest, [range: :lists.reverse(user_acc)] ++ acc, stack, context, line, offset)
   end
 
@@ -1852,6 +1915,8 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__273(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
+
     cron__274(
       rest,
       (
@@ -1914,6 +1979,8 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__281(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
+
     cron__282(
       rest,
       (
@@ -1928,6 +1995,7 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__282(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
     cron__283(rest, [range: :lists.reverse(user_acc)] ++ acc, stack, context, line, offset)
   end
 
@@ -2000,6 +2068,8 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__293(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
+
     cron__294(
       rest,
       (
@@ -2014,6 +2084,7 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__294(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
     cron__295(rest, [step: :lists.reverse(user_acc)] ++ acc, stack, context, line, offset)
   end
 
@@ -2046,6 +2117,7 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__296(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
     cron__297(rest, [hours: :lists.reverse(user_acc)] ++ acc, stack, context, line, offset)
   end
 
@@ -2063,7 +2135,8 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__299(rest, _acc, _stack, context, line, offset) do
-    {:error, "expected byte equal to ?  or equal to 9", rest, context, line, offset}
+    {:error, "expected ASCII character equal to ' ' or equal to '\\t'", rest, context, line,
+     offset}
   end
 
   defp cron__300(<<x0::integer, rest::binary>>, acc, stack, context, comb__line, comb__offset)
@@ -2080,10 +2153,12 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__301(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
     cron__303(rest, acc, stack, context, line, offset)
   end
 
   defp cron__303(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
     cron__304(rest, [] ++ acc, stack, context, line, offset)
   end
 
@@ -2101,7 +2176,7 @@ defmodule Oban.Crontab.Parser do
 
   defp cron__307(rest, _acc, _stack, context, line, offset) do
     {:error,
-     "expected string \"*\" or byte in the range ?0..?9, followed by byte in the range ?0..?9, followed by string \"-\", followed by byte in the range ?0..?9, followed by byte in the range ?0..?9, followed by string \"/\", followed by byte in the range ?0..?9, followed by byte in the range ?0..?9 or byte in the range ?0..?9, followed by byte in the range ?0..?9, followed by string \"-\", followed by byte in the range ?0..?9, followed by byte in the range ?0..?9 or byte in the range ?0..?9, followed by byte in the range ?0..?9 or string \"*\" or string \",\"",
+     "expected string \"*\" or ASCII character in the range '0' to '9', followed by ASCII character in the range '0' to '9', followed by string \"-\", followed by ASCII character in the range '0' to '9', followed by ASCII character in the range '0' to '9', followed by string \"/\", followed by ASCII character in the range '0' to '9', followed by ASCII character in the range '0' to '9' or ASCII character in the range '0' to '9', followed by ASCII character in the range '0' to '9', followed by string \"-\", followed by ASCII character in the range '0' to '9', followed by ASCII character in the range '0' to '9' or ASCII character in the range '0' to '9', followed by ASCII character in the range '0' to '9' or string \"*\" or string \",\"",
      rest, context, line, offset}
   end
 
@@ -2173,6 +2248,8 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__320(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
+
     cron__321(
       rest,
       (
@@ -2187,6 +2264,8 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__321(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
+
     cron__322(
       rest,
       [
@@ -2258,6 +2337,8 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__331(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
+
     cron__332(
       rest,
       (
@@ -2320,6 +2401,8 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__339(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
+
     cron__340(
       rest,
       (
@@ -2334,6 +2417,7 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__340(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
     cron__341(rest, [range: :lists.reverse(user_acc)] ++ acc, stack, context, line, offset)
   end
 
@@ -2397,6 +2481,8 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__353(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
+
     cron__354(
       rest,
       (
@@ -2459,6 +2545,8 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__361(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
+
     cron__362(
       rest,
       (
@@ -2473,6 +2561,7 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__362(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
     cron__363(rest, [range: :lists.reverse(user_acc)] ++ acc, stack, context, line, offset)
   end
 
@@ -2545,6 +2634,8 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__373(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
+
     cron__374(
       rest,
       (
@@ -2559,6 +2650,7 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__374(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
     cron__375(rest, [step: :lists.reverse(user_acc)] ++ acc, stack, context, line, offset)
   end
 
@@ -2651,6 +2743,8 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__392(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
+
     cron__393(
       rest,
       (
@@ -2665,6 +2759,8 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__393(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
+
     cron__394(
       rest,
       [
@@ -2736,6 +2832,8 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__403(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
+
     cron__404(
       rest,
       (
@@ -2798,6 +2896,8 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__411(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
+
     cron__412(
       rest,
       (
@@ -2812,6 +2912,7 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__412(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
     cron__413(rest, [range: :lists.reverse(user_acc)] ++ acc, stack, context, line, offset)
   end
 
@@ -2875,6 +2976,8 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__425(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
+
     cron__426(
       rest,
       (
@@ -2937,6 +3040,8 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__433(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
+
     cron__434(
       rest,
       (
@@ -2951,6 +3056,7 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__434(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
     cron__435(rest, [range: :lists.reverse(user_acc)] ++ acc, stack, context, line, offset)
   end
 
@@ -3023,6 +3129,8 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__445(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
+
     cron__446(
       rest,
       (
@@ -3037,6 +3145,7 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__446(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
     cron__447(rest, [step: :lists.reverse(user_acc)] ++ acc, stack, context, line, offset)
   end
 
@@ -3069,6 +3178,7 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__448(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
     cron__449(rest, [days: :lists.reverse(user_acc)] ++ acc, stack, context, line, offset)
   end
 
@@ -3086,7 +3196,8 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__451(rest, _acc, _stack, context, line, offset) do
-    {:error, "expected byte equal to ?  or equal to 9", rest, context, line, offset}
+    {:error, "expected ASCII character equal to ' ' or equal to '\\t'", rest, context, line,
+     offset}
   end
 
   defp cron__452(<<x0::integer, rest::binary>>, acc, stack, context, comb__line, comb__offset)
@@ -3103,10 +3214,12 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__453(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
     cron__455(rest, acc, stack, context, line, offset)
   end
 
   defp cron__455(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
     cron__456(rest, [] ++ acc, stack, context, line, offset)
   end
 
@@ -3128,7 +3241,7 @@ defmodule Oban.Crontab.Parser do
 
   defp cron__461(rest, _acc, _stack, context, line, offset) do
     {:error,
-     "expected string \"JAN\" or string \"FEB\" or string \"MAR\" or string \"APR\" or string \"MAY\" or string \"JUN\" or string \"JUL\" or string \"AUG\" or string \"SEP\" or string \"OCT\" or string \"NOV\" or string \"DEC\" or string \"*\" or byte in the range ?0..?9, followed by byte in the range ?0..?9, followed by string \"-\", followed by byte in the range ?0..?9, followed by byte in the range ?0..?9, followed by string \"/\", followed by byte in the range ?0..?9, followed by byte in the range ?0..?9 or byte in the range ?0..?9, followed by byte in the range ?0..?9, followed by string \"-\", followed by byte in the range ?0..?9, followed by byte in the range ?0..?9 or byte in the range ?0..?9, followed by byte in the range ?0..?9 or string \"*\" or string \",\"",
+     "expected string \"JAN\" or string \"FEB\" or string \"MAR\" or string \"APR\" or string \"MAY\" or string \"JUN\" or string \"JUL\" or string \"AUG\" or string \"SEP\" or string \"OCT\" or string \"NOV\" or string \"DEC\" or string \"*\" or ASCII character in the range '0' to '9', followed by ASCII character in the range '0' to '9', followed by string \"-\", followed by ASCII character in the range '0' to '9', followed by ASCII character in the range '0' to '9', followed by string \"/\", followed by ASCII character in the range '0' to '9', followed by ASCII character in the range '0' to '9' or ASCII character in the range '0' to '9', followed by ASCII character in the range '0' to '9', followed by string \"-\", followed by ASCII character in the range '0' to '9', followed by ASCII character in the range '0' to '9' or ASCII character in the range '0' to '9', followed by ASCII character in the range '0' to '9' or string \"*\" or string \",\"",
      rest, context, line, offset}
   end
 
@@ -3200,6 +3313,8 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__474(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
+
     cron__475(
       rest,
       (
@@ -3214,6 +3329,8 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__475(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
+
     cron__476(
       rest,
       [
@@ -3285,6 +3402,8 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__485(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
+
     cron__486(
       rest,
       (
@@ -3347,6 +3466,8 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__493(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
+
     cron__494(
       rest,
       (
@@ -3361,6 +3482,7 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__494(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
     cron__495(rest, [range: :lists.reverse(user_acc)] ++ acc, stack, context, line, offset)
   end
 
@@ -3424,6 +3546,8 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__507(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
+
     cron__508(
       rest,
       (
@@ -3486,6 +3610,8 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__515(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
+
     cron__516(
       rest,
       (
@@ -3500,6 +3626,7 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__516(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
     cron__517(rest, [range: :lists.reverse(user_acc)] ++ acc, stack, context, line, offset)
   end
 
@@ -3572,6 +3699,8 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__527(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
+
     cron__528(
       rest,
       (
@@ -3586,6 +3715,7 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__528(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
     cron__529(rest, [step: :lists.reverse(user_acc)] ++ acc, stack, context, line, offset)
   end
 
@@ -3659,6 +3789,8 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__533(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
+
     cron__534(
       rest,
       [
@@ -3771,6 +3903,8 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__553(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
+
     cron__554(
       rest,
       (
@@ -3785,6 +3919,8 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__554(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
+
     cron__555(
       rest,
       [
@@ -3856,6 +3992,8 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__564(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
+
     cron__565(
       rest,
       (
@@ -3918,6 +4056,8 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__572(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
+
     cron__573(
       rest,
       (
@@ -3932,6 +4072,7 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__573(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
     cron__574(rest, [range: :lists.reverse(user_acc)] ++ acc, stack, context, line, offset)
   end
 
@@ -3995,6 +4136,8 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__586(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
+
     cron__587(
       rest,
       (
@@ -4057,6 +4200,8 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__594(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
+
     cron__595(
       rest,
       (
@@ -4071,6 +4216,7 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__595(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
     cron__596(rest, [range: :lists.reverse(user_acc)] ++ acc, stack, context, line, offset)
   end
 
@@ -4143,6 +4289,8 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__606(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
+
     cron__607(
       rest,
       (
@@ -4157,6 +4305,7 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__607(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
     cron__608(rest, [step: :lists.reverse(user_acc)] ++ acc, stack, context, line, offset)
   end
 
@@ -4230,6 +4379,8 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__612(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
+
     cron__613(
       rest,
       [
@@ -4278,6 +4429,7 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__614(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
     cron__615(rest, [months: :lists.reverse(user_acc)] ++ acc, stack, context, line, offset)
   end
 
@@ -4295,7 +4447,8 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__617(rest, _acc, _stack, context, line, offset) do
-    {:error, "expected byte equal to ?  or equal to 9", rest, context, line, offset}
+    {:error, "expected ASCII character equal to ' ' or equal to '\\t'", rest, context, line,
+     offset}
   end
 
   defp cron__618(<<x0::integer, rest::binary>>, acc, stack, context, comb__line, comb__offset)
@@ -4312,10 +4465,12 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__619(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
     cron__621(rest, acc, stack, context, line, offset)
   end
 
   defp cron__621(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
     cron__622(rest, [] ++ acc, stack, context, line, offset)
   end
 
@@ -4337,7 +4492,7 @@ defmodule Oban.Crontab.Parser do
 
   defp cron__627(rest, _acc, _stack, context, line, offset) do
     {:error,
-     "expected string \"MON\" or string \"TUE\" or string \"WED\" or string \"THU\" or string \"FRI\" or string \"SAT\" or string \"SUN\" or string \"*\" or byte in the range ?0..?9, followed by byte in the range ?0..?9, followed by string \"-\", followed by byte in the range ?0..?9, followed by byte in the range ?0..?9, followed by string \"/\", followed by byte in the range ?0..?9, followed by byte in the range ?0..?9 or byte in the range ?0..?9, followed by byte in the range ?0..?9, followed by string \"-\", followed by byte in the range ?0..?9, followed by byte in the range ?0..?9 or byte in the range ?0..?9, followed by byte in the range ?0..?9 or string \"*\" or string \",\"",
+     "expected string \"MON\" or string \"TUE\" or string \"WED\" or string \"THU\" or string \"FRI\" or string \"SAT\" or string \"SUN\" or string \"*\" or ASCII character in the range '0' to '9', followed by ASCII character in the range '0' to '9', followed by string \"-\", followed by ASCII character in the range '0' to '9', followed by ASCII character in the range '0' to '9', followed by string \"/\", followed by ASCII character in the range '0' to '9', followed by ASCII character in the range '0' to '9' or ASCII character in the range '0' to '9', followed by ASCII character in the range '0' to '9', followed by string \"-\", followed by ASCII character in the range '0' to '9', followed by ASCII character in the range '0' to '9' or ASCII character in the range '0' to '9', followed by ASCII character in the range '0' to '9' or string \"*\" or string \",\"",
      rest, context, line, offset}
   end
 
@@ -4409,6 +4564,8 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__640(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
+
     cron__641(
       rest,
       (
@@ -4423,6 +4580,8 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__641(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
+
     cron__642(
       rest,
       [
@@ -4494,6 +4653,8 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__651(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
+
     cron__652(
       rest,
       (
@@ -4556,6 +4717,8 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__659(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
+
     cron__660(
       rest,
       (
@@ -4570,6 +4733,7 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__660(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
     cron__661(rest, [range: :lists.reverse(user_acc)] ++ acc, stack, context, line, offset)
   end
 
@@ -4633,6 +4797,8 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__673(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
+
     cron__674(
       rest,
       (
@@ -4695,6 +4861,8 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__681(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
+
     cron__682(
       rest,
       (
@@ -4709,6 +4877,7 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__682(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
     cron__683(rest, [range: :lists.reverse(user_acc)] ++ acc, stack, context, line, offset)
   end
 
@@ -4781,6 +4950,8 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__693(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
+
     cron__694(
       rest,
       (
@@ -4795,6 +4966,7 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__694(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
     cron__695(rest, [step: :lists.reverse(user_acc)] ++ acc, stack, context, line, offset)
   end
 
@@ -4848,6 +5020,8 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__699(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
+
     cron__700(
       rest,
       [
@@ -4960,6 +5134,8 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__719(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
+
     cron__720(
       rest,
       (
@@ -4974,6 +5150,8 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__720(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
+
     cron__721(
       rest,
       [
@@ -5045,6 +5223,8 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__730(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
+
     cron__731(
       rest,
       (
@@ -5107,6 +5287,8 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__738(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
+
     cron__739(
       rest,
       (
@@ -5121,6 +5303,7 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__739(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
     cron__740(rest, [range: :lists.reverse(user_acc)] ++ acc, stack, context, line, offset)
   end
 
@@ -5184,6 +5367,8 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__752(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
+
     cron__753(
       rest,
       (
@@ -5246,6 +5431,8 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__760(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
+
     cron__761(
       rest,
       (
@@ -5260,6 +5447,7 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__761(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
     cron__762(rest, [range: :lists.reverse(user_acc)] ++ acc, stack, context, line, offset)
   end
 
@@ -5332,6 +5520,8 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__772(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
+
     cron__773(
       rest,
       (
@@ -5346,6 +5536,7 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__773(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
     cron__774(rest, [step: :lists.reverse(user_acc)] ++ acc, stack, context, line, offset)
   end
 
@@ -5399,6 +5590,8 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__778(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
+
     cron__779(
       rest,
       [
@@ -5447,6 +5640,7 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__780(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
     cron__781(rest, [weekdays: :lists.reverse(user_acc)] ++ acc, stack, context, line, offset)
   end
 
