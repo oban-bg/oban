@@ -14,6 +14,7 @@ defmodule Oban.Queue.Executor do
           job: Job.t(),
           kind: any(),
           meta: map(),
+          queue_time: integer(),
           start_mono: integer(),
           start_time: integer(),
           stop_mono: integer(),
@@ -38,6 +39,7 @@ defmodule Oban.Queue.Executor do
     :worker,
     safe: true,
     duration: 0,
+    queue_time: 0,
     stacktrace: [],
     state: :unset
   ]
@@ -108,8 +110,10 @@ defmodule Oban.Queue.Executor do
   @spec record_finished(t()) :: t()
   def record_finished(%__MODULE__{} = exec) do
     stop_mono = System.monotonic_time(:microsecond)
+    duration = stop_mono - exec.start_mono
+    queue_time = DateTime.diff(exec.job.attempted_at, exec.job.scheduled_at, :microsecond)
 
-    %{exec | duration: stop_mono - exec.start_mono, stop_mono: stop_mono}
+    %{exec | duration: duration, queue_time: queue_time, stop_mono: stop_mono}
   end
 
   @spec report_finished(t()) :: t()
@@ -200,19 +204,18 @@ defmodule Oban.Queue.Executor do
   defp backoff(worker, job), do: worker.backoff(job)
 
   defp execute_stop(exec) do
-    event_measurements = %{
-      duration: exec.duration,
-      enqueue_time: DateTime.diff(exec.job.attempted_at, exec.job.scheduled_at, :microsecond)
-    }
+    measurements = %{duration: exec.duration, queue_time: exec.queue_time}
 
-    :telemetry.execute([:oban, :job, :stop], event_measurements, exec.meta)
+    :telemetry.execute([:oban, :job, :stop], measurements, exec.meta)
   end
 
   defp execute_exception(exec) do
+    measurements = %{duration: exec.duration, queue_time: exec.queue_time}
+
     meta =
       Map.merge(exec.meta(), %{kind: exec.kind, error: exec.error, stacktrace: exec.stacktrace})
 
-    :telemetry.execute([:oban, :job, :exception], %{duration: exec.duration}, meta)
+    :telemetry.execute([:oban, :job, :exception], measurements, meta)
   end
 
   defp current_stacktrace do

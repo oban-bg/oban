@@ -47,6 +47,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - [Oban.Telemetry] Add `span/3` for reporting normalized `:start`, `:stop` and
   `:exception` events with timing information.
 
+- [Oban.Telemetry] Include the configured `prefix` in all event metadata. This
+  makes it possible to identify which schema prefix a job ran with, which is
+  useful for differentiating errors in a multi-tenant system.
+
+- [Oban.Telemetry] Include `queue_time` as a measurement with `stop` and
+  `exception` events. This is a measurement in milliseconds of the amount of
+  time between when a job was scheduled to run and when it was last attempted.
+
 - [Oban.Worker] Add `:infinity` option for unique period.
 
 - [Oban.Crontab] Add support for non-standard expressions such as `@daily`,

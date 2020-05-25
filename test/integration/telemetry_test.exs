@@ -34,15 +34,14 @@ defmodule Oban.Integration.TelemetryTest do
 
     assert_receive {:event, :start, started_time, stop_meta}
 
-    assert_receive {:event, :stop, %{duration: stop_duration, enqueue_time: enqueue_time},
-                    stop_meta}
+    assert_receive {:event, :stop, %{duration: stop_duration, queue_time: queue_time}, stop_meta}
 
     assert_receive {:event, :exception, exception_duration, %{kind: :error} = exception_meta}
     assert_receive {:event, :exception, error_duration, %{kind: :error} = error_meta}
 
     assert started_time > 0
     assert stop_duration > 0
-    assert enqueue_time > 0
+    assert queue_time > 0
     assert exception_duration > 0
     assert error_duration > 0
 
