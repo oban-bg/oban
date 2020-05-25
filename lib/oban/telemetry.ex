@@ -8,17 +8,17 @@ defmodule Oban.Telemetry do
 
   * `[:oban, :job, :start]` — at the point a job is fetched from the database and will execute
   * `[:oban, :job, :stop]` — after a job succeeds and the success is recorded in the database
-  * `[:oban, :job, :exeception]` — after a job fails and the failure is recorded in the database
+  * `[:oban, :job, :exception]` — after a job fails and the failure is recorded in the database
 
   All job events share the same details about the job that was executed. In addition, failed jobs
   provide the error type, the error itself, and the stacktrace. The following chart shows which
   metadata you can expect for each event:
 
-  | event        | measures       | metadata                                                                           |
-  | ------------ | -------------- | ---------------------------------------------------------------------------------- |
-  | `:start`     | `:system_time` | `:id, :args, :queue, :worker, :attempt, :max_attempts`                             |
-  | `:stop`      | `:duration`    | `:id, :args, :queue, :worker, :attempt, :max_attempts`                             |
-  | `:exception` | `:duration`    | `:id, :args, :queue, :worker, :attempt, :max_attempts, :kind, :error, :stacktrace` |
+  | event        | measures       | metadata                                                                                      |
+  | ------------ | -------------- | --------------------------------------------------------------------------------------------- |
+  | `:start`     | `:system_time` | `:id, :args, :queue, :worker, :attempt, :max_attempts, :prefix`                               |
+  | `:stop`      | `:duration`    | `:id, :args, :queue, :worker, :attempt, :max_attempts, :prefix`                               |
+  | `:exception` | `:duration`    | `:id, :args, :queue, :worker, :attempt, :max_attempts, , :prefix, :kind, :error, :stacktrace` |
 
   For `:exception` events the metadata includes details about what caused the failure. The `:kind`
   value is determined by how an error occurred. Here are the possible kinds:
@@ -38,7 +38,7 @@ defmodule Oban.Telemetry do
   | event                      | metadata                               |
   | -------------------------- | -------------------------------------- |
   | `[:oban, :circuit, :trip]` | `:error, :message, :name, :stacktrace` |
-  | `[:open, :circuit, :open]` | `:name`                                |
+  | `[:oban, :circuit, :open]` | `:name`                                |
 
   Metadata
 
@@ -99,7 +99,7 @@ defmodule Oban.Telemetry do
 
   * `args` — a map of the job's raw arguments
   * `duration` — the job's runtime duration, in the native time unit
-  * `event` — either `:success` or `:failure` dependening on whether the job succeeded or errored
+  * `event` — either `:success` or `:failure` depending on whether the job succeeded or errored
   * `queue` — the job's queue
   * `source` — always "oban"
   * `system_time` — when the job started, in microseconds
@@ -116,7 +116,7 @@ defmodule Oban.Telemetry do
       :ok = Oban.Telemetry.attach_default_logger(:debug)
   """
   @doc since: "0.4.0"
-  @spec attach_default_logger() :: :ok | {:error, :already_exists}
+  @spec attach_default_logger(Logger.level()) :: :ok | {:error, :already_exists}
   def attach_default_logger(level \\ :info) do
     events = [
       [:oban, :job, :start],
