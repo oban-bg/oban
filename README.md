@@ -1010,4 +1010,4 @@ following commands:
 * Check formatting (`mix format --check-formatted`)
 * Lint with Credo (`mix credo --strict`)
 * Run all tests (`mix test --raise`)
-* Run Dialyzer (`mix dialyzer --halt-exit-status`)
+* Run Dialyzer (`mix dialyzer`)
