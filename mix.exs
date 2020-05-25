@@ -83,7 +83,7 @@ defmodule Oban.MixProject do
         "format --check-formatted",
         "credo --strict",
         "test --raise",
-        "dialyzer --halt-exit-status"
+        "dialyzer"
       ]
     ]
   end
