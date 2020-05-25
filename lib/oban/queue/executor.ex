@@ -70,7 +70,7 @@ defmodule Oban.Queue.Executor do
     Breaker.with_retry(fn -> report_finished(exec).state end)
   end
 
-  defp record_started(%__MODULE__{} = exec) do
+  def record_started(%__MODULE__{} = exec) do
     :telemetry.execute([:oban, :job, :start], %{system_time: exec.start_time}, exec.meta)
 
     exec
