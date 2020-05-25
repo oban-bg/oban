@@ -43,4 +43,17 @@ defmodule Oban.Queue.ExecutorTest do
       assert message =~ "{:bad, :this_will_warn}"
     end
   end
+
+  describe "new/2" do
+    test "include prefix in metadata for job events" do
+      job = %Job{args: %{"mode" => "ok"}, worker: to_string(Worker)}
+
+      assert "public" ==
+               [repo: Repo]
+               |> Config.new()
+               |> Executor.new(job)
+               |> Map.from_struct()
+               |> get_in([:meta, :prefix])
+    end
+  end
 end

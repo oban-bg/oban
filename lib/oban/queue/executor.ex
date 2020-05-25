@@ -47,7 +47,7 @@ defmodule Oban.Queue.Executor do
     struct!(__MODULE__,
       conf: conf,
       job: job,
-      meta: Map.take(job, [:id, :args, :queue, :worker, :attempt, :max_attempts]),
+      meta: event_metadata(conf, job),
       start_mono: System.monotonic_time(),
       start_time: System.system_time()
     )
@@ -70,7 +70,6 @@ defmodule Oban.Queue.Executor do
     Breaker.with_retry(fn -> report_finished(exec).state end)
   end
 
-  @spec record_started(t()) :: t()
   def record_started(%__MODULE__{} = exec) do
     :telemetry.execute([:oban, :job, :start], %{system_time: exec.start_time}, exec.meta)
 
@@ -215,5 +214,11 @@ defmodule Oban.Queue.Executor do
     self()
     |> Process.info(:current_stacktrace)
     |> elem(1)
+  end
+
+  def event_metadata(conf, job) do
+    job
+    |> Map.take([:id, :args, :queue, :worker, :attempt, :max_attempts])
+    |> Map.put(:prefix, conf.prefix)
   end
 end
