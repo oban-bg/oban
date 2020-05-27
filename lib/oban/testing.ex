@@ -112,7 +112,7 @@ defmodule Oban.Testing do
   import Ecto.Query, only: [limit: 2, order_by: 2, select: 2, where: 2, where: 3]
 
   alias Ecto.Changeset
-  alias Oban.Job
+  alias Oban.{Job, Worker}
 
   @wait_interval 10
 
