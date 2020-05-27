@@ -5,6 +5,59 @@ defmodule Oban.TestingTest do
 
   @moduletag :integration
 
+  defmodule InvalidWorker do
+    def perform(_), do: :ok
+  end
+
+  defmodule MisbehavedWorker do
+    use Oban.Worker
+
+    @impl Oban.Worker
+    def perform(%{args: %{"action" => "bad_atom"}}), do: :bad
+    def perform(%{args: %{"action" => "bad_string"}}), do: "bad"
+    def perform(%{args: %{"action" => "bad_error"}}), do: :error
+    def perform(%{args: %{"action" => "bad_tuple"}}), do: {:ok, "bad", :bad}
+    def perform(%{args: %{"action" => "bad_snooze"}}), do: {:snooze, true}
+  end
+
+  describe "perform_job/3" do
+    test "verifying that the worker implements the Oban.Worker behaviour" do
+      message = "worker to be a module that implements"
+
+      assert_perform_error(BogusWorker, message)
+      assert_perform_error(InvalidWorker, message)
+    end
+
+    test "creating a valid job out of the args and options" do
+      assert_perform_error(Worker, %{}, [max_attempts: -1], "args and opts to build a valid job")
+
+      assert_perform_error(
+        Worker,
+        %{},
+        [max_attempts: -1],
+        "max_attempts: must be greater than 0"
+      )
+
+      assert_perform_error(Worker, %{}, [priority: -1], "priority: must be greater than -1")
+    end
+
+    test "validating the return value of the worker's perform/1 function" do
+      message = "result to be one of `:ok`"
+
+      assert_perform_error(MisbehavedWorker, %{"action" => "bad_atom"}, message)
+      assert_perform_error(MisbehavedWorker, %{"action" => "bad_string"}, message)
+      assert_perform_error(MisbehavedWorker, %{"action" => "bad_error"}, message)
+      assert_perform_error(MisbehavedWorker, %{"action" => "bad_tuple"}, message)
+      assert_perform_error(MisbehavedWorker, %{"action" => "bad_snooze"}, message)
+    end
+
+    test "returning the value of worker's perform/1 function" do
+      assert :ok = perform_job(Worker, %{ref: 1, action: "OK"})
+      assert :discard = perform_job(Worker, %{ref: 1, action: "DISCARD"})
+      assert {:error, _} = perform_job(Worker, %{ref: 1, action: "ERROR"})
+    end
+  end
+
   describe "all_enqueued/1" do
     test "retrieving a filtered list of enqueued jobs" do
       insert!(%{id: 1, ref: "a"}, worker: Ping, queue: :alpha)
@@ -104,5 +157,21 @@ defmodule Oban.TestingTest do
 
       refute_enqueued [worker: Ping, args: %{id: 1}], 20
     end
+  end
+
+  defp assert_perform_error(worker, message) when is_binary(message) do
+    assert_perform_error(worker, %{}, [], message)
+  end
+
+  defp assert_perform_error(worker, args, message) when is_binary(message) do
+    assert_perform_error(worker, args, [], message)
+  end
+
+  defp assert_perform_error(worker, args, opts, message) do
+    perform_job(worker, args, opts)
+
+    assert false, "This should not be reached"
+  rescue
+    error in [ExUnit.AssertionError] -> assert error.message =~ message
   end
 end

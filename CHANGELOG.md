@@ -44,6 +44,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   any calls to the worker's `backoff/1` callback, allowing workers to calculate
   a custom backoff depending on the error that failed the job.
 
+- [Oban.Worker] Add `:infinity` option for unique period.
+
 - [Oban.Telemetry] Add `span/3` for reporting normalized `:start`, `:stop` and
   `:exception` events with timing information.
 
@@ -55,7 +57,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   `exception` events. This is a measurement in milliseconds of the amount of
   time between when a job was scheduled to run and when it was last attempted.
 
-- [Oban.Worker] Add `:infinity` option for unique period.
+- [Oban.Testing] Add `perform_job/2,3` helper to automate validating,
+  normalizing and performing jobs while unit testing. This is now the preferred
+  way to unit test workers.
 
 - [Oban.Crontab] Add support for non-standard expressions such as `@daily`,
   `@hourly`, `@midnight`, etc.
@@ -83,6 +87,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - [Oban.Producer] Stop dispatching jobs immediately on queue startup. Instead,
   only dispatch on the first poll. This makes it possible to send the producer
   a message or allow sandboxed connection access before the initial dispatch.
+
+- [Oban.Worker] Limit default backoff calculations to 20 attempts, or roughly 24
+  days. The change addresses an issue with snoozing, which can increase a job's
+  attempts into the hundreds or thousands. In this situation the algorithm
+  calculates the backoff using a ratio of attempts to max attempts, but is still
+  limited to roughly 24 days.
 
 ### Breaking Changes
 

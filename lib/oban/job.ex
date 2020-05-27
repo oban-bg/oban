@@ -166,7 +166,7 @@ defmodule Oban.Job do
     |> put_state()
     |> validate_length(:queue, min: 1, max: 128)
     |> validate_length(:worker, min: 1, max: 128)
-    |> validate_number(:max_attempts, greater_than: 0, less_than: 50)
+    |> validate_number(:max_attempts, greater_than: 0)
     |> validate_number(:priority, greater_than: -1, less_than: 4)
   end
 

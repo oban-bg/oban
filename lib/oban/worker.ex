@@ -96,13 +96,15 @@ defmodule Oban.Worker do
 
   ## Customizing Backoff
 
-  When jobs fail they may be retried again in the future using a backoff algorithm. By default
-  the backoff is exponential with a fixed padding of 15 seconds. This may be too aggressive for
-  jobs that are resource intensive or need more time between retries. To make backoff scheduling
-  flexible a worker module may define a custom backoff function.
+  When jobs fail they may be retried again in the future using a backoff algorithm. By default the
+  backoff is exponential with a fixed padding of 15 seconds. The default backoff is clamped to a
+  maximum of 24 days, the equivalent of the 20th attempt.
 
-  This worker defines a backoff function that delays retries using a variant of the historic
-  Resque/Sidekiq algorithm:
+  If the default strategy is too aggressive or otherwise unsuited to your app's workload you can
+  define a custom backoff function using the `backoff/1` callback.
+
+  The following worker defines a `backoff/1` function that delays retries using a variant of the
+  historic Resque/Sidekiq algorithm:
 
       defmodule MyApp.SidekiqBackoffWorker do
         use Oban.Worker
@@ -190,6 +192,12 @@ defmodule Oban.Worker do
   alias Oban.Job
 
   @type t :: module()
+  @type result ::
+          :ok
+          | :discard
+          | {:ok, ignored :: term()}
+          | {:error, reason :: term()}
+          | {:snooze, seconds :: pos_integer()}
 
   @doc """
   Build a job changeset for this worker with optional overrides.
@@ -224,12 +232,10 @@ defmodule Oban.Worker do
   the key type when the job was enqueued. The `args` are stored as `jsonb` in PostgreSQL and the
   serialization process automatically stringifies all keys.
   """
-  @callback perform(job :: Job.t()) ::
-              :ok
-              | :discard
-              | {:ok, ignored :: term()}
-              | {:error, reason :: term()}
-              | {:snooze, seconds :: pos_integer()}
+  @callback perform(job :: Job.t()) :: result()
+
+  @max_for_backoff 20
+  @base_backoff 15
 
   @doc false
   defmacro __using__(opts) do
@@ -250,8 +256,8 @@ defmodule Oban.Worker do
       end
 
       @impl Worker
-      def backoff(%Job{attempt: attempt}) do
-        Worker.backoff(attempt)
+      def backoff(%Job{} = job) do
+        Worker.backoff(job)
       end
 
       @impl Worker
@@ -276,9 +282,15 @@ defmodule Oban.Worker do
   def resolve_opts(_key, _opts, opts), do: opts
 
   @doc false
-  @spec backoff(pos_integer(), non_neg_integer()) :: pos_integer()
-  def backoff(attempt, base_backoff \\ 15) when is_integer(attempt) do
-    trunc(:math.pow(2, attempt) + base_backoff)
+  def backoff(%Job{attempt: attempt, max_attempts: max_attempts}) do
+    clamped_attempt =
+      if max_attempts <= @max_for_backoff do
+        attempt
+      else
+        round(attempt / max_attempts * @max_for_backoff)
+      end
+
+    trunc(:math.pow(2, clamped_attempt) + @base_backoff)
   end
 
   defp validate_opt!({:max_attempts, max_attempts}) do

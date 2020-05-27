@@ -24,6 +24,8 @@ defmodule Oban.Integration.SchedulingTest do
     # Not descheduled because it is in the future
     refute_received {:started, 5}
 
+    stop_supervised(Oban)
+
     assert %{state: "available"} = Repo.reload(job_3)
     assert %{state: "scheduled"} = Repo.reload(job_4)
     assert %{state: "scheduled"} = Repo.reload(job_5)

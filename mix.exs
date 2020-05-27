@@ -94,6 +94,13 @@ defmodule Oban.MixProject do
     [
       "README.md",
       "guides/troubleshooting.md",
+      "guides/recipes/unique-jobs.md",
+      "guides/recipes/recursive-jobs.md",
+      "guides/recipes/reliable-scheduling.md",
+      "guides/recipes/reporting-progress.md",
+      "guides/recipes/batch-jobs.md",
+      "guides/recipes/expected-failures.md",
+      "guides/recipes/splitting-queues.md",
       "CHANGELOG.md": [filename: "CHANGELOG.md", title: "CHANGELOG"]
     ]
   end
@@ -101,6 +108,7 @@ defmodule Oban.MixProject do
   defp groups_for_extras do
     [
       Guides: ~r{guides/[^\/]+\.md},
+      Recipes: ~r{guides/recipes/.?},
       Extras: ~r{(README|CHANGELOG).md}
     ]
   end

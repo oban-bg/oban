@@ -1,6 +1,8 @@
 defmodule Oban.WorkerTest do
   use ExUnit.Case, async: true
 
+  use ExUnitProperties
+
   alias Oban.{Job, Worker}
 
   defmodule BasicWorker do
@@ -23,15 +25,8 @@ defmodule Oban.WorkerTest do
       unique: [fields: [:queue, :worker], period: 60, states: [:scheduled]]
 
     @impl Worker
-    def backoff(%{attempt: attempt}), do: attempt * attempt
-
-    @impl Worker
     def perform(%{attempt: attempt}) when attempt > 1, do: attempt
     def perform(%{args: %{"a" => a, "b" => b}}), do: a + b
-
-    @impl Worker
-    def timeout(%{args: %{"timeout" => timeout}}), do: timeout
-    def timeout(_), do: :infinity
   end
 
   describe "new/2" do
@@ -61,27 +56,30 @@ defmodule Oban.WorkerTest do
   end
 
   describe "backoff/1" do
-    test "using aan exponential algorithm with a fixed padding by default" do
-      assert BasicWorker.backoff(%Job{attempt: 1}) == 17
-      assert BasicWorker.backoff(%Job{attempt: 2}) == 19
-      assert BasicWorker.backoff(%Job{attempt: 4}) == 31
-      assert BasicWorker.backoff(%Job{attempt: 5}) == 47
+    property "the backoff increases with subsequent attempts" do
+      check all attempt <- integer(1..19) do
+        first = BasicWorker.backoff(%Job{attempt: attempt, max_attempts: 20})
+        second = BasicWorker.backoff(%Job{attempt: attempt + 1, max_attempts: 20})
+
+        assert first < second
+      end
     end
 
-    test "overriding the backoff computation" do
-      assert CustomWorker.backoff(%Job{attempt: 1}) == 1
-      assert CustomWorker.backoff(%Job{attempt: 2}) == 4
-      assert CustomWorker.backoff(%Job{attempt: 3}) == 9
+    property "the default algorithm never exceeds an upper bound" do
+      check all attempt <- integer(1..999),
+                max_diff <- integer(0..999) do
+        job = %Job{attempt: attempt, max_attempts: attempt + max_diff}
+        backoff = BasicWorker.backoff(job)
+        backoff_for_twenty_attempts = 2_097_167
+
+        assert backoff <= backoff_for_twenty_attempts
+      end
     end
   end
 
   describe "timeout/1" do
     test "the default timeout is infinity" do
       assert BasicWorker.timeout(%Job{}) == :infinity
-    end
-
-    test "the timeout can be overridden" do
-      assert CustomWorker.timeout(%Job{args: %{"timeout" => 60_000}}) == 60_000
     end
   end
 
