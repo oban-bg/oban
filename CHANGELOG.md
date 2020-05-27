@@ -88,6 +88,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   only dispatch on the first poll. This makes it possible to send the producer
   a message or allow sandboxed connection access before the initial dispatch.
 
+- [Oban.Worker] Limit default backoff calculations to 20 attempts, or roughly 24
+  days. The change addresses an issue with snoozing, which can increase a job's
+  attempts into the hundreds or thousands. In this situation the algorithm
+  calculates the backoff using a ratio of attempts to max attempts, but is still
+  limited to roughly 24 days.
+
 ### Breaking Changes
 
 - [Oban.Telemetry] The format for telemetry events has changed to match the new

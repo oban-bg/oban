@@ -75,7 +75,7 @@ defmodule Oban.Integration.Worker do
 
   @impl Worker
   def backoff(%_{args: %{"backoff" => backoff}}), do: backoff
-  def backoff(%_{attempt: attempt}), do: Worker.backoff(attempt)
+  def backoff(%_{} = job), do: Worker.backoff(job)
 
   @impl Worker
   def timeout(%_{args: %{"timeout" => timeout}}), do: timeout

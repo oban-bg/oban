@@ -200,7 +200,7 @@ defmodule Oban.Queue.Executor do
     end
   end
 
-  defp backoff(nil, job), do: Worker.backoff(job.attempt)
+  defp backoff(nil, job), do: Worker.backoff(job)
   defp backoff(worker, job), do: worker.backoff(job)
 
   defp execute_stop(exec) do
