@@ -267,7 +267,7 @@ If you are running tests (which you should be) you'll want to disable pruning
 
 ```elixir
 # config/test.exs
-config :my_app, Oban, crontab: false, queues: false, plugins: false
+config :my_app, Oban, crontab: false, queues: false, prune: :disabled
 ```
 
 ### Configuring Queues
