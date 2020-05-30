@@ -267,10 +267,9 @@ defmodule Oban.Queue.Producer do
   defp cooldown_available?(%State{cooldown_ref: ref}), do: is_nil(ref)
 
   defp fetch_jobs(conf, queue, nonce, count) do
-    case Query.fetch_available_jobs(conf, queue, nonce, count) do
-      {0, nil} -> []
-      {_count, jobs} -> jobs
-    end
+    {:ok, jobs} = Query.fetch_available_jobs(conf, queue, nonce, count)
+
+    jobs
   end
 
   defp start_jobs(jobs, %State{conf: conf, foreman: foreman}) do

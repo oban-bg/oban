@@ -32,9 +32,8 @@ defmodule Oban.Queue.Drainer do
   end
 
   defp fetch_jobs(conf, queue) do
-    case Query.fetch_available_jobs(conf, queue, "draining", @unlimited) do
-      {0, nil} -> []
-      {_count, jobs} -> jobs
-    end
+    {:ok, jobs} = Query.fetch_available_jobs(conf, queue, "draining", @unlimited)
+
+    jobs
   end
 end

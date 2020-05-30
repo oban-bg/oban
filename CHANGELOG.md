@@ -23,6 +23,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   were both "public" and an alternate prefix. In situations where there wasn't
   a public `oban_jobs` table at all it would cause cryptic transaction errors.
 
+- [Oban.Query] Wrap all job fetching in an explicit transaction to enforce `FOR
+  UPDATE SKIP LOCKED` semantics. Prior to this it was possible to run the same
+  job at the same time on multiple nodes.
+
 ### Added
 
 - [Oban] Bubble up errors and exits when draining queues by passing
