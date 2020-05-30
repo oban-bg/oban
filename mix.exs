@@ -94,7 +94,6 @@ defmodule Oban.MixProject do
     [
       "README.md",
       "guides/troubleshooting.md",
-      "guides/recipes/unique-jobs.md",
       "guides/recipes/recursive-jobs.md",
       "guides/recipes/reliable-scheduling.md",
       "guides/recipes/reporting-progress.md",
