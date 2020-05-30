@@ -324,7 +324,7 @@ defmodule Oban.Testing do
 
   # Perform Helpers
 
-  def assert_valid_worker(worker) do
+  defp assert_valid_worker(worker) do
     assert Code.ensure_loaded?(worker) and implements_worker?(worker), """
      Expected worker to be a module that implements the Oban.Worker behaviour, got:
 
