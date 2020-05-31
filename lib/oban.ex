@@ -403,13 +403,7 @@ defmodule Oban do
     local_only? = Keyword.get(opts, :local_only, false)
 
     if local_only? do
-      payload = %{"action" => "start", "queue" => queue, "limit" => limit}
-
-      name
-      |> child_name("Midwife")
-      |> send({:notification, :signal, payload})
-
-      :ok
+      send_signal(name, %{"action" => "start", "queue" => queue, "limit" => limit})
     else
       name
       |> config()
@@ -503,13 +497,7 @@ defmodule Oban do
     local_only? = Keyword.get(opts, :local_only, false)
 
     if local_only? do
-      payload = %{"action" => "stop", "queue" => queue}
-
-      name
-      |> child_name("Midwife")
-      |> send({:notification, :signal, payload})
-
-      :ok
+      send_signal(name, %{"action" => "stop", "queue" => queue})
     else
       name
       |> config()
@@ -551,4 +539,12 @@ defmodule Oban do
   end
 
   defp child_name(name, child), do: Module.concat(name, child)
+
+  defp send_signal(name, payload) do
+    name
+    |> child_name("Midwife")
+    |> send({:notification, :signal, payload})
+
+    :ok
+  end
 end
