@@ -48,11 +48,16 @@ defmodule MyApp.Workers.TimezoneWorker do
 
   @impl true
   def perform(%{args: %{"id" => id, "backfill" => true}}) do
-    with :ok <- perform(%{args: %{"id" => id}}),
-         next_id when is_integer(next_id) <- fetch_next(id) do
-      %{id: next_id, backfill: true}
-      |> new(schedule_in: @backfill_delay)
-      |> Oban.insert!()
+    with :ok <- perform(%{args: %{"id" => id}}) do
+      case fetch_next(id) do
+        next_id when is_integer(next_id) ->
+          %{id: next_id, backfill: true}
+          |> new(schedule_in: @backfill_delay)
+          |> Oban.insert!()
+
+        nil ->
+          :ok
+      end
     end
   end
 
