@@ -2,8 +2,8 @@ defmodule Oban.Worker do
   @moduledoc """
   Defines a behavior and macro to guide the creation of worker modules.
 
-  Worker modules do the work of processing a job. At a minimum they must define a `perform/2`
-  function, which is called with an `args` map and the full `Oban.Job` struct.
+  Worker modules do the work of processing a job. At a minimum they must define a `c:perform/1`
+  function, which is called with the full `Oban.Job` struct.
 
   ## Defining Workers
 
@@ -13,7 +13,7 @@ defmodule Oban.Worker do
   * `:max_attempts` — 20
   * `:priority` — 0
   * `:queue` — `:default`
-  * `:unique` — no uniquness set
+  * `:unique` — no uniqueness set
 
   The following example defines a worker module to process jobs in the `events` queue. It then
   dials down the priority from 0 to 1, limits retrying on failures to 10, adds a "business" tag,
@@ -22,13 +22,13 @@ defmodule Oban.Worker do
       defmodule MyApp.Workers.Business do
         use Oban.Worker,
           queue: :events,
-          max_attempts: 10,
           priority: 1,
+          max_attempts: 10,
           tags: ["business"],
           unique: [period: 30]
 
         @impl Oban.Worker
-        def perform(%{attempt: attempt}) when attempt > 3 do
+        def perform(%Oban.Job{attempt: attempt}) when attempt > 3 do
           IO.inspect(attempt)
         end
 
@@ -37,11 +37,11 @@ defmodule Oban.Worker do
         end
       end
 
-  The `perform/2` function receives an args map and an `Oban.Job` struct as arguments. This allows
-  workers to change the behavior of `perform/2` based on attributes of the job, e.g. the number of
+  The `c:perform/1` function receives an `Oban.Job` struct as argument. This allows workers to
+  change the behavior of `c:perform/1` based on attributes of the job, e.g. the number of
   execution attempts or when it was inserted.
 
-  The value returned from `perform/2` can control whether the job is a success or a failure:
+  The value returned from `c:perform/1` can control whether the job is a success or a failure:
 
   * `:ok` or `{:ok, value}` — the job is successful; for success tuples the `value` is ignored
   * `:discard` — discard the job and prevent it from being retried again
@@ -71,7 +71,7 @@ defmodule Oban.Worker do
 
   ## Enqueuing Jobs
 
-  All workers implement a `new/2` function that converts an args map into a job changeset
+  All workers implement a `c:new/2` function that converts an args map into a job changeset
   suitable for inserting into the database for later execution:
 
       %{in_the: "business", of_doing: "business"}
@@ -101,9 +101,9 @@ defmodule Oban.Worker do
   maximum of 24 days, the equivalent of the 20th attempt.
 
   If the default strategy is too aggressive or otherwise unsuited to your app's workload you can
-  define a custom backoff function using the `backoff/1` callback.
+  define a custom backoff function using the `c:backoff/1` callback.
 
-  The following worker defines a `backoff/1` function that delays retries using a variant of the
+  The following worker defines a `c:backoff/1` function that delays retries using a variant of the
   historic Resque/Sidekiq algorithm:
 
       defmodule MyApp.SidekiqBackoffWorker do
@@ -130,9 +130,9 @@ defmodule Oban.Worker do
   ### Contextual Backoff
 
   Any error, catch or throw is temporarily recorded in the job's `unsaved_error` map. The unsaved
-  error map can be used by `backoff/1` to calculate a custom backoff based on the exact error that
-  failed the job. In this example the `backoff/1` callback checks to see if the error was due to
-  rate limiting and adjusts the backoff accordingly:
+  error map can be used by `c:backoff/1` to calculate a custom backoff based on the exact error
+  that failed the job. In this example the `c:backoff/1` callback checks to see if the error was
+  due to rate limiting and adjusts the backoff accordingly:
 
       defmodule MyApp.ApiWorker do
         use Oban.Worker
@@ -158,7 +158,7 @@ defmodule Oban.Worker do
   ## Limiting Execution Time
 
   By default, individual jobs may execute indefinitely. If this is undesirable you may define a
-  timeout in milliseconds with the `timeout/1` callback on your worker module.
+  timeout in milliseconds with the `c:timeout/1` callback on your worker module.
 
   For example, to limit a worker's execution time to 30 seconds:
 
@@ -176,7 +176,7 @@ defmodule Oban.Worker do
         def timeout(_job), do: :timer.seconds(30)
       end
 
-  The `timeout/1` function accepts an `Oban.Job` struct, so you can customize the timeout using
+  The `c:timeout/1` function accepts an `Oban.Job` struct, so you can customize the timeout using
   any job attributes.
 
   Define the `timeout` value through job args:
@@ -207,26 +207,29 @@ defmodule Oban.Worker do
   @callback new(args :: Job.args(), opts :: [Job.option()]) :: Ecto.Changeset.t()
 
   @doc """
-  Calculate the execution backoff, or the number of seconds to wait before retrying a failed job.
+  Calculate the execution backoff.
+
+  In this context backoff specifies the number of seconds to wait before retrying a failed job.
 
   Defaults to an exponential algorithm with a minimum delay of 15 seconds.
   """
   @callback backoff(job :: Job.t()) :: pos_integer()
 
   @doc """
-  Set a job's maximum execution time in milliseconds. Jobs that exceed the time limit are
-  considered a failure and may be retried.
+  Set a job's maximum execution time in milliseconds.
+
+  Jobs that exceed the time limit are considered a failure and may be retried.
 
   Defaults to `:infinity`.
   """
   @callback timeout(job :: Job.t()) :: :infinity | pos_integer()
 
   @doc """
-  The `perform/1` function is called to execute a job.
+  The `c:perform/1` function is called to execute a job.
 
-  Each `perform/1` function should return `:ok` or a success tuple. When the return is an error
-  tuple, an uncaught exception or a throw then the error is recorded and the job may be retried
-  if there are any attempts remaining.
+  Each `c:perform/1` function should return `:ok` or a success tuple. When the return is an error
+  tuple, an uncaught exception or a throw then the error is recorded and the job may be retried if
+  there are any attempts remaining.
 
   Note that the `args` map provided to `perform/1` will _always_ have string keys, regardless of
   the key type when the job was enqueued. The `args` are stored as `jsonb` in PostgreSQL and the
