@@ -372,21 +372,49 @@ defmodule Oban do
   end
 
   @doc """
-  Start a new supervised queue across all connected nodes.
+  Start a new supervised queue
 
-  ## Example
+  By default the new supervised queue will be across the connected nodes. Still,
+  if you prefer to start the queue only on the local node, you can pass the
+  option: `local_only: true`.
 
-  Start the `:priority` queue with a concurrency limit of 10.
+  ## Examples
+
+  Start the `:priority` queue with a concurrency limit of 10 across the
+  connected nodes.
 
       Oban.start_queue(:priority, 10)
       :ok
+
+  Start the `:media` queue with a concurrency limit of 5 only on the local node.
+
+      Oban.start_queue(:media, 5, local_only: true)
+      :ok
   """
   @doc since: "0.12.0"
-  @spec start_queue(name :: atom(), queue :: queue_name(), limit :: pos_integer()) :: :ok
-  def start_queue(name \\ __MODULE__, queue, limit) when is_queue(queue) and is_limit(limit) do
-    name
-    |> config()
-    |> Notifier.notify(:signal, %{action: :start, queue: queue, limit: limit})
+  @spec start_queue(
+          name :: atom(),
+          queue :: queue_name(),
+          limit :: pos_integer(),
+          opts :: Keyword.t()
+        ) :: :ok
+  def start_queue(name \\ __MODULE__, queue, limit, opts \\ [])
+      when is_queue(queue) and is_limit(limit) do
+    local_only? = Keyword.get(opts, :local_only, false)
+
+    if local_only? do
+      payload = %{"action" => "start", "queue" => queue, "limit" => limit}
+
+      name
+      |> child_name("Midwife")
+      |> send({:notification, :signal, payload})
+
+      :ok
+    else
+      name
+      |> config()
+      |> Notifier.notify(:signal, %{action: :start, queue: queue, limit: limit})
+    end
   end
 
   @doc """
@@ -452,23 +480,41 @@ defmodule Oban do
   end
 
   @doc """
-  Shutdown a queue's supervision tree and stop running jobs for that queue across all running
-  nodes.
+  Shutdown a queue's supervision tree and stop running jobs for that queue
 
-  The shutdown process pauses the queue first and allows current jobs to exit gracefully,
-  provided they finish within the shutdown limit.
+  By default this action will occur across all the running nodes. Still, if you
+  prefer to stop the queue's supervision tree and stop running jobs for that
+  queue only on the local node, you can pass the option: `local_only: true`
 
-  ## Example
+  The shutdown process pauses the queue first and allows current jobs to exit
+  gracefully, provided they finish within the shutdown limit.
+
+  ## Examples
 
       Oban.stop_queue(:default)
       :ok
+
+      Oban.stop_queue(:media, local_only: true)
+      :ok
   """
   @doc since: "0.12.0"
-  @spec stop_queue(name :: atom(), queue :: queue_name()) :: :ok
-  def stop_queue(name \\ __MODULE__, queue) when is_atom(name) and is_queue(queue) do
-    name
-    |> config()
-    |> Notifier.notify(:signal, %{action: :stop, queue: queue})
+  @spec stop_queue(name :: atom(), queue :: queue_name(), opts :: Keyword.t()) :: :ok
+  def stop_queue(name \\ __MODULE__, queue, opts \\ []) when is_atom(name) and is_queue(queue) do
+    local_only? = Keyword.get(opts, :local_only, false)
+
+    if local_only? do
+      payload = %{"action" => "stop", "queue" => queue}
+
+      name
+      |> child_name("Midwife")
+      |> send({:notification, :signal, payload})
+
+      :ok
+    else
+      name
+      |> config()
+      |> Notifier.notify(:signal, %{action: :stop, queue: queue})
+    end
   end
 
   @doc false
