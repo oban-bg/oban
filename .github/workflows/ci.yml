@@ -4,7 +4,11 @@ on:
   push:
     branches:
       - master
+    paths-ignore:
+      - 'guides/**'
   pull_request:
+    paths-ignore:
+      - 'guides/**'
 
 jobs:
   ci:
@@ -34,15 +38,15 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - uses: actions/cache@v1
-        with:
-          key: test-${{ hashFiles('mix.lock') }}
-          path: _build
-
       - uses: actions/setup-elixir@v1
         with:
           elixir-version: ${{ matrix.elixir }}
           otp-version: ${{ matrix.otp }}
+
+      - uses: actions/cache@v1
+        with:
+          key: ${{ runner.os }}-${{ matrix.otp }}-${{ matrix.elixir }}-mix-${{ hashFiles(format('{0}{1}', github.workspace, '/mix.lock')) }}
+          path: _build
 
       - name: Run mix deps.get
         run: mix deps.get
