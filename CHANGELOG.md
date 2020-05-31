@@ -93,6 +93,33 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   Remove any `:beats_maxage`, `:rescue_after` or `:rescue_interval` settings
   from your config.
 
+- [Oban] The interface for `start_queue/3` is replaced with `start_queue/2` and
+  `stop_queue/2` no longer accepts a queue name as the second argument. Instead,
+  both functions now accept a keyword list of options. This enables the new
+  `local_only` flag, which allows you to dynamically start and stop queues only
+  for the local node.
+
+  Where you previously called `start_queue/2,3` or `stop_queue/2` like this:
+
+  ```elixir
+  :ok = Oban.start_queue(:myqueue, 10)
+  :ok = Oban.stop_queue(:myqueue)
+  ```
+
+  You'll now them with options, like this:
+
+  ```elixir
+  :ok = Oban.start_queue(queue: :myqueue, limit: 10)
+  :ok = Oban.stop_queue(queue: :myqueue)
+  ```
+
+  Or, to only control the queue locally:
+
+  ```elixir
+  :ok = Oban.start_queue(queue: :myqueue, limit: 10, local_only: true)
+  :ok = Oban.stop_queue(queue: :myqueue, local_only: true)
+  ```
+
 ### Added
 
 - [Oban] Bubble up errors and exits when draining queues by passing

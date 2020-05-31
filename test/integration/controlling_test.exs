@@ -3,50 +3,95 @@ defmodule Oban.Integration.ControllingTest do
 
   @moduletag :integration
 
-  test "starting individual queues dynamically" do
-    start_supervised_oban!(queues: [alpha: 10])
+  describe "start_queue/2" do
+    test "validating options" do
+      start_supervised_oban!(queues: false)
 
-    insert!(%{ref: 1, action: "OK"}, queue: :gamma)
-    insert!(%{ref: 2, action: "OK"}, queue: :delta)
+      assert_invalid_start([queue: nil], ~r/expected :queue to be a binary or atom/)
+      assert_invalid_start([limit: -1], ~r/expected :limit to be a positive integer/)
+      assert_invalid_start([local_only: -1], ~r/expected :local_only to be a boolean/)
+      assert_invalid_start([wat: -1], ~r/unknown option provided/)
+    end
 
-    refute_receive {:ok, 1}
-    refute_receive {:ok, 2}
+    test "starting individual queues dynamically" do
+      start_supervised_oban!(queues: [alpha: 10])
 
-    assert :ok = Oban.start_queue(:gamma, 5)
-    assert :ok = Oban.start_queue(:delta, 6)
-    assert :ok = Oban.start_queue(:alpha, 5)
+      insert!(%{ref: 1, action: "OK"}, queue: :gamma)
+      insert!(%{ref: 2, action: "OK"}, queue: :delta)
 
-    assert_receive {:ok, 1}
-    assert_receive {:ok, 2}
+      refute_receive {:ok, 1}
+      refute_receive {:ok, 2}
+
+      assert :ok = Oban.start_queue(queue: :gamma, limit: 5)
+      assert :ok = Oban.start_queue(queue: :delta, limit: 6)
+      assert :ok = Oban.start_queue(queue: :alpha, limit: 5)
+
+      assert_receive {:ok, 1}
+      assert_receive {:ok, 2}
+    end
+
+    test "starting individual queues only on the local node" do
+      start_supervised_oban!(name: ObanA, queues: [])
+      start_supervised_oban!(name: ObanB, queues: [])
+
+      assert :ok = Oban.start_queue(ObanA, queue: :alpha, limit: 1, local_only: true)
+
+      with_backoff(fn ->
+        assert supervised_queue?(ObanA, ObanA.Queue.Alpha)
+        refute supervised_queue?(ObanB, ObanB.Queue.Alpha)
+      end)
+    end
   end
 
-  test "stopping individual queues" do
-    start_supervised_oban!(queues: [alpha: 5, delta: 5, gamma: 5])
+  describe "stop_queue/2" do
+    test "validating options" do
+      start_supervised_oban!(queues: false)
 
-    assert supervised_queue?(Oban.Queue.Delta)
-    assert supervised_queue?(Oban.Queue.Gamma)
+      assert_invalid_stop([queue: nil], ~r/expected :queue to be a binary or atom/)
+      assert_invalid_stop([local_only: -1], ~r/expected :local_only to be a boolean/)
+      assert_invalid_stop([wat: -1], ~r/unknown option provided/)
+    end
 
-    insert!(%{ref: 1, action: "OK"}, queue: :delta)
-    insert!(%{ref: 2, action: "OK"}, queue: :gamma)
+    test "stopping individual queues" do
+      start_supervised_oban!(queues: [alpha: 5, delta: 5, gamma: 5])
 
-    assert_receive {:ok, 1}
-    assert_receive {:ok, 2}
+      assert supervised_queue?(Oban.Queue.Delta)
+      assert supervised_queue?(Oban.Queue.Gamma)
 
-    assert :ok = Oban.stop_queue(:delta)
-    assert :ok = Oban.stop_queue(:gamma)
+      insert!(%{ref: 1, action: "OK"}, queue: :delta)
+      insert!(%{ref: 2, action: "OK"}, queue: :gamma)
 
-    with_backoff(fn ->
-      refute supervised_queue?(Oban.Queue.Delta)
-      refute supervised_queue?(Oban.Queue.Gamma)
-    end)
+      assert_receive {:ok, 1}
+      assert_receive {:ok, 2}
 
-    insert!(%{ref: 3, action: "OK"}, queue: :alpha)
-    insert!(%{ref: 4, action: "OK"}, queue: :delta)
-    insert!(%{ref: 5, action: "OK"}, queue: :gamma)
+      assert :ok = Oban.stop_queue(queue: :delta)
+      assert :ok = Oban.stop_queue(queue: :gamma)
 
-    assert_receive {:ok, 3}
-    refute_receive {:ok, 4}
-    refute_receive {:ok, 5}
+      with_backoff(fn ->
+        refute supervised_queue?(Oban.Queue.Delta)
+        refute supervised_queue?(Oban.Queue.Gamma)
+      end)
+
+      insert!(%{ref: 3, action: "OK"}, queue: :alpha)
+      insert!(%{ref: 4, action: "OK"}, queue: :delta)
+      insert!(%{ref: 5, action: "OK"}, queue: :gamma)
+
+      assert_receive {:ok, 3}
+      refute_receive {:ok, 4}
+      refute_receive {:ok, 5}
+    end
+
+    test "stopping individual queues only on the local node" do
+      start_supervised_oban!(name: ObanA, queues: [alpha: 1])
+      start_supervised_oban!(name: ObanB, queues: [alpha: 1])
+
+      assert :ok = Oban.stop_queue(ObanB, queue: :alpha, local_only: true)
+
+      with_backoff(fn ->
+        assert supervised_queue?(ObanA, ObanA.Queue.Alpha)
+        refute supervised_queue?(ObanB, Oban.Queue.Alpha)
+      end)
+    end
   end
 
   test "pausing and resuming individual queues" do
@@ -131,9 +176,21 @@ defmodule Oban.Integration.ControllingTest do
     :ok = stop_supervised(Oban)
   end
 
-  defp supervised_queue?(queue_name) do
-    Oban
+  defp supervised_queue?(sup \\ Oban, queue_name) do
+    sup
     |> Supervisor.which_children()
     |> Enum.any?(fn {name, _, _, _} -> name == queue_name end)
+  end
+
+  defp assert_invalid_stop(opts, message) do
+    assert_raise ArgumentError, message, fn ->
+      Oban.stop_queue(opts)
+    end
+  end
+
+  defp assert_invalid_start(opts, message) do
+    assert_raise ArgumentError, message, fn ->
+      Oban.start_queue(opts)
+    end
   end
 end
