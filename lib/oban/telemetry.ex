@@ -18,7 +18,7 @@ defmodule Oban.Telemetry do
   | ------------ | -------------------------- | --------------------------------------------------------------------------------------------- |
   | `:start`     | `:system_time`             | `:id, :args, :queue, :worker, :attempt, :max_attempts, :prefix`                               |
   | `:stop`      | `:duration`, `:queue_time` | `:id, :args, :queue, :worker, :attempt, :max_attempts, :prefix`                               |
-  | `:exception` | `:duration`, `:queue_time` | `:id, :args, :queue, :worker, :attempt, :max_attempts, , :prefix, :kind, :error, :stacktrace` |
+  | `:exception` | `:duration`, `:queue_time` | `:id, :args, :queue, :worker, :attempt, :max_attempts, :prefix, :kind, :error, :stacktrace` |
 
   For `:exception` events the metadata includes details about what caused the failure. The `:kind`
   value is determined by how an error occurred. Here are the possible kinds:
@@ -66,7 +66,7 @@ defmodule Oban.Telemetry do
     end
   end
 
-  :telemetry.attach("oban-logger", [:oban, :exception], &MicroLogger.handle_event/4, nil)
+  :telemetry.attach("oban-logger", [:oban, :job, :exception], &MicroLogger.handle_event/4, nil)
   ```
 
   Another great use of execution data is error reporting. Here is an example of integrating with
