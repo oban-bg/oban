@@ -374,9 +374,9 @@ defmodule Oban do
   @doc """
   Start a new supervised queue
 
-  By default the new supervised queue will be across the connected nodes. Still,
-  if you prefer to start the queue only on the local node, you can pass the
-  option: `local_only: true`.
+  By default this starts a new supervised queue across all nodes running Oban on the same database
+  and prefix. You can pass the option `local_only: true` if you prefer to start the queue only on
+  the local node.
 
   ## Examples
 
