@@ -401,13 +401,14 @@ defmodule Oban do
   def start_queue(name \\ __MODULE__, queue, limit, opts \\ [])
       when is_queue(queue) and is_limit(limit) do
     local_only? = Keyword.get(opts, :local_only, false)
+    payload = %{action: :start, queue: queue, limit: limit}
 
     if local_only? do
-      send_signal(name, %{"action" => "start", "queue" => queue, "limit" => limit})
+      send_signal(name, payload)
     else
       name
       |> config()
-      |> Notifier.notify(:signal, %{action: :start, queue: queue, limit: limit})
+      |> Notifier.notify(:signal, payload)
     end
   end
 
@@ -495,13 +496,14 @@ defmodule Oban do
   @spec stop_queue(name :: atom(), queue :: queue_name(), opts :: Keyword.t()) :: :ok
   def stop_queue(name \\ __MODULE__, queue, opts \\ []) when is_atom(name) and is_queue(queue) do
     local_only? = Keyword.get(opts, :local_only, false)
+    payload = %{action: :stop, queue: queue}
 
     if local_only? do
-      send_signal(name, %{"action" => "stop", "queue" => queue})
+      send_signal(name, payload)
     else
       name
       |> config()
-      |> Notifier.notify(:signal, %{action: :stop, queue: queue})
+      |> Notifier.notify(:signal, payload)
     end
   end
 
@@ -543,8 +545,14 @@ defmodule Oban do
   defp send_signal(name, payload) do
     name
     |> child_name("Midwife")
-    |> send({:notification, :signal, payload})
+    |> send({:notification, :signal, json_encode_decode(payload)})
 
     :ok
+  end
+
+  defp json_encode_decode(map) do
+    map
+    |> Jason.encode!()
+    |> Jason.decode!()
   end
 end
