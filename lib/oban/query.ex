@@ -11,7 +11,7 @@ defmodule Oban.Query do
   def fetch_available_jobs(%Config{} = conf, queue, nonce, demand) do
     %Config{node: node, prefix: prefix, repo: repo, verbose: log} = conf
 
-    subquery =
+    subset =
       Job
       |> select([:id])
       |> where([j], j.state == "available")
@@ -28,7 +28,7 @@ defmodule Oban.Query do
     repo.transaction(
       fn ->
         Job
-        |> join(:inner, [j], x in subquery(subquery, prefix: prefix), on: j.id == x.id)
+        |> where([j], j.id in subquery(subset))
         |> select([j, _], j)
         |> repo.update_all(updates, log: log, prefix: prefix)
         |> case do
@@ -80,11 +80,22 @@ defmodule Oban.Query do
 
     max_scheduled_at = Keyword.get(opts, :max_scheduled_at, utc_now())
 
-    Job
-    |> where([j], j.state in ["scheduled", "retryable"])
-    |> where([j], j.queue == ^queue)
-    |> where([j], j.scheduled_at <= ^max_scheduled_at)
-    |> repo.update_all([set: [state: "available"]], log: log, prefix: prefix)
+    subset =
+      Job
+      |> select([j], j.id)
+      |> where([j], j.state in ["scheduled", "retryable"])
+      |> where([j], j.queue == ^queue)
+      |> where([j], j.scheduled_at <= ^max_scheduled_at)
+      |> lock("FOR UPDATE SKIP LOCKED")
+
+    repo.transaction(
+      fn ->
+        Job
+        |> where([j], j.id in subquery(subset))
+        |> repo.update_all([set: [state: "available"]], log: log, prefix: prefix)
+      end,
+      log: log
+    )
   end
 
   @spec complete_job(Config.t(), Job.t()) :: :ok
