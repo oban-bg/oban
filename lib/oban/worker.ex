@@ -111,7 +111,7 @@ defmodule Oban.Worker do
 
         @impl Worker
         def backoff(%Job{attempt: attempt}) do
-          :math.pow(attempt, 4) + 15 + :rand.uniform(30) * attempt
+          trunc(:math.pow(attempt, 4) + 15 + :rand.uniform(30) * attempt)
         end
 
         @impl Worker
@@ -150,7 +150,7 @@ defmodule Oban.Worker do
 
           case reason do
             %MyApp.ApiError{status: 429} -> @five_minutes
-            _ -> :math.pow(attempt, 4)
+            _ -> trunc(:math.pow(attempt, 4))
           end
         end
       end
