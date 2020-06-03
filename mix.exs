@@ -38,7 +38,8 @@ defmodule Oban.MixProject do
         source_ref: "v#{@version}",
         source_url: "https://github.com/sorentwo/oban",
         extra_section: "GUIDES",
-        extras: extras(),
+        formatters: ["html"],
+        extras: extras() ++ pro_extras() ++ web_extras(),
         groups_for_extras: groups_for_extras()
       ]
     ]
@@ -53,7 +54,59 @@ defmodule Oban.MixProject do
   defp elixirc_paths(:test), do: ["lib", "test/support"]
   defp elixirc_paths(_env), do: ["lib"]
 
-  def package do
+  defp extras do
+    [
+      "CHANGELOG.md",
+      "guides/troubleshooting.md",
+      "guides/release_configuration.md",
+      "guides/recipes/recursive-jobs.md",
+      "guides/recipes/reliable-scheduling.md",
+      "guides/recipes/reporting-progress.md",
+      "guides/recipes/expected-failures.md",
+      "guides/recipes/splitting-queues.md"
+    ]
+  end
+
+  defp pro_extras do
+    if File.exists?("../oban_pro") do
+      [
+        "../oban_pro/guides/pro/overview.md": [filename: "pro_overview"],
+        "../oban_pro/guides/pro/installation.md": [filename: "pro_installation"],
+        "../oban_pro/guides/plugins/lifeline.md": [title: "Lifeline Plugin"],
+        "../oban_pro/guides/plugins/dynamic_pruning.md": [title: "Dynamic Pruning Plugin"],
+        "../oban_pro/guides/plugins/reprioritization.md": [title: "Reprioritization Plugin"],
+        "../oban_pro/guides/workers/batch.md": [title: "Batch Worker"],
+        "../oban_pro/CHANGELOG.md": [filename: "pro-changelog", title: "Changelog"]
+      ]
+    else
+      []
+    end
+  end
+
+  defp web_extras do
+    if File.exists?("../oban_web") do
+      [
+        "../oban_web/guides/web/overview.md": [filename: "web_overview"],
+        "../oban_web/guides/web/installation.md": [filename: "web_installation"],
+        "../oban_web/guides/web/troubleshooting.md": [filename: "web_troubleshooting"],
+        "../oban_web/CHANGELOG.md": [filename: "web-changelog", title: "Changelog"]
+      ]
+    else
+      []
+    end
+  end
+
+  defp groups_for_extras do
+    [
+      Guides: ~r{guides/[^\/]+\.md},
+      Recipes: ~r{guides/recipes/.?},
+      Extras: ~r{^CHANGELOG.md},
+      "Oban Pro": ~r{oban_pro/.?},
+      "Oban Web": ~r{oban_web/.?}
+    ]
+  end
+
+  defp package do
     [
       maintainers: ["Parker Selbert"],
       licenses: ["Apache-2.0"],
@@ -87,29 +140,6 @@ defmodule Oban.MixProject do
         "test --raise",
         "dialyzer"
       ]
-    ]
-  end
-
-  defp extras do
-    [
-      "README.md",
-      "guides/troubleshooting.md",
-      "guides/release_configuration.md",
-      "guides/recipes/recursive-jobs.md",
-      "guides/recipes/reliable-scheduling.md",
-      "guides/recipes/reporting-progress.md",
-      "guides/recipes/batch-jobs.md",
-      "guides/recipes/expected-failures.md",
-      "guides/recipes/splitting-queues.md",
-      "CHANGELOG.md": [filename: "CHANGELOG.md", title: "CHANGELOG"]
-    ]
-  end
-
-  defp groups_for_extras do
-    [
-      Guides: ~r{guides/[^\/]+\.md},
-      Recipes: ~r{guides/recipes/.?},
-      Extras: ~r{(README|CHANGELOG).md}
     ]
   end
 end

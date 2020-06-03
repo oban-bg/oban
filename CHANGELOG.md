@@ -152,9 +152,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   `with_safety: false` as an option to `Oban.drain_queue/3`.
 
 - [Oban] Add `Oban.cancel_job/2` for safely discarding scheduled jobs or killing
-  executing jobs. This deprecates `Oban.kill_job/2`, which isn't as flexible.
+  executing jobs. This deprecates `kill_job/2`, which isn't as flexible.
 
-- [Oban.Worker] Support returning `{:snooze, seconds}` from `perform/2` to
+- [Oban.Worker] Support returning `{:snooze, seconds}` from `perform/1` to
   re-schedule a job some number of seconds in the future. This is useful for
   recycling jobs that aren't ready to run yet, e.g. because of rate limiting.
 
@@ -563,7 +563,7 @@ here: https://explain.depesz.com/s/9Vh7
 ### Added
 
 - [Oban] Add `insert_all/2` and `insert_all/4`, corresponding to
-  `Ecto.Repo.insert_all/3` and `Ecto.Multi.insert_all/5`, respectively.
+  `c:Ecto.Repo.insert_all/3` and `Ecto.Multi.insert_all/5`, respectively.
 
 - [Oban.Job] Add `to_map/1` for converting a changeset into a map suitable for
   database insertion. This is used by `Oban.insert_all/2,4` internally and is

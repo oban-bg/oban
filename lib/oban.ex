@@ -259,7 +259,7 @@ defmodule Oban do
   Insertion respects `prefix` and `log` settings, but it *does not use* per-job unique
   configuration. You must use `insert/2,4` or `insert!/2` for per-job unique support.
 
-  There are a few important differences between this function and `Ecto.Repo.insert_all/3`:
+  There are a few important differences between this function and `c:Ecto.Repo.insert_all/3`:
 
   1. This function always returns a list rather than a tuple of `{count, records}`
   2. This function requires a list of changesets rather than a list of maps or keyword lists
