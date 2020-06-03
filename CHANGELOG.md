@@ -5,12 +5,9 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [2.0.0-rc.0] — 2020-06-03
 
 ### Fixed
-
-- [Oban.Crontab] Fix weekday matching for Sunday, which is represented as `0` in
-  crontabs.
 
 - [Oban.Scheduler] Ensure isolation between transaction locks in different
   prefixes. A node with multiple prefix-isolated instances (i.e. "public" and
@@ -26,6 +23,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - [Oban.Query] Wrap all job fetching in an explicit transaction to enforce `FOR
   UPDATE SKIP LOCKED` semantics. Prior to this it was possible to run the same
   job at the same time on multiple nodes.
+
+- [Oban.Crontab] Fix weekday matching for Sunday, which is represented as `0` in
+  crontabs.
 
 ### Added
 
@@ -863,7 +863,8 @@ end
 
 - [Oban] Initial release with base functionality.
 
-[Unreleased]: https://github.com/sorentwo/oban/compare/v1.2.0...HEAD
+[Unreleased]: https://github.com/sorentwo/oban/compare/v2.0.0-rc.0...HEAD
+[2.0.0-rc.0]: https://github.com/sorentwo/oban/compare/v1.2.0...v2.0.0-rc.0
 [1.2.0]: https://github.com/sorentwo/oban/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/sorentwo/oban/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/sorentwo/oban/compare/v1.0.0-rc.1...v1.0.0
