@@ -493,7 +493,7 @@ defmodule Oban do
 
   ## Examples
 
-      Oban.stop_queue(:default)
+      Oban.stop_queue(queue: :default)
       :ok
 
       Oban.stop_queue(queue: :media, local_only: true)
