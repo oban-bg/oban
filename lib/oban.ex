@@ -378,37 +378,39 @@ defmodule Oban do
   and prefix. You can pass the option `local_only: true` if you prefer to start the queue only on
   the local node.
 
+  ## Options
+
+  * `queue` - specifies the queue name
+  * `limit` - set the concurrency limit
+  * `local_only` - specifies if the queue will be started only on the local node, default: `false`
+
   ## Examples
 
-  Start the `:priority` queue with a concurrency limit of 10 across the
-  connected nodes.
+  Start the `:priority` queue with a concurrency limit of 10 across the connected nodes.
 
-      Oban.start_queue(:priority, 10)
+      Oban.start_queue(queue: :priority, limit: 10)
       :ok
 
   Start the `:media` queue with a concurrency limit of 5 only on the local node.
 
-      Oban.start_queue(:media, 5, local_only: true)
+      Oban.start_queue(queue: :media, limit: 5, local_only: true)
       :ok
   """
-  @doc since: "0.12.0"
-  @spec start_queue(
-          name :: atom(),
-          queue :: queue_name(),
-          limit :: pos_integer(),
-          opts :: Keyword.t()
-        ) :: :ok
-  def start_queue(name \\ __MODULE__, queue, limit, opts \\ [])
-      when is_queue(queue) and is_limit(limit) do
-    local_only? = Keyword.get(opts, :local_only, false)
-    payload = %{action: :start, queue: queue, limit: limit}
+  @doc since: "2.0.0"
+  @spec start_queue(name :: atom(), opts :: Keyword.t()) :: :ok
+  def start_queue(name \\ __MODULE__, opts)
+      when is_atom(name) and is_list(opts) do
+    Enum.each(opts, &validate_queue_opt!/1)
 
-    if local_only? do
-      send_signal(name, payload)
+    queue = Keyword.fetch!(opts, :queue)
+    limit = Keyword.fetch!(opts, :limit)
+
+    if Keyword.get(opts, :local_only) do
+      Midwife.start_queue(name, queue, limit)
     else
       name
       |> config()
-      |> Notifier.notify(:signal, payload)
+      |> Notifier.notify(:signal, %{action: :start, queue: queue, limit: limit})
     end
   end
 
@@ -477,33 +479,39 @@ defmodule Oban do
   @doc """
   Shutdown a queue's supervision tree and stop running jobs for that queue
 
-  By default this action will occur across all the running nodes. Still, if you
-  prefer to stop the queue's supervision tree and stop running jobs for that
-  queue only on the local node, you can pass the option: `local_only: true`
+  By default this action will occur across all the running nodes. Still, if you prefer to stop the
+  queue's supervision tree and stop running jobs for that queue only on the local node, you can
+  pass the option: `local_only: true`
 
-  The shutdown process pauses the queue first and allows current jobs to exit
-  gracefully, provided they finish within the shutdown limit.
+  The shutdown process pauses the queue first and allows current jobs to exit gracefully, provided
+  they finish within the shutdown limit.
+
+  ## Options
+
+  * `queue` - specifies the queue name
+  * `local_only` - specifies if the queue will be stopped only on the local node, default: `false`
 
   ## Examples
 
       Oban.stop_queue(:default)
       :ok
 
-      Oban.stop_queue(:media, local_only: true)
+      Oban.stop_queue(queue: :media, local_only: true)
       :ok
   """
-  @doc since: "0.12.0"
-  @spec stop_queue(name :: atom(), queue :: queue_name(), opts :: Keyword.t()) :: :ok
-  def stop_queue(name \\ __MODULE__, queue, opts \\ []) when is_atom(name) and is_queue(queue) do
-    local_only? = Keyword.get(opts, :local_only, false)
-    payload = %{action: :stop, queue: queue}
+  @doc since: "2.0.0"
+  @spec stop_queue(name :: atom(), opts :: Keyword.t()) :: :ok
+  def stop_queue(name \\ __MODULE__, opts) when is_atom(name) and is_list(opts) do
+    Enum.each(opts, &validate_queue_opt!/1)
 
-    if local_only? do
-      send_signal(name, payload)
+    queue = Keyword.fetch!(opts, :queue)
+
+    if Keyword.get(opts, :local_only) do
+      Midwife.stop_queue(name, queue)
     else
       name
       |> config()
-      |> Notifier.notify(:signal, payload)
+      |> Notifier.notify(:signal, %{action: :stop, queue: queue})
     end
   end
 
@@ -542,17 +550,26 @@ defmodule Oban do
 
   defp child_name(name, child), do: Module.concat(name, child)
 
-  defp send_signal(name, payload) do
-    name
-    |> child_name("Midwife")
-    |> send({:notification, :signal, json_encode_decode(payload)})
-
-    :ok
+  defp validate_queue_opt!({:queue, queue}) do
+    unless is_queue(queue) do
+      raise ArgumentError,
+            "expected :queue to be a binary or atom (except `nil`), got: #{inspect(queue)}"
+    end
   end
 
-  defp json_encode_decode(map) do
-    map
-    |> Jason.encode!()
-    |> Jason.decode!()
+  defp validate_queue_opt!({:limit, limit}) do
+    unless is_limit(limit) do
+      raise ArgumentError, "expected :limit to be a positive integer, got: #{inspect(limit)}"
+    end
+  end
+
+  defp validate_queue_opt!({:local_only, local_only}) do
+    unless is_boolean(local_only) do
+      raise ArgumentError, "expected :local_only to be a boolean, got: #{inspect(local_only)}"
+    end
+  end
+
+  defp validate_queue_opt!(option) do
+    raise ArgumentError, "unknown option provided #{inspect(option)}"
   end
 end

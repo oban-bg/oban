@@ -12,12 +12,30 @@ defmodule Oban.Integration.ControllingTest do
     refute_receive {:ok, 1}
     refute_receive {:ok, 2}
 
-    assert :ok = Oban.start_queue(:gamma, 5)
-    assert :ok = Oban.start_queue(:delta, 6)
-    assert :ok = Oban.start_queue(:alpha, 5)
+    assert :ok = Oban.start_queue(queue: :gamma, limit: 5)
+    assert :ok = Oban.start_queue(queue: :delta, limit: 6, local_only: true)
+    assert :ok = Oban.start_queue(queue: :alpha, limit: 5)
 
     assert_receive {:ok, 1}
     assert_receive {:ok, 2}
+
+    assert_raise ArgumentError,
+                 "expected :queue to be a binary or atom (except `nil`), got: nil",
+                 fn ->
+                   Oban.start_queue(queue: nil)
+                 end
+
+    assert_raise ArgumentError, "expected :limit to be a positive integer, got: -1", fn ->
+      Oban.start_queue(queue: :invalid, limit: -1)
+    end
+
+    assert_raise ArgumentError, "expected :local_only to be a boolean, got: -1", fn ->
+      Oban.start_queue(local_only: -1)
+    end
+
+    assert_raise ArgumentError, "unknown option provided {:wat, -1}", fn ->
+      Oban.start_queue(wat: -1)
+    end
   end
 
   test "stopping individual queues" do
@@ -32,8 +50,8 @@ defmodule Oban.Integration.ControllingTest do
     assert_receive {:ok, 1}
     assert_receive {:ok, 2}
 
-    assert :ok = Oban.stop_queue(:delta)
-    assert :ok = Oban.stop_queue(:gamma)
+    assert :ok = Oban.stop_queue(queue: :delta, local_only: true)
+    assert :ok = Oban.stop_queue(queue: :gamma)
 
     with_backoff(fn ->
       refute supervised_queue?(Oban.Queue.Delta)
@@ -47,6 +65,20 @@ defmodule Oban.Integration.ControllingTest do
     assert_receive {:ok, 3}
     refute_receive {:ok, 4}
     refute_receive {:ok, 5}
+
+    assert_raise ArgumentError,
+                 "expected :queue to be a binary or atom (except `nil`), got: nil",
+                 fn ->
+                   Oban.stop_queue(queue: nil)
+                 end
+
+    assert_raise ArgumentError, "expected :local_only to be a boolean, got: -1", fn ->
+      Oban.stop_queue(local_only: -1)
+    end
+
+    assert_raise ArgumentError, "unknown option provided {:wat, -1}", fn ->
+      Oban.stop_queue(wat: -1)
+    end
   end
 
   test "pausing and resuming individual queues" do
