@@ -400,18 +400,9 @@ defmodule Oban do
   @spec start_queue(name :: atom(), opts :: Keyword.t()) :: :ok
   def start_queue(name \\ __MODULE__, opts)
       when is_atom(name) and is_list(opts) do
-    Enum.each(opts, &validate_queue_opt!/1)
-
-    queue = Keyword.fetch!(opts, :queue)
-    limit = Keyword.fetch!(opts, :limit)
-
-    if Keyword.get(opts, :local_only) do
-      Midwife.start_queue(name, queue, limit)
-    else
-      name
-      |> config()
-      |> Notifier.notify(:signal, %{action: :start, queue: queue, limit: limit})
-    end
+    name
+    |> config()
+    |> Midwife.start_queue(opts)
   end
 
   @doc """
@@ -502,17 +493,9 @@ defmodule Oban do
   @doc since: "2.0.0"
   @spec stop_queue(name :: atom(), opts :: Keyword.t()) :: :ok
   def stop_queue(name \\ __MODULE__, opts) when is_atom(name) and is_list(opts) do
-    Enum.each(opts, &validate_queue_opt!/1)
-
-    queue = Keyword.fetch!(opts, :queue)
-
-    if Keyword.get(opts, :local_only) do
-      Midwife.stop_queue(name, queue)
-    else
-      name
-      |> config()
-      |> Notifier.notify(:signal, %{action: :stop, queue: queue})
-    end
+    name
+    |> config()
+    |> Midwife.stop_queue(opts)
   end
 
   @doc false
@@ -549,27 +532,4 @@ defmodule Oban do
   end
 
   defp child_name(name, child), do: Module.concat(name, child)
-
-  defp validate_queue_opt!({:queue, queue}) do
-    unless is_queue(queue) do
-      raise ArgumentError,
-            "expected :queue to be a binary or atom (except `nil`), got: #{inspect(queue)}"
-    end
-  end
-
-  defp validate_queue_opt!({:limit, limit}) do
-    unless is_limit(limit) do
-      raise ArgumentError, "expected :limit to be a positive integer, got: #{inspect(limit)}"
-    end
-  end
-
-  defp validate_queue_opt!({:local_only, local_only}) do
-    unless is_boolean(local_only) do
-      raise ArgumentError, "expected :local_only to be a boolean, got: #{inspect(local_only)}"
-    end
-  end
-
-  defp validate_queue_opt!(option) do
-    raise ArgumentError, "unknown option provided #{inspect(option)}"
-  end
 end
