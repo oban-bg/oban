@@ -19,23 +19,10 @@ defmodule Oban.Integration.ControllingTest do
     assert_receive {:ok, 1}
     assert_receive {:ok, 2}
 
-    assert_raise ArgumentError,
-                 "expected :queue to be a binary or atom (except `nil`), got: nil",
-                 fn ->
-                   Oban.start_queue(queue: nil)
-                 end
-
-    assert_raise ArgumentError, "expected :limit to be a positive integer, got: -1", fn ->
-      Oban.start_queue(queue: :invalid, limit: -1)
-    end
-
-    assert_raise ArgumentError, "expected :local_only to be a boolean, got: -1", fn ->
-      Oban.start_queue(local_only: -1)
-    end
-
-    assert_raise ArgumentError, "unknown option provided {:wat, -1}", fn ->
-      Oban.start_queue(wat: -1)
-    end
+    assert_invalid_start([queue: nil], ~r/expected :queue to be a binary or atom/)
+    assert_invalid_start([limit: -1], ~r/expected :limit to be a positive integer/)
+    assert_invalid_start([local_only: -1], ~r/expected :local_only to be a boolean/)
+    assert_invalid_start([wat: -1], ~r/unknown option provided/)
   end
 
   test "stopping individual queues" do
@@ -66,19 +53,9 @@ defmodule Oban.Integration.ControllingTest do
     refute_receive {:ok, 4}
     refute_receive {:ok, 5}
 
-    assert_raise ArgumentError,
-                 "expected :queue to be a binary or atom (except `nil`), got: nil",
-                 fn ->
-                   Oban.stop_queue(queue: nil)
-                 end
-
-    assert_raise ArgumentError, "expected :local_only to be a boolean, got: -1", fn ->
-      Oban.stop_queue(local_only: -1)
-    end
-
-    assert_raise ArgumentError, "unknown option provided {:wat, -1}", fn ->
-      Oban.stop_queue(wat: -1)
-    end
+    assert_invalid_stop([queue: nil], ~r/expected :queue to be a binary or atom/)
+    assert_invalid_stop([local_only: -1], ~r/expected :local_only to be a boolean/)
+    assert_invalid_stop([wat: -1], ~r/unknown option provided/)
   end
 
   test "pausing and resuming individual queues" do
@@ -167,5 +144,17 @@ defmodule Oban.Integration.ControllingTest do
     Oban
     |> Supervisor.which_children()
     |> Enum.any?(fn {name, _, _, _} -> name == queue_name end)
+  end
+
+  defp assert_invalid_stop(opts, message) do
+    assert_raise ArgumentError, message, fn ->
+      Oban.stop_queue(opts)
+    end
+  end
+
+  defp assert_invalid_start(opts, message) do
+    assert_raise ArgumentError, message, fn ->
+      Oban.start_queue(opts)
+    end
   end
 end
