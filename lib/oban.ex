@@ -203,7 +203,7 @@ defmodule Oban do
 
       Ecto.Multi.new()
       |> Oban.insert("job-1", MyApp.Worker.new(%{id: 1}))
-      |> Oban.insert("job-2", MyApp.Worker.new(%{id: 2}))
+      |> Oban.insert("job-2", fn _ -> MyApp.Worker.new(%{id: 2}) end)
       |> MyApp.Repo.transaction()
   """
   @doc since: "0.7.0"
@@ -211,13 +211,22 @@ defmodule Oban do
           name :: atom(),
           multi :: Multi.t(),
           multi_name :: Multi.name(),
-          changeset :: Changeset.t(Job.t())
+          changeset_or_fun :: Changeset.t(Job.t()) | fun()
         ) :: Multi.t()
-  def insert(name \\ __MODULE__, %Multi{} = multi, multi_name, %Changeset{} = changeset)
+  def insert(name \\ __MODULE__, multi, multi_name, changeset_or_fun)
+
+  def insert(name, %Multi{} = multi, multi_name, %Changeset{} = changeset)
       when is_atom(name) do
     name
     |> config()
     |> Query.fetch_or_insert_job(multi, multi_name, changeset)
+  end
+
+  def insert(name, %Multi{} = multi, multi_name, fun)
+      when is_atom(name) and is_function(fun, 1) do
+    name
+    |> config()
+    |> Query.fetch_or_insert_job(multi, multi_name, fun)
   end
 
   @doc """
@@ -372,21 +381,36 @@ defmodule Oban do
   end
 
   @doc """
-  Start a new supervised queue across all connected nodes.
+  Start a new supervised queue.
 
-  ## Example
+  By default this starts a new supervised queue across all nodes running Oban on the same database
+  and prefix. You can pass the option `local_only: true` if you prefer to start the queue only on
+  the local node.
 
-  Start the `:priority` queue with a concurrency limit of 10.
+  ## Options
 
-      Oban.start_queue(:priority, 10)
+  * `queue` - specifies the queue name
+  * `limit` - set the concurrency limit
+  * `local_only` - specifies if the queue will be started only on the local node, default: `false`
+
+  ## Examples
+
+  Start the `:priority` queue with a concurrency limit of 10 across the connected nodes.
+
+      Oban.start_queue(queue: :priority, limit: 10)
+      :ok
+
+  Start the `:media` queue with a concurrency limit of 5 only on the local node.
+
+      Oban.start_queue(queue: :media, limit: 5, local_only: true)
       :ok
   """
-  @doc since: "0.12.0"
-  @spec start_queue(name :: atom(), queue :: queue_name(), limit :: pos_integer()) :: :ok
-  def start_queue(name \\ __MODULE__, queue, limit) when is_queue(queue) and is_limit(limit) do
+  @doc since: "2.0.0"
+  @spec start_queue(name :: atom(), opts :: Keyword.t()) :: :ok
+  def start_queue(name \\ __MODULE__, [_ | _] = opts) when is_atom(name) do
     name
     |> config()
-    |> Notifier.notify(:signal, %{action: :start, queue: queue, limit: limit})
+    |> Midwife.start_queue(opts)
   end
 
   @doc """
@@ -452,23 +476,34 @@ defmodule Oban do
   end
 
   @doc """
-  Shutdown a queue's supervision tree and stop running jobs for that queue across all running
-  nodes.
+  Shutdown a queue's supervision tree and stop running jobs for that queue.
 
-  The shutdown process pauses the queue first and allows current jobs to exit gracefully,
-  provided they finish within the shutdown limit.
+  By default this action will occur across all the running nodes. Still, if you prefer to stop the
+  queue's supervision tree and stop running jobs for that queue only on the local node, you can
+  pass the option: `local_only: true`
 
-  ## Example
+  The shutdown process pauses the queue first and allows current jobs to exit gracefully, provided
+  they finish within the shutdown limit.
 
-      Oban.stop_queue(:default)
+  ## Options
+
+  * `queue` - specifies the queue name
+  * `local_only` - specifies if the queue will be stopped only on the local node, default: `false`
+
+  ## Examples
+
+      Oban.stop_queue(queue: :default)
+      :ok
+
+      Oban.stop_queue(queue: :media, local_only: true)
       :ok
   """
-  @doc since: "0.12.0"
-  @spec stop_queue(name :: atom(), queue :: queue_name()) :: :ok
-  def stop_queue(name \\ __MODULE__, queue) when is_atom(name) and is_queue(queue) do
+  @doc since: "2.0.0"
+  @spec stop_queue(name :: atom(), opts :: Keyword.t()) :: :ok
+  def stop_queue(name \\ __MODULE__, opts) when is_atom(name) and is_list(opts) do
     name
     |> config()
-    |> Notifier.notify(:signal, %{action: :stop, queue: queue})
+    |> Midwife.stop_queue(opts)
   end
 
   @doc false

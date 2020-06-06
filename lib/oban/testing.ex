@@ -171,6 +171,10 @@ defmodule Oban.Testing do
 
       assert {:error, _} = perform_job(MyWorker, %{"bad" => "arg"})
 
+  Execute a job with the args keys automatically stringified:
+
+      assert :ok = perform_job(MyWorker, %{id: 1})
+
   Exercise custom attempt handling within a worker by passing options:
 
       assert :ok = perform_job(MyWorker, %{}, attempt: 42)
@@ -324,7 +328,7 @@ defmodule Oban.Testing do
 
   # Perform Helpers
 
-  def assert_valid_worker(worker) do
+  defp assert_valid_worker(worker) do
     assert Code.ensure_loaded?(worker) and implements_worker?(worker), """
      Expected worker to be a module that implements the Oban.Worker behaviour, got:
 

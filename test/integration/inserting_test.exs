@@ -9,7 +9,7 @@ defmodule Oban.Integration.InsertingTest do
     assert {:ok, results} =
              Multi.new()
              |> Oban.insert(:job_1, Worker.new(%{ref: 1}))
-             |> Oban.insert("job-2", Worker.new(%{ref: 2}))
+             |> Oban.insert("job-2", fn _ -> Worker.new(%{ref: 2}) end)
              |> Oban.insert({:job, 3}, Worker.new(%{ref: 3}))
              |> Repo.transaction()
 

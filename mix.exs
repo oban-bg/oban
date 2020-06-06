@@ -1,7 +1,7 @@
 defmodule Oban.MixProject do
   use Mix.Project
 
-  @version "1.2.0"
+  @version "2.0.0-rc.0"
 
   def project do
     [
@@ -94,6 +94,7 @@ defmodule Oban.MixProject do
     [
       "README.md",
       "guides/troubleshooting.md",
+      "guides/release_configuration.md",
       "guides/recipes/recursive-jobs.md",
       "guides/recipes/reliable-scheduling.md",
       "guides/recipes/reporting-progress.md",

@@ -152,8 +152,8 @@ defmodule Oban.Queue.Producer do
   def handle_info(:poll, %State{conf: conf} = state) do
     conf.repo.checkout(fn ->
       state
-      |> deschedule()
       |> schedule_poll()
+      |> deschedule()
       |> dispatch()
     end)
   end
