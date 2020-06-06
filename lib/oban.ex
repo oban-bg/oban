@@ -372,7 +372,7 @@ defmodule Oban do
   end
 
   @doc """
-  Start a new supervised queue
+  Start a new supervised queue.
 
   By default this starts a new supervised queue across all nodes running Oban on the same database
   and prefix. You can pass the option `local_only: true` if you prefer to start the queue only on
@@ -398,8 +398,7 @@ defmodule Oban do
   """
   @doc since: "2.0.0"
   @spec start_queue(name :: atom(), opts :: Keyword.t()) :: :ok
-  def start_queue(name \\ __MODULE__, opts)
-      when is_atom(name) and is_list(opts) do
+  def start_queue(name \\ __MODULE__, [_ | _] = opts) when is_atom(name) do
     name
     |> config()
     |> Midwife.start_queue(opts)
@@ -468,7 +467,7 @@ defmodule Oban do
   end
 
   @doc """
-  Shutdown a queue's supervision tree and stop running jobs for that queue
+  Shutdown a queue's supervision tree and stop running jobs for that queue.
 
   By default this action will occur across all the running nodes. Still, if you prefer to stop the
   queue's supervision tree and stop running jobs for that queue only on the local node, you can

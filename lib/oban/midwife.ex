@@ -48,8 +48,7 @@ defmodule Oban.Midwife do
   """
   @doc since: "2.0.0"
   @spec start_queue(Config.t(), opts :: Keyword.t()) :: :ok
-  def start_queue(%Config{name: name} = conf, opts)
-      when is_list(opts) do
+  def start_queue(%Config{name: name} = conf, [_ | _] = opts) do
     Enum.each(opts, &validate_queue_opt!/1)
 
     queue = Keyword.fetch!(opts, :queue)
@@ -95,7 +94,7 @@ defmodule Oban.Midwife do
 
   @doc since: "2.0.0"
   @spec stop_queue(Config.t(), opts :: Keyword.t()) :: :ok
-  def stop_queue(%Config{name: name} = conf, opts) when is_list(opts) do
+  def stop_queue(%Config{name: name} = conf, [_ | _] = opts) do
     Enum.each(opts, &validate_queue_opt!/1)
 
     queue = Keyword.fetch!(opts, :queue)
