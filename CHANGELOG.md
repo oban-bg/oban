@@ -27,6 +27,72 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - [Oban.Crontab] Fix weekday matching for Sunday, which is represented as `0` in
   crontabs.
 
+### Breaking Changes
+
+- [Oban.Worker] The `perform/2` callback is replaced with `perform/1`, where the
+  only argument is an `Oban.Job` struct. This unifies the interface for all
+  `Oban.Worker` callbacks and helps to eliminate confusion around pattern
+  matching on arguments.
+
+  To migrate change all worker definitions from accepting an `args` map and a
+  `job` struct:
+
+  ```elixir
+  def perform(%{"id" => id}, _job), do: IO.inspect(id)
+  ```
+
+  To accept a single `job` struct and match on the `args` key directly:
+
+  ```elixir
+  def perform(%Job{args: %{"id" => id}}), do: IO.inspect(id)
+  ```
+
+- [Oban.Worker] The `backoff/1` callback now expects a job struct instead of an
+  integer. That allows applications to finely control backoff based on more than
+  just the current attempt number. Use of `backoff/1` with an integer is
+  no longer supported.
+
+  To migrate change any worker definitions that used a raw `attempt` like this:
+
+    ```elixir
+    def backoff(attempt), do: attempt * 60
+    ```
+
+  To match on a job struct instead, like this:
+
+    ```elixir
+    def backoff(%Job{attempt: attempt}), do: attempt * 60
+    ```
+
+- [Oban.Telemetry] The format for telemetry events has changed to match the new
+  telemetry `span` convention. This listing maps the old event to the new one:
+
+    * `[:oban, :started]` -> `[:oban, :job, :start]`
+    * `[:oban, :success]` -> `[:oban, :job, :stop]`
+    * `[:oban, :failure]` -> `[:oban, :job, :exception]`
+    * `[:oban, :trip_circuit]` -> `[:oban, :circuit, :trip]`
+    * `[:oban, :open_circuit]` -> `[:oban, :circuit, :open]`
+
+  In addition, for exceptions the stacktrace meta key has changed from `:stack`
+  to the standardized `:stacktrace`.
+
+- [Oban.Prune] Configurable pruning is no longer available. Instead, pruning is
+  handled by the new plugin system. A fixed period pruning module is enabled as
+  a default plugin. Th plugin always retains "prunable" (discarded or complete)
+  jobs for 60 seconds.
+
+  Remove any `:prune`, `:prune_interval` or `prune_limit` settings from your
+  config. To disable the pruning plugin in test mode set `plugins: false`
+  instead.
+
+- [Oban.Beat] Pulse tracking and periodic job rescue are no longer available.
+  Pulse tracking and rescuing will be handled by an external plugin. This is
+  primarily an implementation detail, but it means that jobs may be left in the
+  `executing` state after a crash or forced shutdown.
+
+  Remove any `:beats_maxage`, `:rescue_after` or `:rescue_interval` settings
+  from your config.
+
 ### Added
 
 - [Oban] Bubble up errors and exits when draining queues by passing
@@ -39,7 +105,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   re-schedule a job some number of seconds in the future. This is useful for
   recycling jobs that aren't ready to run yet, e.g. because of rate limiting.
 
-- [Oban.Worker] Support returning `:discard` from `perform/2` to immediately
+- [Oban.Worker] Support returning `:discard` from `perform/1` to immediately
   discard a job. This is useful when a job encounters an error that won't
   resolve with time, e.g. invalid arguments or a missing record.
 
@@ -64,6 +130,27 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - [Oban.Testing] Add `perform_job/2,3` helper to automate validating,
   normalizing and performing jobs while unit testing. This is now the preferred
   way to unit test workers.
+
+  To update your tests replace any calls to `perform/1,2` with the new
+  `Oban.Testing.perform_job/2,3` helper:
+
+  ```elixir
+  defmodule MyApp.WorkerTest do
+    use MyApp.DataCase, async: true
+
+    use Oban.Testing, repo: MyApp.Repo
+
+    alias MyApp.Worker
+
+    test "doing business in my worker" do
+      assert :ok = perform_job(Worker, %{id: 1})
+    end
+  end
+  ```
+
+  The `perform_job/2,3` helper will verify the worker, the arguments and any
+  provided options. It will then verify that your worker returns a valid result
+  and return the value for you to assert on.
 
 - [Oban.Crontab] Add support for non-standard expressions such as `@daily`,
   `@hourly`, `@midnight`, etc.
@@ -97,54 +184,6 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   attempts into the hundreds or thousands. In this situation the algorithm
   calculates the backoff using a ratio of attempts to max attempts, but is still
   limited to roughly 24 days.
-
-### Breaking Changes
-
-- [Oban.Telemetry] The format for telemetry events has changed to match the new
-  telemetry `span` convention. This listing maps the old event to the new one:
-
-    * `[:oban, :started]` -> `[:oban, :job, :start]`
-    * `[:oban, :success]` -> `[:oban, :job, :stop]`
-    * `[:oban, :failure]` -> `[:oban, :job, :exception]`
-    * `[:oban, :trip_circuit]` -> `[:oban, :circuit, :trip]`
-    * `[:oban, :open_circuit]` -> `[:oban, :circuit, :open]`
-
-  In addition, for exceptions the stacktrace meta key has changed from `:stack`
-  to the standardized `:stacktrace`.
-
-- [Oban.Worker] The `backoff/1` callback now expects a job struct instead of an
-  integer. That allows applications to finely control backoff based on more than
-  just the current attempt number. Use of `backoff/1` with an integer is
-  no longer supported.
-
-  To migrate change any worker definitions that used a raw `attempt` like this:
-
-    ```elixir
-    def backoff(attempt), do: attempt * 60
-    ```
-
-  To match on a job struct instead, like this:
-
-    ```elixir
-    def backoff(%Job{attempt: attempt}), do: attempt * 60
-    ```
-
-- [Oban.Prune] Configurable pruning is no longer available. Instead, pruning is
-  handled by the new plugin system. A fixed period pruning module is enabled as
-  a default plugin. Th plugin always retains "prunable" (discarded or complete)
-  jobs for 60 seconds.
-
-  Remove any `:prune`, `:prune_interval` or `prune_limit` settings from your
-  config. To disable the pruning plugin in test mode set `plugins: false`
-  instead.
-
-- [Oban.Beat] Pulse tracking and periodic job rescue are no longer available.
-  Pulse tracking and rescuing will be handled by an external plugin. This is
-  primarily an implementation detail, but it means that jobs may be left in the
-  `executing` state after a crash or forced shutdown.
-
-  Remove any `:beats_maxage`, `:rescue_after` or `:rescue_interval` settings
-  from your config.
 
 ## [1.2.0] — 2020-03-05
 

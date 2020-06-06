@@ -171,6 +171,10 @@ defmodule Oban.Testing do
 
       assert {:error, _} = perform_job(MyWorker, %{"bad" => "arg"})
 
+  Execute a job with the args keys automatically stringified:
+
+      assert :ok = perform_job(MyWorker, %{id: 1})
+
   Exercise custom attempt handling within a worker by passing options:
 
       assert :ok = perform_job(MyWorker, %{}, attempt: 42)
