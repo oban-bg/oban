@@ -5,27 +5,58 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Breaking Changes
+
+- [Oban.Config] The `:verbose` setting is renamed to `:log`. The setting started
+  off as a simple boolean, but it has morphed to align with the log values
+  accepted by calls to `Ecto.Repo`.
+
+  To migrate, replace any `:verbose` declarations:
+
+    ```elixir
+    config :my_app, Oban,
+      verbose: false,
+      ...
+    ```
+
+  With use of `:log` instead:
+
+    ```elixir
+    config :my_app, Oban,
+      log: false,
+      ...
+    ```
+
+- [Oban] The interface for `start_queue/3` is replaced with `start_queue/2` and
+  `stop_queue/2` no longer accepts a queue name as the second argument. Instead,
+  both functions now accept a keyword list of options. This enables the new
+  `local_only` flag, which allows you to dynamically start and stop queues only
+  for the local node.
+
+  Where you previously called `start_queue/2,3` or `stop_queue/2` like this:
+
+    ```elixir
+    :ok = Oban.start_queue(:myqueue, 10)
+    :ok = Oban.stop_queue(:myqueue)
+    ```
+
+  You'll now them with options, like this:
+
+    ```elixir
+    :ok = Oban.start_queue(queue: :myqueue, limit: 10)
+    :ok = Oban.stop_queue(queue: :myqueue)
+    ```
+
+  Or, to only control the queue locally:
+
+    ```elixir
+    :ok = Oban.start_queue(queue: :myqueue, limit: 10, local_only: true)
+    :ok = Oban.stop_queue(queue: :myqueue, local_only: true)
+    ```
+
 ## [2.0.0-rc.0] — 2020-06-03
-
-### Fixed
-
-- [Oban.Scheduler] Ensure isolation between transaction locks in different
-  prefixes. A node with multiple prefix-isolated instances (i.e. "public" and
-  "private") would always attempt to schedule cron jobs at the same moment. The
-  first scheduler would acquire a lock and block out the second, preventing the
-  second scheduler from ever scheduling jobs.
-
-- [Oban.Query] Correctly prefix unprepared unique queries. Unique queries always
-  targeted the "public" prefix, which either caused incorrect results when there
-  were both "public" and an alternate prefix. In situations where there wasn't
-  a public `oban_jobs` table at all it would cause cryptic transaction errors.
-
-- [Oban.Query] Wrap all job fetching in an explicit transaction to enforce `FOR
-  UPDATE SKIP LOCKED` semantics. Prior to this it was possible to run the same
-  job at the same time on multiple nodes.
-
-- [Oban.Crontab] Fix weekday matching for Sunday, which is represented as `0` in
-  crontabs.
 
 ### Breaking Changes
 
@@ -37,15 +68,15 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   To migrate change all worker definitions from accepting an `args` map and a
   `job` struct:
 
-  ```elixir
-  def perform(%{"id" => id}, _job), do: IO.inspect(id)
-  ```
+    ```elixir
+    def perform(%{"id" => id}, _job), do: IO.inspect(id)
+    ```
 
   To accept a single `job` struct and match on the `args` key directly:
 
-  ```elixir
-  def perform(%Job{args: %{"id" => id}}), do: IO.inspect(id)
-  ```
+    ```elixir
+    def perform(%Job{args: %{"id" => id}}), do: IO.inspect(id)
+    ```
 
 - [Oban.Worker] The `backoff/1` callback now expects a job struct instead of an
   integer. That allows applications to finely control backoff based on more than
@@ -93,32 +124,25 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   Remove any `:beats_maxage`, `:rescue_after` or `:rescue_interval` settings
   from your config.
 
-- [Oban] The interface for `start_queue/3` is replaced with `start_queue/2` and
-  `stop_queue/2` no longer accepts a queue name as the second argument. Instead,
-  both functions now accept a keyword list of options. This enables the new
-  `local_only` flag, which allows you to dynamically start and stop queues only
-  for the local node.
+### Fixed
 
-  Where you previously called `start_queue/2,3` or `stop_queue/2` like this:
+- [Oban.Scheduler] Ensure isolation between transaction locks in different
+  prefixes. A node with multiple prefix-isolated instances (i.e. "public" and
+  "private") would always attempt to schedule cron jobs at the same moment. The
+  first scheduler would acquire a lock and block out the second, preventing the
+  second scheduler from ever scheduling jobs.
 
-  ```elixir
-  :ok = Oban.start_queue(:myqueue, 10)
-  :ok = Oban.stop_queue(:myqueue)
-  ```
+- [Oban.Query] Correctly prefix unprepared unique queries. Unique queries always
+  targeted the "public" prefix, which either caused incorrect results when there
+  were both "public" and an alternate prefix. In situations where there wasn't
+  a public `oban_jobs` table at all it would cause cryptic transaction errors.
 
-  You'll now them with options, like this:
+- [Oban.Query] Wrap all job fetching in an explicit transaction to enforce `FOR
+  UPDATE SKIP LOCKED` semantics. Prior to this it was possible to run the same
+  job at the same time on multiple nodes.
 
-  ```elixir
-  :ok = Oban.start_queue(queue: :myqueue, limit: 10)
-  :ok = Oban.stop_queue(queue: :myqueue)
-  ```
-
-  Or, to only control the queue locally:
-
-  ```elixir
-  :ok = Oban.start_queue(queue: :myqueue, limit: 10, local_only: true)
-  :ok = Oban.stop_queue(queue: :myqueue, local_only: true)
-  ```
+- [Oban.Crontab] Fix weekday matching for Sunday, which is represented as `0` in
+  crontabs.
 
 ### Added
 

@@ -20,7 +20,7 @@ defmodule Oban.Config do
           repo: module(),
           shutdown_grace_period: timeout(),
           timezone: Calendar.time_zone(),
-          verbose: false | Logger.level()
+          log: false | Logger.level()
         }
 
   @type option :: {:name, module()} | {:conf, t()}
@@ -38,7 +38,7 @@ defmodule Oban.Config do
             repo: nil,
             shutdown_grace_period: :timer.seconds(15),
             timezone: "Etc/UTC",
-            verbose: false
+            log: false
 
   @spec start_link([option()]) :: GenServer.on_start()
   def start_link(opts) when is_list(opts) do
@@ -156,9 +156,9 @@ defmodule Oban.Config do
     end
   end
 
-  defp validate_opt!({:verbose, verbose}) do
-    unless verbose in ~w(false error warn info debug)a do
-      raise ArgumentError, "expected :verbose to be `false` or a log level"
+  defp validate_opt!({:log, log}) do
+    unless log in ~w(false error warn info debug)a do
+      raise ArgumentError, "expected :log to be `false` or a log level"
     end
   end
 

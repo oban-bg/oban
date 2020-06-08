@@ -125,15 +125,15 @@ defmodule Oban.ConfigTest do
       assert_valid(timezone: "America/Chicago")
     end
 
-    test ":verbose is validated as `false` or a valid log level" do
-      assert_invalid(verbose: 1)
-      assert_invalid(verbose: "false")
-      assert_invalid(verbose: nil)
-      assert_invalid(verbose: :warning)
-      assert_invalid(verbose: true)
+    test ":log is validated as `false` or a valid log level" do
+      assert_invalid(log: 1)
+      assert_invalid(log: "false")
+      assert_invalid(log: nil)
+      assert_invalid(log: :warning)
+      assert_invalid(log: true)
 
-      assert_valid(verbose: false)
-      assert_valid(verbose: :warn)
+      assert_valid(log: false)
+      assert_valid(log: :warn)
     end
   end
 

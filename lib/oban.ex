@@ -29,7 +29,7 @@ defmodule Oban do
           | {:repo, module()}
           | {:shutdown_grace_period, timeout()}
           | {:timezone, Calendar.time_zone()}
-          | {:verbose, false | Logger.level()}
+          | {:log, false | Logger.level()}
 
   @type queue_name :: atom() | binary()
 
@@ -72,7 +72,7 @@ defmodule Oban do
   * `:timezone` — which timezone to use when scheduling cron jobs. To use a timezone other than
     the default of "Etc/UTC" you *must* have a timezone database like [tzdata][tzdata] installed
     and configured.
-  * `:verbose` — either `false` to disable logging or a standard log level (`:error`, `:warn`,
+  * `:log` — either `false` to disable logging or a standard log level (`:error`, `:warn`,
     `:info`, `:debug`). This determines whether queries are logged or not; overriding the repo's
     configured log level. Defaults to `false`, where no queries are logged.
 
@@ -251,7 +251,7 @@ defmodule Oban do
   @doc """
   Insert multiple jobs into the database for execution.
 
-  Insertion respects `prefix` and `verbose` settings, but it *does not use* per-job unique
+  Insertion respects `prefix` and `log` settings, but it *does not use* per-job unique
   configuration. You must use `insert/2,4` or `insert!/2` for per-job unique support.
 
   There are a few important differences between this function and `Ecto.Repo.insert_all/3`:

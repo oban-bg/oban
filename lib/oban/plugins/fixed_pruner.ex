@@ -39,10 +39,10 @@ defmodule Oban.Plugins.FixedPruner do
 
   @impl GenServer
   def handle_info(:prune, %State{conf: conf} = state) do
-    %Config{repo: repo, verbose: verbose} = conf
+    %Config{repo: repo, log: log} = conf
 
     Telemetry.span(:prune, fn ->
-      repo.transaction(fn -> acquire_and_prune(conf) end, log: verbose)
+      repo.transaction(fn -> acquire_and_prune(conf) end, log: log)
     end)
 
     Process.send_after(self(), :prune, state.interval)
@@ -57,7 +57,7 @@ defmodule Oban.Plugins.FixedPruner do
   end
 
   defp delete_jobs(conf, seconds, limit) do
-    %Config{prefix: prefix, repo: repo, verbose: verbose} = conf
+    %Config{prefix: prefix, repo: repo, log: log} = conf
 
     outdated_at = DateTime.add(DateTime.utc_now(), -seconds)
 
@@ -70,6 +70,6 @@ defmodule Oban.Plugins.FixedPruner do
 
     Job
     |> join(:inner, [j], x in subquery(subquery, prefix: prefix), on: j.id == x.id)
-    |> repo.delete_all(log: verbose, prefix: prefix)
+    |> repo.delete_all(log: log, prefix: prefix)
   end
 end

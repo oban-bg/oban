@@ -91,11 +91,11 @@ defmodule Oban.Crontab.Scheduler do
   defp lock_and_enqueue(%State{circuit: :disabled} = state), do: state
 
   defp lock_and_enqueue(%State{conf: conf, poll_interval: timeout} = state) do
-    %Config{repo: repo, verbose: verbose} = conf
+    %Config{repo: repo, log: log} = conf
 
     repo.transaction(
       fn -> if Query.acquire_lock?(conf, @lock_key), do: enqueue_jobs(conf) end,
-      log: verbose,
+      log: log,
       timeout: timeout
     )
 
