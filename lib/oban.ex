@@ -38,6 +38,11 @@ defmodule Oban do
 
   defguardp is_limit(limit) when is_integer(limit) and limit > 0
 
+  @version Mix.Project.config()[:version]
+
+  @doc false
+  def version, do: @version
+
   @doc """
   Starts an `Oban` supervision tree linked to the current process.
 
