@@ -9,6 +9,7 @@ defmodule Oban.Breaker do
           :circuit => :enabled | :disabled,
           :conf => Config.t(),
           :name => GenServer.name(),
+          :reset_timer => reference(),
           optional(atom()) => any()
         }
 
@@ -19,16 +20,18 @@ defmodule Oban.Breaker do
   defmacro trip_errors, do: [DBConnection.ConnectionError, Postgrex.Error]
 
   @spec trip_circuit(Exception.t(), list(), state_struct()) :: state_struct()
-  def trip_circuit(exception, stack, %{circuit: _, conf: conf, name: name} = state) do
+  def trip_circuit(exception, stack, %{circuit: _, conf: conf, name: name, reset_timer: reset_timer} = state) do
     :telemetry.execute(
       [:oban, :circuit, :trip],
       %{},
       %{error: exception, message: error_message(exception), name: name, stacktrace: stack}
     )
 
-    Process.send_after(self(), :reset_circuit, conf.circuit_backoff)
+    if not is_nil(reset_timer), do: Process.cancel_timer(reset_timer)
 
-    %{state | circuit: :disabled}
+    new_reset_timer = Process.send_after(self(), :reset_circuit, conf.circuit_backoff)
+
+    %{state | circuit: :disabled, reset_timer: new_reset_timer}
   end
 
   @spec open_circuit(state_struct()) :: state_struct()

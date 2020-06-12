@@ -93,6 +93,7 @@ defmodule Oban.Notifier do
       :conn,
       :name,
       circuit: :enabled,
+      reset_timer: nil,
       listeners: %{}
     ]
   end
@@ -242,8 +243,8 @@ defmodule Oban.Notifier do
 
         %{state | conn: conn}
 
-      {:error, _error} ->
-        %{state | circuit: :disabled}
+      {:error, error} ->
+        trip_circuit(error, [], state)
     end
   end
 
