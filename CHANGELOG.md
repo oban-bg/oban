@@ -111,7 +111,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 - [Oban.Prune] Configurable pruning is no longer available. Instead, pruning is
   handled by the new plugin system. A fixed period pruning module is enabled as
-  a default plugin. Th plugin always retains "prunable" (discarded or complete)
+  a default plugin. The plugin always retains "prunable" (discarded or complete)
   jobs for 60 seconds.
 
   Remove any `:prune`, `:prune_interval` or `prune_limit` settings from your
