@@ -242,8 +242,8 @@ defmodule Oban.Notifier do
 
         %{state | conn: conn}
 
-      {:error, error} ->
-        trip_circuit(error, [], state)
+      {:error, _error} ->
+        %{state | circuit: :disabled}
     end
   end
 
