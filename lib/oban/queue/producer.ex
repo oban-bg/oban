@@ -31,6 +31,7 @@ defmodule Oban.Queue.Producer do
       :started_at,
       :timer,
       circuit: :enabled,
+      reset_timer: nil,
       paused: false,
       running: %{}
     ]

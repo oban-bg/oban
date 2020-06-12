@@ -93,6 +93,7 @@ defmodule Oban.Notifier do
       :conn,
       :name,
       circuit: :enabled,
+      reset_timer: nil,
       listeners: %{}
     ]
   end

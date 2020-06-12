@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Fixes
+
+- [Oban.Breaker] Prevent connection bomb when the Notifier experiences repeated
+  disconnections.
+
 ## [2.0.0-rc.1] — 2020-06-12
 
 ### Breaking Changes
