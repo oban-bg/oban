@@ -580,6 +580,7 @@ The following Cron extensions are supported:
 * `@weekly` — `0 0 * * 0`
 * `@monthly` — `0 0 1 * *`
 * `@yearly` (as well as `@annually`) — `0 0 1 1 *`
+* `@reboot` — Run once at boot across the entire cluster
 
 Some specific examples that demonstrate the full range of expressions:
 

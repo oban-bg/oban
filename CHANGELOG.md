@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+- [Oban.Crontab] Add `@reboot` special case to crontab scheduling
+
 ### Fixes
 
 - [Oban.Breaker] Prevent connection bomb when the Notifier experiences repeated

@@ -51,6 +51,7 @@ defmodule Oban.Crontab.Scheduler do
 
   @impl GenServer
   def handle_continue(:start, state) do
+    insert_reboot(state.conf)
     handle_info(:poll, state)
   end
 
@@ -109,11 +110,7 @@ defmodule Oban.Crontab.Scheduler do
     {:ok, datetime} = DateTime.now(timezone)
 
     for {cron, worker, opts} <- crontab, Cron.now?(cron, datetime) do
-      {args, opts} = Keyword.pop(opts, :args, %{})
-
-      opts = unique_opts(worker.__opts__(), opts)
-
-      {:ok, _job} = Query.fetch_or_insert_job(conf, worker.new(args, opts))
+      enqueue_job(worker, opts, conf)
     end
   end
 
@@ -122,5 +119,19 @@ defmodule Oban.Crontab.Scheduler do
     [unique: @unique]
     |> Keyword.merge(worker_opts, &Worker.resolve_opts/3)
     |> Keyword.merge(crontab_opts, &Worker.resolve_opts/3)
+  end
+
+  defp insert_reboot(%Config{crontab: crontab} = conf) do
+    for {cron, worker, opts} <- crontab, Cron.reboot?(cron) do
+      enqueue_job(worker, opts, conf)
+    end
+  end
+
+  defp enqueue_job(worker, opts, conf) do
+    {args, opts} = Keyword.pop(opts, :args, %{})
+
+    opts = unique_opts(worker.__opts__(), opts)
+
+    {:ok, _job} = Query.fetch_or_insert_job(conf, worker.new(args, opts))
   end
 end
