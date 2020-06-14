@@ -10,7 +10,8 @@ defmodule Oban.Crontab.Cron do
           hours: expression(),
           days: expression(),
           months: expression(),
-          weekdays: expression()
+          weekdays: expression(),
+          reboot: boolean()
         }
 
   @part_ranges %{
@@ -21,12 +22,17 @@ defmodule Oban.Crontab.Cron do
     weekdays: {0, 6}
   }
 
-  defstruct minutes: [:*], hours: [:*], days: [:*], months: [:*], weekdays: [:*]
+  defstruct minutes: [:*], hours: [:*], days: [:*], months: [:*], weekdays: [:*], reboot: false
 
   @spec now?(cron :: t(), datetime :: DateTime.t()) :: boolean()
-  def now?(%__MODULE__{} = cron, datetime \\ DateTime.utc_now()) do
+  def now?(cron, datetime \\ DateTime.utc_now())
+
+  def now?(%__MODULE__{reboot: true}, _datetime), do: false
+
+  def now?(%__MODULE__{} = cron, datetime) do
     cron
     |> Map.from_struct()
+    |> Map.drop([:reboot])
     |> Enum.all?(fn {part, values} ->
       Enum.any?(values, &matches_rule?(part, &1, datetime))
     end)
@@ -62,6 +68,7 @@ defmodule Oban.Crontab.Cron do
   - @daily: Run once a day, "0 0 * * *".
   - @midnight: same as @daily
   - @hourly: Run once an hour, "0 * * * *".
+  - @reboot: Run once at boot
 
   ## Examples
 
@@ -82,6 +89,7 @@ defmodule Oban.Crontab.Cron do
   def parse!("@midnight"), do: parse!("@daily")
   def parse!("@daily"), do: parse!("0 0 * * *")
   def parse!("@hourly"), do: parse!("0 * * * *")
+  def parse!("@reboot"), do: struct!(__MODULE__, reboot: true)
 
   def parse!(input) when is_binary(input) do
     input
@@ -129,4 +137,7 @@ defmodule Oban.Crontab.Cron do
   defp expand({_type, value}, min, max) do
     raise ArgumentError, "Unexpected value #{inspect(value)} outside of range #{min}..#{max}"
   end
+
+  @spec reboot?(cron :: t()) :: boolean()
+  def reboot?(%__MODULE__{reboot: reboot}), do: reboot
 end

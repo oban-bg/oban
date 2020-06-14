@@ -16,6 +16,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Added
 
+- [Oban.Crontab] Add `@reboot` special case to crontab scheduling
+
 - [Oban.Telemetry] Add new `:producer` events for descheduling and dispatching
   jobs from queue producers.
 

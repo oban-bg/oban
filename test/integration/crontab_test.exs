@@ -96,6 +96,32 @@ defmodule Oban.Integration.CrontabTest do
     refute_receive {:ok, 2}
   end
 
+  test "reboot jobs are enqueued on startup" do
+    start_supervised_oban!(
+      queues: false,
+      crontab: [{"@reboot", Worker, args: worker_args(1)}]
+    )
+
+    :ok = stop_supervised(Oban)
+
+    assert 1 == Job |> select(count()) |> Repo.one()
+  end
+
+  test "reboot jobs are only enqueued once between nodes" do
+    base_opts = [
+      queues: false,
+      crontab: [{"@reboot", Worker, args: worker_args(1)}]
+    ]
+
+    start_supervised_oban!(base_opts ++ [name: ObanA])
+    start_supervised_oban!(base_opts ++ [name: ObanB])
+
+    :ok = stop_supervised(ObanA)
+    :ok = stop_supervised(ObanB)
+
+    assert 1 == Job |> select(count()) |> Repo.one()
+  end
+
   defp worker_args(ref) do
     %{ref: ref, action: "OK", bin_pid: Worker.pid_to_bin()}
   end

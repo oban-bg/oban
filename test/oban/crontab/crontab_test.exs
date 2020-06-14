@@ -88,6 +88,8 @@ defmodule Oban.Crontab.CronTest do
                months: [:*],
                weekdays: [:*]
              } == Cron.parse!("@hourly")
+
+      assert %Cron{reboot: true} == Cron.parse!("@reboot")
     end
   end
 
@@ -117,6 +119,17 @@ defmodule Oban.Crontab.CronTest do
 
         assert Cron.now?(crontab, datetime)
       end
+    end
+
+    test "reboot never matches" do
+      refute Cron.now?(%Cron{reboot: true})
+    end
+  end
+
+  describe "reboot?/1" do
+    test "only reboot matches" do
+      assert Cron.reboot?(%Cron{reboot: true})
+      refute Cron.reboot?(%Cron{reboot: false})
     end
   end
 
