@@ -30,7 +30,7 @@
 
 - [Features](#Features)
 - [Requirements](#Requirements)
-- [Oban Web UI](#Oban-Web-UI)
+- [Oban Web+Pro](#Oban-Web+Pro)
 - [Installation](#Installation)
 - [Usage](#Usage)
   - [Configuring Queues](#Configuring-Queues)
@@ -137,12 +137,11 @@ Oban has been developed and actively tested with Elixir 1.8+, Erlang/OTP 21.1+
 and PostgreSQL 11.0+. Running Oban currently requires Elixir 1.8+, Erlang 21+,
 and PostgreSQL 9.6+.
 
-## Oban Web UI
+## Oban Web+Pro
 
-A web-based user interface for monitoring and managing Oban is available as a
-private package. Learn more about the UI at [oban.dev][odev].
-
-[odev]: https://oban.dev
+A web-based user interface for managing Oban, along with an official set of
+plugins and workers are available as private packages. Learn more about Oban
+Web+Pro at [getoban.pro][https://getoban.pro].
 
 ## Installation
 
