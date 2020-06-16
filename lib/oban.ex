@@ -134,8 +134,9 @@ defmodule Oban do
 
   @impl Supervisor
   def init(%Config{name: name, plugins: plugins, queues: queues} = conf) do
+    store_config(name, conf)
+
     children = [
-      {Config, conf: conf, name: child_name(name, "Config")},
       {Notifier, conf: conf, name: child_name(name, "Notifier")},
       {Midwife, conf: conf, name: child_name(name, "Midwife")},
       {Scheduler, conf: conf, name: child_name(name, "Scheduler")}
@@ -545,4 +546,10 @@ defmodule Oban do
   end
 
   defp child_name(name, child), do: Module.concat(name, child)
+
+  defp store_config(name, conf) do
+    name
+    |> child_name("Config")
+    |> Config.put(conf)
+  end
 end

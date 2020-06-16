@@ -3,8 +3,6 @@ defmodule Oban.Config do
 
   alias Oban.Crontab.Cron
 
-  use Agent
-
   @type cronjob :: {Cron.t(), module(), Keyword.t()}
 
   @type t :: %__MODULE__{
@@ -40,13 +38,6 @@ defmodule Oban.Config do
             timezone: "Etc/UTC",
             log: false
 
-  @spec start_link([option()]) :: GenServer.on_start()
-  def start_link(opts) when is_list(opts) do
-    {conf, opts} = Keyword.pop(opts, :conf)
-
-    Agent.start_link(fn -> conf end, opts)
-  end
-
   @spec new(Keyword.t()) :: t()
   def new(opts) when is_list(opts) do
     opts =
@@ -63,8 +54,11 @@ defmodule Oban.Config do
     struct!(__MODULE__, opts)
   end
 
+  @spec put(atom(), t()) :: :ok
+  def put(name, conf), do: :persistent_term.put(name, conf)
+
   @spec get(atom()) :: t()
-  def get(name), do: Agent.get(name, & &1)
+  def get(name), do: :persistent_term.get(name)
 
   @spec node_name(%{optional(binary()) => binary()}) :: binary()
   def node_name(env \\ System.get_env()) do

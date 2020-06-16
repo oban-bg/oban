@@ -4,13 +4,14 @@ defmodule Oban.ConfigTest do
   alias Oban.Config
   alias Oban.Plugins.FixedPruner
 
-  describe "start_link/1" do
+  describe "put/2" do
     test "a config struct is stored for retreival" do
-      conf = Config.new(repo: Repo)
+      key = __MODULE__
+      conf = Config.new(repo: Repo, name: key)
 
-      {:ok, pid} = Config.start_link(conf: conf)
+      :ok = Config.put(key, conf)
 
-      assert %Config{} = Config.get(pid)
+      assert conf == Config.get(key)
     end
   end
 
