@@ -50,6 +50,7 @@ defmodule Oban.Integration.TelemetryTest do
              args: %{},
              queue: "alpha",
              worker: "Oban.Integration.Worker",
+             prefix: "public",
              attempt: 1,
              max_attempts: 20
            } = stop_meta
@@ -59,6 +60,7 @@ defmodule Oban.Integration.TelemetryTest do
              args: %{},
              queue: "alpha",
              worker: "Oban.Integration.Worker",
+             prefix: "public",
              attempt: 1,
              max_attempts: 20,
              kind: :error,
@@ -71,6 +73,7 @@ defmodule Oban.Integration.TelemetryTest do
              args: %{},
              queue: "alpha",
              worker: "Oban.Integration.Worker",
+             prefix: "public",
              attempt: 1,
              max_attempts: 20,
              kind: :error,

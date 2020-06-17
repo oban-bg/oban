@@ -82,7 +82,7 @@ defmodule Oban.Queue.Executor do
   def resolve_worker(%__MODULE__{safe: true} = exec) do
     %{resolve_worker(%{exec | safe: false}) | safe: true}
   rescue
-    error -> %{exec | state: :failure, reason: error, stacktrace: __STACKTRACE__}
+    error -> %{exec | state: :failure, error: error, stacktrace: __STACKTRACE__}
   end
 
   def resolve_worker(%__MODULE__{} = exec) do

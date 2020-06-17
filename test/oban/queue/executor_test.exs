@@ -16,16 +16,9 @@ defmodule Oban.Queue.ExecutorTest do
     def perform(%{args: %{"mode" => "error"}}), do: {:error, "no reason"}
   end
 
+  @conf Config.new(repo: Repo)
+
   describe "perform/1" do
-    defp call_with_mode(mode) do
-      job = %Job{args: %{"mode" => mode}, worker: to_string(Worker)}
-
-      Config.new(repo: Repo)
-      |> Executor.new(job)
-      |> Executor.resolve_worker()
-      |> Executor.perform()
-    end
-
     test "accepting :ok as a success" do
       assert %{state: :success} = call_with_mode("ok")
     end
@@ -36,6 +29,15 @@ defmodule Oban.Queue.ExecutorTest do
       assert %{state: :failure, error: "no reason"} = call_with_mode("error")
     end
 
+    test "inability to resolve a worker is a failure" do
+      job = %Job{args: %{}, worker: "Not.A.Real.Worker"}
+
+      assert %{state: :failure, error: %ArgumentError{}} =
+               @conf
+               |> Executor.new(job)
+               |> Executor.resolve_worker()
+    end
+
     test "warning on unexpected return values" do
       message = capture_log(fn -> %{state: :success} = call_with_mode("warn") end)
 
@@ -44,16 +46,12 @@ defmodule Oban.Queue.ExecutorTest do
     end
   end
 
-  describe "new/2" do
-    test "include prefix in metadata for job events" do
-      job = %Job{args: %{"mode" => "ok"}, worker: to_string(Worker)}
+  defp call_with_mode(mode) do
+    job = %Job{args: %{"mode" => mode}, worker: to_string(Worker)}
 
-      assert "public" ==
-               [repo: Repo]
-               |> Config.new()
-               |> Executor.new(job)
-               |> Map.from_struct()
-               |> get_in([:meta, :prefix])
-    end
+    @conf
+    |> Executor.new(job)
+    |> Executor.resolve_worker()
+    |> Executor.perform()
   end
 end
