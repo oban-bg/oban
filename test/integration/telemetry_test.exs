@@ -26,23 +26,18 @@ defmodule Oban.Integration.TelemetryTest do
 
     :telemetry.attach_many("job-handler", events, &Handler.handle/4, self())
 
-    start_supervised_oban!(queues: [alpha: 3])
+    start_supervised_oban!(queues: [alpha: 2])
 
     %Job{id: stop_id} = insert!(ref: 1, action: "OK")
-    %Job{id: exception_id} = insert!(ref: 2, action: "FAIL")
     %Job{id: error_id} = insert!(ref: 2, action: "ERROR")
 
     assert_receive {:event, :start, started_time, stop_meta}
-
     assert_receive {:event, :stop, %{duration: stop_duration, queue_time: queue_time}, stop_meta}
-
-    assert_receive {:event, :exception, exception_duration, %{kind: :error} = exception_meta}
     assert_receive {:event, :exception, error_duration, %{kind: :error} = error_meta}
 
     assert started_time > 0
     assert stop_duration > 0
     assert queue_time > 0
-    assert exception_duration > 0
     assert error_duration > 0
 
     assert %{
@@ -54,19 +49,6 @@ defmodule Oban.Integration.TelemetryTest do
              attempt: 1,
              max_attempts: 20
            } = stop_meta
-
-    assert %{
-             id: ^exception_id,
-             args: %{},
-             queue: "alpha",
-             worker: "Oban.Integration.Worker",
-             prefix: "public",
-             attempt: 1,
-             max_attempts: 20,
-             kind: :error,
-             error: _,
-             stacktrace: [_ | _]
-           } = exception_meta
 
     assert %{
              id: ^error_id,
