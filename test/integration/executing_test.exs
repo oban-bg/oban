@@ -36,13 +36,13 @@ defmodule Oban.Integration.ExecutingTest do
 
               "retryable" ->
                 refute job.completed_at
-                assert job.scheduled_at > NaiveDateTime.utc_now()
+                assert DateTime.compare(job.scheduled_at, DateTime.utc_now()) == :gt
                 assert length(job.errors) > 0
                 assert [%{"attempt" => 1, "at" => _, "error" => _} | _] = job.errors
 
               "scheduled" ->
                 refute job.completed_at
-                assert job.scheduled_at > NaiveDateTime.utc_now()
+                assert DateTime.compare(job.scheduled_at, DateTime.utc_now()) == :gt
                 assert job.max_attempts > 1
             end
           end)
