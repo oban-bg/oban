@@ -15,7 +15,7 @@ defmodule Oban.Plugins.FixedPruner do
   defmodule State do
     @moduledoc false
 
-    defstruct [:conf, :interval, :name]
+    defstruct [:age, :conf, :interval, :name]
   end
 
   @spec start_link(Keyword.t()) :: GenServer.on_start()
@@ -24,6 +24,7 @@ defmodule Oban.Plugins.FixedPruner do
 
     opts =
       opts
+      |> Keyword.put_new(:age, @prune_age)
       |> Keyword.put_new(:interval, @prune_interval)
       |> Map.new()
 
@@ -42,7 +43,7 @@ defmodule Oban.Plugins.FixedPruner do
     %Config{repo: repo, log: log} = conf
 
     Telemetry.span(:prune, fn ->
-      repo.transaction(fn -> acquire_and_prune(conf) end, log: log)
+      repo.transaction(fn -> acquire_and_prune(conf, state.age) end, log: log)
     end)
 
     Process.send_after(self(), :prune, state.interval)
@@ -50,9 +51,9 @@ defmodule Oban.Plugins.FixedPruner do
     {:noreply, state}
   end
 
-  defp acquire_and_prune(conf) do
+  defp acquire_and_prune(conf, age) do
     if Query.acquire_lock?(conf, @lock_key) do
-      delete_jobs(conf, @prune_age, @prune_limit)
+      delete_jobs(conf, age, @prune_limit)
     end
   end
 
