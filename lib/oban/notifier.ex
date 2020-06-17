@@ -187,10 +187,16 @@ defmodule Oban.Notifier do
     {:noreply, state}
   end
 
-  def handle_info({:EXIT, _pid, error}, %State{} = state) do
+  def handle_info({:EXIT, pid, error}, %State{conn: conn} = state) when pid == conn do
     state = trip_circuit(error, [], state)
 
     {:noreply, %{state | conn: nil}}
+  end
+
+  def handle_info({:EXIT, _pid, error}, %State{} = state) do
+    state = trip_circuit(error, [], state)
+
+    {:noreply, state}
   end
 
   def handle_info(:reset_circuit, %State{circuit: :disabled} = state) do
