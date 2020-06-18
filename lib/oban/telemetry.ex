@@ -29,16 +29,34 @@ defmodule Oban.Telemetry do
   * `:throw` — from a caught value, this doesn't necessarily mean that an error occurred and the
     error value is unpredictable
 
+  ### Producer Events
+
+  Oban emits the following telemetry span events for each queue's producer:
+
+  * `[:oban, :producer, :start | :stop | :exception]` — when a producer deschedules or dispatches
+    new jobs
+
+  | event        | measures       | metadata          |
+  | ------------ | -------------- | ----------------- |
+  | `:start`     | `:system_time` | `:action, :queue` |
+  | `:stop`      | `:duration`    | `:action, :queue` |
+  | `:exception` | `:duration`    | `:action, :queue` |
+
+  Metadata
+
+  * `:action` — one of `:deschedule` or `:dispatch`
+  * `:queue` — the name of the queue as a string, e.g. "default" or "mailers"
+
   ### Circuit Events
 
   All processes that interact with the database have circuit breakers to prevent errors from
   crashing the entire supervision tree. Processes emit a `[:oban, :trip_circuit]` event when a
   circuit is tripped and `[:oban, :open_circuit]` when the breaker is subsequently opened again.
 
-  | event                      | metadata                               |
-  | -------------------------- | -------------------------------------- |
-  | `[:oban, :circuit, :trip]` | `:error, :message, :name, :stacktrace` |
-  | `[:oban, :circuit, :open]` | `:name`                                |
+  | event                      | measures | metadata                               |
+  | -------------------------- | -------- | -------------------------------------- |
+  | `[:oban, :circuit, :trip]` |          | `:error, :message, :name, :stacktrace` |
+  | `[:oban, :circuit, :open]` |          | `:name`                                |
 
   Metadata
 

@@ -7,12 +7,17 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
-### Fixes
+### Fixed
 
 - [Oban.Breaker] Prevent connection bomb when the Notifier experiences repeated
   disconnections.
 
 - [Oban.Queue.Executor] Fix error reporting when a worker fails to resolve.
+
+### Added
+
+- [Oban.Telemetry] Add new `:producer` events for descheduling and dispatching
+  jobs from queue producers.
 
 ## [2.0.0-rc.1] — 2020-06-12
 

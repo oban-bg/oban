@@ -5,7 +5,7 @@ defmodule Oban.Queue.Producer do
 
   import Oban.Breaker, only: [open_circuit: 1, trip_errors: 0, trip_circuit: 3]
 
-  alias Oban.{Breaker, Config, Notifier, Query}
+  alias Oban.{Breaker, Config, Notifier, Query, Telemetry}
   alias Oban.Queue.Executor
 
   @type option ::
@@ -212,7 +212,11 @@ defmodule Oban.Queue.Producer do
   end
 
   defp deschedule(%State{conf: conf, queue: queue} = state) do
-    Query.stage_scheduled_jobs(conf, queue)
+    Telemetry.span(
+      :producer,
+      fn -> Query.stage_scheduled_jobs(conf, queue) end,
+      %{action: :deschedule, queue: queue}
+    )
 
     state
   rescue
@@ -237,10 +241,16 @@ defmodule Oban.Queue.Producer do
         %State{conf: conf, limit: limit, nonce: nonce, queue: queue, running: running} = state
 
         running =
-          conf
-          |> fetch_jobs(queue, nonce, limit - map_size(running))
-          |> start_jobs(state)
-          |> Map.merge(running)
+          Telemetry.span(
+            :producer,
+            fn ->
+              conf
+              |> fetch_jobs(queue, nonce, limit - map_size(running))
+              |> start_jobs(state)
+              |> Map.merge(running)
+            end,
+            %{action: :dispatch, queue: queue}
+          )
 
         {:noreply, %{state | cooldown_ref: nil, dispatched_at: system_now(), running: running}}
 
