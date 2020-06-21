@@ -27,7 +27,8 @@ defmodule Oban.Crontab.Scheduler do
       :poll_ref,
       circuit: :enabled,
       reset_timer: nil,
-      poll_interval: :timer.seconds(60)
+      poll_interval: :timer.seconds(60),
+      first_run: true
     ]
   end
 
@@ -51,7 +52,6 @@ defmodule Oban.Crontab.Scheduler do
 
   @impl GenServer
   def handle_continue(:start, state) do
-    insert_reboot(state.conf)
     handle_info(:poll, state)
   end
 
@@ -69,7 +69,7 @@ defmodule Oban.Crontab.Scheduler do
       |> send_poll_after()
       |> lock_and_enqueue()
 
-    {:noreply, state}
+    {:noreply, %{state | first_run: false}}
   end
 
   def handle_info({:EXIT, _pid, error}, %State{} = state) do
@@ -96,7 +96,7 @@ defmodule Oban.Crontab.Scheduler do
     %Config{repo: repo, log: log} = conf
 
     repo.transaction(
-      fn -> if Query.acquire_lock?(conf, @lock_key), do: enqueue_jobs(conf) end,
+      fn -> if Query.acquire_lock?(conf, @lock_key), do: insert_jobs(state) end,
       log: log,
       timeout: timeout
     )
@@ -106,7 +106,12 @@ defmodule Oban.Crontab.Scheduler do
     exception in trip_errors() -> trip_circuit(exception, __STACKTRACE__, state)
   end
 
-  defp enqueue_jobs(%Config{crontab: crontab, timezone: timezone} = conf) do
+  defp insert_jobs(%State{conf: conf, first_run: first_run}) do
+    if first_run, do: insert_reboot_jobs(conf)
+    insert_scheduled_jobs(conf)
+  end
+
+  defp insert_scheduled_jobs(%Config{crontab: crontab, timezone: timezone} = conf) do
     {:ok, datetime} = DateTime.now(timezone)
 
     for {cron, worker, opts} <- crontab, Cron.now?(cron, datetime) do
@@ -114,14 +119,7 @@ defmodule Oban.Crontab.Scheduler do
     end
   end
 
-  # Ensure that `unique` is deep merged and the default period has the lowest priority.
-  defp unique_opts(worker_opts, crontab_opts) do
-    [unique: @unique]
-    |> Keyword.merge(worker_opts, &Worker.resolve_opts/3)
-    |> Keyword.merge(crontab_opts, &Worker.resolve_opts/3)
-  end
-
-  defp insert_reboot(%Config{crontab: crontab} = conf) do
+  defp insert_reboot_jobs(%Config{crontab: crontab} = conf) do
     for {cron, worker, opts} <- crontab, Cron.reboot?(cron) do
       enqueue_job(worker, opts, conf)
     end
@@ -133,5 +131,12 @@ defmodule Oban.Crontab.Scheduler do
     opts = unique_opts(worker.__opts__(), opts)
 
     {:ok, _job} = Query.fetch_or_insert_job(conf, worker.new(args, opts))
+  end
+
+  # Ensure that `unique` is deep merged and the default period has the lowest priority.
+  defp unique_opts(worker_opts, crontab_opts) do
+    [unique: @unique]
+    |> Keyword.merge(worker_opts, &Worker.resolve_opts/3)
+    |> Keyword.merge(crontab_opts, &Worker.resolve_opts/3)
   end
 end
