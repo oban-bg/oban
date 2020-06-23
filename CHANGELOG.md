@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Breaking Changes
+
+- [Oban] The interface for `pause_queue/2`, `resume_queue/2` and `scale_queue/3`
+  now matches the recently changed `start_queue/2` and `stop_queue/2`. All queue
+  manipulation functions now have a consistent interface, including the ability
+  to work in `:local_only` mode. See the notes around `start_queue/2` and
+  `stop_queue/2` in [2.0.0-rc.1][] for help upgrading.
+
 ### Fixed
 
 - [Oban.Breaker] Prevent connection bomb when the Notifier experiences repeated
@@ -16,7 +24,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 - [Oban.Telemetry] Stop logging the `:error` value for circuit trip events. The
   error is a struct that isn't JSON encodable. We include the normalized
-  Postgrex / DBConnection message already, so the error is redundant. 
+  Postgrex / DBConnection message already, so the error is redundant.
 
 ### Added
 

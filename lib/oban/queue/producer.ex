@@ -131,8 +131,8 @@ defmodule Oban.Queue.Producer do
         %{"action" => "resume", "queue" => ^queue} ->
           %{state | paused: false}
 
-        %{"action" => "scale", "queue" => ^queue, "scale" => scale} ->
-          %{state | limit: scale}
+        %{"action" => "scale", "queue" => ^queue, "limit" => limit} ->
+          %{state | limit: limit}
 
         %{"action" => "pkill", "job_id" => kid} ->
           for {_ref, {exec, pid}} <- running, exec.job.id == kid do

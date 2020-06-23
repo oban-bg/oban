@@ -82,6 +82,18 @@ defmodule Oban.Config do
     end
   end
 
+  @spec to_ident(t()) :: binary()
+  def to_ident(%__MODULE__{name: name, node: node}) do
+    to_string(name) <> "." <> to_string(node)
+  end
+
+  @spec match_ident?(t(), binary()) :: boolean()
+  def match_ident?(%__MODULE__{} = conf, ident) when is_binary(ident) do
+    to_ident(conf) == ident
+  end
+
+  # Helpers
+
   defp validate_opt!({:circuit_backoff, interval}) do
     unless is_integer(interval) and interval > 0 do
       raise ArgumentError, "expected :circuit_backoff to be a positive integer"

@@ -33,10 +33,13 @@ defmodule Oban do
 
   @type queue_name :: atom() | binary()
 
+  @type queue_option ::
+          {:queue, queue_name()}
+          | {:limit, pos_integer()}
+          | {:local_only, boolean()}
+
   defguardp is_queue(name)
             when (is_binary(name) and byte_size(name) > 0) or (is_atom(name) and not is_nil(name))
-
-  defguardp is_limit(limit) when is_integer(limit) and limit > 0
 
   @version Mix.Project.config()[:version]
 
@@ -394,9 +397,9 @@ defmodule Oban do
 
   ## Options
 
-  * `queue` - specifies the queue name
-  * `limit` - set the concurrency limit
-  * `local_only` - specifies if the queue will be started only on the local node, default: `false`
+  * `:queue` - specifies the queue name
+  * `:limit` - set the concurrency limit
+  * `:local_only` - whether the queue will be started only on the local node, default: `false`
 
   ## Examples
 
@@ -410,12 +413,21 @@ defmodule Oban do
       Oban.start_queue(queue: :media, limit: 5, local_only: true)
       :ok
   """
-  @doc since: "2.0.0"
-  @spec start_queue(name :: atom(), opts :: Keyword.t()) :: :ok
+  @doc since: "0.12.0"
+  @spec start_queue(name :: atom(), opts :: [queue_option()]) :: :ok
   def start_queue(name \\ __MODULE__, [_ | _] = opts) when is_atom(name) do
-    name
-    |> config()
-    |> Midwife.start_queue(opts)
+    Enum.each(opts, &validate_queue_opt!/1)
+
+    conf = config(name)
+
+    data = %{
+      action: :start,
+      queue: opts[:queue],
+      limit: opts[:limit],
+      ident: scope_signal(conf, opts)
+    }
+
+    Notifier.notify(conf, :signal, data)
   end
 
   @doc """
@@ -424,23 +436,41 @@ defmodule Oban do
 
   When shutdown begins all queues are paused.
 
+  ## Options
+
+  * `:queue` - specifies the queue to pause
+  * `:local_only` - whether the queue will be paused only on the local node, default: `false`
+
   ## Example
 
   Pause the default queue:
 
-      Oban.pause_queue(:default)
+      Oban.pause_queue(queue: :default)
+      :ok
+
+  Pause the default queue, but only on the local node:
+
+      Oban.pause_queue(queue: :default, local_only: true)
       :ok
   """
   @doc since: "0.2.0"
-  @spec pause_queue(name :: atom(), queue :: queue_name()) :: :ok
-  def pause_queue(name \\ __MODULE__, queue) when is_queue(queue) do
-    name
-    |> config()
-    |> Notifier.notify(:signal, %{action: :pause, queue: queue})
+  @spec pause_queue(name :: atom(), opts :: [queue_option()]) :: :ok
+  def pause_queue(name \\ __MODULE__, [_ | _] = opts) when is_atom(name) do
+    Enum.each(opts, &validate_queue_opt!/1)
+
+    conf = config(name)
+    data = %{action: :pause, queue: opts[:queue], ident: scope_signal(conf, opts)}
+
+    Notifier.notify(conf, :signal, data)
   end
 
   @doc """
   Resume executing jobs in a paused queue.
+
+  ## Options
+
+  * `:queue` - specifies the queue to resume
+  * `:local_only` - whether the queue will be resumed only on the local node, default: `false`
 
   ## Example
 
@@ -448,36 +478,64 @@ defmodule Oban do
 
       Oban.resume_queue(:default)
       :ok
+
+  Resume the default queue, but only on the local node:
+
+      Oban.resume_queue(queue: :default, local_only: true)
+      :ok
   """
   @doc since: "0.2.0"
-  @spec resume_queue(name :: atom(), queue :: queue_name()) :: :ok
-  def resume_queue(name \\ __MODULE__, queue) when is_queue(queue) do
-    name
-    |> config()
-    |> Notifier.notify(:signal, %{action: :resume, queue: queue})
+  @spec resume_queue(name :: atom(), opts :: [queue_option()]) :: :ok
+  def resume_queue(name \\ __MODULE__, [_ | _] = opts) when is_atom(name) do
+    Enum.each(opts, &validate_queue_opt!/1)
+
+    conf = config(name)
+    data = %{action: :resume, queue: opts[:queue], ident: scope_signal(conf, opts)}
+
+    Notifier.notify(conf, :signal, data)
   end
 
   @doc """
   Scale the concurrency for a queue.
 
+  ## Options
+
+  * `:queue` — specifies the queue to scale
+  * `:limit` — the new concurrency limit
+  * `:local_only` — whether the queue will be scaled only on the local node, default: `false`
+
   ## Example
 
   Scale a queue up, triggering immediate execution of queued jobs:
 
-      Oban.scale_queue(:default, 50)
+      Oban.scale_queue(queue: :default, limit: 50)
       :ok
 
   Scale the queue back down, allowing executing jobs to finish:
 
-      Oban.scale_queue(:default, 5)
+      Oban.scale_queue(queue: :default, limit: 5)
+      :ok
+
+  Scale the queue only on the local node:
+
+      Oban.scale_queue(queue: :default, limit: 10, local_only: true)
       :ok
   """
   @doc since: "0.2.0"
-  @spec scale_queue(name :: atom(), queue :: queue_name(), scale :: pos_integer()) :: :ok
-  def scale_queue(name \\ __MODULE__, queue, scale) when is_queue(queue) and is_limit(scale) do
-    name
-    |> config()
-    |> Notifier.notify(:signal, %{action: :scale, queue: queue, scale: scale})
+  @spec scale_queue(name :: atom(), opts :: [queue_option()]) :: :ok
+  def scale_queue(name \\ __MODULE__, [_ | _] = opts) when is_atom(name) do
+    Enum.each(opts, &validate_queue_opt!/1)
+
+    conf = config(name)
+
+    data = %{
+      action: :scale,
+      queue: opts[:queue],
+      limit: opts[:limit],
+      ident: scope_signal(conf, opts)
+    }
+
+    Notifier.notify(conf, :signal, data)
   end
 
   @doc """
@@ -492,8 +550,8 @@ defmodule Oban do
 
   ## Options
 
-  * `queue` - specifies the queue name
-  * `local_only` - specifies if the queue will be stopped only on the local node, default: `false`
+  * `:queue` - specifies the queue to stop
+  * `:local_only` - whether the queue will be stopped only on the local node, default: `false`
 
   ## Examples
 
@@ -503,21 +561,15 @@ defmodule Oban do
       Oban.stop_queue(queue: :media, local_only: true)
       :ok
   """
-  @doc since: "2.0.0"
-  @spec stop_queue(name :: atom(), opts :: Keyword.t()) :: :ok
-  def stop_queue(name \\ __MODULE__, opts) when is_atom(name) and is_list(opts) do
-    name
-    |> config()
-    |> Midwife.stop_queue(opts)
-  end
+  @doc since: "0.12.0"
+  @spec stop_queue(name :: atom(), opts :: [queue_option()]) :: :ok
+  def stop_queue(name \\ __MODULE__, [_ | _] = opts) when is_atom(name) do
+    Enum.each(opts, &validate_queue_opt!/1)
 
-  @doc false
-  @deprecated "Use Oban.cancel_job/1 instead"
-  @spec kill_job(name :: module(), job_id :: pos_integer()) :: :ok
-  def kill_job(name \\ __MODULE__, job_id) when is_integer(job_id) do
-    name
-    |> config()
-    |> Notifier.notify(:signal, %{action: :pkill, job_id: job_id})
+    conf = config(name)
+    data = %{action: :stop, queue: opts[:queue], ident: scope_signal(conf, opts)}
+
+    Notifier.notify(conf, :signal, data)
   end
 
   @doc """
@@ -545,4 +597,35 @@ defmodule Oban do
   end
 
   defp child_name(name, child), do: Module.concat(name, child)
+
+  defp scope_signal(conf, opts) do
+    if Keyword.get(opts, :local_only) do
+      Config.to_ident(conf)
+    else
+      :any
+    end
+  end
+
+  defp validate_queue_opt!({:queue, queue}) do
+    unless (is_atom(queue) and not is_nil(queue)) or (is_binary(queue) and byte_size(queue) > 0) do
+      raise ArgumentError,
+            "expected :queue to be a binary or atom (except `nil`), got: #{inspect(queue)}"
+    end
+  end
+
+  defp validate_queue_opt!({:limit, limit}) do
+    unless is_integer(limit) and limit > 0 do
+      raise ArgumentError, "expected :limit to be a positive integer, got: #{inspect(limit)}"
+    end
+  end
+
+  defp validate_queue_opt!({:local_only, local_only}) do
+    unless is_boolean(local_only) do
+      raise ArgumentError, "expected :local_only to be a boolean, got: #{inspect(local_only)}"
+    end
+  end
+
+  defp validate_queue_opt!(option) do
+    raise ArgumentError, "unknown option provided #{inspect(option)}"
+  end
 end

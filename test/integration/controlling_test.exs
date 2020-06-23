@@ -5,12 +5,10 @@ defmodule Oban.Integration.ControllingTest do
 
   describe "start_queue/2" do
     test "validating options" do
-      start_supervised_oban!(queues: false)
-
-      assert_invalid_start([queue: nil], ~r/expected :queue to be a binary or atom/)
-      assert_invalid_start([limit: -1], ~r/expected :limit to be a positive integer/)
-      assert_invalid_start([local_only: -1], ~r/expected :local_only to be a boolean/)
-      assert_invalid_start([wat: -1], ~r/unknown option provided/)
+      assert_invalid_opts(:start_queue, [queue: nil])
+      assert_invalid_opts(:start_queue, [limit: -1])
+      assert_invalid_opts(:start_queue, [local_only: -1])
+      assert_invalid_opts(:start_queue, [wat: -1])
     end
 
     test "starting individual queues dynamically" do
@@ -34,6 +32,8 @@ defmodule Oban.Integration.ControllingTest do
       start_supervised_oban!(name: ObanA, queues: [])
       start_supervised_oban!(name: ObanB, queues: [])
 
+      sleep_for_notifier()
+
       assert :ok = Oban.start_queue(ObanA, queue: :alpha, limit: 1, local_only: true)
 
       with_backoff(fn ->
@@ -45,11 +45,8 @@ defmodule Oban.Integration.ControllingTest do
 
   describe "stop_queue/2" do
     test "validating options" do
-      start_supervised_oban!(queues: false)
-
-      assert_invalid_stop([queue: nil], ~r/expected :queue to be a binary or atom/)
-      assert_invalid_stop([local_only: -1], ~r/expected :local_only to be a boolean/)
-      assert_invalid_stop([wat: -1], ~r/unknown option provided/)
+      assert_invalid_opts(:start_queue, [queue: nil])
+      assert_invalid_opts(:start_queue, [local_only: -1])
     end
 
     test "stopping individual queues" do
@@ -85,6 +82,8 @@ defmodule Oban.Integration.ControllingTest do
       start_supervised_oban!(name: ObanA, queues: [alpha: 1])
       start_supervised_oban!(name: ObanB, queues: [alpha: 1])
 
+      sleep_for_notifier()
+
       assert :ok = Oban.stop_queue(ObanB, queue: :alpha, local_only: true)
 
       with_backoff(fn ->
@@ -94,31 +93,97 @@ defmodule Oban.Integration.ControllingTest do
     end
   end
 
-  test "pausing and resuming individual queues" do
-    start_supervised_oban!(queues: [alpha: 5], poll_interval: 1_000)
+  describe "pause_queue/2 and resume_queue/2" do
+    test "validating options" do
+      assert_invalid_opts(:pause_queue, [queue: nil])
+      assert_invalid_opts(:pause_queue, [local_only: -1])
 
-    # Pause briefly so that the producer has time to subscribe to notifications.
-    Process.sleep(20)
+      assert_invalid_opts(:resume_queue, [queue: nil])
+      assert_invalid_opts(:resume_queue, [local_only: -1])
+    end
 
-    assert :ok = Oban.pause_queue(:alpha)
+    test "pausing and resuming individual queues" do
+      start_supervised_oban!(queues: [alpha: 5], poll_interval: 1_000)
 
-    insert!(ref: 1, action: "OK")
+      sleep_for_notifier()
 
-    refute_receive {:ok, 1}
+      assert :ok = Oban.pause_queue(queue: :alpha)
 
-    assert :ok = Oban.resume_queue(:alpha)
+      insert!(ref: 1, action: "OK")
 
-    assert_receive {:ok, 1}
+      refute_receive {:ok, 1}
+
+      assert :ok = Oban.resume_queue(queue: :alpha)
+
+      assert_receive {:ok, 1}
+    end
+
+    test "pausing queues only on the local node" do
+      start_supervised_oban!(name: ObanA, queues: [alpha: 1])
+      start_supervised_oban!(name: ObanB, queues: [alpha: 1])
+
+      sleep_for_notifier()
+
+      assert :ok = Oban.pause_queue(ObanB, queue: :alpha, local_only: true)
+
+      insert!(%{ref: 1, sleep: 500}, queue: :alpha)
+      insert!(%{ref: 2, sleep: 500}, queue: :alpha)
+
+      assert_receive {:started, 1}
+      refute_receive {:started, 2}
+    end
+
+    test "resuming queues only on the local node" do
+      start_supervised_oban!(name: ObanA, queues: [alpha: 1])
+      start_supervised_oban!(name: ObanB, queues: [alpha: 1])
+
+      sleep_for_notifier()
+
+      assert :ok = Oban.pause_queue(ObanA, queue: :alpha)
+      assert :ok = Oban.resume_queue(ObanA, queue: :alpha, local_only: true)
+
+      insert!(%{ref: 1, sleep: 500}, queue: :alpha)
+      insert!(%{ref: 2, sleep: 500}, queue: :alpha)
+
+      assert_receive {:started, 1}
+      refute_receive {:started, 2}
+    end
   end
 
-  test "scaling individual queues" do
-    start_supervised_oban!(queues: [alpha: 1])
+  describe "scale_queue/2" do
+    test "validating options" do
+      assert_invalid_opts(:scale_queue, [queue: nil])
+      assert_invalid_opts(:scale_queue, [limit: -1])
+      assert_invalid_opts(:scale_queue, [local_only: -1])
+    end
 
-    for ref <- 1..20, do: insert!(ref: ref, sleep: 50)
+    test "scaling individual queues" do
+      start_supervised_oban!(queues: [alpha: 1])
 
-    Oban.scale_queue(:alpha, 20)
+      sleep_for_notifier()
 
-    assert_receive {:ok, 20}
+      for ref <- 1..20, do: insert!(ref: ref, sleep: 500)
+
+      assert :ok = Oban.scale_queue(queue: :alpha, limit: 20)
+
+      assert_receive {:started, 20}
+    end
+
+    test "scaling queues only on the local node" do
+      start_supervised_oban!(name: ObanA, queues: [alpha: 2])
+      start_supervised_oban!(name: ObanB, queues: [alpha: 2])
+
+      sleep_for_notifier()
+
+      assert :ok = Oban.scale_queue(ObanB, queue: :alpha, limit: 1, local_only: true)
+
+      for ref <- 1..4, do: insert!(ref: ref, sleep: 1000)
+
+      assert_receive {:started, 1}
+      assert_receive {:started, 2}
+      assert_receive {:started, 3}
+      refute_receive {:started, 4}
+    end
   end
 
   test "killing an executing job by its id" do
@@ -182,15 +247,11 @@ defmodule Oban.Integration.ControllingTest do
     |> Enum.any?(fn {name, _, _, _} -> name == queue_name end)
   end
 
-  defp assert_invalid_stop(opts, message) do
-    assert_raise ArgumentError, message, fn ->
-      Oban.stop_queue(opts)
-    end
+  defp sleep_for_notifier do
+    Process.sleep(25)
   end
 
-  defp assert_invalid_start(opts, message) do
-    assert_raise ArgumentError, message, fn ->
-      Oban.start_queue(opts)
-    end
+  defp assert_invalid_opts(function_name, opts) do
+    assert_raise ArgumentError, fn -> apply(Oban, function_name, [opts]) end
   end
 end

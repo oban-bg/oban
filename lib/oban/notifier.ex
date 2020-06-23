@@ -180,8 +180,10 @@ defmodule Oban.Notifier do
     channel = reverse_channel(full_channel)
     decoded = if any_listeners?(state.listeners, full_channel), do: Jason.decode!(payload)
 
-    for {pid, channels} <- state.listeners, full_channel in channels do
-      send(pid, {:notification, channel, decoded})
+    if in_scope?(decoded, state.conf) do
+      for {pid, channels} <- state.listeners, full_channel in channels do
+        send(pid, {:notification, channel, decoded})
+      end
     end
 
     {:noreply, state}
@@ -235,6 +237,10 @@ defmodule Oban.Notifier do
   defp any_listeners?(listeners, full_channel) do
     Enum.any?(listeners, fn {_pid, channels} -> full_channel in channels end)
   end
+
+  defp in_scope?(%{"ident" => "any"}, _conf), do: true
+  defp in_scope?(%{"ident" => ident}, conf), do: Config.match_ident?(conf, ident)
+  defp in_scope?(_decoded, _conf), do: true
 
   defp connect_and_listen(%State{conf: conf, conn: nil} = state) do
     case Notifications.start_link(conf.repo.config()) do
