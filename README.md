@@ -85,8 +85,8 @@ orphaned due to crashes.
   slow queue can't back up other faster queues.
 
 - **Queue Control** — Queues can be started, stopped, paused, resumed and scaled
-  independently at runtime across _all_ running nodes (even in environments like
-  Heroku, without distributed Erlang).
+  independently at runtime locally or across _all_ running nodes (even in
+  environments like Heroku, without distributed Erlang).
 
 - **Resilient Queues** — Failing queries won't crash the entire supervision tree,
   instead they trip a circuit breaker and will be retried again in the future.
@@ -717,7 +717,7 @@ As noted in [Usage](#Usage), there are some guidelines for running tests:
 During integration testing it may be necessary to run jobs because they do work
 essential for the test to complete, i.e. sending an email, processing media,
 etc. You can execute all available jobs in a particular queue by calling
-`Oban.drain_queue/1` directly from your tests.
+`Oban.drain_queue/1,2` directly from your tests.
 
 For example, to process all pending jobs in the "mailer" queue while testing
 some business logic:
@@ -731,14 +731,14 @@ defmodule MyApp.BusinessTest do
   test "we stay in the business of doing business" do
     :ok = Business.schedule_a_meeting(%{email: "monty@brewster.com"})
 
-    assert %{success: 1, failure: 0} == Oban.drain_queue(:mailer)
+    assert %{success: 1, failure: 0} == Oban.drain_queue(queue: :mailer)
 
     # Now, make an assertion about the email delivery
   end
 end
 ```
 
-See `Oban.drain_queue/1` for additional details.
+See `Oban.drain_queue/1,2` for additional details.
 
 ## Error Handling
 

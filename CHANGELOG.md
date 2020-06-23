@@ -15,6 +15,21 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   to work in `:local_only` mode. See the notes around `start_queue/2` and
   `stop_queue/2` in [2.0.0-rc.1][] for help upgrading.
 
+- [Oban] Replace `drain_queue/3` with `drain_queue/2`, which now has an
+  interface consistent with the other `*_queue/2` operations.
+
+  Where you previously called `drain_queue/2,3` like this:
+
+    ```elixir
+    Oban.drain_queue(:myqueue, with_safety: false)
+    ```
+
+  You'll now it with options, like this:
+
+    ```elixir
+    Oban.drain_queue(queue: :myqueue, with_safety: false)
+    ```
+
 ### Fixed
 
 - [Oban.Breaker] Prevent connection bomb when the Notifier experiences repeated

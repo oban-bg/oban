@@ -38,9 +38,6 @@ defmodule Oban do
           | {:limit, pos_integer()}
           | {:local_only, boolean()}
 
-  defguardp is_queue(name)
-            when (is_binary(name) and byte_size(name) > 0) or (is_atom(name) and not is_nil(name))
-
   @version Mix.Project.config()[:version]
 
   @doc false
@@ -109,7 +106,7 @@ defmodule Oban do
   * `:shutdown_grace_period` - the amount of time a queue will wait for executing jobs to complete
     before hard shutdown, specified in milliseconds. The default is `15_000`, or 15 seconds.
 
-  ## Examples
+  ## Example
 
   To start an `Oban` supervisor within an application's supervision tree:
 
@@ -311,37 +308,12 @@ defmodule Oban do
   @doc """
   Synchronously execute all available jobs in a queue.
 
-  See `drain_queue/3`.
-  """
-  @doc since: "0.4.0"
-  @spec drain_queue(queue :: atom() | binary()) :: Drainer.drain_result()
-  def drain_queue(queue) when is_queue(queue) do
-    drain_queue(__MODULE__, queue, [])
-  end
-
-  @doc """
-  Synchronously execute all available jobs in a queue.
-
-  See `drain_queue/3`.
-  """
-  @doc since: "0.4.0"
-  def drain_queue(queue, opts) when is_queue(queue) and is_list(opts) do
-    drain_queue(__MODULE__, queue, opts)
-  end
-
-  def drain_queue(name, queue) when is_atom(name) and is_queue(queue) do
-    drain_queue(name, queue, [])
-  end
-
-  @doc """
-  Synchronously execute all available jobs in a queue.
-
   All execution happens within the current process and it is guaranteed not to raise an error or
   exit.
 
   Draining a queue from within the current process is especially useful for testing. Jobs that are
   enqueued by a process when `Ecto` is in sandbox mode are only visible to that process. Calling
-  `drain_queue/3` allows you to control when the jobs are executed and to wait synchronously for
+  `drain_queue/2` allows you to control when the jobs are executed and to wait synchronously for
   all jobs to complete.
 
   ## Failures & Retries
@@ -359,33 +331,38 @@ defmodule Oban do
 
   ## Scheduled Jobs
 
-  By default, `drain_queue/3` will execute all currently available jobs. In order to execute
+  By default, `drain_queue/2` will execute all currently available jobs. In order to execute
   scheduled jobs, you may pass the `:with_scheduled` flag which will cause scheduled jobs to be
   marked as `available` beforehand.
+
+  ## Options
+
+  * `:queue` — the name of the queue to drain, required
+  * `:with_scheduled` — whether to include any scheduled jobs when draining, default `false`
+  * `:with_safety` — whether to silently catch errors when draining, default `true`
 
   ## Example
 
   Drain a queue with three available jobs, two of which succeed and one of which fails:
 
-      Oban.drain_queue(:default)
+      Oban.drain_queue(queue: :default)
       %{success: 2, failure: 1}
 
   Drain a queue including any scheduled jobs:
 
-      Oban.drain_queue(:default, with_scheduled: true)
+      Oban.drain_queue(queue: :default, with_scheduled: true)
       %{success: 1, failure: 0}
 
   Drain a queue and assert an error is raised:
 
-      assert_raise RuntimeError, fn -> Oban.drain_queue(:risky, with_safety: false) end
+      assert_raise RuntimeError, fn -> Oban.drain_queue(queue: :risky, with_safety: false) end
   """
   @doc since: "0.4.0"
-  @spec drain_queue(name :: atom(), queue :: queue_name(), [Drainer.drain_option()]) ::
-          Drainer.drain_result()
-  def drain_queue(name, queue, opts) when is_atom(name) and is_queue(queue) and is_list(opts) do
+  @spec drain_queue(name :: atom(), [Drainer.drain_option()]) :: Drainer.drain_result()
+  def drain_queue(name \\ __MODULE__, [_ | _] = opts) when is_atom(name) do
     name
     |> config()
-    |> Drainer.drain(to_string(queue), opts)
+    |> Drainer.drain(opts)
   end
 
   @doc """
@@ -401,7 +378,7 @@ defmodule Oban do
   * `:limit` - set the concurrency limit
   * `:local_only` - whether the queue will be started only on the local node, default: `false`
 
-  ## Examples
+  ## Example
 
   Start the `:priority` queue with a concurrency limit of 10 across the connected nodes.
 
@@ -553,7 +530,7 @@ defmodule Oban do
   * `:queue` - specifies the queue to stop
   * `:local_only` - whether the queue will be stopped only on the local node, default: `false`
 
-  ## Examples
+  ## Example
 
       Oban.stop_queue(queue: :default)
       :ok

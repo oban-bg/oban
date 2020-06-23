@@ -5,10 +5,10 @@ defmodule Oban.Integration.ControllingTest do
 
   describe "start_queue/2" do
     test "validating options" do
-      assert_invalid_opts(:start_queue, [queue: nil])
-      assert_invalid_opts(:start_queue, [limit: -1])
-      assert_invalid_opts(:start_queue, [local_only: -1])
-      assert_invalid_opts(:start_queue, [wat: -1])
+      assert_invalid_opts(:start_queue, queue: nil)
+      assert_invalid_opts(:start_queue, limit: -1)
+      assert_invalid_opts(:start_queue, local_only: -1)
+      assert_invalid_opts(:start_queue, wat: -1)
     end
 
     test "starting individual queues dynamically" do
@@ -45,8 +45,8 @@ defmodule Oban.Integration.ControllingTest do
 
   describe "stop_queue/2" do
     test "validating options" do
-      assert_invalid_opts(:start_queue, [queue: nil])
-      assert_invalid_opts(:start_queue, [local_only: -1])
+      assert_invalid_opts(:start_queue, queue: nil)
+      assert_invalid_opts(:start_queue, local_only: -1)
     end
 
     test "stopping individual queues" do
@@ -95,11 +95,11 @@ defmodule Oban.Integration.ControllingTest do
 
   describe "pause_queue/2 and resume_queue/2" do
     test "validating options" do
-      assert_invalid_opts(:pause_queue, [queue: nil])
-      assert_invalid_opts(:pause_queue, [local_only: -1])
+      assert_invalid_opts(:pause_queue, queue: nil)
+      assert_invalid_opts(:pause_queue, local_only: -1)
 
-      assert_invalid_opts(:resume_queue, [queue: nil])
-      assert_invalid_opts(:resume_queue, [local_only: -1])
+      assert_invalid_opts(:resume_queue, queue: nil)
+      assert_invalid_opts(:resume_queue, local_only: -1)
     end
 
     test "pausing and resuming individual queues" do
@@ -152,9 +152,9 @@ defmodule Oban.Integration.ControllingTest do
 
   describe "scale_queue/2" do
     test "validating options" do
-      assert_invalid_opts(:scale_queue, [queue: nil])
-      assert_invalid_opts(:scale_queue, [limit: -1])
-      assert_invalid_opts(:scale_queue, [local_only: -1])
+      assert_invalid_opts(:scale_queue, queue: nil)
+      assert_invalid_opts(:scale_queue, limit: -1)
+      assert_invalid_opts(:scale_queue, local_only: -1)
     end
 
     test "scaling individual queues" do
