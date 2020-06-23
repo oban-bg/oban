@@ -863,7 +863,7 @@ integrating with [Honeybadger][honeybadger] to report job failures:
 
 ```elixir
 defmodule ErrorReporter do
-  def handle_event([:oban, :failure], measure, meta, _) do
+  def handle_event([:oban, :job, :exception], measure, meta, _) do
     context =
       meta
       |> Map.take([:id, :args, :queue, :worker])
@@ -872,7 +872,7 @@ defmodule ErrorReporter do
     Honeybadger.notify(meta.error, context, meta.stack)
   end
 
-  def handle_event([:oban, :trip_circuit], _measure, meta, _) do
+  def handle_event([:oban, :circuit, :trip], _measure, meta, _) do
     context = Map.take(meta, [:name])
 
     Honeybadger.notify(meta.error, context, meta.stack)
@@ -881,7 +881,7 @@ end
 
 :telemetry.attach_many(
   "oban-errors",
-  [[:oban, :failure], [:oban, :trip_circuit]],
+  [[:oban, :job, :exception], [:oban, :circuit, :trip]],
   &ErrorReporter.handle_event/4,
   nil
 )
