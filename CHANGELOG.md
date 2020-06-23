@@ -50,6 +50,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - [Oban.Telemetry] Add new `:producer` events for descheduling and dispatching
   jobs from queue producers.
 
+### Removed
+
+- [Oban] Removed `Oban.kill_job/2`, which wasn't as flexible as
+  `Oban.cancel_job/2`. Use `Oban.cancel_job/2` instead to safely discard
+  scheduled jobs or killing executing jobs.
+
 ## [2.0.0-rc.1] — 2020-06-12
 
 ### Breaking Changes
