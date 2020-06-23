@@ -116,7 +116,7 @@ defmodule Oban.MixProject do
 
   defp deps do
     [
-      {:ecto_sql, "~> 3.1"},
+      {:ecto_sql, ">= 3.4.3"},
       {:jason, "~> 1.1"},
       {:postgrex, "~> 0.14"},
       {:telemetry, "~> 0.4"},
