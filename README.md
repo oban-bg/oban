@@ -151,7 +151,7 @@ dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:oban, "~> 2.0.0-rc.1"}
+    {:oban, "~> 2.0.0-rc.2"}
   ]
 end
 ```

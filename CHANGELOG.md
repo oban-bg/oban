@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## [2.0.0-rc.2] — 2020-06-23
+
 ### Breaking Changes
 
 - [Oban] The interface for `pause_queue/2`, `resume_queue/2` and `scale_queue/3`
@@ -996,7 +998,8 @@ end
 
 - [Oban] Initial release with base functionality.
 
-[Unreleased]: https://github.com/sorentwo/oban/compare/v2.0.0-rc.1...HEAD
+[Unreleased]: https://github.com/sorentwo/oban/compare/v2.0.0-rc.2...HEAD
+[2.0.0-rc.2]: https://github.com/sorentwo/oban/compare/v2.0.0-rc.1...v2.0.0-rc.2
 [2.0.0-rc.1]: https://github.com/sorentwo/oban/compare/v2.0.0-rc.0...v2.0.0-rc.1
 [2.0.0-rc.0]: https://github.com/sorentwo/oban/compare/v1.2.0...v2.0.0-rc.0
 [1.2.0]: https://github.com/sorentwo/oban/compare/v1.1.0...v1.2.0
