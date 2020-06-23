@@ -203,7 +203,7 @@ defmodule Oban.Telemetry do
   end
 
   def handle_event([:oban, :circuit, event], _measure, meta, level) do
-    log_message(level, "circuit:#{event}", Map.take(meta, [:error, :message, :name]))
+    log_message(level, "circuit:#{event}", Map.take(meta, [:message, :name]))
   end
 
   defp log_message(level, event, message) do

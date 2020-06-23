@@ -14,6 +14,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 - [Oban.Queue.Executor] Fix error reporting when a worker fails to resolve.
 
+- [Oban.Telemetry] Stop logging the `:error` value for circuit trip events. The
+  error is a struct that isn't JSON encodable. We include the normalized
+  Postgrex / DBConnection message already, so the error is redundant. 
+
 ### Added
 
 - [Oban.Crontab] Add `@reboot` special case to crontab scheduling
