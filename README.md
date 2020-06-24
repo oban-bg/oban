@@ -869,13 +869,13 @@ defmodule ErrorReporter do
       |> Map.take([:id, :args, :queue, :worker])
       |> Map.merge(measure)
 
-    Honeybadger.notify(meta.error, context, meta.stack)
+    Honeybadger.notify(meta.error, context, meta.stacktrace)
   end
 
   def handle_event([:oban, :circuit, :trip], _measure, meta, _) do
     context = Map.take(meta, [:name])
 
-    Honeybadger.notify(meta.error, context, meta.stack)
+    Honeybadger.notify(meta.error, context, meta.stacktrace)
   end
 end
 
