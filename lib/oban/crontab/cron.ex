@@ -121,7 +121,9 @@ defmodule Oban.Crontab.Cron do
 
   defp expand({:literal, value}, min, max) when value in min..max, do: [value]
 
-  defp expand({:step, [{:wild, _}, value]}, min, max) when value in (min + 1)..max do
+  defp expand({:step, value}, 0, max), do: expand({:step, value}, 1, max)
+
+  defp expand({:step, [{:wild, _}, value]}, min, max) when value in min..max do
     for step <- min..max, rem(step, value) == 0, do: step
   end
 
