@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Fixed
+
+- [Oban.Crontab.Cron] Do not raise an `ArgumentError` exception when the
+  crontab configuration includes a step of 1, which is a valid step value.
+
 ## [2.0.0-rc.2] — 2020-06-23
 
 ### Breaking Changes

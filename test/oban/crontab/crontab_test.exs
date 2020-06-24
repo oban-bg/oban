@@ -4,10 +4,10 @@ defmodule Oban.Crontab.CronTest do
   alias Oban.Crontab.Cron
 
   describe "parse!/1" do
-    property "literal values and aliases are parsed" do
-      check all minutes <- integer(0..59),
-                hours <- integer(0..23),
-                days <- integer(1..31),
+    property "expressions with literals, wildcards, ranges, steps and lists are parsed" do
+      check all minutes <- minutes(),
+                hours <- hours(),
+                days <- days(),
                 months <- months(),
                 weekdays <- weekdays(),
                 spaces <- spaces() do
@@ -19,26 +19,22 @@ defmodule Oban.Crontab.CronTest do
       end
     end
 
-    property "expressions with wildcards, ranges, steps and lists are parsed" do
-      check all minutes <- expression() do
-        minutes
-        |> List.wrap()
-        |> Enum.join(",")
-        |> Kernel.<>(" * * * *")
-        |> Cron.parse!()
-      end
-    end
-
     test "parsing expressions that are out of bounds fails" do
-      assert_raise ArgumentError, fn -> Cron.parse!("60 * * * *") end
-      assert_raise ArgumentError, fn -> Cron.parse!("* 24 * * *") end
-      assert_raise ArgumentError, fn -> Cron.parse!("* * 32 * *") end
-      assert_raise ArgumentError, fn -> Cron.parse!("* * * 13 *") end
-      assert_raise ArgumentError, fn -> Cron.parse!("* * * * 7") end
-      assert_raise ArgumentError, fn -> Cron.parse!("*/0 * * * *") end
-      assert_raise ArgumentError, fn -> Cron.parse!("ONE * * * *") end
-      assert_raise ArgumentError, fn -> Cron.parse!("* * * jan *") end
-      assert_raise ArgumentError, fn -> Cron.parse!("* * * * sun") end
+      expressions = [
+        "60 * * * *",
+        "* 24 * * *",
+        "* * 32 * *",
+        "* * * 13 *",
+        "* * * * 7",
+        "*/0 * * * *",
+        "ONE * * * *",
+        "* * * jan *",
+        "* * * * sun"
+      ]
+
+      for expression <- expressions do
+        assert_raise ArgumentError, fn -> Cron.parse!(expression) end
+      end
     end
 
     test "parsing non-standard expressions" do
@@ -133,9 +129,21 @@ defmodule Oban.Crontab.CronTest do
     end
   end
 
+  defp minutes do
+    expression(0..59)
+  end
+
+  defp hours do
+    expression(0..23)
+  end
+
+  defp days do
+    expression(1..31)
+  end
+
   defp months do
     one_of([
-      integer(1..12),
+      expression(1..12),
       constant("JAN"),
       constant("FEB"),
       constant("MAR"),
@@ -153,7 +161,7 @@ defmodule Oban.Crontab.CronTest do
 
   defp weekdays do
     one_of([
-      integer(0..6),
+      expression(0..6),
       constant("MON"),
       constant("TUE"),
       constant("WED"),
@@ -168,13 +176,20 @@ defmodule Oban.Crontab.CronTest do
     list_of(one_of([constant(" "), constant("\t")]), min_length: 1, max_length: 4)
   end
 
-  defp expression do
-    one_of([
-      constant("*"),
-      map(integer(1..59), &"*/#{&1}"),
-      map(integer(1..58), &"#{&1}-#{&1 + 1}"),
-      map(integer(1..57), &"#{&1}-#{&1 + 2}/2"),
-      list_of(integer(0..59), length: 1..10)
-    ])
+  defp expression(min..max) do
+    gen all expr <-
+              one_of([
+                constant("*"),
+                integer(min..max),
+                map(integer((min + 1)..max), &"*/#{&1}"),
+                map(integer(min..(max - 2)), &"#{&1}-#{&1 + 1}"),
+                map(integer(min..(max - 3)), &"#{&1}-#{&1 + 2}/1"),
+                map(integer(min..(max - 3)), &"#{&1}-#{&1 + 2}/2"),
+                list_of(integer(min..max), length: 1..10)
+              ]) do
+      expr
+      |> List.wrap()
+      |> Enum.join(",")
+    end
   end
 end
