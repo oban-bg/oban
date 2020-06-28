@@ -54,7 +54,7 @@ jobs:
       - name: Run mix compile
         env:
           MIX_ENV: test
-        run: mix compile
+        run: mix compile --warnings-as-errors
 
       - name: Run mix ecto.migrate
         env:
