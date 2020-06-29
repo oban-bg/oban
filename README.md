@@ -28,25 +28,24 @@
 
 ## Table of Contents
 
-- [Features](#Features)
-- [Requirements](#Requirements)
-- [Oban Web+Pro](#Oban-Web+Pro)
-- [Installation](#Installation)
-- [Usage](#Usage)
-  - [Configuring Queues](#Configuring-Queues)
-  - [Defining Workers](#Defining-Workers)
-  - [Enqueuing Jobs](#Enqueueing-Jobs)
-  - [Pruning Historic Jobs](#Pruning-Historic-Jobs)
-  - [Unique Jobs](#Unique-Jobs)
-  - [Periodic Jobs](#Periodic-Jobs)
-  - [Prioritizing Jobs](#Prioritizing-Jobs)
-- [Testing](#Testing)
-- [Error Handling](#Error-Handling)
-- [Instrumentation & Logging](#Instrumentation-and-Logging)
-- [Isolation](#Isolation)
-- [Troubleshooting](#Troubleshooting)
-- [Community](#Community)
-- [Contributing](#Contributing)
+- [Features](#features)
+- [Requirements](#requirements)
+- [Oban Web+Pro](#oban-webpro)
+- [Installation](#installation)
+- [Usage](#usage)
+  - [Configuring Queues](#configuring-queues)
+  - [Defining Workers](#defining-workers)
+  - [Enqueueing Jobs](#enqueueing-jobs)
+  - [Pruning Historic Jobs](#pruning-historic-jobs)
+  - [Unique Jobs](#unique-jobs)
+  - [Periodic Jobs](#periodic-jobs)
+  - [Prioritizing Jobs](#prioritizing-jobs)
+- [Testing](#testing)
+- [Error Handling](#error-handling)
+- [Instrumentation and Logging](#instrumentation-and-logging)
+- [Isolation](#isolation)
+- [Community](#community)
+- [Contributing](#contributing)
 
 ---
 
@@ -141,7 +140,7 @@ and PostgreSQL 9.6+.
 
 A web-based user interface for managing Oban, along with an official set of
 plugins and workers are available as private packages. Learn more about Oban
-Web+Pro at [getoban.pro][https://getoban.pro].
+Web+Pro at [getoban.pro](https://getoban.pro).
 
 ## Installation
 
