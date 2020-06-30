@@ -196,7 +196,7 @@ defmodule Oban.Telemetry do
 
     message =
       measure
-      |> Map.take([:duration, :system_time])
+      |> Map.take([:duration, :queue_time, :system_time])
       |> Map.merge(select_meta)
 
     log_message(level, "job:#{event}", message)

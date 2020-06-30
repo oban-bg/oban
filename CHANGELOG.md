@@ -12,6 +12,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - [Oban.Crontab.Cron] Do not raise an `ArgumentError` exception when the
   crontab configuration includes a step of 1, which is a valid step value.
 
+### Added
+
+- [Oban.Telemetry] Include job `queue_time` in the default logger output.
+
 ## [2.0.0-rc.2] — 2020-06-23
 
 ### Breaking Changes

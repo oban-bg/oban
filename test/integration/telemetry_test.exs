@@ -96,6 +96,7 @@ defmodule Oban.Integration.TelemetryTest do
     assert logged =~ ~s("worker":"Oban.Integration.Worker")
     assert logged =~ ~s("queue":"alpha")
     assert logged =~ ~s("duration":)
+    assert logged =~ ~s("queue_time":)
   after
     :telemetry.detach("oban-default-logger")
   end
