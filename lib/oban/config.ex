@@ -31,7 +31,7 @@ defmodule Oban.Config do
             dispatch_cooldown: 5,
             name: Oban,
             node: nil,
-            plugins: [Oban.Plugins.FixedPruner],
+            plugins: [Oban.Plugins.Pruner],
             poll_interval: :timer.seconds(1),
             prefix: "public",
             queues: [],

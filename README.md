@@ -260,8 +260,8 @@ defmodule MyApp.Application do
 end
 ```
 
-If you are running tests (which you should be) you'll want to disable pruning
-, enqueuing scheduled jobs and job dispatching altogether when testing:
+If you are running tests (which you should be) you'll want to disable plugins,
+enqueuing scheduled jobs and job dispatching altogether when testing:
 
 ```elixir
 # config/test.exs
@@ -460,7 +460,15 @@ and build informative aggregates, at the expense of storage and an unbounded
 table size. To prevent the `oban_jobs` table from growing indefinitely, Oban
 provides active pruning of `completed` and `discarded` jobs.
 
-By default, pruning retains jobs for 60 seconds.
+By default, pruning retains jobs for 60 seconds. You can configure a longer
+retention period by providing a `max_age` in seconds to the `Pruner` plugin.
+
+```elixir
+# Set the max_age for 5 minutes
+config :my_app, Oban,
+  plugins: [{Oban.Plugins.Prunerm, max_age: 300}]
+  ...
+```
 
 #### Caveats & Guidelines
 

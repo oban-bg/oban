@@ -1,4 +1,4 @@
-defmodule Oban.Plugins.FixedPruner do
+defmodule Oban.Plugins.Pruner do
   @moduledoc false
 
   use GenServer
@@ -7,52 +7,66 @@ defmodule Oban.Plugins.FixedPruner do
 
   import Ecto.Query
 
-  @lock_key 1_159_969_450_252_858_340
-  @prune_age 60
-  @prune_interval :timer.seconds(30)
-  @prune_limit 100_000
-
   defmodule State do
     @moduledoc false
 
-    defstruct [:conf, :interval, :name]
+    defstruct [
+      :conf,
+      :name,
+      :timer,
+      max_age: 60,
+      interval: :timer.seconds(30),
+      limit: 10_000,
+      lock_key: 1_159_969_450_252_858_340
+    ]
   end
 
   @spec start_link(Keyword.t()) :: GenServer.on_start()
   def start_link(opts) do
     name = Keyword.get(opts, :name, __MODULE__)
 
-    opts =
-      opts
-      |> Keyword.put_new(:interval, @prune_interval)
-      |> Map.new()
-
     GenServer.start_link(__MODULE__, opts, name: name)
   end
 
   @impl GenServer
   def init(opts) do
-    Process.send_after(self(), :prune, opts.interval)
+    Process.flag(:trap_exit, true)
 
-    {:ok, struct!(State, opts)}
+    state =
+      State
+      |> struct!(opts)
+      |> schedule_prune()
+
+    {:ok, state}
+  end
+
+  @impl GenServer
+  def terminate(_reason, state) do
+    if is_reference(state.timer), do: Process.cancel_timer(state.timer)
+
+    :ok
   end
 
   @impl GenServer
   def handle_info(:prune, %State{conf: conf} = state) do
-    %Config{repo: repo, log: log} = conf
-
     Telemetry.span(:prune, fn ->
-      repo.transaction(fn -> acquire_and_prune(conf) end, log: log)
+      conf.repo.transaction(fn -> acquire_and_prune(state) end, log: conf.log)
     end)
 
-    Process.send_after(self(), :prune, state.interval)
-
-    {:noreply, state}
+    {:noreply, schedule_prune(state)}
   end
 
-  defp acquire_and_prune(conf) do
-    if Query.acquire_lock?(conf, @lock_key) do
-      delete_jobs(conf, @prune_age, @prune_limit)
+  # Scheduling
+
+  defp schedule_prune(state) do
+    %{state | timer: Process.send_after(self(), :prune, state.interval)}
+  end
+
+  # Query
+
+  defp acquire_and_prune(state) do
+    if Query.acquire_lock?(state.conf, state.lock_key) do
+      delete_jobs(state.conf, state.max_age, state.limit)
     end
   end
 

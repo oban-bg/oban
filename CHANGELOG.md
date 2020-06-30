@@ -16,6 +16,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 - [Oban.Telemetry] Include job `queue_time` in the default logger output.
 
+### Changed
+
+- [Oban.Plugins.Pruner] The `FixedPruner` is renamed to `Pruner` and allows
+  users to configure the `max_age` value. This partially reverses the breaking
+  change imposed by the move from `prune` to the `FixedPruner` plugin, though
+  there isn't any support for `max_len` or dynamic pruning.
+
 ## [2.0.0-rc.2] — 2020-06-23
 
 ### Breaking Changes

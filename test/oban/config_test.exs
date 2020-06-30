@@ -2,7 +2,7 @@ defmodule Oban.ConfigTest do
   use Oban.Case, async: true
 
   alias Oban.Config
-  alias Oban.Plugins.FixedPruner
+  alias Oban.Plugins.Pruner
 
   describe "start_link/1" do
     test "a config struct is stored for retreival" do
@@ -66,15 +66,15 @@ defmodule Oban.ConfigTest do
     test ":plugins are validated as modules or module/keyword tuples" do
       assert_invalid(plugins: ["Module"])
       assert_invalid(plugins: [FakeModule])
-      assert_invalid(plugins: [FixedPruner, FakeModule])
+      assert_invalid(plugins: [Pruner, FakeModule])
       assert_invalid(plugins: [{Worker, nil}])
       assert_invalid(plugins: [{Worker, %{}}])
 
       assert_valid(plugins: false)
       assert_valid(plugins: [])
-      assert_valid(plugins: [FixedPruner])
-      assert_valid(plugins: [{FixedPruner, []}])
-      assert_valid(plugins: [{FixedPruner, [name: "Something"]}])
+      assert_valid(plugins: [Pruner])
+      assert_valid(plugins: [{Pruner, []}])
+      assert_valid(plugins: [{Pruner, [name: "Something"]}])
     end
 
     test ":poll_interval is validated as an integer" do
