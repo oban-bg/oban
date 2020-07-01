@@ -71,6 +71,22 @@ defmodule Oban.Telemetry do
   usage. Otherwise, if you would prefer more control over logging or would like to instrument
   events you can write your own handler.
 
+  Here is an example of the JSON output for the `job:stop` event:
+
+  ```json
+  {
+    "args":{"action":"OK","ref":1},
+    "duration":4327295,
+    "event":"job:stop",
+    "queue":"alpha",
+    "queue_time":3127905,
+    "source":"oban",
+    "worker":"Oban.Integration.Worker"
+  }
+  ```
+
+  All timing measurements are recorded as native time units but logged in microseconds.
+
   ## Examples
 
   A handler that only logs a few details about failed jobs:
@@ -192,21 +208,25 @@ defmodule Oban.Telemetry do
   @doc false
   @spec handle_event([atom()], map(), map(), Logger.level()) :: :ok
   def handle_event([:oban, :job, event], measure, meta, level) do
-    select_meta = Map.take(meta, [:args, :worker, :queue])
-
-    message =
-      measure
-      |> Map.take([:duration, :queue_time, :system_time])
-      |> Map.merge(select_meta)
-
-    log_message(level, "job:#{event}", message)
+    meta
+    |> Map.take([:args, :worker, :queue])
+    |> Map.merge(converted_measurements(measure))
+    |> log_message("job:#{event}", level)
   end
 
   def handle_event([:oban, :circuit, event], _measure, meta, level) do
-    log_message(level, "circuit:#{event}", Map.take(meta, [:message, :name]))
+    meta
+    |> Map.take([:message, :name])
+    |> log_message("circuit:#{event}", level)
   end
 
-  defp log_message(level, event, message) do
+  defp converted_measurements(measure) do
+    for {key, val} <- measure, key in [:duration, :queue_time], into: %{} do
+      {key, System.convert_time_unit(val, :native, :microsecond)}
+    end
+  end
+
+  defp log_message(message, event, level) do
     Logger.log(level, fn ->
       message
       |> Map.put(:event, event)

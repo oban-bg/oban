@@ -12,6 +12,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - [Oban.Crontab.Cron] Do not raise an `ArgumentError` exception when the
   crontab configuration includes a step of 1, which is a valid step value.
 
+- [Oban.Telemetry] Correctly record `duration` and `queue_time` using native
+  time units, but log them using microseconds. Previously they used a mixture of
+  native and microseconds, which yielded inconsistent values.
+
 ### Added
 
 - [Oban.Telemetry] Include job `queue_time` in the default logger output.

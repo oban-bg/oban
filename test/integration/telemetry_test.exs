@@ -86,7 +86,6 @@ defmodule Oban.Integration.TelemetryTest do
 
     assert logged =~ ~s("source":"oban")
     assert logged =~ ~s("event":"job:start")
-    assert logged =~ ~s("system_time":)
 
     # Stop
 
@@ -95,8 +94,8 @@ defmodule Oban.Integration.TelemetryTest do
     assert logged =~ ~s("args":)
     assert logged =~ ~s("worker":"Oban.Integration.Worker")
     assert logged =~ ~s("queue":"alpha")
-    assert logged =~ ~s("duration":)
-    assert logged =~ ~s("queue_time":)
+    assert logged =~ ~r|"duration":\d{2,5},|
+    assert logged =~ ~r|"queue_time":\d{2,5},|
   after
     :telemetry.detach("oban-default-logger")
   end

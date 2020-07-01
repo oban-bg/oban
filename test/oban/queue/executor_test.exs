@@ -14,6 +14,7 @@ defmodule Oban.Queue.ExecutorTest do
     def perform(%{args: %{"mode" => "raise"}}), do: raise(ArgumentError)
     def perform(%{args: %{"mode" => "catch"}}), do: throw(:no_reason)
     def perform(%{args: %{"mode" => "error"}}), do: {:error, "no reason"}
+    def perform(%{args: %{"mode" => "sleep"}}), do: Process.sleep(10)
   end
 
   @conf Config.new(repo: Repo)
@@ -43,6 +44,30 @@ defmodule Oban.Queue.ExecutorTest do
 
       assert message =~ "Expected #{__MODULE__}.Worker.perform/2"
       assert message =~ "{:bad, :this_will_warn}"
+    end
+
+    test "reporting duration and queue_time measurements" do
+      now = DateTime.utc_now()
+
+      job = %Job{
+        args: %{"mode" => "sleep"},
+        worker: to_string(Worker),
+        attempted_at: DateTime.add(now, 30, :millisecond),
+        scheduled_at: now
+      }
+
+      assert %{duration: duration, queue_time: queue_time} =
+               @conf
+               |> Executor.new(job)
+               |> Executor.resolve_worker()
+               |> Executor.perform()
+               |> Executor.record_finished()
+
+      duration_ms = System.convert_time_unit(duration, :native, :millisecond)
+      queue_time_ms = System.convert_time_unit(queue_time, :native, :millisecond)
+
+      assert_in_delta duration_ms, 10, 1
+      assert_in_delta queue_time_ms, 30, 1
     end
   end
 
