@@ -466,7 +466,7 @@ retention period by providing a `max_age` in seconds to the `Pruner` plugin.
 ```elixir
 # Set the max_age for 5 minutes
 config :my_app, Oban,
-  plugins: [{Oban.Plugins.Prunerm, max_age: 300}]
+  plugins: [{Oban.Plugins.Pruner, max_age: 300}]
   ...
 ```
 
