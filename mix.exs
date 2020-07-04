@@ -57,6 +57,7 @@ defmodule Oban.MixProject do
   defp extras do
     [
       "CHANGELOG.md",
+      "guides/installation.md",
       "guides/troubleshooting.md",
       "guides/release_configuration.md",
       "guides/recipes/recursive-jobs.md",

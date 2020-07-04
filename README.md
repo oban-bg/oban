@@ -268,6 +268,9 @@ enqueuing scheduled jobs and job dispatching altogether when testing:
 config :my_app, Oban, crontab: false, queues: false, plugins: false
 ```
 
+See the installation instructions in the README or on the Hexdocs guide for details
+on how to migrate your database.
+
 ### Configuring Queues
 
 Queues are specified as a keyword list where the key is the name of the queue
