@@ -1,5 +1,5 @@
 # Generated from lib/oban/crontab/parser.ex.exs, do not edit.
-# Generated at 2020-05-25 15:18:25Z.
+# Generated at 2020-07-07 01:21:04Z.
 
 defmodule Oban.Crontab.Parser do
   @moduledoc false
@@ -1057,6 +1057,7 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__144(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
     cron__145(rest, [minutes: :lists.reverse(user_acc)] ++ acc, stack, context, line, offset)
   end
 

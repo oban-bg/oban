@@ -42,7 +42,10 @@ defmodule Oban.Crontab.Parser do
     |> integer(min: 1, max: 2)
     |> tag(:range)
 
-  wild = string("*") |> unwrap_and_tag(:wild)
+  wild =
+    "*"
+    |> string()
+    |> unwrap_and_tag(:wild)
 
   step =
     [wild, range]
@@ -51,9 +54,15 @@ defmodule Oban.Crontab.Parser do
     |> integer(min: 1, max: 2)
     |> tag(:step)
 
-  literal = integer(min: 1, max: 2) |> unwrap_and_tag(:literal)
+  literal =
+    [min: 1, max: 2]
+    |> integer()
+    |> unwrap_and_tag(:literal)
 
-  separator = string(",") |> ignore()
+  separator =
+    ","
+    |> string()
+    |> ignore()
 
   expression = choice([step, range, literal, wild, separator])
 
