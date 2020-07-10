@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## Unreleased
 
+## [2.0.0] — 2020-07-10
+
+No changes from [2.0.0-rc.3][].
+
 ## [2.0.0-rc.3] — 2020-07-01
 
 ### Fixed
@@ -1026,7 +1030,8 @@ end
 
 - [Oban] Initial release with base functionality.
 
-[Unreleased]: https://github.com/sorentwo/oban/compare/v2.0.0-rc.3...HEAD
+[Unreleased]: https://github.com/sorentwo/oban/compare/v2.0.0...HEAD
+[2.0.0]: https://github.com/sorentwo/oban/compare/v2.0.0-rc.3...v2.0.0
 [2.0.0-rc.3]: https://github.com/sorentwo/oban/compare/v2.0.0-rc.2...v2.0.0-rc.3
 [2.0.0-rc.2]: https://github.com/sorentwo/oban/compare/v2.0.0-rc.1...v2.0.0-rc.2
 [2.0.0-rc.1]: https://github.com/sorentwo/oban/compare/v2.0.0-rc.0...v2.0.0-rc.1
