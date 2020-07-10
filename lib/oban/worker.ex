@@ -46,9 +46,8 @@ defmodule Oban.Worker do
   * `:ok` or `{:ok, value}` — the job is successful; for success tuples the `value` is ignored
   * `:discard` — discard the job and prevent it from being retried again
   * `{:error, error}` — the job failed, record the error and schedule a retry if possible
-  * `{:snooze, seconds}` — consider the job a success and schedule it to run `seconds` in the
-    future. Snoozing will also increase the `max_attempts` by one to ensure that the job isn't
-    accidentally discarded before it can run.
+  * `{:snooze, seconds}` — mark the job as `snoozed` and schedule it to run again `seconds` in the
+    future. Snoozing a job does not change the number of retries remaining on the job.
 
   In addition to explicit return values, any _unhandled exception_, _exit_ or _throw_ will fail
   the job and schedule a retry if possible.
