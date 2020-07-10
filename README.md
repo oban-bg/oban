@@ -305,9 +305,9 @@ concurrently in each queue. Here are a few caveats and guidelines:
 ### Defining Workers
 
 Worker modules do the work of processing a job. At a minimum they must define a
-`perform/2` function, which is called with an `args` map and the job struct.
+`perform/2` function, which is called with an `%Oban.Job{}` struct.
 
-Note that the `args` map passed to `perform/2` will _always_ have string keys,
+Note that the `args` field of the job struct will _always_ have string keys,
 regardless of the key type when the job was enqueued. The `args` are stored as
 `jsonb` in PostgreSQL and the serialization process automatically stringifies
 all keys.
@@ -319,7 +319,7 @@ defmodule MyApp.Business do
   use Oban.Worker, queue: :events
 
   @impl Oban.Worker
-  def perform(%_{args: %{"id" => id}}) do
+  def perform(%Oban.Job{args: %{"id" => id}}) do
     model = MyApp.Repo.get(MyApp.Business.Man, id)
 
     case args do
@@ -562,6 +562,8 @@ The crontab format respects all [standard rules][cron] and has one minute
 resolution. Jobs are considered unique for most of each minute, which prevents
 duplicate jobs with multiple nodes and across node restarts.
 
+Like other jobs, recurring jobs will use the `:queue` specified by the worker module (or `:default` if one is not specified).
+
 #### Cron Expressions
 
 Standard Cron expressions are composed of rules specifying the minutes, hours,
@@ -799,7 +801,7 @@ def MyApp.Worker do
   use Oban.Worker
 
   @impl Oban.Worker
-  def perform(_args, _job) do
+  def perform(_job) do
     something_that_may_take_a_long_time()
 
     :ok
