@@ -231,7 +231,7 @@ defmodule Oban.Telemetry do
       message
       |> Map.put(:event, event)
       |> Map.put(:source, "oban")
-      |> Jason.encode!()
+      |> Jason.encode_to_iodata!()
     end)
   end
 end
