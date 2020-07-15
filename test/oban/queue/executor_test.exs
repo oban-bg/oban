@@ -42,7 +42,7 @@ defmodule Oban.Queue.ExecutorTest do
     test "warning on unexpected return values" do
       message = capture_log(fn -> %{state: :success} = call_with_mode("warn") end)
 
-      assert message =~ "Expected #{__MODULE__}.Worker.perform/2"
+      assert message =~ "Expected #{__MODULE__}.Worker.perform/1"
       assert message =~ "{:bad, :this_will_warn}"
     end
 

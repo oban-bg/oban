@@ -305,7 +305,7 @@ concurrently in each queue. Here are a few caveats and guidelines:
 ### Defining Workers
 
 Worker modules do the work of processing a job. At a minimum they must define a
-`perform/2` function, which is called with an `%Oban.Job{}` struct.
+`perform/1` function, which is called with an `%Oban.Job{}` struct.
 
 Note that the `args` field of the job struct will _always_ have string keys,
 regardless of the key type when the job was enqueued. The `args` are stored as

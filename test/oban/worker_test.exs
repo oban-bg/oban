@@ -83,7 +83,7 @@ defmodule Oban.WorkerTest do
     end
   end
 
-  describe "perform/2" do
+  describe "perform/1" do
     test "arguments from the complete job struct are extracted" do
       args = %{"a" => 2, "b" => 3}
 

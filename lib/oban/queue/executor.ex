@@ -175,7 +175,7 @@ defmodule Oban.Queue.Executor do
       returned ->
         Logger.warn(fn ->
           """
-          Expected #{worker}.perform/2 to return :ok, `{:ok, value}`, or {:error, reason}. Instead
+          Expected #{worker}.perform/1 to return :ok, `{:ok, value}`, or {:error, reason}. Instead
           received:
 
           #{inspect(returned, pretty: true)}
