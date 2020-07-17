@@ -23,7 +23,7 @@ defmodule Oban.Queue.Supervisor do
   def child_spec({queue, opts}, conf) do
     queue = to_string(queue)
     name = Module.concat([conf.name, "Queue", Macro.camelize(queue)])
-    opts = Keyword.merge(opts, [conf: conf, queue: queue, name: name])
+    opts = Keyword.merge(opts, conf: conf, queue: queue, name: name)
 
     Supervisor.child_spec({__MODULE__, opts}, id: name)
   end
