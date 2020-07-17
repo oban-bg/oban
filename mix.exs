@@ -46,9 +46,7 @@ defmodule Oban.MixProject do
   end
 
   def application do
-    [
-      extra_applications: [:logger]
-    ]
+    [extra_applications: [:logger]]
   end
 
   defp elixirc_paths(:test), do: ["lib", "test/support"]
@@ -59,6 +57,7 @@ defmodule Oban.MixProject do
       "CHANGELOG.md",
       "guides/installation.md",
       "guides/troubleshooting.md",
+      "guides/upgrading/v2.0.md",
       "guides/release_configuration.md",
       "guides/recipes/recursive-jobs.md",
       "guides/recipes/reliable-scheduling.md",
@@ -102,6 +101,7 @@ defmodule Oban.MixProject do
       Guides: ~r{guides/[^\/]+\.md},
       Recipes: ~r{guides/recipes/.?},
       Extras: ~r{^CHANGELOG.md},
+      "Upgrade Guides": ~r{guides/upgrading/.*},
       "Oban Pro": ~r{oban_pro/.?},
       "Oban Web": ~r{oban_web/.?}
     ]
@@ -111,7 +111,11 @@ defmodule Oban.MixProject do
     [
       maintainers: ["Parker Selbert"],
       licenses: ["Apache-2.0"],
-      links: %{github: "https://github.com/sorentwo/oban"}
+      links: %{
+        Website: "https://getoban.pro",
+        Changelog: "https://github.com/sorentwo/oban/blob/master/CHANGELOG.md",
+        GitHub: "https://github.com/sorentwo/oban"
+      }
     ]
   end
 

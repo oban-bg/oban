@@ -125,7 +125,7 @@ No changes from [2.0.0-rc.3][].
     :ok = Oban.stop_queue(:myqueue)
     ```
 
-  You'll now them with options, like this:
+  You'll now call them with options, like this:
 
     ```elixir
     :ok = Oban.start_queue(queue: :myqueue, limit: 10)
