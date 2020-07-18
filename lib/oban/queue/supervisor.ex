@@ -12,6 +12,9 @@ defmodule Oban.Queue.Supervisor do
           | {:queue, binary()}
           | {:limit, pos_integer()}
 
+  @type queue_name :: atom() | binary()
+  @type queue_opts :: integer() | Keyword.t()
+
   @spec start_link([option]) :: Supervisor.on_start()
   def start_link(opts) when is_list(opts) do
     name = Keyword.get(opts, :name, __MODULE__)
@@ -19,7 +22,7 @@ defmodule Oban.Queue.Supervisor do
     Supervisor.start_link(__MODULE__, opts, name: name)
   end
 
-  @spec child_spec({atom(), integer()}, Config.t()) :: Supervisor.child_spec()
+  @spec child_spec({queue_name(), queue_opts()}, Config.t()) :: Supervisor.child_spec()
   def child_spec({queue, opts}, conf) do
     queue = to_string(queue)
     name = Module.concat([conf.name, "Queue", Macro.camelize(queue)])
