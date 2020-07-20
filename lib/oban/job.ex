@@ -20,7 +20,14 @@ defmodule Oban.Job do
 
   @type unique_period :: pos_integer() | :infinity
 
-  @type unique_state :: [:available | :scheduled | :executing | :retryable | :completed]
+  @type unique_state :: [
+          :available
+          | :scheduled
+          | :executing
+          | :retryable
+          | :completed
+          | :discarded
+        ]
 
   @type unique_option ::
           {:fields, [unique_field()]}
@@ -79,7 +86,7 @@ defmodule Oban.Job do
     field :unsaved_error, :map, virtual: true
   end
 
-  @permitted ~w(
+  @permitted_params ~w(
     args
     attempt
     attempted_by
@@ -97,7 +104,7 @@ defmodule Oban.Job do
     worker
   )a
 
-  @required ~w(worker args)a
+  @required_params ~w(worker args)a
 
   @doc """
   Construct a new job changeset ready for insertion into the database.
@@ -159,8 +166,8 @@ defmodule Oban.Job do
       |> normalize_tags()
 
     %__MODULE__{}
-    |> cast(params, @permitted)
-    |> validate_required(@required)
+    |> cast(params, @permitted_params)
+    |> validate_required(@required_params)
     |> put_scheduling(params[:schedule_in])
     |> put_uniqueness(params[:unique])
     |> put_state()
@@ -169,6 +176,22 @@ defmodule Oban.Job do
     |> validate_number(:max_attempts, greater_than: 0)
     |> validate_number(:priority, greater_than: -1, less_than: 4)
   end
+
+  @unique_fields ~w(args queue worker)a
+  @unique_period 60
+  @unique_states ~w(scheduled available executing retryable completed discarded)a
+
+  @doc """
+  A canonical list of all possible job states.
+
+  This may be used to build up `:unique` options without duplicating states in application code.
+
+  ## Examples
+
+      iex> Oban.Job.states() -- [:completed, :discarded]
+      [:scheduled, :available, :executing, :retryable]
+  """
+  def states, do: @unique_states
 
   @doc """
   Convert a Job changeset into a map suitable for database insertion.
@@ -187,7 +210,7 @@ defmodule Oban.Job do
     changeset
     |> apply_changes()
     |> Map.from_struct()
-    |> Map.take(@permitted)
+    |> Map.take(@permitted_params)
     |> Enum.reject(fn {_, val} -> is_nil(val) end)
     |> Map.new()
   end
@@ -205,16 +228,12 @@ defmodule Oban.Job do
     end
   end
 
-  @unique_fields ~w(args queue worker)a
-  @unique_period 60
-  @unique_states ~w(available scheduled executing retryable completed)a
-
   @doc false
   @spec valid_unique_opt?({:fields | :period | :states, [atom()] | integer()}) :: boolean()
   def valid_unique_opt?({:fields, [_ | _] = fields}), do: fields -- @unique_fields == []
   def valid_unique_opt?({:period, :infinity}), do: true
   def valid_unique_opt?({:period, period}), do: is_integer(period) and period > 0
-  def valid_unique_opt?({:states, [_ | _] = states}), do: states -- @unique_states == []
+  def valid_unique_opt?({:states, [_ | _] = states}), do: states -- states() == []
   def valid_unique_opt?(_option), do: false
 
   defp put_scheduling(changeset, value) do

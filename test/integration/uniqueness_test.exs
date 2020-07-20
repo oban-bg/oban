@@ -56,6 +56,7 @@ defmodule Oban.Integration.UniquenessTest do
     assert %Job{id: id_3} = unique_insert!(%{id: 3}, state: "executing")
     assert %Job{id: ^id_1} = unique_insert!(%{id: 1}, unique: [states: [:available]])
     assert %Job{id: ^id_2} = unique_insert!(%{id: 2}, unique: [states: [:available, :completed]])
+    assert %Job{id: ^id_2} = unique_insert!(%{id: 2}, unique: [states: [:completed, :discarded]])
     assert %Job{id: ^id_3} = unique_insert!(%{id: 3}, unique: [states: [:completed, :executing]])
 
     assert count_jobs() == 3

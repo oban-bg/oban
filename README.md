@@ -499,9 +499,10 @@ level using the following options:
   fields are `:args`, `:queue` and `:worker`, by default all three are used.
 
 * `:states` — The job states that are checked for duplicates. The available
-  states are `:available`, `:scheduled`, `:executing`, `:retryable` and
-  `:completed`. By default all states are checked, which prevents _any_
-  duplicates, even if the previous job has been completed.
+  states are `:available`, `:scheduled`, `:executing`, `:retryable`,
+  `:completed` and `:discarded`. By default all states except for `:discarded`
+  are checked, which prevents duplicates even if the previous job has been
+  completed.
 
 For example, configure a worker to be unique across all fields and states for 60
 seconds:
@@ -520,6 +521,13 @@ Or, configure a worker to be unique until it has executed:
 
 ```elixir
 use Oban.Worker, unique: [period: 300, states: [:available, :scheduled, :executing]]
+```
+
+You can use `Oban.Job.states/0` to specify uniqueness across _all_ states,
+including `:discarded`:
+
+```elixir
+use Oban.Worker, unique: [period: 300, states: Oban.Job.states()]
 ```
 
 #### Strong Guarantees

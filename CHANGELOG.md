@@ -13,6 +13,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   possible to define per-queue options such as `:poll_limit`,
   `:dispatch_cooldown`, and even override the `:producer` module.
 
+- [Oban.Job] Allow using `:discarded` as a unique state and expose all possible
+  states through `Oban.Job.states/0`.
+
 ## [2.0.0] — 2020-07-10
 
 No changes from [2.0.0-rc.3][].

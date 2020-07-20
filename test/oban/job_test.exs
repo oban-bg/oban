@@ -1,6 +1,8 @@
 defmodule Oban.JobTest do
   use Oban.Case, async: true
 
+  doctest Oban.Job
+
   describe "scheduling with new/2" do
     test "scheduling a job for the future using :schedule_in" do
       changeset = Job.new(%{}, worker: Fake, schedule_in: 10)
@@ -36,7 +38,7 @@ defmodule Oban.JobTest do
       assert changeset.changes[:unique] == %{
                fields: [:args, :queue, :worker],
                period: 60,
-               states: [:available, :scheduled, :executing, :retryable, :completed]
+               states: [:scheduled, :available, :executing, :retryable, :completed, :discarded]
              }
     end
 
