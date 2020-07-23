@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## Unreleased
 
+### Fixed
+
+- [Oban.Testing] Modify the behaviour checking in `perform_job/3` so that it
+  considers all behaviours.
+
 ### Added
 
 - [Oban] In addition to the standard queue-name / limit keyword syntax it is now

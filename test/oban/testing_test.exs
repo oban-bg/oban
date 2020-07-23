@@ -9,6 +9,27 @@ defmodule Oban.TestingTest do
     def perform(_), do: :ok
   end
 
+  defmodule MyApp.Worker do
+    defmacro __using__(_opts) do
+      quote do
+        @behaviour unquote(__MODULE__)
+      end
+    end
+
+    @callback process() :: :ok
+  end
+
+  defmodule DoubleBehaviourWorker do
+    use MyApp.Worker
+    use Oban.Worker
+
+    @impl Oban.Worker
+    def perform(_job), do: :ok
+
+    @impl MyApp.Worker
+    def process, do: :ok
+  end
+
   defmodule MisbehavedWorker do
     use Oban.Worker
 
@@ -26,6 +47,8 @@ defmodule Oban.TestingTest do
 
       assert_perform_error(BogusWorker, message)
       assert_perform_error(InvalidWorker, message)
+
+      :ok = perform_job(DoubleBehaviourWorker, %{})
     end
 
     test "creating a valid job out of the args and options" do
