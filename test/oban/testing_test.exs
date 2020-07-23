@@ -20,12 +20,23 @@ defmodule Oban.TestingTest do
     def perform(%{args: %{"action" => "bad_snooze"}}), do: {:snooze, true}
   end
 
+  defmodule MultiBehaviourWorker do
+    @behaviour SomeOtherBehaviour
+    use Oban.Worker
+
+    @impl Oban.Worker
+    def perform(_job), do: :ok
+  end
+
   describe "perform_job/3" do
     test "verifying that the worker implements the Oban.Worker behaviour" do
       message = "worker to be a module that implements"
 
       assert_perform_error(BogusWorker, message)
       assert_perform_error(InvalidWorker, message)
+
+      # not sure how to best test this
+      perform_job(MultiBehaviourWorker, %{})
     end
 
     test "creating a valid job out of the args and options" do

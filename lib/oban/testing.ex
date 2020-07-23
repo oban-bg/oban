@@ -339,7 +339,8 @@ defmodule Oban.Testing do
   defp implements_worker?(worker) do
     :attributes
     |> worker.__info__()
-    |> Keyword.get(:behaviour, [])
+    |> Keyword.get_values(:behaviour)
+    |> Enum.flat_map(& &1)
     |> Enum.member?(Oban.Worker)
   end
 
