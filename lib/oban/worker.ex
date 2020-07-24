@@ -342,8 +342,7 @@ defmodule Oban.Worker do
   @doc """
   Return a string representation of a worker module.
 
-  This is particularly useful for normalizing
-  worker names when building custom Ecto queries.
+  This is particularly useful for normalizing worker names when building custom Ecto queries.
 
   ## Examples
 
