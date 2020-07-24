@@ -377,14 +377,23 @@ defmodule Oban.Testing do
         :ok -> true
         {:ok, _value} -> true
         {:error, _value} -> true
+        {:discard, _value} -> true
         {:snooze, snooze} when is_integer(snooze) -> true
         :discard -> true
         _ -> false
       end
 
     assert valid?, """
-    Expected result to be one of `:ok`, `{:ok, value}`, `{:error, reason}`, `{:snooze, duration}
-    or `:discard`, got:
+    Expected result to be one of
+
+      - `:ok`
+      - `:discard`
+      - `{:ok, value}`
+      - `{:error, reason}`
+      - `{:discard, reason}`
+      - `{:snooze, duration}
+
+    Instead received:
 
     #{inspect(result, pretty: true)}
     """

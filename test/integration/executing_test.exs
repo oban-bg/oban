@@ -33,6 +33,7 @@ defmodule Oban.Integration.ExecutingTest do
               "discarded" ->
                 refute job.completed_at
                 assert job.discarded_at
+                assert [%{"attempt" => _, "at" => _, "error" => _} | _] = job.errors
 
               "retryable" ->
                 refute job.completed_at

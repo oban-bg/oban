@@ -125,10 +125,7 @@ defmodule Oban.Queue.Executor do
         execute_stop(exec)
 
       :failure ->
-        job = %{
-          exec.job
-          | unsaved_error: %{kind: exec.kind, reason: exec.error, stacktrace: exec.stacktrace}
-        }
+        job = job_with_unsaved_error(exec)
 
         Query.retry_job(exec.conf, job, backoff(exec.worker, job))
 
@@ -140,7 +137,7 @@ defmodule Oban.Queue.Executor do
         execute_stop(exec)
 
       :discard ->
-        Query.discard_job(exec.conf, exec.job)
+        Query.discard_job(exec.conf, job_with_unsaved_error(exec))
 
         execute_stop(exec)
     end
@@ -164,7 +161,10 @@ defmodule Oban.Queue.Executor do
         %{exec | state: :success}
 
       :discard ->
-        %{exec | state: :discard}
+        %{exec | state: :discard, kind: :error, error: "None", stacktrace: current_stacktrace()}
+
+      {:discard, reason} ->
+        %{exec | state: :discard, kind: :error, error: reason, stacktrace: current_stacktrace()}
 
       {:error, error} ->
         %{exec | state: :failure, kind: :error, error: error, stacktrace: current_stacktrace()}
@@ -175,8 +175,16 @@ defmodule Oban.Queue.Executor do
       returned ->
         Logger.warn(fn ->
           """
-          Expected #{worker}.perform/1 to return :ok, `{:ok, value}`, or {:error, reason}. Instead
-          received:
+          Expected #{worker}.perform/1 to return:
+
+          - `:ok`
+          - `:discard`
+          - `{:ok, value}`
+          - `{:error, reason}`,
+          - `{:discard, reason}`
+          - `{:snooze, seconds}`
+
+          Instead received:
 
           #{inspect(returned, pretty: true)}
 
@@ -224,9 +232,16 @@ defmodule Oban.Queue.Executor do
     |> elem(1)
   end
 
-  def event_metadata(conf, job) do
+  defp event_metadata(conf, job) do
     job
     |> Map.take([:id, :args, :queue, :worker, :attempt, :max_attempts])
     |> Map.put(:prefix, conf.prefix)
+  end
+
+  defp job_with_unsaved_error(%__MODULE__{} = exec) do
+    %{
+      exec.job
+      | unsaved_error: %{kind: exec.kind, reason: exec.error, stacktrace: exec.stacktrace}
+    }
   end
 end

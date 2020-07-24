@@ -65,7 +65,7 @@ defmodule Oban.TestingTest do
     end
 
     test "validating the return value of the worker's perform/1 function" do
-      message = "result to be one of `:ok`"
+      message = "result to be one of"
 
       assert_perform_error(MisbehavedWorker, %{"action" => "bad_atom"}, message)
       assert_perform_error(MisbehavedWorker, %{"action" => "bad_string"}, message)
@@ -76,7 +76,7 @@ defmodule Oban.TestingTest do
 
     test "returning the value of worker's perform/1 function" do
       assert :ok = perform_job(Worker, %{ref: 1, action: "OK"})
-      assert :discard = perform_job(Worker, %{ref: 1, action: "DISCARD"})
+      assert {:discard, _} = perform_job(Worker, %{ref: 1, action: "DISCARD"})
       assert {:error, _} = perform_job(Worker, %{ref: 1, action: "ERROR"})
     end
   end

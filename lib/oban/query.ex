@@ -118,10 +118,17 @@ defmodule Oban.Query do
   end
 
   @spec discard_job(Config.t(), Job.t()) :: :ok
-  def discard_job(%Config{prefix: prefix, repo: repo, log: log}, %Job{id: id}) do
+  def discard_job(%Config{prefix: prefix, repo: repo, log: log}, %Job{} = job) do
+    updates = [
+      set: [state: "discarded", discarded_at: utc_now()],
+      push: [
+        errors: %{attempt: job.attempt, at: utc_now(), error: format_blamed(job.unsaved_error)}
+      ]
+    ]
+
     repo.update_all(
-      where(Job, id: ^id),
-      [set: [state: "discarded", discarded_at: utc_now()]],
+      where(Job, id: ^job.id),
+      updates,
       log: log,
       prefix: prefix
     )

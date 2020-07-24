@@ -21,6 +21,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - [Oban.Job] Allow using `:discarded` as a unique state and expose all possible
   states through `Oban.Job.states/0`.
 
+- [Oban.Worker] Allow returning `{:discard, reason}` from `perform/1`, where the
+  reason is recorded in the job's errors array. If no reason is provided then a
+  default of "None" is used. All discarded jobs will have an error now, whether
+  discarded manually or automatically.
+
 ## [2.0.0] — 2020-07-10
 
 No changes from [2.0.0-rc.3][].
