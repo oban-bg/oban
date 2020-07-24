@@ -50,7 +50,7 @@ Now, run the migration to create the table:
 mix ecto.migrate
 ```
 
-Next see [Usage](Oban.html) for how to integrate Oban into your application and
+Next see [Usage](Oban.html#Usage) for how to integrate Oban into your application and
 start defining jobs!
 
 [ecto]: https://hex.pm/packages/ecto
