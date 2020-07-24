@@ -16,7 +16,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 - [Oban] In addition to the standard queue-name / limit keyword syntax it is now
   possible to define per-queue options such as `:poll_limit`,
-  `:dispatch_cooldown`, and even override the `:producer` module.
+  `:dispatch_cooldown`, `:paused`, and even override the `:producer` module.
 
 - [Oban.Job] Allow using `:discarded` as a unique state and expose all possible
   states through `Oban.Job.states/0`.

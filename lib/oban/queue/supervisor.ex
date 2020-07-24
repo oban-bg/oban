@@ -44,7 +44,7 @@ defmodule Oban.Queue.Supervisor do
 
     prod_opts =
       opts
-      |> Keyword.take([:conf, :dispatch_cooldown, :limit, :poll_interval, :queue])
+      |> Keyword.drop([:name])
       |> Keyword.merge(foreman: fore_name, name: prod_name)
       |> Keyword.put_new(:dispatch_cooldown, conf.dispatch_cooldown)
       |> Keyword.put_new(:poll_interval, conf.poll_interval)

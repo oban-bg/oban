@@ -10,7 +10,8 @@ defmodule Oban.Integration.ConfiguringTest do
       queues: [
         alpha: 1,
         gamma: [limit: 2, poll_interval: 10, dispatch_cooldown: 5],
-        delta: [limit: 1, poll_interval: 5_000]
+        delta: [limit: 1, poll_interval: 5_000],
+        omega: [limit: 1, paused: true]
       ]
     )
 
@@ -40,5 +41,10 @@ defmodule Oban.Integration.ConfiguringTest do
     assert_receive {:started, 7}
     refute_receive {:started, 8}
     refute_receive {:started, 9}
+
+    # Omega is paused, this won't start
+    insert!([ref: 10, sleep: 5], queue: :omega)
+
+    refute_receive {:started, 10}
   end
 end
