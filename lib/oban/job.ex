@@ -161,8 +161,8 @@ defmodule Oban.Job do
       opts
       |> Keyword.put(:args, args)
       |> Map.new()
-      |> coerce_field(:queue)
-      |> coerce_field(:worker)
+      |> coerce_field(:queue, &to_clean_string/1)
+      |> coerce_field(:worker, &Oban.Worker.to_string/1)
       |> normalize_tags()
 
     %__MODULE__{}
@@ -215,13 +215,13 @@ defmodule Oban.Job do
     |> Map.new()
   end
 
-  defp coerce_field(params, field) do
+  defp coerce_field(params, field, fun) do
     case Map.get(params, field) do
       value when is_atom(value) and not is_nil(value) ->
-        update_in(params, [field], &to_clean_string/1)
+        update_in(params, [field], fun)
 
       value when is_binary(value) ->
-        update_in(params, [field], &to_clean_string/1)
+        update_in(params, [field], fun)
 
       _ ->
         params
@@ -314,8 +314,9 @@ defmodule Oban.Job do
   end
 
   defp to_clean_string(value) do
-    value
-    |> to_string()
-    |> String.trim_leading("Elixir.")
+    case to_string(value) do
+      "Elixir." <> val -> val
+      val -> val
+    end
   end
 end

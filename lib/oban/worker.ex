@@ -188,6 +188,8 @@ defmodule Oban.Worker do
   """
   @moduledoc since: "0.1.0"
 
+  import Kernel, except: [to_string: 1]
+
   alias Oban.Job
 
   @type t :: module()
@@ -249,7 +251,7 @@ defmodule Oban.Worker do
 
       @doc false
       def __opts__ do
-        Keyword.put(unquote(opts), :worker, to_string(__MODULE__))
+        Keyword.put(unquote(opts), :worker, Kernel.to_string(__MODULE__))
       end
 
       @impl Worker
@@ -336,4 +338,31 @@ defmodule Oban.Worker do
   defp validate_opt!(option) do
     raise ArgumentError, "unknown option provided #{inspect(option)}"
   end
+
+  @doc """
+  Return a string representation of a worker module.
+
+  This is particularly useful for normalizing worker names when building custom Ecto queries.
+
+  ## Examples
+
+      iex> Oban.Worker.to_string(MyApp.SomeWorker)
+      "MyApp.SomeWorker"
+
+      iex> Oban.Worker.to_string(Elixir.MyApp.SomeWorker)
+      "MyApp.SomeWorker"
+
+      iex> Oban.Worker.to_string("Elixir.MyApp.SomeWorker")
+      "MyApp.SomeWorker"
+  """
+  @spec to_string(module() | String.t()) :: String.t()
+  def to_string(worker) when is_atom(worker) and not is_nil(worker) do
+    worker
+    |> Kernel.to_string()
+    |> to_string()
+  end
+
+  def to_string("Elixir." <> val), do: val
+
+  def to_string(worker) when is_binary(worker), do: worker
 end
