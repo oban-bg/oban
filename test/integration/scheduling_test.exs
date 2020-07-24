@@ -4,11 +4,11 @@ defmodule Oban.Integration.SchedulingTest do
   @moduletag :integration
 
   test "descheduling jobs to make them available for execution" do
-    _job_ = insert!([ref: 1, sleep: 1000], schedule_in: -9, queue: :alpha)
-    _job_ = insert!([ref: 2, sleep: 1000], schedule_in: -5, queue: :alpha)
-    job_3 = insert!([ref: 3, sleep: 1000], schedule_in: -1, queue: :alpha)
-    job_4 = insert!([ref: 4, sleep: 1000], schedule_in: -1, queue: :gamma)
-    job_5 = insert!([ref: 5, sleep: 1000], schedule_in: 10, queue: :alpha)
+    _job_ = insert!([ref: 1, sleep: 5000], schedule_in: -9, queue: :alpha)
+    _job_ = insert!([ref: 2, sleep: 5000], schedule_in: -5, queue: :alpha)
+    job_3 = insert!([ref: 3, sleep: 5000], schedule_in: -1, queue: :alpha)
+    job_4 = insert!([ref: 4, sleep: 5000], schedule_in: -1, queue: :gamma)
+    job_5 = insert!([ref: 5, sleep: 5000], schedule_in: 10, queue: :alpha)
 
     start_supervised_oban!(queues: [alpha: 2])
 

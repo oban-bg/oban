@@ -161,7 +161,7 @@ defmodule Oban.Job do
       opts
       |> Keyword.put(:args, args)
       |> Map.new()
-      |> coerce_field(:queue, &to_clean_string/1)
+      |> coerce_field(:queue, &to_string/1)
       |> coerce_field(:worker, &Oban.Worker.to_string/1)
       |> normalize_tags()
 
@@ -191,6 +191,7 @@ defmodule Oban.Job do
       iex> Oban.Job.states() -- [:completed, :discarded]
       [:scheduled, :available, :executing, :retryable]
   """
+  @doc since: "2.1.0"
   def states, do: @unique_states
 
   @doc """
@@ -311,12 +312,5 @@ defmodule Oban.Job do
         {:halt, {:error, key, val}}
       end
     end)
-  end
-
-  defp to_clean_string(value) do
-    case to_string(value) do
-      "Elixir." <> val -> val
-      val -> val
-    end
   end
 end

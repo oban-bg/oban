@@ -355,6 +355,7 @@ defmodule Oban.Worker do
       iex> Oban.Worker.to_string("Elixir.MyApp.SomeWorker")
       "MyApp.SomeWorker"
   """
+  @doc since: "2.1.0"
   @spec to_string(module() | String.t()) :: String.t()
   def to_string(worker) when is_atom(worker) and not is_nil(worker) do
     worker
