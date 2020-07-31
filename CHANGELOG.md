@@ -18,6 +18,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   possible to define per-queue options such as `:poll_interval`,
   `:dispatch_cooldown`, `:paused`, and even override the `:producer` module.
 
+- [Oban] Cancelling a running job now records an error on the job if it was
+  _running_ at the time it was cancelled.
+
 - [Oban.Job] Allow using `:discarded` as a unique state and expose all possible
   states through `Oban.Job.states/0`.
 

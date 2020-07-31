@@ -139,8 +139,7 @@ defmodule Oban.Queue.Producer do
         %{"action" => "pkill", "job_id" => kid} ->
           for {_ref, {exec, pid}} <- running, exec.job.id == kid do
             with :ok <- DynamicSupervisor.terminate_child(foreman, pid) do
-              reason = %RuntimeError{message: "job killed"}
-              uerror = %{kind: :error, reason: reason, stacktrace: []}
+              uerror = %{kind: :error, reason: "None", stacktrace: []}
 
               Query.discard_job(conf, %{exec.job | unsaved_error: uerror})
             end
