@@ -44,7 +44,8 @@ defmodule Oban.Worker do
   The value returned from `c:perform/1` can control whether the job is a success or a failure:
 
   * `:ok` or `{:ok, value}` — the job is successful; for success tuples the `value` is ignored
-  * `:discard` — discard the job and prevent it from being retried again
+  * `:discard` or `{:discard, reason}` — discard the job and prevent it from being retried again.
+    An error is recorded using the optional reason, though the job is still successful
   * `{:error, error}` — the job failed, record the error and schedule a retry if possible
   * `{:snooze, seconds}` — mark the job as `snoozed` and schedule it to run again `seconds` in the
     future. Snoozing a job does not change the number of retries remaining on the job.
@@ -196,6 +197,7 @@ defmodule Oban.Worker do
   @type result ::
           :ok
           | :discard
+          | {:discard, reason :: term()}
           | {:ok, ignored :: term()}
           | {:error, reason :: term()}
           | {:snooze, seconds :: pos_integer()}

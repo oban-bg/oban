@@ -65,7 +65,7 @@ defmodule Oban.TestingTest do
     end
 
     test "validating the return value of the worker's perform/1 function" do
-      message = "result to be one of `:ok`"
+      message = "result to be one of"
 
       assert_perform_error(MisbehavedWorker, %{"action" => "bad_atom"}, message)
       assert_perform_error(MisbehavedWorker, %{"action" => "bad_string"}, message)
