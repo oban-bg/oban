@@ -197,7 +197,8 @@ defmodule Oban.Integration.ControllingTest do
 
     refute_receive {:ok, 1}, 200
 
-    assert %Job{state: "discarded", discarded_at: %DateTime{}} = Repo.reload(job)
+    assert %Job{state: "discarded", discarded_at: %_{}, errors: errors} = Repo.reload(job)
+    assert [%{"error" => "** (RuntimeError) job killed"}] = errors
 
     %{running: running} = :sys.get_state(Oban.Queue.Alpha.Producer)
 
