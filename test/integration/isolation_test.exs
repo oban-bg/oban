@@ -6,8 +6,8 @@ defmodule Oban.Integration.IsolationTest do
   @moduletag :integration
 
   test "multiple supervisors can be run simultaneously" do
-    start_supervised_oban!(name: ObanA, queues: [alpha: 1])
-    start_supervised_oban!(name: ObanB, queues: [gamma: 1])
+    start_supervised_oban!(name: ObanA, queues: [alpha: 1], plugins: [Oban.Plugins.Pruner])
+    start_supervised_oban!(name: ObanB, queues: [gamma: 1], plugins: [Oban.Plugins.Pruner])
 
     insert!(ObanA, %{ref: 1, action: "OK"}, [])
 

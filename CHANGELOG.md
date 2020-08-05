@@ -12,6 +12,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - [Oban.Testing] Modify the behaviour checking in `perform_job/3` so that it
   considers all behaviours.
 
+- [Oban.Plugins.Pruner] Use distinct names when running multiple Oban instances
+  in the same application.
+
 ### Added
 
 - [Oban] In addition to the standard queue-name / limit keyword syntax it is now
