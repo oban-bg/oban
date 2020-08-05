@@ -224,6 +224,7 @@ allowing you to configure Oban like the rest of your application:
 # config/config.exs
 config :my_app, Oban,
   repo: MyApp.Repo,
+  plugins: [Oban.Plugins.Pruner],
   queues: [default: 10, events: 50, media: 20]
 
 # lib/my_app/application.ex
