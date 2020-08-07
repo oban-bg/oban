@@ -3,6 +3,7 @@ defmodule Oban.Queue.ExecutorTest do
 
   import ExUnit.CaptureLog
 
+  alias Oban.{CrashError, PerformError}
   alias Oban.Queue.Executor
 
   defmodule Worker do
@@ -26,8 +27,8 @@ defmodule Oban.Queue.ExecutorTest do
 
     test "raising, catching and error tuples are failures" do
       assert %{state: :failure} = call_with_mode("raise")
-      assert %{state: :failure, error: :no_reason} = call_with_mode("catch")
-      assert %{state: :failure, error: "no reason"} = call_with_mode("error")
+      assert %{state: :failure, error: %CrashError{}} = call_with_mode("catch")
+      assert %{state: :failure, error: %PerformError{}} = call_with_mode("error")
     end
 
     test "inability to resolve a worker is a failure" do

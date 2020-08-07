@@ -3,7 +3,7 @@ defmodule Oban.Integration.TelemetryTest do
 
   import ExUnit.CaptureLog
 
-  alias Oban.Telemetry
+  alias Oban.{PerformError, Telemetry}
 
   @moduletag :integration
 
@@ -59,8 +59,8 @@ defmodule Oban.Integration.TelemetryTest do
              attempt: 1,
              max_attempts: 20,
              kind: :error,
-             error: "ERROR",
-             stacktrace: [_ | _]
+             error: %PerformError{},
+             stacktrace: []
            } = error_meta
 
     :ok = stop_supervised(Oban)

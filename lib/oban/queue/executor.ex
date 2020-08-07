@@ -3,7 +3,7 @@ defmodule Oban.Queue.Executor do
 
   require Logger
 
-  alias Oban.{Breaker, Config, Job, Query, Worker}
+  alias Oban.{Breaker, Config, CrashError, Job, PerformError, Query, TimeoutError, Worker}
 
   @type success :: {:success, Job.t()}
   @type failure :: {:failure, Job.t(), Worker.t(), atom(), term()}
@@ -30,7 +30,6 @@ defmodule Oban.Queue.Executor do
     :conf,
     :error,
     :job,
-    :kind,
     :meta,
     :snooze,
     :start_mono,
@@ -39,6 +38,7 @@ defmodule Oban.Queue.Executor do
     :worker,
     safe: true,
     duration: 0,
+    kind: :error,
     queue_time: 0,
     stacktrace: [],
     state: :unset
@@ -147,9 +147,14 @@ defmodule Oban.Queue.Executor do
 
   defp perform_inline(%{safe: true} = exec) do
     perform_inline(%{exec | safe: false})
+  rescue
+    error ->
+      %{exec | state: :failure, error: error, stacktrace: __STACKTRACE__}
   catch
     kind, value ->
-      %{exec | state: :failure, kind: kind, error: value, stacktrace: __STACKTRACE__}
+      error = CrashError.exception({kind, value, __STACKTRACE__})
+
+      %{exec | state: :failure, error: error, stacktrace: __STACKTRACE__}
   end
 
   defp perform_inline(%{worker: worker, job: job} = exec) do
@@ -161,13 +166,13 @@ defmodule Oban.Queue.Executor do
         %{exec | state: :success}
 
       :discard ->
-        %{exec | state: :discard, kind: :error, error: "None", stacktrace: current_stacktrace()}
+        %{exec | state: :discard, error: PerformError.exception({worker, :discard})}
 
       {:discard, reason} ->
-        %{exec | state: :discard, kind: :error, error: reason, stacktrace: current_stacktrace()}
+        %{exec | state: :discard, error: PerformError.exception({worker, reason})}
 
-      {:error, error} ->
-        %{exec | state: :failure, kind: :error, error: error, stacktrace: current_stacktrace()}
+      {:error, reason} ->
+        %{exec | state: :failure, error: PerformError.exception({worker, reason})}
 
       {:snooze, seconds} ->
         %{exec | state: :snoozed, snooze: seconds}
@@ -204,7 +209,9 @@ defmodule Oban.Queue.Executor do
         reply
 
       nil ->
-        %{exec | state: :failure, kind: :error, error: :timeout, stacktrace: current_stacktrace()}
+        error = TimeoutError.exception({exec.worker, timeout})
+
+        %{exec | state: :failure, error: error}
     end
   end
 
@@ -224,12 +231,6 @@ defmodule Oban.Queue.Executor do
       Map.merge(exec.meta(), %{kind: exec.kind, error: exec.error, stacktrace: exec.stacktrace})
 
     :telemetry.execute([:oban, :job, :exception], measurements, meta)
-  end
-
-  defp current_stacktrace do
-    self()
-    |> Process.info(:current_stacktrace)
-    |> elem(1)
   end
 
   defp event_metadata(conf, job) do
