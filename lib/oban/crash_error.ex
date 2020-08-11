@@ -3,10 +3,12 @@ defmodule Oban.CrashError do
   Wraps unhandled exits and throws that occur during job execution.
   """
 
-  defexception [:message]
+  defexception [:message, :reason]
 
   @impl Exception
   def exception({kind, reason, stacktrace}) do
-    %__MODULE__{message: Exception.format_banner(kind, reason, stacktrace)}
+    message = Exception.format_banner(kind, reason, stacktrace)
+
+    %__MODULE__{message: message, reason: reason}
   end
 end

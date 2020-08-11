@@ -5,10 +5,12 @@ defmodule Oban.TimeoutError do
 
   alias Oban.Worker
 
-  defexception [:message]
+  defexception [:message, :reason]
 
   @impl Exception
   def exception({worker, timeout}) do
-    %__MODULE__{message: "#{Worker.to_string(worker)} timed out after #{timeout}ms"}
+    message = "#{Worker.to_string(worker)} timed out after #{timeout}ms"
+
+    %__MODULE__{message: message, reason: :timeout}
   end
 end

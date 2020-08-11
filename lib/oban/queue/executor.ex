@@ -151,8 +151,8 @@ defmodule Oban.Queue.Executor do
     error ->
       %{exec | state: :failure, error: error, stacktrace: __STACKTRACE__}
   catch
-    kind, value ->
-      error = CrashError.exception({kind, value, __STACKTRACE__})
+    kind, reason ->
+      error = CrashError.exception({kind, reason, __STACKTRACE__})
 
       %{exec | state: :failure, error: error, stacktrace: __STACKTRACE__}
   end
@@ -169,10 +169,10 @@ defmodule Oban.Queue.Executor do
         %{exec | state: :discard, error: PerformError.exception({worker, :discard})}
 
       {:discard, reason} ->
-        %{exec | state: :discard, error: PerformError.exception({worker, reason})}
+        %{exec | state: :discard, error: PerformError.exception({worker, {:discard, reason}})}
 
       {:error, reason} ->
-        %{exec | state: :failure, error: PerformError.exception({worker, reason})}
+        %{exec | state: :failure, error: PerformError.exception({worker, {:error, reason}})}
 
       {:snooze, seconds} ->
         %{exec | state: :snoozed, snooze: seconds}
