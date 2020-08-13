@@ -12,6 +12,6 @@ defmodule Oban.Integration.TimeoutsTest do
     refute_receive {:ok, 1}
 
     assert %Job{state: "retryable", errors: [%{"error" => error}]} = Repo.reload(job)
-    assert error =~ "Erlang error: :timeout"
+    assert error == "** (Oban.TimeoutError) Oban.Integration.Worker timed out after 20ms"
   end
 end

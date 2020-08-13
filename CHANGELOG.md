@@ -32,6 +32,25 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   default of "None" is used. All discarded jobs will have an error now, whether
   discarded manually or automatically.
 
+### Changed
+
+- [Oban.Worker] Wrap `{:error, reason}` and `{:discard, reason}` in a proper
+  `Oban.PerformError` exception with a customized message. This ensures that the
+  `:error` value passed to telemetry handlers is an exception and not a raw
+  term.
+
+- [Oban.Worker] Wrap job timeouts in `Oban.TimeoutError` with a customized
+  message indicating the worker and timeout value. This replaces the raw
+  `:timeout` atom that was reported before.
+
+- [Oban.Worker] Wrap caught exits and throws in `Oban.CrashError` with a
+  formatted message. This means the `:error` value passed to telemetry is
+  _always_ a proper exception and easier to report.
+
+- [Oban.Worker] Stop reporting internal stacktraces for timeouts, discards or
+  error tuples. The stacktrace was useless and potentially misleading as it
+  appeared that the error originated from Oban rather than the worker module.
+
 ## [2.0.0] — 2020-07-10
 
 No changes from [2.0.0-rc.3][].

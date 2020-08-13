@@ -69,6 +69,9 @@ defmodule Oban.Worker do
         end
       end
 
+  The error tuple is wrapped in an `Oban.PerformError` with a formatted message. The error tuple
+  itself is available through the exception's `:reason` field.
+
   ## Enqueuing Jobs
 
   All workers implement a `c:new/2` function that converts an args map into a job changeset
