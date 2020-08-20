@@ -265,22 +265,10 @@ defmodule Oban.Query do
     dynamic([j], fragment("? @> ?", j.args, ^args) and ^acc)
   end
 
-  defp unique_field({changeset, :args, _}, acc) do
-    args = Changeset.get_field(changeset, :args)
+  defp unique_field({changeset, field, _}, acc) do
+    value = Changeset.get_field(changeset, field)
 
-    dynamic([j], j.args == ^args and ^acc)
-  end
-
-  defp unique_field({changeset, :queue, _}, acc) do
-    queue = Changeset.get_field(changeset, :queue)
-
-    dynamic([j], j.queue == ^queue and ^acc)
-  end
-
-  defp unique_field({changeset, :worker, _}, acc) do
-    worker = Changeset.get_field(changeset, :worker)
-
-    dynamic([j], j.worker == ^worker and ^acc)
+    dynamic([j], field(j, ^field) == ^value and ^acc)
   end
 
   defp since_period(query, :infinity), do: query
