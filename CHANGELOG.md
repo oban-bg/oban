@@ -32,6 +32,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   default of "None" is used. All discarded jobs will have an error now, whether
   discarded manually or automatically.
 
+- [Oban.Job] Add support for uniqueness across sub-args with the `:keys`
+  attribute. This makes it possible to only use a few values from a job to
+  determine uniqueness. For example, a job that includes a lot of metadata but
+  must be considered unique based on a `:url` field can specify `keys: [:url]`.
+
 ### Changed
 
 - [Oban.Worker] Wrap `{:error, reason}` and `{:discard, reason}` in a proper

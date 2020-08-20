@@ -31,6 +31,7 @@ defmodule Oban.Job do
 
   @type unique_option ::
           {:fields, [unique_field()]}
+          | {:keys, [atom()]}
           | {:period, unique_period()}
           | {:states, [unique_state()]}
 
@@ -121,7 +122,7 @@ defmodule Oban.Job do
     * `:scheduled_at` - a time in the future after which the job should be executed
     * `:tags` — a list of tags to group and organize related jobs, i.e. to identify scheduled jobs
     * `:unique` — a keyword list of options specifying how uniqueness will be calculated. The
-      options define which fields will be used, for how long, and for which states.
+      options define which fields will be used, for how long, with which keys, and for which states.
     * `:worker` — a module to execute the job in. The module must implement the `Oban.Worker`
       behaviour.
 
@@ -152,6 +153,14 @@ defmodule Oban.Job do
 
       %{id: 1}
       |> MyApp.Worker.new(unique: [fields: fields, period: 60, states: states])
+      |> Oban.insert()
+
+  Insert a unique job considering only the worker and specified keys in the args:
+
+      keys = [:account_id, :url]
+
+      %{account_id: 1, url: "https://example.com"}
+      |> MyApp.Worker.new(unique: [fields: [:args, :worker], keys: keys])
       |> Oban.insert()
   """
   @doc since: "0.1.0"
@@ -232,6 +241,8 @@ defmodule Oban.Job do
   @doc false
   @spec valid_unique_opt?({:fields | :period | :states, [atom()] | integer()}) :: boolean()
   def valid_unique_opt?({:fields, [_ | _] = fields}), do: fields -- @unique_fields == []
+  def valid_unique_opt?({:keys, []}), do: true
+  def valid_unique_opt?({:keys, [_ | _] = keys}), do: Enum.all?(keys, &is_atom/1)
   def valid_unique_opt?({:period, :infinity}), do: true
   def valid_unique_opt?({:period, period}), do: is_integer(period) and period > 0
   def valid_unique_opt?({:states, [_ | _] = states}), do: states -- states() == []
@@ -265,6 +276,7 @@ defmodule Oban.Job do
         unique =
           opts
           |> Keyword.put_new(:fields, @unique_fields)
+          |> Keyword.put_new(:keys, [])
           |> Keyword.put_new(:period, @unique_period)
           |> Keyword.put_new(:states, @unique_states)
           |> Map.new()

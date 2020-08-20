@@ -50,6 +50,17 @@ defmodule Oban.Integration.UniquenessTest do
     assert count_jobs() == 2
   end
 
+  test "scoping uniqueness to specific argument keys" do
+    assert %Job{id: id_1} = unique_insert!(%{id: 1, url: "https://a.co"})
+    assert %Job{id: id_2} = unique_insert!(%{id: 2, url: "https://b.co"})
+
+    assert %Job{id: ^id_1} = unique_insert!(%{id: 3, url: "https://a.co"}, unique: [keys: [:url]])
+    assert %Job{id: ^id_2} = unique_insert!(%{id: 2, url: "https://a.co"}, unique: [keys: [:id]])
+    assert %Job{id: ^id_2} = unique_insert!(%{"id" => 2}, unique: [keys: [:id]])
+
+    assert count_jobs() == 2
+  end
+
   test "scoping uniqueness by state" do
     assert %Job{id: id_1} = unique_insert!(%{id: 1}, state: "available")
     assert %Job{id: id_2} = unique_insert!(%{id: 2}, state: "completed")
