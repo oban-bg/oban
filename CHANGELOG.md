@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## Unreleased
 
+## [2.1.0] — 2020-08-21
+
 ### Fixed
 
 - [Oban.Testing] Modify the behaviour checking in `perform_job/3` so that it
@@ -1079,7 +1081,8 @@ end
 
 - [Oban] Initial release with base functionality.
 
-[Unreleased]: https://github.com/sorentwo/oban/compare/v2.0.0...HEAD
+[Unreleased]: https://github.com/sorentwo/oban/compare/v2.1.0...HEAD
+[2.1.0]: https://github.com/sorentwo/oban/compare/v2.0.0...v2.1.0
 [2.0.0]: https://github.com/sorentwo/oban/compare/v2.0.0-rc.3...v2.0.0
 [2.0.0-rc.3]: https://github.com/sorentwo/oban/compare/v2.0.0-rc.2...v2.0.0-rc.3
 [2.0.0-rc.2]: https://github.com/sorentwo/oban/compare/v2.0.0-rc.1...v2.0.0-rc.2
