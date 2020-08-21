@@ -508,7 +508,7 @@ level using the following options:
 
 * `:keys` — A specific subset of the `:args` to consider when comparing against
   historic jobs. This allows a job with multiple key/value pairs in the args to
-  be compared using only one or more of the key/values.
+  be compared using only a subset of them.
 
 * `:states` — The job states that are checked for duplicates. The available
   states are `:available`, `:scheduled`, `:executing`, `:retryable`,
