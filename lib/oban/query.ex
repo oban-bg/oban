@@ -235,17 +235,18 @@ defmodule Oban.Query do
   end
 
   defp unique_query(%{changes: %{unique: %{} = unique}} = changeset) do
-    %{fields: fields, period: period, states: states} = unique
+    %{fields: fields, keys: keys, period: period, states: states} = unique
 
-    fields = for field <- fields, do: {field, Changeset.get_field(changeset, field)}
-    states = for state <- states, do: to_string(state)
-    lock_key = :erlang.phash2([fields, states])
+    keys = Enum.map(keys, &to_string/1)
+    states = Enum.map(states, &to_string/1)
+    dynamic = Enum.reduce(fields, true, &unique_field({changeset, &1, keys}, &2))
+    lock_key = :erlang.phash2([keys, states, dynamic])
 
     query =
       Job
       |> where([j], j.state in ^states)
       |> since_period(period)
-      |> where(^fields)
+      |> where(^dynamic)
       |> order_by(desc: :id)
       |> limit(1)
 
@@ -253,6 +254,22 @@ defmodule Oban.Query do
   end
 
   defp unique_query(_changeset), do: nil
+
+  defp unique_field({changeset, :args, [_ | _] = keys}, acc) do
+    args =
+      changeset
+      |> Changeset.get_field(:args)
+      |> Map.new(fn {key, val} -> {to_string(key), val} end)
+      |> Map.take(keys)
+
+    dynamic([j], fragment("? @> ?", j.args, ^args) and ^acc)
+  end
+
+  defp unique_field({changeset, field, _}, acc) do
+    value = Changeset.get_field(changeset, field)
+
+    dynamic([j], field(j, ^field) == ^value and ^acc)
+  end
 
   defp since_period(query, :infinity), do: query
 

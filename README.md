@@ -98,8 +98,8 @@ orphaned due to crashes.
   soon as they are inserted into the database.
 
 - **Unique Jobs** — Duplicate work can be avoided through unique job controls.
-  Uniqueness can be enforced at the argument, queue and worker level for any
-  period of time.
+  Uniqueness can be enforced at the argument, queue, worker and even
+  sub-argument level for any period of time.
 
 - **Scheduled Jobs** — Jobs can be scheduled at any time in the future, down to
   the second.
@@ -506,6 +506,10 @@ level using the following options:
 * `:fields` — The fields to compare when evaluating uniqueness. The available
   fields are `:args`, `:queue` and `:worker`, by default all three are used.
 
+* `:keys` — A specific subset of the `:args` to consider when comparing against
+  historic jobs. This allows a job with multiple key/value pairs in the args to
+  be compared using only a subset of them.
+
 * `:states` — The job states that are checked for duplicates. The available
   states are `:available`, `:scheduled`, `:executing`, `:retryable`,
   `:completed` and `:discarded`. By default all states except for `:discarded`
@@ -529,6 +533,12 @@ Or, configure a worker to be unique until it has executed:
 
 ```elixir
 use Oban.Worker, unique: [period: 300, states: [:available, :scheduled, :executing]]
+```
+
+Only consider the `:url` key rather than the entire `args`:
+
+```elixir
+use Oban.Worker, unique: [fields: [:args, :worker], keys: [:url]]
 ```
 
 You can use `Oban.Job.states/0` to specify uniqueness across _all_ states,

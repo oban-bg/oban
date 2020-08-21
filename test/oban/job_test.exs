@@ -37,6 +37,7 @@ defmodule Oban.JobTest do
 
       assert changeset.changes[:unique] == %{
                fields: [:args, :queue, :worker],
+               keys: [],
                period: 60,
                states: [:scheduled, :available, :executing, :retryable, :completed, :discarded]
              }
@@ -47,6 +48,7 @@ defmodule Oban.JobTest do
 
       assert changeset.changes[:unique] == %{
                fields: [:worker],
+               keys: [],
                period: 60,
                states: [:available]
              }
@@ -57,6 +59,7 @@ defmodule Oban.JobTest do
       assert Job.new(%{}, worker: Fake, unique: []).errors[:unique]
       assert Job.new(%{}, worker: Fake, unique: [special: :value]).errors[:unique]
       assert Job.new(%{}, worker: Fake, unique: [fields: [:bogus]]).errors[:unique]
+      assert Job.new(%{}, worker: Fake, unique: [keys: [[]]]).errors[:unique]
       assert Job.new(%{}, worker: Fake, unique: [period: :bogus]).errors[:unique]
       assert Job.new(%{}, worker: Fake, unique: [states: [:random]]).errors[:unique]
     end
