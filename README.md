@@ -907,7 +907,7 @@ defmodule ErrorReporter do
       |> Map.take([:id, :args, :queue, :worker])
       |> Map.merge(measure)
 
-    Sentry.capture_exception(meta.error, stracktrace: meta.stacktrace, extra: extra)
+    Sentry.capture_exception(meta.error, stacktrace: meta.stacktrace, extra: extra)
   end
 
   def handle_event([:oban, :circuit, :trip], _measure, meta, _) do
