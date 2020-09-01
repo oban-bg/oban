@@ -1,5 +1,5 @@
 # Generated from lib/oban/crontab/parser.ex.exs, do not edit.
-# Generated at 2020-07-07 01:21:04Z.
+# Generated at 2020-09-01 15:54:03Z.
 
 defmodule Oban.Crontab.Parser do
   @moduledoc false
@@ -4480,7 +4480,7 @@ defmodule Oban.Crontab.Parser do
   end
 
   defp cron__623(rest, acc, stack, context, line, offset) do
-    cron__697(rest, [], [{rest, context, line, offset}, acc | stack], context, line, offset)
+    cron__702(rest, [], [{rest, context, line, offset}, acc | stack], context, line, offset)
   end
 
   defp cron__625(rest, acc, stack, context, line, offset) do
@@ -4493,7 +4493,7 @@ defmodule Oban.Crontab.Parser do
 
   defp cron__627(rest, _acc, _stack, context, line, offset) do
     {:error,
-     "expected string \"MON\" or string \"TUE\" or string \"WED\" or string \"THU\" or string \"FRI\" or string \"SAT\" or string \"SUN\" or string \"*\" or ASCII character in the range '0' to '9', followed by ASCII character in the range '0' to '9', followed by string \"-\", followed by ASCII character in the range '0' to '9', followed by ASCII character in the range '0' to '9', followed by string \"/\", followed by ASCII character in the range '0' to '9', followed by ASCII character in the range '0' to '9' or ASCII character in the range '0' to '9', followed by ASCII character in the range '0' to '9', followed by string \"-\", followed by ASCII character in the range '0' to '9', followed by ASCII character in the range '0' to '9' or ASCII character in the range '0' to '9', followed by ASCII character in the range '0' to '9' or string \"*\" or string \",\"",
+     "expected string \"MON\" or string \"TUE\" or string \"WED\" or string \"THU\" or string \"FRI\" or string \"SAT\" or string \"SUN\", followed by string \"-\", followed by string \"MON\" or string \"TUE\" or string \"WED\" or string \"THU\" or string \"FRI\" or string \"SAT\" or string \"SUN\" or string \"MON\" or string \"TUE\" or string \"WED\" or string \"THU\" or string \"FRI\" or string \"SAT\" or string \"SUN\" or string \"*\" or ASCII character in the range '0' to '9', followed by ASCII character in the range '0' to '9', followed by string \"-\", followed by ASCII character in the range '0' to '9', followed by ASCII character in the range '0' to '9', followed by string \"/\", followed by ASCII character in the range '0' to '9', followed by ASCII character in the range '0' to '9' or ASCII character in the range '0' to '9', followed by ASCII character in the range '0' to '9', followed by string \"-\", followed by ASCII character in the range '0' to '9', followed by ASCII character in the range '0' to '9' or ASCII character in the range '0' to '9', followed by ASCII character in the range '0' to '9' or string \"*\" or string \",\"",
      rest, context, line, offset}
   end
 
@@ -5046,187 +5046,190 @@ defmodule Oban.Crontab.Parser do
     cron__624(rest, acc ++ previous_acc, stack, context, line, offset)
   end
 
-  defp cron__624(rest, acc, stack, context, line, offset) do
-    cron__702(rest, [], [{rest, acc, context, line, offset} | stack], context, line, offset)
+  defp cron__701(_, _, [{rest, context, line, offset} | _] = stack, _, _, _) do
+    cron__697(rest, [], stack, context, line, offset)
   end
 
   defp cron__702(rest, acc, stack, context, line, offset) do
-    cron__776(rest, [], [{rest, context, line, offset}, acc | stack], context, line, offset)
+    cron__703(rest, [], [acc | stack], context, line, offset)
   end
 
-  defp cron__704(rest, acc, stack, context, line, offset) do
-    cron__742(rest, [], [{rest, context, line, offset}, acc | stack], context, line, offset)
+  defp cron__703(<<"MON", rest::binary>>, acc, stack, context, comb__line, comb__offset) do
+    cron__704(rest, [1] ++ acc, stack, context, comb__line, comb__offset + 3)
   end
 
-  defp cron__706(<<",", rest::binary>>, acc, stack, context, comb__line, comb__offset) do
-    cron__707(rest, [] ++ acc, stack, context, comb__line, comb__offset + 1)
+  defp cron__703(<<"TUE", rest::binary>>, acc, stack, context, comb__line, comb__offset) do
+    cron__704(rest, [2] ++ acc, stack, context, comb__line, comb__offset + 3)
   end
 
-  defp cron__706(rest, _acc, stack, context, line, offset) do
-    [_, _, _, acc | stack] = stack
+  defp cron__703(<<"WED", rest::binary>>, acc, stack, context, comb__line, comb__offset) do
+    cron__704(rest, [3] ++ acc, stack, context, comb__line, comb__offset + 3)
+  end
+
+  defp cron__703(<<"THU", rest::binary>>, acc, stack, context, comb__line, comb__offset) do
+    cron__704(rest, [4] ++ acc, stack, context, comb__line, comb__offset + 3)
+  end
+
+  defp cron__703(<<"FRI", rest::binary>>, acc, stack, context, comb__line, comb__offset) do
+    cron__704(rest, [5] ++ acc, stack, context, comb__line, comb__offset + 3)
+  end
+
+  defp cron__703(<<"SAT", rest::binary>>, acc, stack, context, comb__line, comb__offset) do
+    cron__704(rest, [6] ++ acc, stack, context, comb__line, comb__offset + 3)
+  end
+
+  defp cron__703(<<"SUN", rest::binary>>, acc, stack, context, comb__line, comb__offset) do
+    cron__704(rest, [0] ++ acc, stack, context, comb__line, comb__offset + 3)
+  end
+
+  defp cron__703(rest, _acc, stack, context, line, offset) do
+    [acc | stack] = stack
     cron__701(rest, acc, stack, context, line, offset)
   end
 
+  defp cron__704(<<"-", rest::binary>>, acc, stack, context, comb__line, comb__offset) do
+    cron__705(rest, [] ++ acc, stack, context, comb__line, comb__offset + 1)
+  end
+
+  defp cron__704(rest, _acc, stack, context, line, offset) do
+    [acc | stack] = stack
+    cron__701(rest, acc, stack, context, line, offset)
+  end
+
+  defp cron__705(<<"MON", rest::binary>>, acc, stack, context, comb__line, comb__offset) do
+    cron__706(rest, [1] ++ acc, stack, context, comb__line, comb__offset + 3)
+  end
+
+  defp cron__705(<<"TUE", rest::binary>>, acc, stack, context, comb__line, comb__offset) do
+    cron__706(rest, [2] ++ acc, stack, context, comb__line, comb__offset + 3)
+  end
+
+  defp cron__705(<<"WED", rest::binary>>, acc, stack, context, comb__line, comb__offset) do
+    cron__706(rest, [3] ++ acc, stack, context, comb__line, comb__offset + 3)
+  end
+
+  defp cron__705(<<"THU", rest::binary>>, acc, stack, context, comb__line, comb__offset) do
+    cron__706(rest, [4] ++ acc, stack, context, comb__line, comb__offset + 3)
+  end
+
+  defp cron__705(<<"FRI", rest::binary>>, acc, stack, context, comb__line, comb__offset) do
+    cron__706(rest, [5] ++ acc, stack, context, comb__line, comb__offset + 3)
+  end
+
+  defp cron__705(<<"SAT", rest::binary>>, acc, stack, context, comb__line, comb__offset) do
+    cron__706(rest, [6] ++ acc, stack, context, comb__line, comb__offset + 3)
+  end
+
+  defp cron__705(<<"SUN", rest::binary>>, acc, stack, context, comb__line, comb__offset) do
+    cron__706(rest, [0] ++ acc, stack, context, comb__line, comb__offset + 3)
+  end
+
+  defp cron__705(rest, _acc, stack, context, line, offset) do
+    [acc | stack] = stack
+    cron__701(rest, acc, stack, context, line, offset)
+  end
+
+  defp cron__706(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
+    cron__707(rest, [range: :lists.reverse(user_acc)] ++ acc, stack, context, line, offset)
+  end
+
   defp cron__707(rest, acc, [_, previous_acc | stack], context, line, offset) do
-    cron__705(rest, acc ++ previous_acc, stack, context, line, offset)
+    cron__624(rest, acc ++ previous_acc, stack, context, line, offset)
   end
 
-  defp cron__708(_, _, [{rest, context, line, offset} | _] = stack, _, _, _) do
-    cron__706(rest, [], stack, context, line, offset)
-  end
-
-  defp cron__709(<<"*", rest::binary>>, acc, stack, context, comb__line, comb__offset) do
-    cron__710(rest, [wild: "*"] ++ acc, stack, context, comb__line, comb__offset + 1)
+  defp cron__624(rest, acc, stack, context, line, offset) do
+    cron__709(rest, [], [{rest, acc, context, line, offset} | stack], context, line, offset)
   end
 
   defp cron__709(rest, acc, stack, context, line, offset) do
+    cron__788(rest, [], [{rest, context, line, offset}, acc | stack], context, line, offset)
+  end
+
+  defp cron__711(rest, acc, stack, context, line, offset) do
+    cron__749(rest, [], [{rest, context, line, offset}, acc | stack], context, line, offset)
+  end
+
+  defp cron__713(<<",", rest::binary>>, acc, stack, context, comb__line, comb__offset) do
+    cron__714(rest, [] ++ acc, stack, context, comb__line, comb__offset + 1)
+  end
+
+  defp cron__713(rest, _acc, stack, context, line, offset) do
+    [_, _, _, acc | stack] = stack
     cron__708(rest, acc, stack, context, line, offset)
   end
 
-  defp cron__710(rest, acc, [_, previous_acc | stack], context, line, offset) do
-    cron__705(rest, acc ++ previous_acc, stack, context, line, offset)
+  defp cron__714(rest, acc, [_, previous_acc | stack], context, line, offset) do
+    cron__712(rest, acc ++ previous_acc, stack, context, line, offset)
   end
 
-  defp cron__711(_, _, [{rest, context, line, offset} | _] = stack, _, _, _) do
-    cron__709(rest, [], stack, context, line, offset)
+  defp cron__715(_, _, [{rest, context, line, offset} | _] = stack, _, _, _) do
+    cron__713(rest, [], stack, context, line, offset)
   end
 
-  defp cron__712(rest, acc, stack, context, line, offset) do
-    cron__713(rest, [], [acc | stack], context, line, offset)
+  defp cron__716(<<"*", rest::binary>>, acc, stack, context, comb__line, comb__offset) do
+    cron__717(rest, [wild: "*"] ++ acc, stack, context, comb__line, comb__offset + 1)
   end
 
-  defp cron__713(rest, acc, stack, context, line, offset) do
-    cron__714(rest, [], [acc | stack], context, line, offset)
+  defp cron__716(rest, acc, stack, context, line, offset) do
+    cron__715(rest, acc, stack, context, line, offset)
   end
 
-  defp cron__714(<<x0::integer, rest::binary>>, acc, stack, context, comb__line, comb__offset)
+  defp cron__717(rest, acc, [_, previous_acc | stack], context, line, offset) do
+    cron__712(rest, acc ++ previous_acc, stack, context, line, offset)
+  end
+
+  defp cron__718(_, _, [{rest, context, line, offset} | _] = stack, _, _, _) do
+    cron__716(rest, [], stack, context, line, offset)
+  end
+
+  defp cron__719(rest, acc, stack, context, line, offset) do
+    cron__720(rest, [], [acc | stack], context, line, offset)
+  end
+
+  defp cron__720(rest, acc, stack, context, line, offset) do
+    cron__721(rest, [], [acc | stack], context, line, offset)
+  end
+
+  defp cron__721(<<x0::integer, rest::binary>>, acc, stack, context, comb__line, comb__offset)
        when x0 >= 48 and x0 <= 57 do
-    cron__715(rest, [x0 - 48] ++ acc, stack, context, comb__line, comb__offset + 1)
+    cron__722(rest, [x0 - 48] ++ acc, stack, context, comb__line, comb__offset + 1)
   end
 
-  defp cron__714(rest, _acc, stack, context, line, offset) do
+  defp cron__721(rest, _acc, stack, context, line, offset) do
     [_, acc | stack] = stack
-    cron__711(rest, acc, stack, context, line, offset)
+    cron__718(rest, acc, stack, context, line, offset)
   end
 
-  defp cron__715(rest, acc, stack, context, line, offset) do
-    cron__717(rest, acc, [1 | stack], context, line, offset)
+  defp cron__722(rest, acc, stack, context, line, offset) do
+    cron__724(rest, acc, [1 | stack], context, line, offset)
   end
 
-  defp cron__717(<<x0::integer, rest::binary>>, acc, stack, context, comb__line, comb__offset)
+  defp cron__724(<<x0::integer, rest::binary>>, acc, stack, context, comb__line, comb__offset)
        when x0 >= 48 and x0 <= 57 do
-    cron__718(rest, [x0] ++ acc, stack, context, comb__line, comb__offset + 1)
-  end
-
-  defp cron__717(rest, acc, stack, context, line, offset) do
-    cron__716(rest, acc, stack, context, line, offset)
-  end
-
-  defp cron__716(rest, acc, [_ | stack], context, line, offset) do
-    cron__719(rest, acc, stack, context, line, offset)
-  end
-
-  defp cron__718(rest, acc, [1 | stack], context, line, offset) do
-    cron__719(rest, acc, stack, context, line, offset)
-  end
-
-  defp cron__718(rest, acc, [count | stack], context, line, offset) do
-    cron__717(rest, acc, [count - 1 | stack], context, line, offset)
-  end
-
-  defp cron__719(rest, user_acc, [acc | stack], context, line, offset) do
-    _ = user_acc
-
-    cron__720(
-      rest,
-      (
-        [head | tail] = :lists.reverse(user_acc)
-        [:lists.foldl(fn x, acc -> x - 48 + acc * 10 end, head, tail)]
-      ) ++ acc,
-      stack,
-      context,
-      line,
-      offset
-    )
-  end
-
-  defp cron__720(rest, user_acc, [acc | stack], context, line, offset) do
-    _ = user_acc
-
-    cron__721(
-      rest,
-      [
-        literal:
-          case(:lists.reverse(user_acc)) do
-            [one] ->
-              one
-
-            many ->
-              raise("unwrap_and_tag/3 expected a single token, got: #{inspect(many)}")
-          end
-      ] ++ acc,
-      stack,
-      context,
-      line,
-      offset
-    )
-  end
-
-  defp cron__721(rest, acc, [_, previous_acc | stack], context, line, offset) do
-    cron__705(rest, acc ++ previous_acc, stack, context, line, offset)
-  end
-
-  defp cron__722(_, _, [{rest, context, line, offset} | _] = stack, _, _, _) do
-    cron__712(rest, [], stack, context, line, offset)
-  end
-
-  defp cron__723(rest, acc, stack, context, line, offset) do
-    cron__724(rest, [], [acc | stack], context, line, offset)
+    cron__725(rest, [x0] ++ acc, stack, context, comb__line, comb__offset + 1)
   end
 
   defp cron__724(rest, acc, stack, context, line, offset) do
-    cron__725(rest, [], [acc | stack], context, line, offset)
+    cron__723(rest, acc, stack, context, line, offset)
   end
 
-  defp cron__725(<<x0::integer, rest::binary>>, acc, stack, context, comb__line, comb__offset)
-       when x0 >= 48 and x0 <= 57 do
-    cron__726(rest, [x0 - 48] ++ acc, stack, context, comb__line, comb__offset + 1)
+  defp cron__723(rest, acc, [_ | stack], context, line, offset) do
+    cron__726(rest, acc, stack, context, line, offset)
   end
 
-  defp cron__725(rest, _acc, stack, context, line, offset) do
-    [_, acc | stack] = stack
-    cron__722(rest, acc, stack, context, line, offset)
+  defp cron__725(rest, acc, [1 | stack], context, line, offset) do
+    cron__726(rest, acc, stack, context, line, offset)
   end
 
-  defp cron__726(rest, acc, stack, context, line, offset) do
-    cron__728(rest, acc, [1 | stack], context, line, offset)
+  defp cron__725(rest, acc, [count | stack], context, line, offset) do
+    cron__724(rest, acc, [count - 1 | stack], context, line, offset)
   end
 
-  defp cron__728(<<x0::integer, rest::binary>>, acc, stack, context, comb__line, comb__offset)
-       when x0 >= 48 and x0 <= 57 do
-    cron__729(rest, [x0] ++ acc, stack, context, comb__line, comb__offset + 1)
-  end
-
-  defp cron__728(rest, acc, stack, context, line, offset) do
-    cron__727(rest, acc, stack, context, line, offset)
-  end
-
-  defp cron__727(rest, acc, [_ | stack], context, line, offset) do
-    cron__730(rest, acc, stack, context, line, offset)
-  end
-
-  defp cron__729(rest, acc, [1 | stack], context, line, offset) do
-    cron__730(rest, acc, stack, context, line, offset)
-  end
-
-  defp cron__729(rest, acc, [count | stack], context, line, offset) do
-    cron__728(rest, acc, [count - 1 | stack], context, line, offset)
-  end
-
-  defp cron__730(rest, user_acc, [acc | stack], context, line, offset) do
+  defp cron__726(rest, user_acc, [acc | stack], context, line, offset) do
     _ = user_acc
 
-    cron__731(
+    cron__727(
       rest,
       (
         [head | tail] = :lists.reverse(user_acc)
@@ -5239,361 +5242,10 @@ defmodule Oban.Crontab.Parser do
     )
   end
 
-  defp cron__731(<<"-", rest::binary>>, acc, stack, context, comb__line, comb__offset) do
-    cron__732(rest, [] ++ acc, stack, context, comb__line, comb__offset + 1)
-  end
-
-  defp cron__731(rest, _acc, stack, context, line, offset) do
-    [acc | stack] = stack
-    cron__722(rest, acc, stack, context, line, offset)
-  end
-
-  defp cron__732(rest, acc, stack, context, line, offset) do
-    cron__733(rest, [], [acc | stack], context, line, offset)
-  end
-
-  defp cron__733(<<x0::integer, rest::binary>>, acc, stack, context, comb__line, comb__offset)
-       when x0 >= 48 and x0 <= 57 do
-    cron__734(rest, [x0 - 48] ++ acc, stack, context, comb__line, comb__offset + 1)
-  end
-
-  defp cron__733(rest, _acc, stack, context, line, offset) do
-    [_, acc | stack] = stack
-    cron__722(rest, acc, stack, context, line, offset)
-  end
-
-  defp cron__734(rest, acc, stack, context, line, offset) do
-    cron__736(rest, acc, [1 | stack], context, line, offset)
-  end
-
-  defp cron__736(<<x0::integer, rest::binary>>, acc, stack, context, comb__line, comb__offset)
-       when x0 >= 48 and x0 <= 57 do
-    cron__737(rest, [x0] ++ acc, stack, context, comb__line, comb__offset + 1)
-  end
-
-  defp cron__736(rest, acc, stack, context, line, offset) do
-    cron__735(rest, acc, stack, context, line, offset)
-  end
-
-  defp cron__735(rest, acc, [_ | stack], context, line, offset) do
-    cron__738(rest, acc, stack, context, line, offset)
-  end
-
-  defp cron__737(rest, acc, [1 | stack], context, line, offset) do
-    cron__738(rest, acc, stack, context, line, offset)
-  end
-
-  defp cron__737(rest, acc, [count | stack], context, line, offset) do
-    cron__736(rest, acc, [count - 1 | stack], context, line, offset)
-  end
-
-  defp cron__738(rest, user_acc, [acc | stack], context, line, offset) do
+  defp cron__727(rest, user_acc, [acc | stack], context, line, offset) do
     _ = user_acc
 
-    cron__739(
-      rest,
-      (
-        [head | tail] = :lists.reverse(user_acc)
-        [:lists.foldl(fn x, acc -> x - 48 + acc * 10 end, head, tail)]
-      ) ++ acc,
-      stack,
-      context,
-      line,
-      offset
-    )
-  end
-
-  defp cron__739(rest, user_acc, [acc | stack], context, line, offset) do
-    _ = user_acc
-    cron__740(rest, [range: :lists.reverse(user_acc)] ++ acc, stack, context, line, offset)
-  end
-
-  defp cron__740(rest, acc, [_, previous_acc | stack], context, line, offset) do
-    cron__705(rest, acc ++ previous_acc, stack, context, line, offset)
-  end
-
-  defp cron__741(_, _, [{rest, context, line, offset} | _] = stack, _, _, _) do
-    cron__723(rest, [], stack, context, line, offset)
-  end
-
-  defp cron__742(rest, acc, stack, context, line, offset) do
-    cron__743(rest, [], [acc | stack], context, line, offset)
-  end
-
-  defp cron__743(rest, acc, stack, context, line, offset) do
-    cron__764(rest, [], [{rest, context, line, offset}, acc | stack], context, line, offset)
-  end
-
-  defp cron__745(rest, acc, stack, context, line, offset) do
-    cron__746(rest, [], [acc | stack], context, line, offset)
-  end
-
-  defp cron__746(rest, acc, stack, context, line, offset) do
-    cron__747(rest, [], [acc | stack], context, line, offset)
-  end
-
-  defp cron__747(<<x0::integer, rest::binary>>, acc, stack, context, comb__line, comb__offset)
-       when x0 >= 48 and x0 <= 57 do
-    cron__748(rest, [x0 - 48] ++ acc, stack, context, comb__line, comb__offset + 1)
-  end
-
-  defp cron__747(rest, _acc, stack, context, line, offset) do
-    [_, _, _, _, acc | stack] = stack
-    cron__741(rest, acc, stack, context, line, offset)
-  end
-
-  defp cron__748(rest, acc, stack, context, line, offset) do
-    cron__750(rest, acc, [1 | stack], context, line, offset)
-  end
-
-  defp cron__750(<<x0::integer, rest::binary>>, acc, stack, context, comb__line, comb__offset)
-       when x0 >= 48 and x0 <= 57 do
-    cron__751(rest, [x0] ++ acc, stack, context, comb__line, comb__offset + 1)
-  end
-
-  defp cron__750(rest, acc, stack, context, line, offset) do
-    cron__749(rest, acc, stack, context, line, offset)
-  end
-
-  defp cron__749(rest, acc, [_ | stack], context, line, offset) do
-    cron__752(rest, acc, stack, context, line, offset)
-  end
-
-  defp cron__751(rest, acc, [1 | stack], context, line, offset) do
-    cron__752(rest, acc, stack, context, line, offset)
-  end
-
-  defp cron__751(rest, acc, [count | stack], context, line, offset) do
-    cron__750(rest, acc, [count - 1 | stack], context, line, offset)
-  end
-
-  defp cron__752(rest, user_acc, [acc | stack], context, line, offset) do
-    _ = user_acc
-
-    cron__753(
-      rest,
-      (
-        [head | tail] = :lists.reverse(user_acc)
-        [:lists.foldl(fn x, acc -> x - 48 + acc * 10 end, head, tail)]
-      ) ++ acc,
-      stack,
-      context,
-      line,
-      offset
-    )
-  end
-
-  defp cron__753(<<"-", rest::binary>>, acc, stack, context, comb__line, comb__offset) do
-    cron__754(rest, [] ++ acc, stack, context, comb__line, comb__offset + 1)
-  end
-
-  defp cron__753(rest, _acc, stack, context, line, offset) do
-    [_, _, _, acc | stack] = stack
-    cron__741(rest, acc, stack, context, line, offset)
-  end
-
-  defp cron__754(rest, acc, stack, context, line, offset) do
-    cron__755(rest, [], [acc | stack], context, line, offset)
-  end
-
-  defp cron__755(<<x0::integer, rest::binary>>, acc, stack, context, comb__line, comb__offset)
-       when x0 >= 48 and x0 <= 57 do
-    cron__756(rest, [x0 - 48] ++ acc, stack, context, comb__line, comb__offset + 1)
-  end
-
-  defp cron__755(rest, _acc, stack, context, line, offset) do
-    [_, _, _, _, acc | stack] = stack
-    cron__741(rest, acc, stack, context, line, offset)
-  end
-
-  defp cron__756(rest, acc, stack, context, line, offset) do
-    cron__758(rest, acc, [1 | stack], context, line, offset)
-  end
-
-  defp cron__758(<<x0::integer, rest::binary>>, acc, stack, context, comb__line, comb__offset)
-       when x0 >= 48 and x0 <= 57 do
-    cron__759(rest, [x0] ++ acc, stack, context, comb__line, comb__offset + 1)
-  end
-
-  defp cron__758(rest, acc, stack, context, line, offset) do
-    cron__757(rest, acc, stack, context, line, offset)
-  end
-
-  defp cron__757(rest, acc, [_ | stack], context, line, offset) do
-    cron__760(rest, acc, stack, context, line, offset)
-  end
-
-  defp cron__759(rest, acc, [1 | stack], context, line, offset) do
-    cron__760(rest, acc, stack, context, line, offset)
-  end
-
-  defp cron__759(rest, acc, [count | stack], context, line, offset) do
-    cron__758(rest, acc, [count - 1 | stack], context, line, offset)
-  end
-
-  defp cron__760(rest, user_acc, [acc | stack], context, line, offset) do
-    _ = user_acc
-
-    cron__761(
-      rest,
-      (
-        [head | tail] = :lists.reverse(user_acc)
-        [:lists.foldl(fn x, acc -> x - 48 + acc * 10 end, head, tail)]
-      ) ++ acc,
-      stack,
-      context,
-      line,
-      offset
-    )
-  end
-
-  defp cron__761(rest, user_acc, [acc | stack], context, line, offset) do
-    _ = user_acc
-    cron__762(rest, [range: :lists.reverse(user_acc)] ++ acc, stack, context, line, offset)
-  end
-
-  defp cron__762(rest, acc, [_, previous_acc | stack], context, line, offset) do
-    cron__744(rest, acc ++ previous_acc, stack, context, line, offset)
-  end
-
-  defp cron__763(_, _, [{rest, context, line, offset} | _] = stack, _, _, _) do
-    cron__745(rest, [], stack, context, line, offset)
-  end
-
-  defp cron__764(<<"*", rest::binary>>, acc, stack, context, comb__line, comb__offset) do
-    cron__765(rest, [wild: "*"] ++ acc, stack, context, comb__line, comb__offset + 1)
-  end
-
-  defp cron__764(rest, acc, stack, context, line, offset) do
-    cron__763(rest, acc, stack, context, line, offset)
-  end
-
-  defp cron__765(rest, acc, [_, previous_acc | stack], context, line, offset) do
-    cron__744(rest, acc ++ previous_acc, stack, context, line, offset)
-  end
-
-  defp cron__744(<<"/", rest::binary>>, acc, stack, context, comb__line, comb__offset) do
-    cron__766(rest, [] ++ acc, stack, context, comb__line, comb__offset + 1)
-  end
-
-  defp cron__744(rest, _acc, stack, context, line, offset) do
-    [acc | stack] = stack
-    cron__741(rest, acc, stack, context, line, offset)
-  end
-
-  defp cron__766(rest, acc, stack, context, line, offset) do
-    cron__767(rest, [], [acc | stack], context, line, offset)
-  end
-
-  defp cron__767(<<x0::integer, rest::binary>>, acc, stack, context, comb__line, comb__offset)
-       when x0 >= 48 and x0 <= 57 do
-    cron__768(rest, [x0 - 48] ++ acc, stack, context, comb__line, comb__offset + 1)
-  end
-
-  defp cron__767(rest, _acc, stack, context, line, offset) do
-    [_, acc | stack] = stack
-    cron__741(rest, acc, stack, context, line, offset)
-  end
-
-  defp cron__768(rest, acc, stack, context, line, offset) do
-    cron__770(rest, acc, [1 | stack], context, line, offset)
-  end
-
-  defp cron__770(<<x0::integer, rest::binary>>, acc, stack, context, comb__line, comb__offset)
-       when x0 >= 48 and x0 <= 57 do
-    cron__771(rest, [x0] ++ acc, stack, context, comb__line, comb__offset + 1)
-  end
-
-  defp cron__770(rest, acc, stack, context, line, offset) do
-    cron__769(rest, acc, stack, context, line, offset)
-  end
-
-  defp cron__769(rest, acc, [_ | stack], context, line, offset) do
-    cron__772(rest, acc, stack, context, line, offset)
-  end
-
-  defp cron__771(rest, acc, [1 | stack], context, line, offset) do
-    cron__772(rest, acc, stack, context, line, offset)
-  end
-
-  defp cron__771(rest, acc, [count | stack], context, line, offset) do
-    cron__770(rest, acc, [count - 1 | stack], context, line, offset)
-  end
-
-  defp cron__772(rest, user_acc, [acc | stack], context, line, offset) do
-    _ = user_acc
-
-    cron__773(
-      rest,
-      (
-        [head | tail] = :lists.reverse(user_acc)
-        [:lists.foldl(fn x, acc -> x - 48 + acc * 10 end, head, tail)]
-      ) ++ acc,
-      stack,
-      context,
-      line,
-      offset
-    )
-  end
-
-  defp cron__773(rest, user_acc, [acc | stack], context, line, offset) do
-    _ = user_acc
-    cron__774(rest, [step: :lists.reverse(user_acc)] ++ acc, stack, context, line, offset)
-  end
-
-  defp cron__774(rest, acc, [_, previous_acc | stack], context, line, offset) do
-    cron__705(rest, acc ++ previous_acc, stack, context, line, offset)
-  end
-
-  defp cron__705(rest, acc, [_, previous_acc | stack], context, line, offset) do
-    cron__703(rest, acc ++ previous_acc, stack, context, line, offset)
-  end
-
-  defp cron__775(_, _, [{rest, context, line, offset} | _] = stack, _, _, _) do
-    cron__704(rest, [], stack, context, line, offset)
-  end
-
-  defp cron__776(rest, acc, stack, context, line, offset) do
-    cron__777(rest, [], [acc | stack], context, line, offset)
-  end
-
-  defp cron__777(<<"MON", rest::binary>>, acc, stack, context, comb__line, comb__offset) do
-    cron__778(rest, [1] ++ acc, stack, context, comb__line, comb__offset + 3)
-  end
-
-  defp cron__777(<<"TUE", rest::binary>>, acc, stack, context, comb__line, comb__offset) do
-    cron__778(rest, [2] ++ acc, stack, context, comb__line, comb__offset + 3)
-  end
-
-  defp cron__777(<<"WED", rest::binary>>, acc, stack, context, comb__line, comb__offset) do
-    cron__778(rest, [3] ++ acc, stack, context, comb__line, comb__offset + 3)
-  end
-
-  defp cron__777(<<"THU", rest::binary>>, acc, stack, context, comb__line, comb__offset) do
-    cron__778(rest, [4] ++ acc, stack, context, comb__line, comb__offset + 3)
-  end
-
-  defp cron__777(<<"FRI", rest::binary>>, acc, stack, context, comb__line, comb__offset) do
-    cron__778(rest, [5] ++ acc, stack, context, comb__line, comb__offset + 3)
-  end
-
-  defp cron__777(<<"SAT", rest::binary>>, acc, stack, context, comb__line, comb__offset) do
-    cron__778(rest, [6] ++ acc, stack, context, comb__line, comb__offset + 3)
-  end
-
-  defp cron__777(<<"SUN", rest::binary>>, acc, stack, context, comb__line, comb__offset) do
-    cron__778(rest, [0] ++ acc, stack, context, comb__line, comb__offset + 3)
-  end
-
-  defp cron__777(rest, _acc, stack, context, line, offset) do
-    [acc | stack] = stack
-    cron__775(rest, acc, stack, context, line, offset)
-  end
-
-  defp cron__778(rest, user_acc, [acc | stack], context, line, offset) do
-    _ = user_acc
-
-    cron__779(
+    cron__728(
       rest,
       [
         literal:
@@ -5612,15 +5264,547 @@ defmodule Oban.Crontab.Parser do
     )
   end
 
-  defp cron__779(rest, acc, [_, previous_acc | stack], context, line, offset) do
-    cron__703(rest, acc ++ previous_acc, stack, context, line, offset)
+  defp cron__728(rest, acc, [_, previous_acc | stack], context, line, offset) do
+    cron__712(rest, acc ++ previous_acc, stack, context, line, offset)
   end
 
-  defp cron__701(_, _, [{rest, acc, context, line, offset} | stack], _, _, _) do
-    cron__780(rest, acc, stack, context, line, offset)
+  defp cron__729(_, _, [{rest, context, line, offset} | _] = stack, _, _, _) do
+    cron__719(rest, [], stack, context, line, offset)
   end
 
-  defp cron__703(
+  defp cron__730(rest, acc, stack, context, line, offset) do
+    cron__731(rest, [], [acc | stack], context, line, offset)
+  end
+
+  defp cron__731(rest, acc, stack, context, line, offset) do
+    cron__732(rest, [], [acc | stack], context, line, offset)
+  end
+
+  defp cron__732(<<x0::integer, rest::binary>>, acc, stack, context, comb__line, comb__offset)
+       when x0 >= 48 and x0 <= 57 do
+    cron__733(rest, [x0 - 48] ++ acc, stack, context, comb__line, comb__offset + 1)
+  end
+
+  defp cron__732(rest, _acc, stack, context, line, offset) do
+    [_, acc | stack] = stack
+    cron__729(rest, acc, stack, context, line, offset)
+  end
+
+  defp cron__733(rest, acc, stack, context, line, offset) do
+    cron__735(rest, acc, [1 | stack], context, line, offset)
+  end
+
+  defp cron__735(<<x0::integer, rest::binary>>, acc, stack, context, comb__line, comb__offset)
+       when x0 >= 48 and x0 <= 57 do
+    cron__736(rest, [x0] ++ acc, stack, context, comb__line, comb__offset + 1)
+  end
+
+  defp cron__735(rest, acc, stack, context, line, offset) do
+    cron__734(rest, acc, stack, context, line, offset)
+  end
+
+  defp cron__734(rest, acc, [_ | stack], context, line, offset) do
+    cron__737(rest, acc, stack, context, line, offset)
+  end
+
+  defp cron__736(rest, acc, [1 | stack], context, line, offset) do
+    cron__737(rest, acc, stack, context, line, offset)
+  end
+
+  defp cron__736(rest, acc, [count | stack], context, line, offset) do
+    cron__735(rest, acc, [count - 1 | stack], context, line, offset)
+  end
+
+  defp cron__737(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
+
+    cron__738(
+      rest,
+      (
+        [head | tail] = :lists.reverse(user_acc)
+        [:lists.foldl(fn x, acc -> x - 48 + acc * 10 end, head, tail)]
+      ) ++ acc,
+      stack,
+      context,
+      line,
+      offset
+    )
+  end
+
+  defp cron__738(<<"-", rest::binary>>, acc, stack, context, comb__line, comb__offset) do
+    cron__739(rest, [] ++ acc, stack, context, comb__line, comb__offset + 1)
+  end
+
+  defp cron__738(rest, _acc, stack, context, line, offset) do
+    [acc | stack] = stack
+    cron__729(rest, acc, stack, context, line, offset)
+  end
+
+  defp cron__739(rest, acc, stack, context, line, offset) do
+    cron__740(rest, [], [acc | stack], context, line, offset)
+  end
+
+  defp cron__740(<<x0::integer, rest::binary>>, acc, stack, context, comb__line, comb__offset)
+       when x0 >= 48 and x0 <= 57 do
+    cron__741(rest, [x0 - 48] ++ acc, stack, context, comb__line, comb__offset + 1)
+  end
+
+  defp cron__740(rest, _acc, stack, context, line, offset) do
+    [_, acc | stack] = stack
+    cron__729(rest, acc, stack, context, line, offset)
+  end
+
+  defp cron__741(rest, acc, stack, context, line, offset) do
+    cron__743(rest, acc, [1 | stack], context, line, offset)
+  end
+
+  defp cron__743(<<x0::integer, rest::binary>>, acc, stack, context, comb__line, comb__offset)
+       when x0 >= 48 and x0 <= 57 do
+    cron__744(rest, [x0] ++ acc, stack, context, comb__line, comb__offset + 1)
+  end
+
+  defp cron__743(rest, acc, stack, context, line, offset) do
+    cron__742(rest, acc, stack, context, line, offset)
+  end
+
+  defp cron__742(rest, acc, [_ | stack], context, line, offset) do
+    cron__745(rest, acc, stack, context, line, offset)
+  end
+
+  defp cron__744(rest, acc, [1 | stack], context, line, offset) do
+    cron__745(rest, acc, stack, context, line, offset)
+  end
+
+  defp cron__744(rest, acc, [count | stack], context, line, offset) do
+    cron__743(rest, acc, [count - 1 | stack], context, line, offset)
+  end
+
+  defp cron__745(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
+
+    cron__746(
+      rest,
+      (
+        [head | tail] = :lists.reverse(user_acc)
+        [:lists.foldl(fn x, acc -> x - 48 + acc * 10 end, head, tail)]
+      ) ++ acc,
+      stack,
+      context,
+      line,
+      offset
+    )
+  end
+
+  defp cron__746(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
+    cron__747(rest, [range: :lists.reverse(user_acc)] ++ acc, stack, context, line, offset)
+  end
+
+  defp cron__747(rest, acc, [_, previous_acc | stack], context, line, offset) do
+    cron__712(rest, acc ++ previous_acc, stack, context, line, offset)
+  end
+
+  defp cron__748(_, _, [{rest, context, line, offset} | _] = stack, _, _, _) do
+    cron__730(rest, [], stack, context, line, offset)
+  end
+
+  defp cron__749(rest, acc, stack, context, line, offset) do
+    cron__750(rest, [], [acc | stack], context, line, offset)
+  end
+
+  defp cron__750(rest, acc, stack, context, line, offset) do
+    cron__771(rest, [], [{rest, context, line, offset}, acc | stack], context, line, offset)
+  end
+
+  defp cron__752(rest, acc, stack, context, line, offset) do
+    cron__753(rest, [], [acc | stack], context, line, offset)
+  end
+
+  defp cron__753(rest, acc, stack, context, line, offset) do
+    cron__754(rest, [], [acc | stack], context, line, offset)
+  end
+
+  defp cron__754(<<x0::integer, rest::binary>>, acc, stack, context, comb__line, comb__offset)
+       when x0 >= 48 and x0 <= 57 do
+    cron__755(rest, [x0 - 48] ++ acc, stack, context, comb__line, comb__offset + 1)
+  end
+
+  defp cron__754(rest, _acc, stack, context, line, offset) do
+    [_, _, _, _, acc | stack] = stack
+    cron__748(rest, acc, stack, context, line, offset)
+  end
+
+  defp cron__755(rest, acc, stack, context, line, offset) do
+    cron__757(rest, acc, [1 | stack], context, line, offset)
+  end
+
+  defp cron__757(<<x0::integer, rest::binary>>, acc, stack, context, comb__line, comb__offset)
+       when x0 >= 48 and x0 <= 57 do
+    cron__758(rest, [x0] ++ acc, stack, context, comb__line, comb__offset + 1)
+  end
+
+  defp cron__757(rest, acc, stack, context, line, offset) do
+    cron__756(rest, acc, stack, context, line, offset)
+  end
+
+  defp cron__756(rest, acc, [_ | stack], context, line, offset) do
+    cron__759(rest, acc, stack, context, line, offset)
+  end
+
+  defp cron__758(rest, acc, [1 | stack], context, line, offset) do
+    cron__759(rest, acc, stack, context, line, offset)
+  end
+
+  defp cron__758(rest, acc, [count | stack], context, line, offset) do
+    cron__757(rest, acc, [count - 1 | stack], context, line, offset)
+  end
+
+  defp cron__759(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
+
+    cron__760(
+      rest,
+      (
+        [head | tail] = :lists.reverse(user_acc)
+        [:lists.foldl(fn x, acc -> x - 48 + acc * 10 end, head, tail)]
+      ) ++ acc,
+      stack,
+      context,
+      line,
+      offset
+    )
+  end
+
+  defp cron__760(<<"-", rest::binary>>, acc, stack, context, comb__line, comb__offset) do
+    cron__761(rest, [] ++ acc, stack, context, comb__line, comb__offset + 1)
+  end
+
+  defp cron__760(rest, _acc, stack, context, line, offset) do
+    [_, _, _, acc | stack] = stack
+    cron__748(rest, acc, stack, context, line, offset)
+  end
+
+  defp cron__761(rest, acc, stack, context, line, offset) do
+    cron__762(rest, [], [acc | stack], context, line, offset)
+  end
+
+  defp cron__762(<<x0::integer, rest::binary>>, acc, stack, context, comb__line, comb__offset)
+       when x0 >= 48 and x0 <= 57 do
+    cron__763(rest, [x0 - 48] ++ acc, stack, context, comb__line, comb__offset + 1)
+  end
+
+  defp cron__762(rest, _acc, stack, context, line, offset) do
+    [_, _, _, _, acc | stack] = stack
+    cron__748(rest, acc, stack, context, line, offset)
+  end
+
+  defp cron__763(rest, acc, stack, context, line, offset) do
+    cron__765(rest, acc, [1 | stack], context, line, offset)
+  end
+
+  defp cron__765(<<x0::integer, rest::binary>>, acc, stack, context, comb__line, comb__offset)
+       when x0 >= 48 and x0 <= 57 do
+    cron__766(rest, [x0] ++ acc, stack, context, comb__line, comb__offset + 1)
+  end
+
+  defp cron__765(rest, acc, stack, context, line, offset) do
+    cron__764(rest, acc, stack, context, line, offset)
+  end
+
+  defp cron__764(rest, acc, [_ | stack], context, line, offset) do
+    cron__767(rest, acc, stack, context, line, offset)
+  end
+
+  defp cron__766(rest, acc, [1 | stack], context, line, offset) do
+    cron__767(rest, acc, stack, context, line, offset)
+  end
+
+  defp cron__766(rest, acc, [count | stack], context, line, offset) do
+    cron__765(rest, acc, [count - 1 | stack], context, line, offset)
+  end
+
+  defp cron__767(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
+
+    cron__768(
+      rest,
+      (
+        [head | tail] = :lists.reverse(user_acc)
+        [:lists.foldl(fn x, acc -> x - 48 + acc * 10 end, head, tail)]
+      ) ++ acc,
+      stack,
+      context,
+      line,
+      offset
+    )
+  end
+
+  defp cron__768(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
+    cron__769(rest, [range: :lists.reverse(user_acc)] ++ acc, stack, context, line, offset)
+  end
+
+  defp cron__769(rest, acc, [_, previous_acc | stack], context, line, offset) do
+    cron__751(rest, acc ++ previous_acc, stack, context, line, offset)
+  end
+
+  defp cron__770(_, _, [{rest, context, line, offset} | _] = stack, _, _, _) do
+    cron__752(rest, [], stack, context, line, offset)
+  end
+
+  defp cron__771(<<"*", rest::binary>>, acc, stack, context, comb__line, comb__offset) do
+    cron__772(rest, [wild: "*"] ++ acc, stack, context, comb__line, comb__offset + 1)
+  end
+
+  defp cron__771(rest, acc, stack, context, line, offset) do
+    cron__770(rest, acc, stack, context, line, offset)
+  end
+
+  defp cron__772(rest, acc, [_, previous_acc | stack], context, line, offset) do
+    cron__751(rest, acc ++ previous_acc, stack, context, line, offset)
+  end
+
+  defp cron__751(<<"/", rest::binary>>, acc, stack, context, comb__line, comb__offset) do
+    cron__773(rest, [] ++ acc, stack, context, comb__line, comb__offset + 1)
+  end
+
+  defp cron__751(rest, _acc, stack, context, line, offset) do
+    [acc | stack] = stack
+    cron__748(rest, acc, stack, context, line, offset)
+  end
+
+  defp cron__773(rest, acc, stack, context, line, offset) do
+    cron__774(rest, [], [acc | stack], context, line, offset)
+  end
+
+  defp cron__774(<<x0::integer, rest::binary>>, acc, stack, context, comb__line, comb__offset)
+       when x0 >= 48 and x0 <= 57 do
+    cron__775(rest, [x0 - 48] ++ acc, stack, context, comb__line, comb__offset + 1)
+  end
+
+  defp cron__774(rest, _acc, stack, context, line, offset) do
+    [_, acc | stack] = stack
+    cron__748(rest, acc, stack, context, line, offset)
+  end
+
+  defp cron__775(rest, acc, stack, context, line, offset) do
+    cron__777(rest, acc, [1 | stack], context, line, offset)
+  end
+
+  defp cron__777(<<x0::integer, rest::binary>>, acc, stack, context, comb__line, comb__offset)
+       when x0 >= 48 and x0 <= 57 do
+    cron__778(rest, [x0] ++ acc, stack, context, comb__line, comb__offset + 1)
+  end
+
+  defp cron__777(rest, acc, stack, context, line, offset) do
+    cron__776(rest, acc, stack, context, line, offset)
+  end
+
+  defp cron__776(rest, acc, [_ | stack], context, line, offset) do
+    cron__779(rest, acc, stack, context, line, offset)
+  end
+
+  defp cron__778(rest, acc, [1 | stack], context, line, offset) do
+    cron__779(rest, acc, stack, context, line, offset)
+  end
+
+  defp cron__778(rest, acc, [count | stack], context, line, offset) do
+    cron__777(rest, acc, [count - 1 | stack], context, line, offset)
+  end
+
+  defp cron__779(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
+
+    cron__780(
+      rest,
+      (
+        [head | tail] = :lists.reverse(user_acc)
+        [:lists.foldl(fn x, acc -> x - 48 + acc * 10 end, head, tail)]
+      ) ++ acc,
+      stack,
+      context,
+      line,
+      offset
+    )
+  end
+
+  defp cron__780(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
+    cron__781(rest, [step: :lists.reverse(user_acc)] ++ acc, stack, context, line, offset)
+  end
+
+  defp cron__781(rest, acc, [_, previous_acc | stack], context, line, offset) do
+    cron__712(rest, acc ++ previous_acc, stack, context, line, offset)
+  end
+
+  defp cron__712(rest, acc, [_, previous_acc | stack], context, line, offset) do
+    cron__710(rest, acc ++ previous_acc, stack, context, line, offset)
+  end
+
+  defp cron__782(_, _, [{rest, context, line, offset} | _] = stack, _, _, _) do
+    cron__711(rest, [], stack, context, line, offset)
+  end
+
+  defp cron__783(rest, acc, stack, context, line, offset) do
+    cron__784(rest, [], [acc | stack], context, line, offset)
+  end
+
+  defp cron__784(<<"MON", rest::binary>>, acc, stack, context, comb__line, comb__offset) do
+    cron__785(rest, [1] ++ acc, stack, context, comb__line, comb__offset + 3)
+  end
+
+  defp cron__784(<<"TUE", rest::binary>>, acc, stack, context, comb__line, comb__offset) do
+    cron__785(rest, [2] ++ acc, stack, context, comb__line, comb__offset + 3)
+  end
+
+  defp cron__784(<<"WED", rest::binary>>, acc, stack, context, comb__line, comb__offset) do
+    cron__785(rest, [3] ++ acc, stack, context, comb__line, comb__offset + 3)
+  end
+
+  defp cron__784(<<"THU", rest::binary>>, acc, stack, context, comb__line, comb__offset) do
+    cron__785(rest, [4] ++ acc, stack, context, comb__line, comb__offset + 3)
+  end
+
+  defp cron__784(<<"FRI", rest::binary>>, acc, stack, context, comb__line, comb__offset) do
+    cron__785(rest, [5] ++ acc, stack, context, comb__line, comb__offset + 3)
+  end
+
+  defp cron__784(<<"SAT", rest::binary>>, acc, stack, context, comb__line, comb__offset) do
+    cron__785(rest, [6] ++ acc, stack, context, comb__line, comb__offset + 3)
+  end
+
+  defp cron__784(<<"SUN", rest::binary>>, acc, stack, context, comb__line, comb__offset) do
+    cron__785(rest, [0] ++ acc, stack, context, comb__line, comb__offset + 3)
+  end
+
+  defp cron__784(rest, _acc, stack, context, line, offset) do
+    [acc | stack] = stack
+    cron__782(rest, acc, stack, context, line, offset)
+  end
+
+  defp cron__785(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
+
+    cron__786(
+      rest,
+      [
+        literal:
+          case(:lists.reverse(user_acc)) do
+            [one] ->
+              one
+
+            many ->
+              raise("unwrap_and_tag/3 expected a single token, got: #{inspect(many)}")
+          end
+      ] ++ acc,
+      stack,
+      context,
+      line,
+      offset
+    )
+  end
+
+  defp cron__786(rest, acc, [_, previous_acc | stack], context, line, offset) do
+    cron__710(rest, acc ++ previous_acc, stack, context, line, offset)
+  end
+
+  defp cron__787(_, _, [{rest, context, line, offset} | _] = stack, _, _, _) do
+    cron__783(rest, [], stack, context, line, offset)
+  end
+
+  defp cron__788(rest, acc, stack, context, line, offset) do
+    cron__789(rest, [], [acc | stack], context, line, offset)
+  end
+
+  defp cron__789(<<"MON", rest::binary>>, acc, stack, context, comb__line, comb__offset) do
+    cron__790(rest, [1] ++ acc, stack, context, comb__line, comb__offset + 3)
+  end
+
+  defp cron__789(<<"TUE", rest::binary>>, acc, stack, context, comb__line, comb__offset) do
+    cron__790(rest, [2] ++ acc, stack, context, comb__line, comb__offset + 3)
+  end
+
+  defp cron__789(<<"WED", rest::binary>>, acc, stack, context, comb__line, comb__offset) do
+    cron__790(rest, [3] ++ acc, stack, context, comb__line, comb__offset + 3)
+  end
+
+  defp cron__789(<<"THU", rest::binary>>, acc, stack, context, comb__line, comb__offset) do
+    cron__790(rest, [4] ++ acc, stack, context, comb__line, comb__offset + 3)
+  end
+
+  defp cron__789(<<"FRI", rest::binary>>, acc, stack, context, comb__line, comb__offset) do
+    cron__790(rest, [5] ++ acc, stack, context, comb__line, comb__offset + 3)
+  end
+
+  defp cron__789(<<"SAT", rest::binary>>, acc, stack, context, comb__line, comb__offset) do
+    cron__790(rest, [6] ++ acc, stack, context, comb__line, comb__offset + 3)
+  end
+
+  defp cron__789(<<"SUN", rest::binary>>, acc, stack, context, comb__line, comb__offset) do
+    cron__790(rest, [0] ++ acc, stack, context, comb__line, comb__offset + 3)
+  end
+
+  defp cron__789(rest, _acc, stack, context, line, offset) do
+    [acc | stack] = stack
+    cron__787(rest, acc, stack, context, line, offset)
+  end
+
+  defp cron__790(<<"-", rest::binary>>, acc, stack, context, comb__line, comb__offset) do
+    cron__791(rest, [] ++ acc, stack, context, comb__line, comb__offset + 1)
+  end
+
+  defp cron__790(rest, _acc, stack, context, line, offset) do
+    [acc | stack] = stack
+    cron__787(rest, acc, stack, context, line, offset)
+  end
+
+  defp cron__791(<<"MON", rest::binary>>, acc, stack, context, comb__line, comb__offset) do
+    cron__792(rest, [1] ++ acc, stack, context, comb__line, comb__offset + 3)
+  end
+
+  defp cron__791(<<"TUE", rest::binary>>, acc, stack, context, comb__line, comb__offset) do
+    cron__792(rest, [2] ++ acc, stack, context, comb__line, comb__offset + 3)
+  end
+
+  defp cron__791(<<"WED", rest::binary>>, acc, stack, context, comb__line, comb__offset) do
+    cron__792(rest, [3] ++ acc, stack, context, comb__line, comb__offset + 3)
+  end
+
+  defp cron__791(<<"THU", rest::binary>>, acc, stack, context, comb__line, comb__offset) do
+    cron__792(rest, [4] ++ acc, stack, context, comb__line, comb__offset + 3)
+  end
+
+  defp cron__791(<<"FRI", rest::binary>>, acc, stack, context, comb__line, comb__offset) do
+    cron__792(rest, [5] ++ acc, stack, context, comb__line, comb__offset + 3)
+  end
+
+  defp cron__791(<<"SAT", rest::binary>>, acc, stack, context, comb__line, comb__offset) do
+    cron__792(rest, [6] ++ acc, stack, context, comb__line, comb__offset + 3)
+  end
+
+  defp cron__791(<<"SUN", rest::binary>>, acc, stack, context, comb__line, comb__offset) do
+    cron__792(rest, [0] ++ acc, stack, context, comb__line, comb__offset + 3)
+  end
+
+  defp cron__791(rest, _acc, stack, context, line, offset) do
+    [acc | stack] = stack
+    cron__787(rest, acc, stack, context, line, offset)
+  end
+
+  defp cron__792(rest, user_acc, [acc | stack], context, line, offset) do
+    _ = user_acc
+    cron__793(rest, [range: :lists.reverse(user_acc)] ++ acc, stack, context, line, offset)
+  end
+
+  defp cron__793(rest, acc, [_, previous_acc | stack], context, line, offset) do
+    cron__710(rest, acc ++ previous_acc, stack, context, line, offset)
+  end
+
+  defp cron__708(_, _, [{rest, acc, context, line, offset} | stack], _, _, _) do
+    cron__794(rest, acc, stack, context, line, offset)
+  end
+
+  defp cron__710(
          inner_rest,
          inner_acc,
          [{rest, acc, context, line, offset} | stack],
@@ -5630,7 +5814,7 @@ defmodule Oban.Crontab.Parser do
        ) do
     _ = {rest, acc, context, line, offset}
 
-    cron__702(
+    cron__709(
       inner_rest,
       [],
       [{inner_rest, inner_acc ++ acc, inner_context, inner_line, inner_offset} | stack],
@@ -5640,12 +5824,12 @@ defmodule Oban.Crontab.Parser do
     )
   end
 
-  defp cron__780(rest, user_acc, [acc | stack], context, line, offset) do
+  defp cron__794(rest, user_acc, [acc | stack], context, line, offset) do
     _ = user_acc
-    cron__781(rest, [weekdays: :lists.reverse(user_acc)] ++ acc, stack, context, line, offset)
+    cron__795(rest, [weekdays: :lists.reverse(user_acc)] ++ acc, stack, context, line, offset)
   end
 
-  defp cron__781(rest, acc, _stack, context, line, offset) do
+  defp cron__795(rest, acc, _stack, context, line, offset) do
     {:ok, acc, rest, context, line, offset}
   end
 end
