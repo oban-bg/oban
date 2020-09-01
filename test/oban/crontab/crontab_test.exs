@@ -87,6 +87,18 @@ defmodule Oban.Crontab.CronTest do
 
       assert %Cron{reboot: true} == Cron.parse!("@reboot")
     end
+
+    test "parsing non-standard weekday ranges" do
+      working_days = %Cron{
+        minutes: [:*],
+        hours: [:*],
+        days: [:*],
+        months: [:*],
+        weekdays: [1, 2, 3, 4, 5]
+      }
+
+      assert working_days == Cron.parse!("* * * * MON-FRI")
+    end
   end
 
   describe "now?/2" do

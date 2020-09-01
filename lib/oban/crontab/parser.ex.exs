@@ -23,8 +23,8 @@ defmodule Oban.Crontab.Parser do
     |> choice()
     |> unwrap_and_tag(:literal)
 
-  weekday_alias =
-    [
+  weekday_choice =
+    choice([
       replace(string("MON"), 1),
       replace(string("TUE"), 2),
       replace(string("WED"), 3),
@@ -32,14 +32,20 @@ defmodule Oban.Crontab.Parser do
       replace(string("FRI"), 5),
       replace(string("SAT"), 6),
       replace(string("SUN"), 0)
-    ]
-    |> choice()
-    |> unwrap_and_tag(:literal)
+    ])
+
+  weekday_alias = unwrap_and_tag(weekday_choice, :literal)
 
   range =
     integer(min: 1, max: 2)
     |> ignore(string("-"))
     |> integer(min: 1, max: 2)
+    |> tag(:range)
+
+  weekday_range =
+    weekday_choice
+    |> ignore(string("-"))
+    |> concat(weekday_choice)
     |> tag(:range)
 
   wild =
@@ -88,7 +94,7 @@ defmodule Oban.Crontab.Parser do
     |> tag(:months)
 
   weekdays =
-    [weekday_alias, expression]
+    [weekday_range, weekday_alias, expression]
     |> choice()
     |> times(min: 1)
     |> tag(:weekdays)
