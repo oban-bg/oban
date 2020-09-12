@@ -10,8 +10,5 @@ defmodule Oban.Registry do
 
   def whereis(root_process, role), do: GenServer.whereis(via(root_process, role))
 
-  def via(root_process, role) do
-    root_pid = GenServer.whereis(root_process)
-    {:via, Registry, {__MODULE__, {root_pid, role}}}
-  end
+  def via(oban_name, role), do: {:via, Registry, {__MODULE__, {oban_name, role}}}
 end

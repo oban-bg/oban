@@ -138,10 +138,10 @@ defmodule Oban do
   @impl Supervisor
   def init(%Config{plugins: plugins, queues: queues} = conf) do
     children = [
-      {Config, conf: conf, name: Oban.Registry.via(self(), Config)},
-      {Notifier, conf: conf, name: Oban.Registry.via(self(), Notifier)},
-      {Midwife, conf: conf, name: Oban.Registry.via(self(), Midwife)},
-      {Scheduler, conf: conf, name: Oban.Registry.via(self(), Scheduler)}
+      {Config, conf: conf, name: Oban.Registry.via(conf.name, Config)},
+      {Notifier, conf: conf, name: Oban.Registry.via(conf.name, Notifier)},
+      {Midwife, conf: conf, name: Oban.Registry.via(conf.name, Midwife)},
+      {Scheduler, conf: conf, name: Oban.Registry.via(conf.name, Scheduler)}
     ]
 
     children = children ++ Enum.map(plugins, &plugin_child_spec(&1, conf))
@@ -151,7 +151,7 @@ defmodule Oban do
   end
 
   defp plugin_child_spec({module, opts}, conf) do
-    name = Oban.Registry.via(self(), {:plugin, module})
+    name = Oban.Registry.via(conf.name, {:plugin, module})
 
     opts =
       opts
