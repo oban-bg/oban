@@ -23,9 +23,7 @@ defmodule Oban.Integration.ResiliencyTest do
     assert_receive {:tripped, %{message: message, name: name}}
 
     assert message =~ ~s|ERROR 42P01 (undefined_table)|
-
-    # TODO: remove via noise
-    assert {:via, Registry, {Oban.Registry, {_pid, {:producer, "alpha"}}}} = name
+    assert name == {:producer, "alpha"}
   after
     reform_jobs_table!()
   end

@@ -183,17 +183,17 @@ defmodule Oban.Telemetry do
     start_time = System.system_time()
     start_mono = System.monotonic_time()
 
-    :telemetry.execute([:oban, name, :start], %{system_time: start_time}, meta)
+    execute([:oban, name, :start], %{system_time: start_time}, meta)
 
     try do
       result = fun.()
 
-      :telemetry.execute([:oban, name, :stop], %{duration: duration(start_mono)}, meta)
+      execute([:oban, name, :stop], %{duration: duration(start_mono)}, meta)
 
       result
     catch
       kind, reason ->
-        :telemetry.execute(
+        execute(
           [:oban, name, :exception],
           %{duration: duration(start_mono)},
           Map.merge(meta, %{kind: kind, reason: reason, stacktrace: __STACKTRACE__})
@@ -204,6 +204,16 @@ defmodule Oban.Telemetry do
   end
 
   defp duration(start_mono), do: System.monotonic_time() - start_mono
+
+  @doc false
+  def execute(event_name, measurements, meta) do
+    :telemetry.execute(event_name, measurements, normalize_meta(meta))
+  end
+
+  defp normalize_meta(%{name: {:via, Registry, {Oban.Registry, {_pid, name}}}} = meta),
+    do: %{meta | name: name}
+
+  defp normalize_meta(meta), do: meta
 
   @doc false
   @spec handle_event([atom()], map(), map(), Logger.level()) :: :ok
@@ -231,13 +241,7 @@ defmodule Oban.Telemetry do
       message
       |> Map.put(:event, event)
       |> Map.put(:source, "oban")
-      |> update_name()
       |> Jason.encode_to_iodata!()
     end)
-  end
-
-  defp update_name(message) do
-    with %{name: {:via, Registry, {Oban.Registry, {_pid, role}}}} <- message,
-         do: %{message | name: role}
   end
 end
