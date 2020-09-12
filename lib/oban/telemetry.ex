@@ -210,8 +210,18 @@ defmodule Oban.Telemetry do
     :telemetry.execute(event_name, measurements, normalize_meta(meta))
   end
 
-  defp normalize_meta(%{name: {:via, Registry, {Oban.Registry, {_pid, name}}}} = meta),
-    do: %{meta | name: name}
+  defp normalize_meta(%{name: {:via, Registry, {Oban.Registry, {_pid, name}}}} = meta) do
+    name =
+      with {role, name} <- name do
+        Module.concat([
+          Oban.Queue,
+          Macro.camelize(to_string(name)),
+          Macro.camelize(to_string(role))
+        ])
+      end
+
+    %{meta | name: name}
+  end
 
   defp normalize_meta(meta), do: meta
 

@@ -23,7 +23,7 @@ defmodule Oban.Integration.ResiliencyTest do
     assert_receive {:tripped, %{message: message, name: name}}
 
     assert message =~ ~s|ERROR 42P01 (undefined_table)|
-    assert name == {:producer, "alpha"}
+    assert name == Oban.Queue.Alpha.Producer
   after
     reform_jobs_table!()
   end
