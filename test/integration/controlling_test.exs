@@ -37,8 +37,8 @@ defmodule Oban.Integration.ControllingTest do
       assert :ok = Oban.start_queue(ObanA, queue: :alpha, limit: 1, local_only: true)
 
       with_backoff(fn ->
-        assert supervised_queue?(ObanA, ObanA.Queue.Alpha)
-        refute supervised_queue?(ObanB, ObanB.Queue.Alpha)
+        assert supervised_queue?(ObanA, "alpha")
+        refute supervised_queue?(ObanB, "alpha")
       end)
     end
   end
@@ -52,8 +52,8 @@ defmodule Oban.Integration.ControllingTest do
     test "stopping individual queues" do
       start_supervised_oban!(queues: [alpha: 5, delta: 5, gamma: 5])
 
-      assert supervised_queue?(Oban.Queue.Delta)
-      assert supervised_queue?(Oban.Queue.Gamma)
+      assert supervised_queue?("delta")
+      assert supervised_queue?("gamma")
 
       insert!(%{ref: 1, action: "OK"}, queue: :delta)
       insert!(%{ref: 2, action: "OK"}, queue: :gamma)
@@ -65,8 +65,8 @@ defmodule Oban.Integration.ControllingTest do
       assert :ok = Oban.stop_queue(queue: :gamma)
 
       with_backoff(fn ->
-        refute supervised_queue?(Oban.Queue.Delta)
-        refute supervised_queue?(Oban.Queue.Gamma)
+        refute supervised_queue?("delta")
+        refute supervised_queue?("gamma")
       end)
 
       insert!(%{ref: 3, action: "OK"}, queue: :alpha)
@@ -87,8 +87,8 @@ defmodule Oban.Integration.ControllingTest do
       assert :ok = Oban.stop_queue(ObanB, queue: :alpha, local_only: true)
 
       with_backoff(fn ->
-        assert supervised_queue?(ObanA, ObanA.Queue.Alpha)
-        refute supervised_queue?(ObanB, Oban.Queue.Alpha)
+        assert supervised_queue?(ObanA, "alpha")
+        refute supervised_queue?(ObanB, "alpha")
       end)
     end
   end
@@ -199,7 +199,7 @@ defmodule Oban.Integration.ControllingTest do
 
     assert %Job{state: "discarded", discarded_at: %_{}, errors: [_]} = Repo.reload(job)
 
-    %{running: running} = :sys.get_state(Oban.Queue.Alpha.Producer)
+    %{running: running} = :sys.get_state(Oban.Registry.whereis(Oban, {:producer, "alpha"}))
 
     assert Enum.empty?(running)
   end
