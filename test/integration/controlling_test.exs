@@ -243,6 +243,7 @@ defmodule Oban.Integration.ControllingTest do
 
   defp supervised_queue?(sup \\ Oban, queue_name) do
     sup
+    |> Oban.Registry.via()
     |> Supervisor.which_children()
     |> Enum.any?(fn {name, _, _, _} -> name == queue_name end)
   end

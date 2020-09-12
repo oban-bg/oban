@@ -39,13 +39,13 @@ defmodule Oban.Midwife do
   def handle_info({:notification, :signal, payload}, %State{conf: conf} = state) do
     case payload do
       %{"action" => "start", "queue" => queue, "limit" => limit} ->
-        Supervisor.start_child(conf.name, queue_spec(queue, limit, conf))
+        Supervisor.start_child(Oban.Registry.via(conf.name), queue_spec(queue, limit, conf))
 
       %{"action" => "stop", "queue" => queue} ->
         %{id: child_id} = queue_spec(queue, 0, conf)
 
-        Supervisor.terminate_child(conf.name, child_id)
-        Supervisor.delete_child(conf.name, child_id)
+        Supervisor.terminate_child(Oban.Registry.via(conf.name), child_id)
+        Supervisor.delete_child(Oban.Registry.via(conf.name), child_id)
 
       _ ->
         :ok

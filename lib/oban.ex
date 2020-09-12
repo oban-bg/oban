@@ -132,7 +132,7 @@ defmodule Oban do
   def start_link(opts) when is_list(opts) do
     conf = Config.new(opts)
 
-    Supervisor.start_link(__MODULE__, conf, name: conf.name)
+    Supervisor.start_link(__MODULE__, conf, name: Oban.Registry.via(conf.name))
   end
 
   @impl Supervisor
