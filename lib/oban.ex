@@ -151,14 +151,14 @@ defmodule Oban do
   end
 
   defp plugin_child_spec({module, opts}, conf) do
-    name = Module.concat([conf.name, module])
+    name = Oban.Registry.via(self(), {:plugin, module})
 
     opts =
       opts
       |> Keyword.put_new(:conf, conf)
       |> Keyword.put_new(:name, name)
 
-    Supervisor.child_spec({module, opts}, id: name)
+    Supervisor.child_spec({module, opts}, id: {:plugin, module})
   end
 
   defp plugin_child_spec(module, conf) do
