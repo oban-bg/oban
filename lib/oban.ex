@@ -134,7 +134,7 @@ defmodule Oban do
   def start_link(opts) when is_list(opts) do
     conf = Config.new(opts)
 
-    Supervisor.start_link(__MODULE__, conf, name: Oban.Registry.via(conf.name))
+    Supervisor.start_link(__MODULE__, conf, name: Oban.Registry.via(conf.name, nil, conf))
   end
 
   @doc "Returns the pid of the root oban process for the given name."
@@ -144,7 +144,6 @@ defmodule Oban do
   @impl Supervisor
   def init(%Config{plugins: plugins, queues: queues} = conf) do
     children = [
-      {Config, conf: conf, name: Oban.Registry.via(conf.name, Config)},
       {Notifier, conf: conf, name: Oban.Registry.via(conf.name, Notifier)},
       {Midwife, conf: conf, name: Oban.Registry.via(conf.name, Midwife)},
       {Scheduler, conf: conf, name: Oban.Registry.via(conf.name, Scheduler)}
@@ -176,9 +175,7 @@ defmodule Oban do
   """
   @doc since: "0.2.0"
   @spec config(name) :: Config.t()
-  def config(name \\ __MODULE__) do
-    Config.get(Oban.Registry.via(name, Config))
-  end
+  def config(name \\ __MODULE__), do: Oban.Registry.config(name)
 
   @doc """
   Insert a new job into the database for execution.

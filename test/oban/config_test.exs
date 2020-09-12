@@ -4,16 +4,6 @@ defmodule Oban.ConfigTest do
   alias Oban.Config
   alias Oban.Plugins.Pruner
 
-  describe "start_link/1" do
-    test "a config struct is stored for retreival" do
-      conf = Config.new(repo: Repo)
-
-      {:ok, pid} = Config.start_link(conf: conf)
-
-      assert %Config{} = Config.get(pid)
-    end
-  end
-
   describe "new/1" do
     test ":circuit_backoff is validated as an integer" do
       assert_invalid(circuit_backoff: -1)
