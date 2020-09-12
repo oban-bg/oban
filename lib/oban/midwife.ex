@@ -3,7 +3,7 @@ defmodule Oban.Midwife do
 
   use GenServer
 
-  alias Oban.{Config, Notifier}
+  alias Oban.{Config, Notifier, Registry}
   alias Oban.Queue.Supervisor, as: QueueSupervisor
 
   @type option :: {:name, module()} | {:conf, Config.t()}
@@ -29,7 +29,7 @@ defmodule Oban.Midwife do
   @impl GenServer
   def handle_continue(:start, %State{conf: conf} = state) do
     conf.name
-    |> Oban.Registry.whereis(Notifier)
+    |> Registry.whereis(Notifier)
     |> Notifier.listen([:signal])
 
     {:noreply, state}
@@ -39,13 +39,13 @@ defmodule Oban.Midwife do
   def handle_info({:notification, :signal, payload}, %State{conf: conf} = state) do
     case payload do
       %{"action" => "start", "queue" => queue, "limit" => limit} ->
-        Supervisor.start_child(Oban.Registry.via(conf.name), queue_spec(queue, limit, conf))
+        Supervisor.start_child(Registry.via(conf.name), queue_spec(queue, limit, conf))
 
       %{"action" => "stop", "queue" => queue} ->
         %{id: child_id} = queue_spec(queue, 0, conf)
 
-        Supervisor.terminate_child(Oban.Registry.via(conf.name), child_id)
-        Supervisor.delete_child(Oban.Registry.via(conf.name), child_id)
+        Supervisor.terminate_child(Registry.via(conf.name), child_id)
+        Supervisor.delete_child(Registry.via(conf.name), child_id)
 
       _ ->
         :ok

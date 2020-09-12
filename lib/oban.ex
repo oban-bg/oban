@@ -11,7 +11,7 @@ defmodule Oban do
   use Supervisor
 
   alias Ecto.{Changeset, Multi}
-  alias Oban.{Config, Job, Midwife, Notifier, Query}
+  alias Oban.{Config, Job, Midwife, Notifier, Query, Registry}
   alias Oban.Crontab.Scheduler
   alias Oban.Queue.Drainer
   alias Oban.Queue.Supervisor, as: QueueSupervisor
@@ -134,19 +134,19 @@ defmodule Oban do
   def start_link(opts) when is_list(opts) do
     conf = Config.new(opts)
 
-    Supervisor.start_link(__MODULE__, conf, name: Oban.Registry.via(conf.name, nil, conf))
+    Supervisor.start_link(__MODULE__, conf, name: Registry.via(conf.name, nil, conf))
   end
 
   @doc "Returns the pid of the root oban process for the given name."
   @spec whereis(name) :: pid | nil
-  def whereis(name), do: Oban.Registry.whereis(name)
+  def whereis(name), do: Registry.whereis(name)
 
   @impl Supervisor
   def init(%Config{plugins: plugins, queues: queues} = conf) do
     children = [
-      {Notifier, conf: conf, name: Oban.Registry.via(conf.name, Notifier)},
-      {Midwife, conf: conf, name: Oban.Registry.via(conf.name, Midwife)},
-      {Scheduler, conf: conf, name: Oban.Registry.via(conf.name, Scheduler)}
+      {Notifier, conf: conf, name: Registry.via(conf.name, Notifier)},
+      {Midwife, conf: conf, name: Registry.via(conf.name, Midwife)},
+      {Scheduler, conf: conf, name: Registry.via(conf.name, Scheduler)}
     ]
 
     children = children ++ Enum.map(plugins, &plugin_child_spec(&1, conf))
@@ -156,7 +156,7 @@ defmodule Oban do
   end
 
   defp plugin_child_spec({module, opts}, conf) do
-    name = Oban.Registry.via(conf.name, {:plugin, module})
+    name = Registry.via(conf.name, {:plugin, module})
 
     opts =
       opts
@@ -175,7 +175,7 @@ defmodule Oban do
   """
   @doc since: "0.2.0"
   @spec config(name) :: Config.t()
-  def config(name \\ __MODULE__), do: Oban.Registry.config(name)
+  def config(name \\ __MODULE__), do: Registry.config(name)
 
   @doc """
   Insert a new job into the database for execution.
