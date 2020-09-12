@@ -18,15 +18,20 @@ defmodule ObanTest do
       assert Oban.start_link(name: name, repo: Oban.Test.Repo) ==
                {:error, {:already_started, pid}}
     end
+
+    test "is used as a default child id" do
+      assert Supervisor.child_spec(Oban, []).id == Oban
+      assert Supervisor.child_spec({Oban, name: :foo}, []).id == :foo
+    end
   end
 
   describe "whereis/1" do
     test "returns pid of the oban root process" do
       name1 = make_ref()
-      {:ok, oban1} = start_supervised({Oban, name: name1, repo: Oban.Test.Repo}, id: :oban1)
+      {:ok, oban1} = start_supervised({Oban, name: name1, repo: Oban.Test.Repo})
 
       name2 = make_ref()
-      {:ok, oban2} = start_supervised({Oban, name: name2, repo: Oban.Test.Repo}, id: :oban2)
+      {:ok, oban2} = start_supervised({Oban, name: name2, repo: Oban.Test.Repo})
 
       assert Oban.whereis(name1) == oban1
       assert Oban.whereis(name2) == oban2

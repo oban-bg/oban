@@ -137,6 +137,13 @@ defmodule Oban do
     Supervisor.start_link(__MODULE__, conf, name: Registry.via(conf.name, nil, conf))
   end
 
+  @spec child_spec([option]) :: Supervisor.child_spec()
+  def child_spec(opts) do
+    opts
+    |> super()
+    |> Supervisor.child_spec(id: Keyword.get(opts, :name, __MODULE__))
+  end
+
   @doc "Returns the pid of the root oban process for the given name."
   @spec whereis(name) :: pid | nil
   def whereis(name), do: Registry.whereis(name)
