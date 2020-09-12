@@ -38,13 +38,6 @@ defmodule Oban.ConfigTest do
       assert %Config{crontab: []} = conf(crontab: false)
     end
 
-    test ":name is validated as a module" do
-      assert_invalid(name: "Oban")
-      assert_invalid(name: {:via, :whatever})
-
-      assert_valid(name: MyOban)
-    end
-
     test ":node is validated as a binary" do
       assert_invalid(node: nil)
       assert_invalid(node: '')

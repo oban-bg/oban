@@ -16,6 +16,8 @@ defmodule Oban do
   alias Oban.Queue.Drainer
   alias Oban.Queue.Supervisor, as: QueueSupervisor
 
+  @type name :: term
+
   @type queue_name :: atom() | binary()
 
   @type queue_option ::
@@ -135,6 +137,10 @@ defmodule Oban do
     Supervisor.start_link(__MODULE__, conf, name: Oban.Registry.via(conf.name))
   end
 
+  @doc "Returns the pid of the root oban process for the given name."
+  @spec whereis(name) :: pid | nil
+  def whereis(name), do: Oban.Registry.whereis(name)
+
   @impl Supervisor
   def init(%Config{plugins: plugins, queues: queues} = conf) do
     children = [
@@ -169,7 +175,7 @@ defmodule Oban do
   Retrieve the config struct for a named Oban supervision tree.
   """
   @doc since: "0.2.0"
-  @spec config(name :: GenServer.server()) :: Config.t()
+  @spec config(name) :: Config.t()
   def config(name \\ __MODULE__) do
     Config.get(Oban.Registry.via(name, Config))
   end
@@ -193,9 +199,9 @@ defmodule Oban do
       {:ok, job} = Oban.insert(MyApp.Worker.new(%{id: 1}, unique: [period: 30]))
   """
   @doc since: "0.7.0"
-  @spec insert(name :: atom(), changeset :: Changeset.t(Job.t())) ::
+  @spec insert(name, changeset :: Changeset.t(Job.t())) ::
           {:ok, Job.t()} | {:error, Changeset.t()}
-  def insert(name \\ __MODULE__, %Changeset{} = changeset) when is_atom(name) do
+  def insert(name \\ __MODULE__, %Changeset{} = changeset) do
     name
     |> config()
     |> Query.fetch_or_insert_job(changeset)
@@ -218,22 +224,20 @@ defmodule Oban do
   """
   @doc since: "0.7.0"
   @spec insert(
-          name :: atom(),
+          name,
           multi :: Multi.t(),
           multi_name :: Multi.name(),
           changeset_or_fun :: Changeset.t(Job.t()) | fun()
         ) :: Multi.t()
   def insert(name \\ __MODULE__, multi, multi_name, changeset_or_fun)
 
-  def insert(name, %Multi{} = multi, multi_name, %Changeset{} = changeset)
-      when is_atom(name) do
+  def insert(name, %Multi{} = multi, multi_name, %Changeset{} = changeset) do
     name
     |> config()
     |> Query.fetch_or_insert_job(multi, multi_name, changeset)
   end
 
-  def insert(name, %Multi{} = multi, multi_name, fun)
-      when is_atom(name) and is_function(fun, 1) do
+  def insert(name, %Multi{} = multi, multi_name, fun) when is_function(fun, 1) do
     name
     |> config()
     |> Query.fetch_or_insert_job(multi, multi_name, fun)
@@ -247,8 +251,8 @@ defmodule Oban do
       job = Oban.insert!(MyApp.Worker.new(%{id: 1}))
   """
   @doc since: "0.7.0"
-  @spec insert!(name :: atom(), changeset :: Changeset.t(Job.t())) :: Job.t()
-  def insert!(name \\ __MODULE__, %Changeset{} = changeset) when is_atom(name) do
+  @spec insert!(name, changeset :: Changeset.t(Job.t())) :: Job.t()
+  def insert!(name \\ __MODULE__, %Changeset{} = changeset) do
     case insert(name, changeset) do
       {:ok, job} ->
         job
@@ -276,8 +280,8 @@ defmodule Oban do
       |> Oban.insert_all()
   """
   @doc since: "0.9.0"
-  @spec insert_all(name :: atom(), jobs :: [Changeset.t(Job.t())]) :: [Job.t()]
-  def insert_all(name \\ __MODULE__, changesets) when is_atom(name) and is_list(changesets) do
+  @spec insert_all(name, jobs :: [Changeset.t(Job.t())]) :: [Job.t()]
+  def insert_all(name \\ __MODULE__, changesets) when is_list(changesets) do
     name
     |> config()
     |> Query.insert_all_jobs(changesets)
@@ -298,7 +302,7 @@ defmodule Oban do
   """
   @doc since: "0.9.0"
   @spec insert_all(
-          name :: atom(),
+          name,
           multi :: Multi.t(),
           multi_name :: Multi.name(),
           changeset :: [Changeset.t(Job.t())]
@@ -363,8 +367,8 @@ defmodule Oban do
       assert_raise RuntimeError, fn -> Oban.drain_queue(queue: :risky, with_safety: false) end
   """
   @doc since: "0.4.0"
-  @spec drain_queue(name :: atom(), [Drainer.drain_option()]) :: Drainer.drain_result()
-  def drain_queue(name \\ __MODULE__, [_ | _] = opts) when is_atom(name) do
+  @spec drain_queue(name, [Drainer.drain_option()]) :: Drainer.drain_result()
+  def drain_queue(name \\ __MODULE__, [_ | _] = opts) do
     name
     |> config()
     |> Drainer.drain(opts)
@@ -396,8 +400,8 @@ defmodule Oban do
       :ok
   """
   @doc since: "0.12.0"
-  @spec start_queue(name :: atom(), opts :: [queue_option()]) :: :ok
-  def start_queue(name \\ __MODULE__, [_ | _] = opts) when is_atom(name) do
+  @spec start_queue(name, opts :: [queue_option()]) :: :ok
+  def start_queue(name \\ __MODULE__, [_ | _] = opts) do
     Enum.each(opts, &validate_queue_opt!/1)
 
     conf = config(name)
@@ -436,8 +440,8 @@ defmodule Oban do
       :ok
   """
   @doc since: "0.2.0"
-  @spec pause_queue(name :: atom(), opts :: [queue_option()]) :: :ok
-  def pause_queue(name \\ __MODULE__, [_ | _] = opts) when is_atom(name) do
+  @spec pause_queue(name, opts :: [queue_option()]) :: :ok
+  def pause_queue(name \\ __MODULE__, [_ | _] = opts) do
     Enum.each(opts, &validate_queue_opt!/1)
 
     conf = config(name)
@@ -467,8 +471,8 @@ defmodule Oban do
       :ok
   """
   @doc since: "0.2.0"
-  @spec resume_queue(name :: atom(), opts :: [queue_option()]) :: :ok
-  def resume_queue(name \\ __MODULE__, [_ | _] = opts) when is_atom(name) do
+  @spec resume_queue(name, opts :: [queue_option()]) :: :ok
+  def resume_queue(name \\ __MODULE__, [_ | _] = opts) do
     Enum.each(opts, &validate_queue_opt!/1)
 
     conf = config(name)
@@ -504,8 +508,8 @@ defmodule Oban do
       :ok
   """
   @doc since: "0.2.0"
-  @spec scale_queue(name :: atom(), opts :: [queue_option()]) :: :ok
-  def scale_queue(name \\ __MODULE__, [_ | _] = opts) when is_atom(name) do
+  @spec scale_queue(name, opts :: [queue_option()]) :: :ok
+  def scale_queue(name \\ __MODULE__, [_ | _] = opts) do
     Enum.each(opts, &validate_queue_opt!/1)
 
     conf = config(name)
@@ -544,8 +548,8 @@ defmodule Oban do
       :ok
   """
   @doc since: "0.12.0"
-  @spec stop_queue(name :: atom(), opts :: [queue_option()]) :: :ok
-  def stop_queue(name \\ __MODULE__, [_ | _] = opts) when is_atom(name) do
+  @spec stop_queue(name, opts :: [queue_option()]) :: :ok
+  def stop_queue(name \\ __MODULE__, [_ | _] = opts) do
     Enum.each(opts, &validate_queue_opt!/1)
 
     conf = config(name)
@@ -569,7 +573,7 @@ defmodule Oban do
       :ok
   """
   @doc since: "1.3.0"
-  @spec cancel_job(name :: atom(), job_id :: pos_integer()) :: :ok
+  @spec cancel_job(name, job_id :: pos_integer()) :: :ok
   def cancel_job(name \\ __MODULE__, job_id) when is_integer(job_id) do
     conf = config(name)
 

@@ -11,7 +11,7 @@ defmodule Oban.Config do
           circuit_backoff: timeout(),
           crontab: [cronjob()],
           dispatch_cooldown: pos_integer(),
-          name: atom(),
+          name: Oban.name(),
           node: binary(),
           plugins: [module() | {module() | Keyword.t()}],
           poll_interval: pos_integer(),
@@ -117,11 +117,7 @@ defmodule Oban.Config do
     end
   end
 
-  defp validate_opt!({:name, name}) do
-    unless is_atom(name) do
-      raise ArgumentError, "expected :name to be a module or atom"
-    end
-  end
+  defp validate_opt!({:name, _}), do: :ok
 
   defp validate_opt!({:node, node}) do
     unless is_binary(node) and node != "" do
