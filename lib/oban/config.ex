@@ -87,7 +87,7 @@ defmodule Oban.Config do
 
   @spec to_ident(t()) :: binary()
   def to_ident(%__MODULE__{name: name, node: node}) do
-    to_string(name) <> "." <> to_string(node)
+    inspect(name) <> "." <> to_string(node)
   end
 
   @spec match_ident?(t(), binary()) :: boolean()

@@ -20,8 +20,6 @@ defmodule Oban.Integration.CrontabTest do
     refute_receive {:ok, 2}
     assert_receive {:ok, 3}
     refute_receive {:ok, 4}
-
-    :ok = stop_supervised(Oban)
   end
 
   test "cron jobs are not enqueued twice within the same minute" do
@@ -30,17 +28,15 @@ defmodule Oban.Integration.CrontabTest do
       crontab: [{"* * * * *", Worker, args: worker_args(1)}]
     ]
 
-    start_supervised_oban!(oban_opts)
+    name = start_supervised_oban!(oban_opts).name
 
     assert_receive {:ok, 1}
 
-    :ok = stop_supervised(Oban)
+    :ok = stop_supervised(name)
 
     start_supervised_oban!(oban_opts)
 
     refute_receive {:ok, 1}
-
-    :ok = stop_supervised(Oban)
   end
 
   test "cron jobs are only enqueued once between nodes" do
@@ -49,13 +45,13 @@ defmodule Oban.Integration.CrontabTest do
       crontab: [{"* * * * *", Worker, args: worker_args(1)}]
     ]
 
-    start_supervised_oban!(base_opts ++ [name: ObanA])
-    start_supervised_oban!(base_opts ++ [name: ObanB])
+    name1 = start_supervised_oban!(base_opts).name
+    name2 = start_supervised_oban!(base_opts).name
 
     assert_receive {:ok, 1}
 
-    :ok = stop_supervised(ObanA)
-    :ok = stop_supervised(ObanB)
+    :ok = stop_supervised(name1)
+    :ok = stop_supervised(name2)
 
     assert 1 == Job |> select(count()) |> Repo.one()
   end
@@ -66,14 +62,14 @@ defmodule Oban.Integration.CrontabTest do
       crontab: [{"* * * * *", Worker, args: worker_args(1)}]
     ]
 
-    start_supervised_oban!(base_opts ++ [name: ObanA, prefix: "public"])
-    start_supervised_oban!(base_opts ++ [name: ObanB, prefix: "private"])
+    name1 = start_supervised_oban!(base_opts ++ [prefix: "public"]).name
+    name2 = start_supervised_oban!(base_opts ++ [prefix: "private"]).name
 
     assert_receive {:ok, 1}
     assert_receive {:ok, 1}
 
-    :ok = stop_supervised(ObanA)
-    :ok = stop_supervised(ObanB)
+    :ok = stop_supervised(name1)
+    :ok = stop_supervised(name2)
 
     assert 1 == Job |> select(count()) |> Repo.one(prefix: "public")
     assert 1 == Job |> select(count()) |> Repo.one(prefix: "private")
@@ -97,12 +93,13 @@ defmodule Oban.Integration.CrontabTest do
   end
 
   test "reboot jobs are enqueued on startup" do
-    start_supervised_oban!(
-      queues: false,
-      crontab: [{"@reboot", Worker, args: worker_args(1)}]
-    )
+    name =
+      start_supervised_oban!(
+        queues: false,
+        crontab: [{"@reboot", Worker, args: worker_args(1)}]
+      ).name
 
-    :ok = stop_supervised(Oban)
+    :ok = stop_supervised(name)
 
     assert 1 == Job |> select(count()) |> Repo.one()
   end
@@ -113,11 +110,11 @@ defmodule Oban.Integration.CrontabTest do
       crontab: [{"@reboot", Worker, args: worker_args(1)}]
     ]
 
-    start_supervised_oban!(base_opts ++ [name: ObanA])
-    start_supervised_oban!(base_opts ++ [name: ObanB])
+    name1 = start_supervised_oban!(base_opts).name
+    name2 = start_supervised_oban!(base_opts).name
 
-    :ok = stop_supervised(ObanA)
-    :ok = stop_supervised(ObanB)
+    :ok = stop_supervised(name1)
+    :ok = stop_supervised(name2)
 
     assert 1 == Job |> select(count()) |> Repo.one()
   end

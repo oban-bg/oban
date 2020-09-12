@@ -44,12 +44,15 @@ defmodule Oban.Case do
   def start_supervised_oban!(opts) do
     opts =
       opts
-      |> Keyword.put_new(:name, Oban)
+      |> Keyword.put_new(:name, make_ref())
       |> Keyword.put_new(:repo, Repo)
       |> Keyword.put_new(:poll_interval, 25)
       |> Keyword.put_new(:shutdown_grace_period, 1)
 
-    start_supervised!({Oban, opts}, id: opts[:name])
+    name = opts[:name]
+    pid = start_supervised!({Oban, opts}, id: name)
+
+    %{name: name, pid: pid}
   end
 
   def build(args, opts \\ []) do

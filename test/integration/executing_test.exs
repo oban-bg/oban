@@ -6,15 +6,15 @@ defmodule Oban.Integration.ExecutingTest do
   @moduletag :integration
 
   setup do
-    start_supervised_oban!(queues: [alpha: 3, beta: 3, gamma: 3, delta: 3])
+    name = start_supervised_oban!(queues: [alpha: 3, beta: 3, gamma: 3, delta: 3]).name
 
-    :ok
+    {:ok, name: name}
   end
 
-  property "individual jobs inserted into running queues are executed" do
+  property "individual jobs inserted into running queues are executed", context do
     check all jobs <- list_of(job()), max_runs: 20 do
       capture_log(fn ->
-        for job <- Oban.insert_all(jobs) do
+        for job <- Oban.insert_all(context.name, jobs) do
           %{args: %{"ref" => ref, "action" => action}, id: id, max_attempts: max} = job
 
           assert_receive {_, ^ref}
