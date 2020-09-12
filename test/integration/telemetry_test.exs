@@ -107,7 +107,7 @@ defmodule Oban.Integration.TelemetryTest do
 
     logged =
       capture_log(fn ->
-        assert %{conn: conn} = :sys.get_state(Oban.Notifier)
+        assert %{conn: conn} = :sys.get_state(Oban.Registry.whereis(Oban, Oban.Notifier))
         assert Process.exit(conn, :forced_exit)
 
         # Give it time to log

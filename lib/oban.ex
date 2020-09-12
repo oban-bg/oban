@@ -136,12 +136,12 @@ defmodule Oban do
   end
 
   @impl Supervisor
-  def init(%Config{name: name, plugins: plugins, queues: queues} = conf) do
+  def init(%Config{plugins: plugins, queues: queues} = conf) do
     children = [
-      {Config, conf: conf, name: child_name(name, "Config")},
-      {Notifier, conf: conf, name: child_name(name, "Notifier")},
-      {Midwife, conf: conf, name: child_name(name, "Midwife")},
-      {Scheduler, conf: conf, name: child_name(name, "Scheduler")}
+      {Config, conf: conf, name: Oban.Registry.via(self(), Config)},
+      {Notifier, conf: conf, name: Oban.Registry.via(self(), Notifier)},
+      {Midwife, conf: conf, name: Oban.Registry.via(self(), Midwife)},
+      {Scheduler, conf: conf, name: Oban.Registry.via(self(), Scheduler)}
     ]
 
     children = children ++ Enum.map(plugins, &plugin_child_spec(&1, conf))
@@ -169,11 +169,9 @@ defmodule Oban do
   Retrieve the config struct for a named Oban supervision tree.
   """
   @doc since: "0.2.0"
-  @spec config(name :: atom()) :: Config.t()
-  def config(name \\ __MODULE__) when is_atom(name) do
-    name
-    |> child_name("Config")
-    |> Config.get()
+  @spec config(name :: GenServer.server()) :: Config.t()
+  def config(name \\ __MODULE__) do
+    Config.get(Oban.Registry.via(name, Config))
   end
 
   @doc """
@@ -579,8 +577,6 @@ defmodule Oban do
       Notifier.notify(conf, :signal, %{action: :pkill, job_id: job_id})
     end
   end
-
-  defp child_name(name, child), do: Module.concat(name, child)
 
   defp scope_signal(conf, opts) do
     if Keyword.get(opts, :local_only) do

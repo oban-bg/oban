@@ -66,7 +66,7 @@ defmodule Oban.Config do
     struct!(__MODULE__, opts)
   end
 
-  @spec get(atom()) :: t()
+  @spec get(GenServer.server()) :: t()
   def get(name), do: Agent.get(name, & &1)
 
   @spec node_name(%{optional(binary()) => binary()}) :: binary()

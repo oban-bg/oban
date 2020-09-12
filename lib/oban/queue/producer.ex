@@ -199,7 +199,7 @@ defmodule Oban.Queue.Producer do
 
   defp start_listener(%State{conf: conf} = state) do
     conf.name
-    |> Module.concat("Notifier")
+    |> Oban.Registry.whereis(Notifier)
     |> Notifier.listen([:insert, :signal])
 
     state

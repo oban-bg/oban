@@ -231,7 +231,13 @@ defmodule Oban.Telemetry do
       message
       |> Map.put(:event, event)
       |> Map.put(:source, "oban")
+      |> update_name()
       |> Jason.encode_to_iodata!()
     end)
+  end
+
+  defp update_name(message) do
+    with %{name: {:via, Registry, {Oban.Registry, {_pid, role}}}} <- message,
+         do: %{message | name: role}
   end
 end
