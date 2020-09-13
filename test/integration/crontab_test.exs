@@ -28,7 +28,7 @@ defmodule Oban.Integration.CrontabTest do
       crontab: [{"* * * * *", Worker, args: worker_args(1)}]
     ]
 
-    name = start_supervised_oban!(oban_opts).name
+    name = start_supervised_oban!(oban_opts)
 
     assert_receive {:ok, 1}
 
@@ -45,8 +45,8 @@ defmodule Oban.Integration.CrontabTest do
       crontab: [{"* * * * *", Worker, args: worker_args(1)}]
     ]
 
-    name1 = start_supervised_oban!(base_opts).name
-    name2 = start_supervised_oban!(base_opts).name
+    name1 = start_supervised_oban!(base_opts)
+    name2 = start_supervised_oban!(base_opts)
 
     assert_receive {:ok, 1}
 
@@ -62,8 +62,8 @@ defmodule Oban.Integration.CrontabTest do
       crontab: [{"* * * * *", Worker, args: worker_args(1)}]
     ]
 
-    name1 = start_supervised_oban!(base_opts ++ [prefix: "public"]).name
-    name2 = start_supervised_oban!(base_opts ++ [prefix: "private"]).name
+    name1 = start_supervised_oban!(base_opts ++ [prefix: "public"])
+    name2 = start_supervised_oban!(base_opts ++ [prefix: "private"])
 
     assert_receive {:ok, 1}
     assert_receive {:ok, 1}
@@ -97,7 +97,7 @@ defmodule Oban.Integration.CrontabTest do
       start_supervised_oban!(
         queues: false,
         crontab: [{"@reboot", Worker, args: worker_args(1)}]
-      ).name
+      )
 
     :ok = stop_supervised(name)
 
@@ -110,8 +110,8 @@ defmodule Oban.Integration.CrontabTest do
       crontab: [{"@reboot", Worker, args: worker_args(1)}]
     ]
 
-    name1 = start_supervised_oban!(base_opts).name
-    name2 = start_supervised_oban!(base_opts).name
+    name1 = start_supervised_oban!(base_opts)
+    name2 = start_supervised_oban!(base_opts)
 
     :ok = stop_supervised(name1)
     :ok = stop_supervised(name2)

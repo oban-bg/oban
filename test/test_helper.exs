@@ -50,9 +50,8 @@ defmodule Oban.Case do
       |> Keyword.put_new(:shutdown_grace_period, 1)
 
     name = opts[:name]
-    pid = start_supervised!({Oban, opts}, id: name)
-
-    %{name: name, pid: pid}
+    start_supervised!({Oban, opts})
+    name
   end
 
   def build(args, opts \\ []) do

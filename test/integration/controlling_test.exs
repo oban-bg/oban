@@ -12,7 +12,7 @@ defmodule Oban.Integration.ControllingTest do
     end
 
     test "starting individual queues dynamically" do
-      name = start_supervised_oban!(queues: [alpha: 10]).name
+      name = start_supervised_oban!(queues: [alpha: 10])
 
       insert!(%{ref: 1, action: "OK"}, queue: :gamma)
       insert!(%{ref: 2, action: "OK"}, queue: :delta)
@@ -29,8 +29,8 @@ defmodule Oban.Integration.ControllingTest do
     end
 
     test "starting individual queues only on the local node" do
-      name1 = start_supervised_oban!(queues: []).name
-      name2 = start_supervised_oban!(queues: []).name
+      name1 = start_supervised_oban!(queues: [])
+      name2 = start_supervised_oban!(queues: [])
 
       sleep_for_notifier()
 
@@ -50,7 +50,7 @@ defmodule Oban.Integration.ControllingTest do
     end
 
     test "stopping individual queues" do
-      name = start_supervised_oban!(queues: [alpha: 5, delta: 5, gamma: 5]).name
+      name = start_supervised_oban!(queues: [alpha: 5, delta: 5, gamma: 5])
 
       assert supervised_queue?(name, "delta")
       assert supervised_queue?(name, "gamma")
@@ -79,8 +79,8 @@ defmodule Oban.Integration.ControllingTest do
     end
 
     test "stopping individual queues only on the local node" do
-      name1 = start_supervised_oban!(queues: [alpha: 1]).name
-      name2 = start_supervised_oban!(queues: [alpha: 1]).name
+      name1 = start_supervised_oban!(queues: [alpha: 1])
+      name2 = start_supervised_oban!(queues: [alpha: 1])
 
       sleep_for_notifier()
 
@@ -103,7 +103,7 @@ defmodule Oban.Integration.ControllingTest do
     end
 
     test "pausing and resuming individual queues" do
-      name = start_supervised_oban!(queues: [alpha: 5], poll_interval: 1_000).name
+      name = start_supervised_oban!(queues: [alpha: 5], poll_interval: 1_000)
 
       sleep_for_notifier()
 
@@ -120,7 +120,7 @@ defmodule Oban.Integration.ControllingTest do
 
     test "pausing queues only on the local node" do
       start_supervised_oban!(queues: [alpha: 1])
-      name2 = start_supervised_oban!(queues: [alpha: 1]).name
+      name2 = start_supervised_oban!(queues: [alpha: 1])
 
       sleep_for_notifier()
 
@@ -134,7 +134,7 @@ defmodule Oban.Integration.ControllingTest do
     end
 
     test "resuming queues only on the local node" do
-      name1 = start_supervised_oban!(queues: [alpha: 1]).name
+      name1 = start_supervised_oban!(queues: [alpha: 1])
       start_supervised_oban!(queues: [alpha: 1])
 
       sleep_for_notifier()
@@ -158,7 +158,7 @@ defmodule Oban.Integration.ControllingTest do
     end
 
     test "scaling individual queues" do
-      name = start_supervised_oban!(queues: [alpha: 1]).name
+      name = start_supervised_oban!(queues: [alpha: 1])
 
       sleep_for_notifier()
 
@@ -171,7 +171,7 @@ defmodule Oban.Integration.ControllingTest do
 
     test "scaling queues only on the local node" do
       start_supervised_oban!(queues: [alpha: 2])
-      name2 = start_supervised_oban!(queues: [alpha: 2]).name
+      name2 = start_supervised_oban!(queues: [alpha: 2])
 
       sleep_for_notifier()
 
@@ -187,7 +187,7 @@ defmodule Oban.Integration.ControllingTest do
   end
 
   test "killing an executing job by its id" do
-    name = start_supervised_oban!(queues: [alpha: 5]).name
+    name = start_supervised_oban!(queues: [alpha: 5])
 
     job = insert!(ref: 1, sleep: 100)
 
@@ -205,7 +205,7 @@ defmodule Oban.Integration.ControllingTest do
   end
 
   test "cancelling jobs that may or may not be executing" do
-    name = start_supervised_oban!(queues: [alpha: 5]).name
+    name = start_supervised_oban!(queues: [alpha: 5])
 
     job_a = insert!(%{ref: 1}, schedule_in: 10)
     job_b = insert!(%{ref: 2}, schedule_in: 10, state: "retryable")

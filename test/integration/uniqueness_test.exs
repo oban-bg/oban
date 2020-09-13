@@ -15,7 +15,7 @@ defmodule Oban.Integration.UniquenessTest do
   end
 
   setup do
-    name = start_supervised_oban!(queues: [alpha: 5]).name
+    name = start_supervised_oban!(queues: [alpha: 5])
 
     {:ok, name: name}
   end

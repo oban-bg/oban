@@ -4,7 +4,7 @@ defmodule Oban.Integration.DrainingTest do
   @moduletag :integration
 
   test "all jobs in a queue can be drained and executed synchronously" do
-    name = start_supervised_oban!(queues: false).name
+    name = start_supervised_oban!(queues: false)
 
     insert!(ref: 1, action: "OK")
     insert!(ref: 2, action: "FAIL")
@@ -18,7 +18,7 @@ defmodule Oban.Integration.DrainingTest do
   end
 
   test "scheduled jobs are executed when given the :with_scheduled flag" do
-    name = start_supervised_oban!(queues: false).name
+    name = start_supervised_oban!(queues: false)
 
     insert!(%{ref: 1, action: "OK"}, scheduled_at: seconds_from_now(3600))
 
@@ -27,7 +27,7 @@ defmodule Oban.Integration.DrainingTest do
   end
 
   test "job errors bubble up when :with_safety is false" do
-    name = start_supervised_oban!(queues: false).name
+    name = start_supervised_oban!(queues: false)
 
     insert!(ref: 1, action: "FAIL")
 
@@ -39,7 +39,7 @@ defmodule Oban.Integration.DrainingTest do
   end
 
   test "job crashes bubble up when :with_safety is false" do
-    name = start_supervised_oban!(queues: false).name
+    name = start_supervised_oban!(queues: false)
 
     insert!(ref: 1, action: "EXIT")
 

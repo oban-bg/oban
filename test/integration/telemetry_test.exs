@@ -99,7 +99,7 @@ defmodule Oban.Integration.TelemetryTest do
   end
 
   test "the default handler logs circuit breaker information" do
-    name = start_supervised_oban!(queues: [alpha: 3]).name
+    name = start_supervised_oban!(queues: [alpha: 3])
 
     :ok = Telemetry.attach_default_logger(:warn)
 

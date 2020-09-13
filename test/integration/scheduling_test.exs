@@ -10,7 +10,7 @@ defmodule Oban.Integration.SchedulingTest do
     job_4 = insert!([ref: 4, sleep: 5000], schedule_in: -1, queue: :gamma)
     job_5 = insert!([ref: 5, sleep: 5000], schedule_in: 10, queue: :alpha)
 
-    name = start_supervised_oban!(queues: [alpha: 2]).name
+    name = start_supervised_oban!(queues: [alpha: 2])
 
     assert_receive {:started, 1}
     assert_receive {:started, 2}

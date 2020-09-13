@@ -6,7 +6,7 @@ defmodule Oban.Integration.ExecutingTest do
   @moduletag :integration
 
   setup do
-    name = start_supervised_oban!(queues: [alpha: 3, beta: 3, gamma: 3, delta: 3]).name
+    name = start_supervised_oban!(queues: [alpha: 3, beta: 3, gamma: 3, delta: 3])
 
     {:ok, name: name}
   end

@@ -29,7 +29,7 @@ defmodule Oban.Integration.ResiliencyTest do
   end
 
   test "reporting notification connection errors" do
-    name = start_supervised_oban!(queues: [alpha: 1]).name
+    name = start_supervised_oban!(queues: [alpha: 1])
 
     assert %{conn: conn} = :sys.get_state(Oban.Registry.whereis(name, Oban.Notifier))
     assert Process.exit(conn, :forced_exit)

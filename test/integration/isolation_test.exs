@@ -6,7 +6,7 @@ defmodule Oban.Integration.IsolationTest do
   @moduletag :integration
 
   test "multiple supervisors can be run simultaneously" do
-    name1 = start_supervised_oban!(queues: [alpha: 1], plugins: [Oban.Plugins.Pruner]).name
+    name1 = start_supervised_oban!(queues: [alpha: 1], plugins: [Oban.Plugins.Pruner])
     start_supervised_oban!(queues: [gamma: 1], plugins: [Oban.Plugins.Pruner])
 
     insert!(name1, %{ref: 1, action: "OK"}, [])
@@ -15,7 +15,7 @@ defmodule Oban.Integration.IsolationTest do
   end
 
   test "inserting and executing jobs with a custom prefix" do
-    name = start_supervised_oban!(prefix: "private", queues: [alpha: 5]).name
+    name = start_supervised_oban!(prefix: "private", queues: [alpha: 5])
 
     job = insert!(name, %{ref: 1, action: "OK"}, [])
 
@@ -28,7 +28,7 @@ defmodule Oban.Integration.IsolationTest do
     # Make sure the public table isn't available when we're attempting to query
     mangle_jobs_table!()
 
-    name = start_supervised_oban!(prefix: "private", queues: [alpha: 5]).name
+    name = start_supervised_oban!(prefix: "private", queues: [alpha: 5])
 
     insert!(name, %{ref: 1, action: "OK"}, unique: [period: 60, fields: [:worker]])
     insert!(name, %{ref: 2, action: "OK"}, unique: [period: 60, fields: [:worker]])
