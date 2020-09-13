@@ -29,7 +29,7 @@ defmodule Oban do
           {:circuit_backoff, timeout()}
           | {:crontab, [Config.cronjob()]}
           | {:dispatch_cooldown, pos_integer()}
-          | {:name, module()}
+          | {:name, name()}
           | {:node, binary()}
           | {:plugins, [module() | {module() | Keyword.t()}]}
           | {:poll_interval, pos_integer()}
