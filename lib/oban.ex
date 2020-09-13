@@ -144,7 +144,20 @@ defmodule Oban do
     |> Supervisor.child_spec(id: Keyword.get(opts, :name, __MODULE__))
   end
 
-  @doc "Returns the pid of the root oban process for the given name."
+  @doc """
+  Returns the pid of the root oban process for the given name.
+
+  ## Example
+
+  Find the default instance:
+
+      Oban.whereis(Oban)
+
+  Find a dynamically named instance:
+
+      Oban.whereis({:oban, 1})
+  """
+  @doc since: "2.2.0"
   @spec whereis(name) :: pid | nil
   def whereis(name), do: Registry.whereis(name)
 
