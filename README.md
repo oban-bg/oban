@@ -982,9 +982,9 @@ def start(_type, _args) do
   children = [
     Repo,
     Endpoint,
-    Supervisor.child_spec({Oban, name: ObanA, repo: Repo}, id: ObanA),
-    Supervisor.child_spec({Oban, name: ObanB, repo: Repo, prefix: "special"}, id: ObanB),
-    Supervisor.child_spec({Oban, name: ObanC, repo: Repo, prefix: "private"}, id: ObanC)
+    {Oban, name: ObanA, repo: Repo},
+    {Oban, name: ObanB, repo: Repo, prefix: "special"},
+    {Oban, name: ObanC, repo: Repo, prefix: "private"}
   ]
 
   Supervisor.start_link(children, strategy: :one_for_one, name: MyApp.Supervisor)

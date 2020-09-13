@@ -62,8 +62,6 @@ defmodule Oban.Integration.TelemetryTest do
              error: %PerformError{},
              stacktrace: []
            } = error_meta
-
-    :ok = stop_supervised(Oban)
   after
     :telemetry.detach("job-handler")
   end
@@ -101,13 +99,13 @@ defmodule Oban.Integration.TelemetryTest do
   end
 
   test "the default handler logs circuit breaker information" do
-    start_supervised_oban!(queues: [alpha: 3])
+    name = start_supervised_oban!(queues: [alpha: 3])
 
     :ok = Telemetry.attach_default_logger(:warn)
 
     logged =
       capture_log(fn ->
-        assert %{conn: conn} = :sys.get_state(Oban.Notifier)
+        assert %{conn: conn} = :sys.get_state(Oban.Registry.whereis(name, Oban.Notifier))
         assert Process.exit(conn, :forced_exit)
 
         # Give it time to log

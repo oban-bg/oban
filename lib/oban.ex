@@ -11,10 +11,12 @@ defmodule Oban do
   use Supervisor
 
   alias Ecto.{Changeset, Multi}
-  alias Oban.{Config, Job, Midwife, Notifier, Query}
+  alias Oban.{Config, Job, Midwife, Notifier, Query, Registry}
   alias Oban.Crontab.Scheduler
   alias Oban.Queue.Drainer
   alias Oban.Queue.Supervisor, as: QueueSupervisor
+
+  @type name :: term
 
   @type queue_name :: atom() | binary()
 
@@ -27,7 +29,7 @@ defmodule Oban do
           {:circuit_backoff, timeout()}
           | {:crontab, [Config.cronjob()]}
           | {:dispatch_cooldown, pos_integer()}
-          | {:name, module()}
+          | {:name, name()}
           | {:node, binary()}
           | {:plugins, [module() | {module() | Keyword.t()}]}
           | {:poll_interval, pos_integer()}
@@ -132,16 +134,39 @@ defmodule Oban do
   def start_link(opts) when is_list(opts) do
     conf = Config.new(opts)
 
-    Supervisor.start_link(__MODULE__, conf, name: conf.name)
+    Supervisor.start_link(__MODULE__, conf, name: Registry.via(conf.name, nil, conf))
   end
 
+  @spec child_spec([option]) :: Supervisor.child_spec()
+  def child_spec(opts) do
+    opts
+    |> super()
+    |> Supervisor.child_spec(id: Keyword.get(opts, :name, __MODULE__))
+  end
+
+  @doc """
+  Returns the pid of the root oban process for the given name.
+
+  ## Example
+
+  Find the default instance:
+
+      Oban.whereis(Oban)
+
+  Find a dynamically named instance:
+
+      Oban.whereis({:oban, 1})
+  """
+  @doc since: "2.2.0"
+  @spec whereis(name()) :: pid() | nil
+  def whereis(name), do: Registry.whereis(name)
+
   @impl Supervisor
-  def init(%Config{name: name, plugins: plugins, queues: queues} = conf) do
+  def init(%Config{plugins: plugins, queues: queues} = conf) do
     children = [
-      {Config, conf: conf, name: child_name(name, "Config")},
-      {Notifier, conf: conf, name: child_name(name, "Notifier")},
-      {Midwife, conf: conf, name: child_name(name, "Midwife")},
-      {Scheduler, conf: conf, name: child_name(name, "Scheduler")}
+      {Notifier, conf: conf, name: Registry.via(conf.name, Notifier)},
+      {Midwife, conf: conf, name: Registry.via(conf.name, Midwife)},
+      {Scheduler, conf: conf, name: Registry.via(conf.name, Scheduler)}
     ]
 
     children = children ++ Enum.map(plugins, &plugin_child_spec(&1, conf))
@@ -151,14 +176,14 @@ defmodule Oban do
   end
 
   defp plugin_child_spec({module, opts}, conf) do
-    name = Module.concat([conf.name, module])
+    name = Registry.via(conf.name, {:plugin, module})
 
     opts =
       opts
       |> Keyword.put_new(:conf, conf)
       |> Keyword.put_new(:name, name)
 
-    Supervisor.child_spec({module, opts}, id: name)
+    Supervisor.child_spec({module, opts}, id: {:plugin, module})
   end
 
   defp plugin_child_spec(module, conf) do
@@ -169,12 +194,8 @@ defmodule Oban do
   Retrieve the config struct for a named Oban supervision tree.
   """
   @doc since: "0.2.0"
-  @spec config(name :: atom()) :: Config.t()
-  def config(name \\ __MODULE__) when is_atom(name) do
-    name
-    |> child_name("Config")
-    |> Config.get()
-  end
+  @spec config(name()) :: Config.t()
+  def config(name \\ __MODULE__), do: Registry.config(name)
 
   @doc """
   Insert a new job into the database for execution.
@@ -195,9 +216,9 @@ defmodule Oban do
       {:ok, job} = Oban.insert(MyApp.Worker.new(%{id: 1}, unique: [period: 30]))
   """
   @doc since: "0.7.0"
-  @spec insert(name :: atom(), changeset :: Changeset.t(Job.t())) ::
+  @spec insert(name(), changeset :: Changeset.t(Job.t())) ::
           {:ok, Job.t()} | {:error, Changeset.t()}
-  def insert(name \\ __MODULE__, %Changeset{} = changeset) when is_atom(name) do
+  def insert(name \\ __MODULE__, %Changeset{} = changeset) do
     name
     |> config()
     |> Query.fetch_or_insert_job(changeset)
@@ -220,22 +241,20 @@ defmodule Oban do
   """
   @doc since: "0.7.0"
   @spec insert(
-          name :: atom(),
+          name,
           multi :: Multi.t(),
           multi_name :: Multi.name(),
           changeset_or_fun :: Changeset.t(Job.t()) | fun()
         ) :: Multi.t()
   def insert(name \\ __MODULE__, multi, multi_name, changeset_or_fun)
 
-  def insert(name, %Multi{} = multi, multi_name, %Changeset{} = changeset)
-      when is_atom(name) do
+  def insert(name, %Multi{} = multi, multi_name, %Changeset{} = changeset) do
     name
     |> config()
     |> Query.fetch_or_insert_job(multi, multi_name, changeset)
   end
 
-  def insert(name, %Multi{} = multi, multi_name, fun)
-      when is_atom(name) and is_function(fun, 1) do
+  def insert(name, %Multi{} = multi, multi_name, fun) when is_function(fun, 1) do
     name
     |> config()
     |> Query.fetch_or_insert_job(multi, multi_name, fun)
@@ -249,8 +268,8 @@ defmodule Oban do
       job = Oban.insert!(MyApp.Worker.new(%{id: 1}))
   """
   @doc since: "0.7.0"
-  @spec insert!(name :: atom(), changeset :: Changeset.t(Job.t())) :: Job.t()
-  def insert!(name \\ __MODULE__, %Changeset{} = changeset) when is_atom(name) do
+  @spec insert!(name(), changeset :: Changeset.t(Job.t())) :: Job.t()
+  def insert!(name \\ __MODULE__, %Changeset{} = changeset) do
     case insert(name, changeset) do
       {:ok, job} ->
         job
@@ -278,8 +297,8 @@ defmodule Oban do
       |> Oban.insert_all()
   """
   @doc since: "0.9.0"
-  @spec insert_all(name :: atom(), jobs :: [Changeset.t(Job.t())]) :: [Job.t()]
-  def insert_all(name \\ __MODULE__, changesets) when is_atom(name) and is_list(changesets) do
+  @spec insert_all(name(), jobs :: [Changeset.t(Job.t())]) :: [Job.t()]
+  def insert_all(name \\ __MODULE__, changesets) when is_list(changesets) do
     name
     |> config()
     |> Query.insert_all_jobs(changesets)
@@ -300,7 +319,7 @@ defmodule Oban do
   """
   @doc since: "0.9.0"
   @spec insert_all(
-          name :: atom(),
+          name,
           multi :: Multi.t(),
           multi_name :: Multi.name(),
           changeset :: [Changeset.t(Job.t())]
@@ -365,8 +384,8 @@ defmodule Oban do
       assert_raise RuntimeError, fn -> Oban.drain_queue(queue: :risky, with_safety: false) end
   """
   @doc since: "0.4.0"
-  @spec drain_queue(name :: atom(), [Drainer.drain_option()]) :: Drainer.drain_result()
-  def drain_queue(name \\ __MODULE__, [_ | _] = opts) when is_atom(name) do
+  @spec drain_queue(name(), [Drainer.drain_option()]) :: Drainer.drain_result()
+  def drain_queue(name \\ __MODULE__, [_ | _] = opts) do
     name
     |> config()
     |> Drainer.drain(opts)
@@ -398,8 +417,8 @@ defmodule Oban do
       :ok
   """
   @doc since: "0.12.0"
-  @spec start_queue(name :: atom(), opts :: [queue_option()]) :: :ok
-  def start_queue(name \\ __MODULE__, [_ | _] = opts) when is_atom(name) do
+  @spec start_queue(name(), opts :: [queue_option()]) :: :ok
+  def start_queue(name \\ __MODULE__, [_ | _] = opts) do
     Enum.each(opts, &validate_queue_opt!/1)
 
     conf = config(name)
@@ -438,8 +457,8 @@ defmodule Oban do
       :ok
   """
   @doc since: "0.2.0"
-  @spec pause_queue(name :: atom(), opts :: [queue_option()]) :: :ok
-  def pause_queue(name \\ __MODULE__, [_ | _] = opts) when is_atom(name) do
+  @spec pause_queue(name(), opts :: [queue_option()]) :: :ok
+  def pause_queue(name \\ __MODULE__, [_ | _] = opts) do
     Enum.each(opts, &validate_queue_opt!/1)
 
     conf = config(name)
@@ -469,8 +488,8 @@ defmodule Oban do
       :ok
   """
   @doc since: "0.2.0"
-  @spec resume_queue(name :: atom(), opts :: [queue_option()]) :: :ok
-  def resume_queue(name \\ __MODULE__, [_ | _] = opts) when is_atom(name) do
+  @spec resume_queue(name(), opts :: [queue_option()]) :: :ok
+  def resume_queue(name \\ __MODULE__, [_ | _] = opts) do
     Enum.each(opts, &validate_queue_opt!/1)
 
     conf = config(name)
@@ -506,8 +525,8 @@ defmodule Oban do
       :ok
   """
   @doc since: "0.2.0"
-  @spec scale_queue(name :: atom(), opts :: [queue_option()]) :: :ok
-  def scale_queue(name \\ __MODULE__, [_ | _] = opts) when is_atom(name) do
+  @spec scale_queue(name(), opts :: [queue_option()]) :: :ok
+  def scale_queue(name \\ __MODULE__, [_ | _] = opts) do
     Enum.each(opts, &validate_queue_opt!/1)
 
     conf = config(name)
@@ -546,8 +565,8 @@ defmodule Oban do
       :ok
   """
   @doc since: "0.12.0"
-  @spec stop_queue(name :: atom(), opts :: [queue_option()]) :: :ok
-  def stop_queue(name \\ __MODULE__, [_ | _] = opts) when is_atom(name) do
+  @spec stop_queue(name(), opts :: [queue_option()]) :: :ok
+  def stop_queue(name \\ __MODULE__, [_ | _] = opts) do
     Enum.each(opts, &validate_queue_opt!/1)
 
     conf = config(name)
@@ -571,7 +590,7 @@ defmodule Oban do
       :ok
   """
   @doc since: "1.3.0"
-  @spec cancel_job(name :: atom(), job_id :: pos_integer()) :: :ok
+  @spec cancel_job(name(), job_id :: pos_integer()) :: :ok
   def cancel_job(name \\ __MODULE__, job_id) when is_integer(job_id) do
     conf = config(name)
 
@@ -579,8 +598,6 @@ defmodule Oban do
       Notifier.notify(conf, :signal, %{action: :pkill, job_id: job_id})
     end
   end
-
-  defp child_name(name, child), do: Module.concat(name, child)
 
   defp scope_signal(conf, opts) do
     if Keyword.get(opts, :local_only) do

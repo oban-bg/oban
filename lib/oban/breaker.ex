@@ -3,7 +3,7 @@ defmodule Oban.Breaker do
 
   require Logger
 
-  alias Oban.Config
+  alias Oban.{Config, Telemetry}
 
   @type state_struct :: %{
           :circuit => :enabled | :disabled,
@@ -28,7 +28,7 @@ defmodule Oban.Breaker do
       stacktrace: stacktrace
     }
 
-    :telemetry.execute([:oban, :circuit, :trip], %{}, meta)
+    Telemetry.execute([:oban, :circuit, :trip], %{}, meta)
 
     if is_reference(state.reset_timer), do: Process.cancel_timer(state.reset_timer)
 
@@ -39,7 +39,7 @@ defmodule Oban.Breaker do
 
   @spec open_circuit(state_struct()) :: state_struct()
   def open_circuit(%{circuit: _, name: name} = state) do
-    :telemetry.execute([:oban, :circuit, :open], %{}, %{name: name})
+    Telemetry.execute([:oban, :circuit, :open], %{}, %{name: name})
 
     %{state | circuit: :enabled}
   end

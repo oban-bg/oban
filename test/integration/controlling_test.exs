@@ -12,7 +12,7 @@ defmodule Oban.Integration.ControllingTest do
     end
 
     test "starting individual queues dynamically" do
-      start_supervised_oban!(queues: [alpha: 10])
+      name = start_supervised_oban!(queues: [alpha: 10])
 
       insert!(%{ref: 1, action: "OK"}, queue: :gamma)
       insert!(%{ref: 2, action: "OK"}, queue: :delta)
@@ -20,25 +20,25 @@ defmodule Oban.Integration.ControllingTest do
       refute_receive {:ok, 1}
       refute_receive {:ok, 2}
 
-      assert :ok = Oban.start_queue(queue: :gamma, limit: 5)
-      assert :ok = Oban.start_queue(queue: :delta, limit: 6)
-      assert :ok = Oban.start_queue(queue: :alpha, limit: 5)
+      assert :ok = Oban.start_queue(name, queue: :gamma, limit: 5)
+      assert :ok = Oban.start_queue(name, queue: :delta, limit: 6)
+      assert :ok = Oban.start_queue(name, queue: :alpha, limit: 5)
 
       assert_receive {:ok, 1}
       assert_receive {:ok, 2}
     end
 
     test "starting individual queues only on the local node" do
-      start_supervised_oban!(name: ObanA, queues: [])
-      start_supervised_oban!(name: ObanB, queues: [])
+      name1 = start_supervised_oban!(queues: [])
+      name2 = start_supervised_oban!(queues: [])
 
       sleep_for_notifier()
 
-      assert :ok = Oban.start_queue(ObanA, queue: :alpha, limit: 1, local_only: true)
+      assert :ok = Oban.start_queue(name1, queue: :alpha, limit: 1, local_only: true)
 
       with_backoff(fn ->
-        assert supervised_queue?(ObanA, ObanA.Queue.Alpha)
-        refute supervised_queue?(ObanB, ObanB.Queue.Alpha)
+        assert supervised_queue?(name1, "alpha")
+        refute supervised_queue?(name2, "alpha")
       end)
     end
   end
@@ -50,10 +50,10 @@ defmodule Oban.Integration.ControllingTest do
     end
 
     test "stopping individual queues" do
-      start_supervised_oban!(queues: [alpha: 5, delta: 5, gamma: 5])
+      name = start_supervised_oban!(queues: [alpha: 5, delta: 5, gamma: 5])
 
-      assert supervised_queue?(Oban.Queue.Delta)
-      assert supervised_queue?(Oban.Queue.Gamma)
+      assert supervised_queue?(name, "delta")
+      assert supervised_queue?(name, "gamma")
 
       insert!(%{ref: 1, action: "OK"}, queue: :delta)
       insert!(%{ref: 2, action: "OK"}, queue: :gamma)
@@ -61,12 +61,12 @@ defmodule Oban.Integration.ControllingTest do
       assert_receive {:ok, 1}
       assert_receive {:ok, 2}
 
-      assert :ok = Oban.stop_queue(queue: :delta)
-      assert :ok = Oban.stop_queue(queue: :gamma)
+      assert :ok = Oban.stop_queue(name, queue: :delta)
+      assert :ok = Oban.stop_queue(name, queue: :gamma)
 
       with_backoff(fn ->
-        refute supervised_queue?(Oban.Queue.Delta)
-        refute supervised_queue?(Oban.Queue.Gamma)
+        refute supervised_queue?(name, "delta")
+        refute supervised_queue?(name, "gamma")
       end)
 
       insert!(%{ref: 3, action: "OK"}, queue: :alpha)
@@ -79,16 +79,16 @@ defmodule Oban.Integration.ControllingTest do
     end
 
     test "stopping individual queues only on the local node" do
-      start_supervised_oban!(name: ObanA, queues: [alpha: 1])
-      start_supervised_oban!(name: ObanB, queues: [alpha: 1])
+      name1 = start_supervised_oban!(queues: [alpha: 1])
+      name2 = start_supervised_oban!(queues: [alpha: 1])
 
       sleep_for_notifier()
 
-      assert :ok = Oban.stop_queue(ObanB, queue: :alpha, local_only: true)
+      assert :ok = Oban.stop_queue(name2, queue: :alpha, local_only: true)
 
       with_backoff(fn ->
-        assert supervised_queue?(ObanA, ObanA.Queue.Alpha)
-        refute supervised_queue?(ObanB, Oban.Queue.Alpha)
+        assert supervised_queue?(name1, "alpha")
+        refute supervised_queue?(name2, "alpha")
       end)
     end
   end
@@ -103,28 +103,28 @@ defmodule Oban.Integration.ControllingTest do
     end
 
     test "pausing and resuming individual queues" do
-      start_supervised_oban!(queues: [alpha: 5], poll_interval: 1_000)
+      name = start_supervised_oban!(queues: [alpha: 5], poll_interval: 1_000)
 
       sleep_for_notifier()
 
-      assert :ok = Oban.pause_queue(queue: :alpha)
+      assert :ok = Oban.pause_queue(name, queue: :alpha)
 
       insert!(ref: 1, action: "OK")
 
       refute_receive {:ok, 1}
 
-      assert :ok = Oban.resume_queue(queue: :alpha)
+      assert :ok = Oban.resume_queue(name, queue: :alpha)
 
       assert_receive {:ok, 1}
     end
 
     test "pausing queues only on the local node" do
-      start_supervised_oban!(name: ObanA, queues: [alpha: 1])
-      start_supervised_oban!(name: ObanB, queues: [alpha: 1])
+      start_supervised_oban!(queues: [alpha: 1])
+      name2 = start_supervised_oban!(queues: [alpha: 1])
 
       sleep_for_notifier()
 
-      assert :ok = Oban.pause_queue(ObanB, queue: :alpha, local_only: true)
+      assert :ok = Oban.pause_queue(name2, queue: :alpha, local_only: true)
 
       insert!(%{ref: 1, sleep: 500}, queue: :alpha)
       insert!(%{ref: 2, sleep: 500}, queue: :alpha)
@@ -134,13 +134,13 @@ defmodule Oban.Integration.ControllingTest do
     end
 
     test "resuming queues only on the local node" do
-      start_supervised_oban!(name: ObanA, queues: [alpha: 1])
-      start_supervised_oban!(name: ObanB, queues: [alpha: 1])
+      name1 = start_supervised_oban!(queues: [alpha: 1])
+      start_supervised_oban!(queues: [alpha: 1])
 
       sleep_for_notifier()
 
-      assert :ok = Oban.pause_queue(ObanA, queue: :alpha)
-      assert :ok = Oban.resume_queue(ObanA, queue: :alpha, local_only: true)
+      assert :ok = Oban.pause_queue(name1, queue: :alpha)
+      assert :ok = Oban.resume_queue(name1, queue: :alpha, local_only: true)
 
       insert!(%{ref: 1, sleep: 500}, queue: :alpha)
       insert!(%{ref: 2, sleep: 500}, queue: :alpha)
@@ -158,24 +158,24 @@ defmodule Oban.Integration.ControllingTest do
     end
 
     test "scaling individual queues" do
-      start_supervised_oban!(queues: [alpha: 1])
+      name = start_supervised_oban!(queues: [alpha: 1])
 
       sleep_for_notifier()
 
       for ref <- 1..20, do: insert!(ref: ref, sleep: 500)
 
-      assert :ok = Oban.scale_queue(queue: :alpha, limit: 20)
+      assert :ok = Oban.scale_queue(name, queue: :alpha, limit: 20)
 
       assert_receive {:started, 20}
     end
 
     test "scaling queues only on the local node" do
-      start_supervised_oban!(name: ObanA, queues: [alpha: 2])
-      start_supervised_oban!(name: ObanB, queues: [alpha: 2])
+      start_supervised_oban!(queues: [alpha: 2])
+      name2 = start_supervised_oban!(queues: [alpha: 2])
 
       sleep_for_notifier()
 
-      assert :ok = Oban.scale_queue(ObanB, queue: :alpha, limit: 1, local_only: true)
+      assert :ok = Oban.scale_queue(name2, queue: :alpha, limit: 1, local_only: true)
 
       for ref <- 1..4, do: insert!(ref: ref, sleep: 1000)
 
@@ -187,25 +187,25 @@ defmodule Oban.Integration.ControllingTest do
   end
 
   test "killing an executing job by its id" do
-    start_supervised_oban!(queues: [alpha: 5])
+    name = start_supervised_oban!(queues: [alpha: 5])
 
     job = insert!(ref: 1, sleep: 100)
 
     assert_receive {:started, 1}
 
-    Oban.cancel_job(job.id)
+    Oban.cancel_job(name, job.id)
 
     refute_receive {:ok, 1}, 200
 
     assert %Job{state: "discarded", discarded_at: %_{}, errors: [_]} = Repo.reload(job)
 
-    %{running: running} = :sys.get_state(Oban.Queue.Alpha.Producer)
+    %{running: running} = :sys.get_state(Oban.Registry.whereis(name, {:producer, "alpha"}))
 
     assert Enum.empty?(running)
   end
 
   test "cancelling jobs that may or may not be executing" do
-    start_supervised_oban!(queues: [alpha: 5])
+    name = start_supervised_oban!(queues: [alpha: 5])
 
     job_a = insert!(%{ref: 1}, schedule_in: 10)
     job_b = insert!(%{ref: 2}, schedule_in: 10, state: "retryable")
@@ -214,10 +214,10 @@ defmodule Oban.Integration.ControllingTest do
 
     assert_receive {:started, 4}
 
-    assert :ok = Oban.cancel_job(job_a.id)
-    assert :ok = Oban.cancel_job(job_b.id)
-    assert :ok = Oban.cancel_job(job_c.id)
-    assert :ok = Oban.cancel_job(job_d.id)
+    assert :ok = Oban.cancel_job(name, job_a.id)
+    assert :ok = Oban.cancel_job(name, job_b.id)
+    assert :ok = Oban.cancel_job(name, job_c.id)
+    assert :ok = Oban.cancel_job(name, job_d.id)
 
     refute_receive {:ok, 4}, 200
 
@@ -237,12 +237,11 @@ defmodule Oban.Integration.ControllingTest do
     insert!(ref: 1, action: "OK")
 
     assert_receive {:ok, 1}
-
-    :ok = stop_supervised(Oban)
   end
 
-  defp supervised_queue?(sup \\ Oban, queue_name) do
-    sup
+  defp supervised_queue?(oban_name, queue_name) do
+    oban_name
+    |> Oban.whereis()
     |> Supervisor.which_children()
     |> Enum.any?(fn {name, _, _, _} -> name == queue_name end)
   end

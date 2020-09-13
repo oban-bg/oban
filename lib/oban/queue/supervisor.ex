@@ -3,7 +3,7 @@ defmodule Oban.Queue.Supervisor do
 
   use Supervisor
 
-  alias Oban.Config
+  alias Oban.{Config, Registry}
   alias Oban.Queue.{Producer, Watchman}
 
   @type option ::
@@ -25,20 +25,20 @@ defmodule Oban.Queue.Supervisor do
   @spec child_spec({queue_name(), queue_opts()}, Config.t()) :: Supervisor.child_spec()
   def child_spec({queue, opts}, conf) do
     queue = to_string(queue)
-    name = Module.concat([conf.name, "Queue", Macro.camelize(queue)])
+    name = Registry.via(conf.name, {:supervisor, queue})
     opts = Keyword.merge(opts, conf: conf, queue: queue, name: name)
 
-    Supervisor.child_spec({__MODULE__, opts}, id: name)
+    Supervisor.child_spec({__MODULE__, opts}, id: queue)
   end
 
   @impl Supervisor
   def init(opts) do
     conf = Keyword.fetch!(opts, :conf)
-    name = Keyword.fetch!(opts, :name)
+    queue = Keyword.fetch!(opts, :queue)
 
-    fore_name = Module.concat(name, "Foreman")
-    prod_name = Module.concat(name, "Producer")
-    watch_name = Module.concat(name, "Watchman")
+    fore_name = Registry.via(conf.name, {:foreman, queue})
+    prod_name = Registry.via(conf.name, {:producer, queue})
+    watch_name = Registry.via(conf.name, {:watchman, queue})
 
     fore_opts = [name: fore_name]
 

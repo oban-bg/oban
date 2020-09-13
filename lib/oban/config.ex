@@ -3,15 +3,13 @@ defmodule Oban.Config do
 
   alias Oban.Crontab.Cron
 
-  use Agent
-
   @type cronjob :: {Cron.t(), module(), Keyword.t()}
 
   @type t :: %__MODULE__{
           circuit_backoff: timeout(),
           crontab: [cronjob()],
           dispatch_cooldown: pos_integer(),
-          name: atom(),
+          name: Oban.name(),
           node: binary(),
           plugins: [module() | {module() | Keyword.t()}],
           poll_interval: pos_integer(),
@@ -40,13 +38,6 @@ defmodule Oban.Config do
             timezone: "Etc/UTC",
             log: false
 
-  @spec start_link([option()]) :: GenServer.on_start()
-  def start_link(opts) when is_list(opts) do
-    {conf, opts} = Keyword.pop(opts, :conf)
-
-    Agent.start_link(fn -> conf end, opts)
-  end
-
   @spec new(Keyword.t()) :: t()
   def new(opts) when is_list(opts) do
     opts =
@@ -66,9 +57,6 @@ defmodule Oban.Config do
     struct!(__MODULE__, opts)
   end
 
-  @spec get(atom()) :: t()
-  def get(name), do: Agent.get(name, & &1)
-
   @spec node_name(%{optional(binary()) => binary()}) :: binary()
   def node_name(env \\ System.get_env()) do
     cond do
@@ -87,7 +75,7 @@ defmodule Oban.Config do
 
   @spec to_ident(t()) :: binary()
   def to_ident(%__MODULE__{name: name, node: node}) do
-    to_string(name) <> "." <> to_string(node)
+    inspect(name) <> "." <> to_string(node)
   end
 
   @spec match_ident?(t(), binary()) :: boolean()
@@ -117,11 +105,7 @@ defmodule Oban.Config do
     end
   end
 
-  defp validate_opt!({:name, name}) do
-    unless is_atom(name) do
-      raise ArgumentError, "expected :name to be a module or atom"
-    end
-  end
+  defp validate_opt!({:name, _}), do: :ok
 
   defp validate_opt!({:node, node}) do
     unless is_binary(node) and node != "" do

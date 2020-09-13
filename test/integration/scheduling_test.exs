@@ -10,7 +10,7 @@ defmodule Oban.Integration.SchedulingTest do
     job_4 = insert!([ref: 4, sleep: 5000], schedule_in: -1, queue: :gamma)
     job_5 = insert!([ref: 5, sleep: 5000], schedule_in: 10, queue: :alpha)
 
-    start_supervised_oban!(queues: [alpha: 2])
+    name = start_supervised_oban!(queues: [alpha: 2])
 
     assert_receive {:started, 1}
     assert_receive {:started, 2}
@@ -24,7 +24,7 @@ defmodule Oban.Integration.SchedulingTest do
     # Not descheduled because it is in the future
     refute_received {:started, 5}
 
-    stop_supervised(Oban)
+    :ok = stop_supervised(name)
 
     assert %{state: "available"} = Repo.reload(job_3)
     assert %{state: "scheduled"} = Repo.reload(job_4)

@@ -5,7 +5,7 @@ defmodule Oban.Queue.Producer do
 
   import Oban.Breaker, only: [open_circuit: 1, trip_errors: 0, trip_circuit: 3]
 
-  alias Oban.{Breaker, Config, Notifier, Query, Telemetry}
+  alias Oban.{Breaker, Config, Notifier, Query, Registry, Telemetry}
   alias Oban.Queue.Executor
 
   @type option ::
@@ -199,7 +199,7 @@ defmodule Oban.Queue.Producer do
 
   defp start_listener(%State{conf: conf} = state) do
     conf.name
-    |> Module.concat("Notifier")
+    |> Registry.whereis(Notifier)
     |> Notifier.listen([:insert, :signal])
 
     state

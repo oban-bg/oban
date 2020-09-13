@@ -3,7 +3,17 @@ defmodule Oban.Queue.Executor do
 
   require Logger
 
-  alias Oban.{Breaker, Config, CrashError, Job, PerformError, Query, TimeoutError, Worker}
+  alias Oban.{
+    Breaker,
+    Config,
+    CrashError,
+    Job,
+    PerformError,
+    Query,
+    Telemetry,
+    TimeoutError,
+    Worker
+  }
 
   @type success :: {:success, Job.t()}
   @type failure :: {:failure, Job.t(), Worker.t(), atom(), term()}
@@ -73,7 +83,7 @@ defmodule Oban.Queue.Executor do
   end
 
   def record_started(%__MODULE__{} = exec) do
-    :telemetry.execute([:oban, :job, :start], %{system_time: exec.start_time}, exec.meta)
+    Telemetry.execute([:oban, :job, :start], %{system_time: exec.start_time}, exec.meta)
 
     exec
   end
@@ -221,7 +231,7 @@ defmodule Oban.Queue.Executor do
   defp execute_stop(exec) do
     measurements = %{duration: exec.duration, queue_time: exec.queue_time}
 
-    :telemetry.execute([:oban, :job, :stop], measurements, exec.meta)
+    Telemetry.execute([:oban, :job, :stop], measurements, exec.meta)
   end
 
   defp execute_exception(exec) do
@@ -230,7 +240,7 @@ defmodule Oban.Queue.Executor do
     meta =
       Map.merge(exec.meta(), %{kind: exec.kind, error: exec.error, stacktrace: exec.stacktrace})
 
-    :telemetry.execute([:oban, :job, :exception], measurements, meta)
+    Telemetry.execute([:oban, :job, :exception], measurements, meta)
   end
 
   defp event_metadata(conf, job) do
