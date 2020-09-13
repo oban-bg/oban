@@ -6,7 +6,7 @@ defmodule Oban.Migrations do
   alias Oban.Repo
 
   @initial_version 1
-  @current_version 8
+  @current_version 9
   @default_prefix "public"
 
   def up(opts \\ []) when is_list(opts) do
@@ -441,6 +441,84 @@ defmodule Oban.Migrations do
       v1_oban_notify(prefix)
 
       record_version(prefix, 7)
+    end
+  end
+
+  defmodule V9 do
+    @moduledoc false
+
+    use Ecto.Migration
+
+    import Oban.Migrations.Helper
+
+    def up(prefix) do
+      alter table(:oban_jobs, prefix: prefix) do
+        add_if_not_exists(:meta, :map, default: %{})
+        add_if_not_exists(:cancelled_at, :utc_datetime_usec)
+      end
+
+      execute """
+      DO $$
+      BEGIN
+        ALTER TYPE #{prefix}.oban_job_state RENAME TO _oban_job_state;
+
+        CREATE TYPE #{prefix}.oban_job_state AS ENUM (
+          'available',
+          'scheduled',
+          'executing',
+          'retryable',
+          'completed',
+          'discarded',
+          'cancelled'
+        );
+
+        ALTER TABLE #{prefix}.oban_jobs RENAME column state TO _state;
+
+        ALTER TABLE #{prefix}.oban_jobs ADD state #{prefix}.oban_job_state NOT NULL default 'available';
+
+        UPDATE #{prefix}.oban_jobs SET state = _state::text::#{prefix}.oban_job_state;
+
+        ALTER TABLE #{prefix}.oban_jobs DROP column _state;
+        DROP TYPE #{prefix}._oban_job_state;
+      END$$;
+      """
+
+      record_version(prefix, 9)
+    end
+
+    def down(prefix) do
+      alter table(:oban_jobs, prefix: prefix) do
+        remove_if_exists(:meta, :map)
+        remove_if_exists(:cancelled_at, :utc_datetime_usec)
+      end
+
+      execute """
+      DO $$
+      BEGIN
+        ALTER TYPE #{prefix}.oban_job_state RENAME TO _oban_job_state;
+
+        CREATE TYPE #{prefix}.oban_job_state AS ENUM (
+          'available',
+          'scheduled',
+          'executing',
+          'retryable',
+          'completed',
+          'discarded'
+        );
+
+        ALTER TABLE #{prefix}.oban_jobs RENAME column state TO _state;
+
+        ALTER TABLE #{prefix}.oban_jobs ADD state #{prefix}.oban_job_state NOT NULL default 'available';
+
+        UPDATE #{prefix}.oban_jobs SET state = _state::text::#{prefix}.oban_job_state;
+
+        ALTER TABLE #{prefix}.oban_jobs DROP column _state;
+
+        DROP TYPE #{prefix}._oban_job_state;
+      END$$;
+      """
+
+      record_version(prefix, 8)
     end
   end
 end

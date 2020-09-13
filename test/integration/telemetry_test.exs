@@ -48,6 +48,7 @@ defmodule Oban.Integration.TelemetryTest do
              prefix: "public",
              attempt: 1,
              max_attempts: 20,
+             meta: %{},
              tags: ["baz"]
            } = stop_meta
 
@@ -62,6 +63,7 @@ defmodule Oban.Integration.TelemetryTest do
              kind: :error,
              error: %PerformError{},
              stacktrace: [],
+             meta: %{},
              tags: ["foo"]
            } = error_meta
   after

@@ -143,10 +143,18 @@ defmodule Oban.Query do
 
   @cancellable_states ~w(available scheduled retryable)
 
-  @spec cancel_job(Config.t(), pos_integer()) :: :ok | :ignored
+  @spec cancel_job(Config.t(), pos_integer() | Job.t()) :: :ok | :ignored
+  def cancel_job(%Config{} = conf, %Job{id: id}) do
+    updates = [set: [state: "cancelled", cancelled_at: utc_now()]]
+
+    Repo.update_all(conf, where(Job, id: ^id), updates)
+
+    :ok
+  end
+
   def cancel_job(%Config{} = conf, job_id) do
     query = where(Job, [j], j.id == ^job_id and j.state in @cancellable_states)
-    updates = [set: [state: "discarded", discarded_at: utc_now()]]
+    updates = [set: [state: "cancelled", cancelled_at: utc_now()]]
 
     case Repo.update_all(conf, query, updates) do
       {1, nil} -> :ok

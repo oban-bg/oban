@@ -58,9 +58,17 @@ defmodule Oban.Integration.ExecutingTest do
             ref <- integer(),
             max_attempts <- integer(1..20),
             priority <- integer(0..3),
+            meta <- map_of(string(:ascii), integer()),
             tags <- list_of(string(:ascii)) do
       args = %{ref: ref, action: action}
-      opts = [queue: queue, max_attempts: max_attempts, priority: priority, tags: tags]
+
+      opts = [
+        queue: queue,
+        max_attempts: max_attempts,
+        priority: priority,
+        meta: meta,
+        tags: tags
+      ]
 
       build(args, opts)
     end

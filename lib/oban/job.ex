@@ -27,6 +27,7 @@ defmodule Oban.Job do
           | :retryable
           | :completed
           | :discarded
+          | :cancelled
         ]
 
   @type unique_option ::
@@ -38,6 +39,7 @@ defmodule Oban.Job do
   @type option ::
           {:args, args()}
           | {:max_attempts, pos_integer()}
+          | {:meta, map()}
           | {:priority, pos_integer()}
           | {:queue, atom() | binary()}
           | {:schedule_in, pos_integer()}
@@ -58,12 +60,14 @@ defmodule Oban.Job do
           attempt: non_neg_integer(),
           attempted_by: [binary()],
           max_attempts: pos_integer(),
+          meta: map(),
           priority: pos_integer(),
           inserted_at: DateTime.t(),
           scheduled_at: DateTime.t(),
           attempted_at: DateTime.t(),
           completed_at: DateTime.t(),
           discarded_at: DateTime.t(),
+          cancelled_at: DateTime.t(),
           unique: %{fields: [unique_field()], period: unique_period(), states: [unique_state()]},
           unsaved_error: %{kind: atom(), reason: term(), stacktrace: Exception.stacktrace()}
         }
@@ -78,10 +82,12 @@ defmodule Oban.Job do
     field :attempt, :integer, default: 0
     field :attempted_by, {:array, :string}
     field :max_attempts, :integer, default: 20
+    field :meta, :map, default: %{}
     field :priority, :integer, default: 0
     field :attempted_at, :utc_datetime_usec
     field :completed_at, :utc_datetime_usec
     field :discarded_at, :utc_datetime_usec
+    field :cancelled_at, :utc_datetime_usec
     field :inserted_at, :utc_datetime_usec
     field :scheduled_at, :utc_datetime_usec
     field :unique, :map, virtual: true
@@ -96,9 +102,11 @@ defmodule Oban.Job do
     attempted_at
     completed_at
     discarded_at
+    cancelled_at
     errors
     inserted_at
     max_attempts
+    meta
     priority
     queue
     scheduled_at
@@ -117,6 +125,7 @@ defmodule Oban.Job do
 
     * `:max_attempts` — the maximum number of times a job can be retried if there are errors
       during execution
+    * `:meta` — a map containing additional information about the job
     * `:priority` — a numerical indicator from 0 to 3 of how important this job is relative to
       other jobs in the same queue. The lower the number, the higher priority the job.
     * `:queue` — a named queue to push the job into. Jobs may be pushed into any queue, regardless
@@ -202,10 +211,10 @@ defmodule Oban.Job do
   ## Examples
 
       iex> Oban.Job.states() -- [:completed, :discarded]
-      [:scheduled, :available, :executing, :retryable]
+      [:scheduled, :available, :executing, :retryable, :cancelled]
   """
   @doc since: "2.1.0"
-  def states, do: @unique_states ++ [:discarded]
+  def states, do: @unique_states ++ [:discarded, :cancelled]
 
   @doc """
   Convert a Job changeset into a map suitable for database insertion.
