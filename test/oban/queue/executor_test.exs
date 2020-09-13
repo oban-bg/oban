@@ -72,6 +72,22 @@ defmodule Oban.Queue.ExecutorTest do
     end
   end
 
+  describe "new/2" do
+    test "tags are included in the job metadata" do
+      now = DateTime.utc_now()
+
+      job = %Job{
+        args: %{"mode" => "sleep"},
+        worker: to_string(Worker),
+        tags: ["my_tag"],
+        attempted_at: DateTime.add(now, 30, :millisecond),
+        scheduled_at: now
+      }
+
+      assert %{meta: %{args: %{"mode" => "sleep"}, tags: ["my_tag"]}} = Executor.new(@conf, job)
+    end
+  end
+
   defp call_with_mode(mode) do
     job = %Job{args: %{"mode" => mode}, worker: to_string(Worker)}
 

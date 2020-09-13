@@ -14,11 +14,11 @@ defmodule Oban.Telemetry do
   provide the error type, the error itself, and the stacktrace. The following chart shows which
   metadata you can expect for each event:
 
-  | event        | measures                   | metadata                                                                                      |
-  | ------------ | -------------------------- | --------------------------------------------------------------------------------------------- |
-  | `:start`     | `:system_time`             | `:id, :args, :queue, :worker, :attempt, :max_attempts, :prefix`                               |
-  | `:stop`      | `:duration`, `:queue_time` | `:id, :args, :queue, :worker, :attempt, :max_attempts, :prefix`                               |
-  | `:exception` | `:duration`, `:queue_time` | `:id, :args, :queue, :worker, :attempt, :max_attempts, :prefix, :kind, :error, :stacktrace` |
+  | event        | measures                   | metadata                                                                                           |
+  | ------------ | -------------------------- | -------------------------------------------------------------------------------------------------- |
+  | `:start`     | `:system_time`             | `:id, :args, :queue, :worker, :attempt, :max_attempts, :prefix, :tags`                             |
+  | `:stop`      | `:duration`, `:queue_time` | `:id, :args, :queue, :worker, :attempt, :max_attempts, :prefix, :tags`                             |
+  | `:exception` | `:duration`, `:queue_time` | `:id, :args, :queue, :worker, :attempt, :max_attempts, :prefix, :kind, :error, :stacktrace, :tags` |
 
   For `:exception` events the metadata includes details about what caused the failure. The `:kind`
   value is determined by how an error occurred. Here are the possible kinds:
