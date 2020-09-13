@@ -5,15 +5,6 @@ defmodule Oban.Integration.IsolationTest do
 
   @moduletag :integration
 
-  test "multiple supervisors can be run simultaneously" do
-    name1 = start_supervised_oban!(queues: [alpha: 1], plugins: [Oban.Plugins.Pruner])
-    start_supervised_oban!(queues: [gamma: 1], plugins: [Oban.Plugins.Pruner])
-
-    insert!(name1, %{ref: 1, action: "OK"}, [])
-
-    assert_receive {:ok, 1}
-  end
-
   test "inserting and executing jobs with a custom prefix" do
     name = start_supervised_oban!(prefix: "private", queues: [alpha: 5])
 

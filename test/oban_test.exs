@@ -33,6 +33,7 @@ defmodule ObanTest do
       name2 = make_ref()
       {:ok, oban2} = start_supervised({Oban, name: name2, repo: Oban.Test.Repo})
 
+      refute oban1 == oban2
       assert Oban.whereis(name1) == oban1
       assert Oban.whereis(name2) == oban2
     end
