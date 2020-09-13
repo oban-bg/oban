@@ -4,7 +4,7 @@ defmodule Oban.Migrations do
   use Ecto.Migration
 
   @initial_version 1
-  @current_version 8
+  @current_version 9
   @default_prefix "public"
 
   def up(opts \\ []) when is_list(opts) do
@@ -439,6 +439,30 @@ defmodule Oban.Migrations do
       v1_oban_notify(prefix)
 
       record_version(prefix, 7)
+    end
+  end
+
+  defmodule V9 do
+    @moduledoc false
+
+    use Ecto.Migration
+
+    import Oban.Migrations.Helper
+
+    def up(prefix) do
+      alter table(:oban_jobs, prefix: prefix) do
+        add_if_not_exists(:meta, :map)
+      end
+
+      record_version(prefix, 9)
+    end
+
+    def down(prefix) do
+      alter table(:oban_jobs, prefix: prefix) do
+        add_if_not_exists(:meta, :map)
+      end
+
+      record_version(prefix, 8)
     end
   end
 end

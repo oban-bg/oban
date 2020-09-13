@@ -38,6 +38,7 @@ defmodule Oban.Job do
   @type option ::
           {:args, args()}
           | {:max_attempts, pos_integer()}
+          | {:meta, map()}
           | {:priority, pos_integer()}
           | {:queue, atom() | binary()}
           | {:schedule_in, pos_integer()}
@@ -58,6 +59,7 @@ defmodule Oban.Job do
           attempt: non_neg_integer(),
           attempted_by: [binary()],
           max_attempts: pos_integer(),
+          meta: map(),
           priority: pos_integer(),
           inserted_at: DateTime.t(),
           scheduled_at: DateTime.t(),
@@ -78,6 +80,7 @@ defmodule Oban.Job do
     field :attempt, :integer, default: 0
     field :attempted_by, {:array, :string}
     field :max_attempts, :integer, default: 20
+    field :meta, :map, default: %{}
     field :priority, :integer, default: 0
     field :attempted_at, :utc_datetime_usec
     field :completed_at, :utc_datetime_usec
@@ -99,6 +102,7 @@ defmodule Oban.Job do
     errors
     inserted_at
     max_attempts
+    meta
     priority
     queue
     scheduled_at
@@ -117,6 +121,7 @@ defmodule Oban.Job do
 
     * `:max_attempts` — the maximum number of times a job can be retried if there are errors
       during execution
+    * `:meta` — a map containing additional information about the job
     * `:priority` — a numerical indicator from 0 to 3 of how important this job is relative to
       other jobs in the same queue. The lower the number, the higher priority the job.
     * `:queue` — a named queue to push the job into. Jobs may be pushed into any queue, regardless
