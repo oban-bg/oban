@@ -239,6 +239,31 @@ defmodule Oban.Integration.ControllingTest do
     assert_receive {:ok, 1}
   end
 
+  test "retrying jobs from multiple states" do
+    name = start_supervised_oban!(queues: [])
+
+    job_a = insert!(%{ref: 1}, state: "discarded", max_attempts: 20, attempt: 20)
+    job_b = insert!(%{ref: 2}, state: "completed", max_attempts: 20)
+    job_c = insert!(%{ref: 3}, state: "available", max_attempts: 20)
+    job_d = insert!(%{ref: 4}, state: "retryable", max_attempts: 20)
+    job_e = insert!(%{ref: 5}, state: "executing", max_attempts: 1, attempt: 1)
+    job_f = insert!(%{ref: 6}, state: "scheduled", max_attempts: 1, attempt: 1)
+
+    assert :ok = Oban.retry_job(name, job_a.id)
+    assert :ok = Oban.retry_job(name, job_b.id)
+    assert :ok = Oban.retry_job(name, job_c.id)
+    assert :ok = Oban.retry_job(name, job_d.id)
+    assert :ok = Oban.retry_job(name, job_e.id)
+    assert :ok = Oban.retry_job(name, job_f.id)
+
+    assert %Job{state: "available", max_attempts: 21} = Repo.reload(job_a)
+    assert %Job{state: "available", max_attempts: 20} = Repo.reload(job_b)
+    assert %Job{state: "available", max_attempts: 20} = Repo.reload(job_c)
+    assert %Job{state: "available", max_attempts: 20} = Repo.reload(job_d)
+    assert %Job{state: "executing", max_attempts: 1} = Repo.reload(job_e)
+    assert %Job{state: "scheduled", max_attempts: 1} = Repo.reload(job_f)
+  end
+
   defp supervised_queue?(oban_name, queue_name) do
     oban_name
     |> Oban.whereis()
