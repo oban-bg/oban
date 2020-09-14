@@ -576,6 +576,25 @@ defmodule Oban do
   end
 
   @doc """
+  Sets a job as `available`, adding attempts if already maxed out. If the job is currently 
+  `available`, `executing` or `scheduled` it will be ignored. The job is scheduled for immediate
+  execution.
+
+  ## Example
+
+  Retry a discarded job with the id `1`:
+
+      Oban.retry_job(1)
+      :ok
+  """
+  @spec retry_job(name :: atom(), job_id :: pos_integer()) :: :ok
+  def retry_job(name \\ __MODULE__, job_id) when is_integer(job_id) do
+    name
+    |> config()
+    |> Query.retry_job(job_id)
+  end
+
+  @doc """
   Cancel an `available`, `scheduled` or `retryable` job and mark it as `discarded` to prevent it
   from running. If the job is currently `executing` it will be killed and otherwise it is ignored.
 

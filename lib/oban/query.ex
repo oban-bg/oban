@@ -105,6 +105,25 @@ defmodule Oban.Query do
     )
   end
 
+  @spec retry_job(Config.t(), pos_integer()) :: :ok
+  def retry_job(%Config{prefix: prefix, repo: repo, log: log}, id) do
+    Job
+    |> where([j], j.id == ^id)
+    |> where([j], j.state not in ["available", "executing", "scheduled"])
+    |> update([j],
+      set: [
+        state: "available",
+        max_attempts: fragment("GREATEST(?, ? + 1)", j.max_attempts, j.attempt),
+        scheduled_at: ^utc_now(),
+        completed_at: nil,
+        discarded_at: nil
+      ]
+    )
+    |> repo.update_all([], log: log, prefix: prefix)
+
+    :ok
+  end
+
   @spec complete_job(Config.t(), Job.t()) :: :ok
   def complete_job(%Config{prefix: prefix, repo: repo, log: log}, %Job{id: id}) do
     repo.update_all(
