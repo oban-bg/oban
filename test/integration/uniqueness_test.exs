@@ -91,6 +91,16 @@ defmodule Oban.Integration.UniquenessTest do
     assert count_jobs() == 3
   end
 
+  test "replace allows replacing the args for the same job id", context do
+    assert %Job{id: id_1} = unique_insert!(context.name, %{id: 1, url: "https://a.co"})
+
+    assert %Job{id: ^id_1, args: %{url: "https://b.co"}} =
+             unique_insert!(context.name, %{id: 1, url: "https://b.co"},
+               unique: [keys: [:id]],
+               replace_args: true
+             )
+  end
+
   test "scoping uniqueness by period", context do
     now = DateTime.utc_now()
     two_minutes_ago = DateTime.add(now, -120, :second)

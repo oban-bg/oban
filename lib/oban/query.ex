@@ -224,13 +224,23 @@ defmodule Oban.Query do
     with {:ok, query, lock_key} <- unique_query(changeset),
          :ok <- acquire_lock(repo, lock_key, query_opts),
          {:ok, job} <- unprepared_one(repo, query, query_opts) do
-      {:ok, job}
+      return_or_replace(repo, query_opts, job, changeset)
     else
       {:error, :locked} ->
         {:ok, Changeset.apply_changes(changeset)}
 
       nil ->
         repo.insert(changeset, query_opts)
+    end
+  end
+
+  defp return_or_replace(repo, query_opts, job, changeset) do
+    if Changeset.get_change(changeset, :replace_args) do
+      job
+      |> Ecto.Changeset.change(%{args: changeset.changes.args})
+      |> repo.update(query_opts)
+    else
+      {:ok, job}
     end
   end
 

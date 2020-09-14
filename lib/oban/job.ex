@@ -41,6 +41,7 @@ defmodule Oban.Job do
           | {:priority, pos_integer()}
           | {:queue, atom() | binary()}
           | {:schedule_in, pos_integer()}
+          | {:replace_args, boolean()}
           | {:scheduled_at, DateTime.t()}
           | {:tags, tags()}
           | {:unique, [unique_option()]}
@@ -84,6 +85,7 @@ defmodule Oban.Job do
     field :inserted_at, :utc_datetime_usec
     field :scheduled_at, :utc_datetime_usec
     field :unique, :map, virtual: true
+    field :replace_args, :boolean, virtual: true
     field :unsaved_error, :map, virtual: true
   end
 
@@ -100,6 +102,7 @@ defmodule Oban.Job do
     priority
     queue
     scheduled_at
+    replace_args
     state
     tags
     worker
@@ -119,6 +122,7 @@ defmodule Oban.Job do
     * `:queue` — a named queue to push the job into. Jobs may be pushed into any queue, regardless
       of whether jobs are currently being processed for the queue.
     * `:schedule_in` - the number of seconds until the job should be executed
+    * `:replace_args` - if the arguments should be replaced on a unique conflict
     * `:scheduled_at` - a time in the future after which the job should be executed
     * `:tags` — a list of tags to group and organize related jobs, i.e. to identify scheduled jobs
     * `:unique` — a keyword list of options specifying how uniqueness will be calculated. The
