@@ -7,6 +7,8 @@ defmodule Oban.Plugins.Pruner do
 
   import Ecto.Query
 
+  @prunable_states ["completed", "discarded"]
+
   defmodule State do
     @moduledoc false
 
@@ -17,7 +19,8 @@ defmodule Oban.Plugins.Pruner do
       max_age: 60,
       interval: :timer.seconds(30),
       limit: 10_000,
-      lock_key: 1_159_969_450_252_858_340
+      lock_key: 1_159_969_450_252_858_340,
+      states: ["completed", "discarded"]
     ]
   end
 
@@ -73,11 +76,19 @@ defmodule Oban.Plugins.Pruner do
   defp delete_jobs(conf, seconds, limit) do
     %Config{prefix: prefix, repo: repo, log: log} = conf
 
+    %{states: to_be_prune_states} = conf
+
+    # Ignore all non pruable states
+    to_be_prune_states =
+      Enum.reduce(to_be_prune_states, [], fn state, states ->
+        if state in @prunable_states, do: [state | states], else: states
+      end)
+
     outdated_at = DateTime.add(DateTime.utc_now(), -seconds)
 
     subquery =
       Job
-      |> where([j], j.state in ["completed", "discarded"])
+      |> where([j], j.state in ^to_be_prune_states)
       |> where([j], j.attempted_at < ^outdated_at)
       |> select([:id])
       |> limit(^limit)
