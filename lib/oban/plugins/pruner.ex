@@ -7,7 +7,7 @@ defmodule Oban.Plugins.Pruner do
 
   import Ecto.Query
 
-  @prunable_states ["completed", "discarded"]
+  @prunable_states ~w(completed discarded)
 
   defmodule State do
     @moduledoc false
@@ -20,7 +20,7 @@ defmodule Oban.Plugins.Pruner do
       interval: :timer.seconds(30),
       limit: 10_000,
       lock_key: 1_159_969_450_252_858_340,
-      states: ["completed", "discarded"]
+      states: ~w(completed discarded)
     ]
   end
 
@@ -69,14 +69,16 @@ defmodule Oban.Plugins.Pruner do
 
   defp acquire_and_prune(state) do
     if Query.acquire_lock?(state.conf, state.lock_key) do
-      delete_jobs(state.conf, state.max_age, state.limit)
+      opts = [states: state.states]
+
+      delete_jobs(state.conf, state.max_age, state.limit, opts)
     end
   end
 
-  defp delete_jobs(conf, seconds, limit) do
+  defp delete_jobs(conf, seconds, limit, opts) do
     %Config{prefix: prefix, repo: repo, log: log} = conf
 
-    %{states: to_be_prune_states} = conf
+    to_be_prune_states = Keyword.get(opts, :states)
 
     # Ignore all non pruable states
     to_be_prune_states =
