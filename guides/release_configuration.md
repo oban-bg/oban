@@ -1,6 +1,6 @@
 # Release Configuration
 
-While having the same `Oban` configuration for every environment might be fine,
+While having the same Oban configuration for every environment might be fine,
 there are certainly times you might want to make changes for a specific
 environment. For example, you may want to increase or decrease a queue's
 concurrency.
