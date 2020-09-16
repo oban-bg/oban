@@ -106,15 +106,17 @@ the `:name` and `:conf` automatically.
 Plugins are named dynamically using `via` tuples, which is an effective way to
 manage process registration for multiple unique Oban instances. However, it
 makes writing interface functions for plugins a little more complicated. The
-solution is to make use of `Oban.whereis/2` for process discovery.
+solution is to make use of the `Oban.Registry` for process discovery.
 
 Imagine adding a `pause` interface function to the `Breakdown` plugin we built
 above:
 
 ```elixir
+alias Oban.Registry
+
 def pause(oban_name \\ Oban) do
   oban_name
-  |> Oban.whereis({:plugin, __MODULE__})
+  |> Registry.whereis({:plugin, __MODULE__})
   |> GenServer.call(:pause)
 end
 ```
