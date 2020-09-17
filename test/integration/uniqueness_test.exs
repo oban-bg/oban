@@ -75,6 +75,7 @@ defmodule Oban.Integration.UniquenessTest do
     assert %Job{id: id_1} = unique_insert!(context.name, %{id: 1}, state: "available")
     assert %Job{id: id_2} = unique_insert!(context.name, %{id: 2}, state: "completed")
     assert %Job{id: id_3} = unique_insert!(context.name, %{id: 3}, state: "executing")
+    assert %Job{id: id_4} = unique_insert!(context.name, %{id: 4}, state: "discarded")
 
     assert %Job{id: ^id_1} =
              unique_insert!(context.name, %{id: 1}, unique: [states: [:available]])
@@ -88,41 +89,44 @@ defmodule Oban.Integration.UniquenessTest do
     assert %Job{id: ^id_3} =
              unique_insert!(context.name, %{id: 3}, unique: [states: [:completed, :executing]])
 
-    assert count_jobs() == 3
+    assert %Job{id: ^id_4} =
+             unique_insert!(context.name, %{id: 4}, unique: [states: [:completed, :discarded]])
+
+    assert %Job{id: _id_4} = unique_insert!(context.name, %{id: 4}, unique: [period: 30])
+
+    assert count_jobs() == 5
   end
 
   test "replace allows replacing the args for the same job id", context do
     assert %Job{id: id_1} = unique_insert!(context.name, %{id: 1, url: "https://a.co"})
 
     assert %Job{id: ^id_1, args: %{url: "https://b.co"}} =
-             unique_insert!(context.name, %{id: 1, url: "https://b.co"},
+             unique_insert!(
+               context.name,
+               %{id: 1, url: "https://b.co"},
                unique: [keys: [:id]],
                replace_args: true
              )
   end
 
-  test "scoping uniqueness by period", context do
+  test "scoping uniqueness by period", %{name: name} do
     now = DateTime.utc_now()
     two_minutes_ago = DateTime.add(now, -120, :second)
     five_minutes_ago = DateTime.add(now, -300, :second)
-    one_thousand_years_ago = Map.put(now, :year, now.year - 1000)
-    ten_years_in_seconds = 100 * 365 * 24 * 60 * 60
+    two_years_ago = Map.put(now, :year, now.year - 2)
+    one_year_in_seconds = 365 * 24 * 60 * 60
 
-    assert %Job{id: _id} = unique_insert!(context.name, %{id: 1}, inserted_at: two_minutes_ago)
-    assert %Job{id: _id} = unique_insert!(context.name, %{id: 2}, inserted_at: five_minutes_ago)
+    assert %Job{id: _id} = unique_insert!(name, %{id: 1}, inserted_at: two_minutes_ago)
+    assert %Job{id: _id} = unique_insert!(name, %{id: 2}, inserted_at: five_minutes_ago)
+    assert %Job{id: _id} = unique_insert!(name, %{id: 3}, inserted_at: two_years_ago)
 
-    assert %Job{id: _id} =
-             unique_insert!(context.name, %{id: 3}, inserted_at: one_thousand_years_ago)
+    assert %Job{id: id_1} = unique_insert!(name, %{id: 1}, unique: [period: 110])
+    assert %Job{id: id_2} = unique_insert!(name, %{id: 2}, unique: [period: 290])
+    assert %Job{id: id_3} = unique_insert!(name, %{id: 3}, unique: [period: one_year_in_seconds])
 
-    assert %Job{id: id_1} = unique_insert!(context.name, %{id: 1}, unique: [period: 110])
-    assert %Job{id: id_2} = unique_insert!(context.name, %{id: 2}, unique: [period: 290])
-
-    assert %Job{id: id_3} =
-             unique_insert!(context.name, %{id: 3}, unique: [period: ten_years_in_seconds])
-
-    assert %Job{id: ^id_1} = unique_insert!(context.name, %{id: 1}, unique: [period: 180])
-    assert %Job{id: ^id_2} = unique_insert!(context.name, %{id: 2}, unique: [period: 400])
-    assert %Job{id: ^id_3} = unique_insert!(context.name, %{id: 3}, unique: [period: :infinity])
+    assert %Job{id: ^id_1} = unique_insert!(name, %{id: 1}, unique: [period: 180])
+    assert %Job{id: ^id_2} = unique_insert!(name, %{id: 2}, unique: [period: 400])
+    assert %Job{id: ^id_3} = unique_insert!(name, %{id: 3}, unique: [period: :infinity])
 
     assert count_jobs() == 6
   end

@@ -39,7 +39,7 @@ defmodule Oban.JobTest do
                fields: [:args, :queue, :worker],
                keys: [],
                period: 60,
-               states: [:scheduled, :available, :executing, :retryable, :completed, :discarded]
+               states: [:scheduled, :available, :executing, :retryable, :completed]
              }
     end
 

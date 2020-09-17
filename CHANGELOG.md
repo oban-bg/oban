@@ -11,6 +11,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 - [Oban.Telemetry] Include `tags` as part of the metadata for job events.
 
+### Fixed
+
+- [Oban.Job] Don't include `discarded` state by default when accounting for
+  uniqueness.
+
 ## [2.1.0] — 2020-08-21
 
 ### Fixed

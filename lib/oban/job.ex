@@ -192,7 +192,7 @@ defmodule Oban.Job do
 
   @unique_fields ~w(args queue worker)a
   @unique_period 60
-  @unique_states ~w(scheduled available executing retryable completed discarded)a
+  @unique_states ~w(scheduled available executing retryable completed)a
 
   @doc """
   A canonical list of all possible job states.
@@ -205,7 +205,7 @@ defmodule Oban.Job do
       [:scheduled, :available, :executing, :retryable]
   """
   @doc since: "2.1.0"
-  def states, do: @unique_states
+  def states, do: @unique_states ++ [:discarded]
 
   @doc """
   Convert a Job changeset into a map suitable for database insertion.
