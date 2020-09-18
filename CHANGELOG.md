@@ -11,6 +11,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 - [Oban.Telemetry] Include `tags` as part of the metadata for job events.
 
+### Changed
+
+- [Oban.Worker] The default backoff algorithm now includes a small amount of
+  jitter. The jitter helps prevent jobs that fail simultaneously from repeatedly
+  retrying together.
+
 ### Fixed
 
 - [Oban.Job] Don't include `discarded` state by default when accounting for

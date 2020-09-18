@@ -100,8 +100,10 @@ defmodule Oban.Worker do
   ## Customizing Backoff
 
   When jobs fail they may be retried again in the future using a backoff algorithm. By default the
-  backoff is exponential with a fixed padding of 15 seconds. The default backoff is clamped to a
-  maximum of 24 days, the equivalent of the 20th attempt.
+  backoff is exponential with a fixed padding of 15 seconds and a small amount of jitter. The
+  jitter helps to prevent jobs that fail simultaneously from consistently retrying at the same
+  time. The default backoff is clamped to a maximum of 24 days, the equivalent of the 20th
+  attempt.
 
   If the default strategy is too aggressive or otherwise unsuited to your app's workload you can
   define a custom backoff function using the `c:backoff/1` callback.
@@ -217,7 +219,8 @@ defmodule Oban.Worker do
 
   In this context backoff specifies the number of seconds to wait before retrying a failed job.
 
-  Defaults to an exponential algorithm with a minimum delay of 15 seconds.
+  Defaults to an exponential algorithm with a minimum delay of 15 seconds and a small amount of
+  jitter.
   """
   @callback backoff(job :: Job.t()) :: pos_integer()
 
@@ -244,7 +247,8 @@ defmodule Oban.Worker do
   @callback perform(job :: Job.t()) :: result()
 
   @max_for_backoff 20
-  @base_backoff 15
+  @backoff_base 15
+  @backoff_jitter 0.10
 
   @doc false
   defmacro __using__(opts) do
@@ -299,7 +303,10 @@ defmodule Oban.Worker do
         round(attempt / max_attempts * @max_for_backoff)
       end
 
-    trunc(:math.pow(2, clamped_attempt) + @base_backoff)
+    base = :math.pow(2, clamped_attempt) + @backoff_base
+    diff = base * @backoff_jitter
+
+    Enum.random(trunc(base - diff)..trunc(base + diff))
   end
 
   defp validate_opt!({:max_attempts, max_attempts}) do

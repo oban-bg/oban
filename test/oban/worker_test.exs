@@ -61,7 +61,7 @@ defmodule Oban.WorkerTest do
     property "the backoff increases with subsequent attempts" do
       check all attempt <- integer(1..19) do
         first = BasicWorker.backoff(%Job{attempt: attempt, max_attempts: 20})
-        second = BasicWorker.backoff(%Job{attempt: attempt + 1, max_attempts: 20})
+        second = BasicWorker.backoff(%Job{attempt: attempt + 2, max_attempts: 20})
 
         assert first < second
       end
