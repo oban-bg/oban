@@ -227,7 +227,7 @@ defmodule Oban do
   @doc """
   Put a job insert operation into an `Ecto.Multi`.
 
-  Like `insert/2`, this variant is recommended over `Ecto.Multi.insert` beause it supports all of
+  Like `insert/2`, this variant is recommended over `Ecto.Multi.insert` because it supports all of
   Oban's features, i.e. unique jobs.
 
   See the section on "Unique Jobs" for more details.
