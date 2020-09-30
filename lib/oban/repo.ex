@@ -3,6 +3,9 @@ defmodule Oban.Repo do
     conf.repo.transaction(fun_or_multi, with_default_opts(opts, conf))
   end
 
+  def update(conf, changeset, opts \\ []),
+    do: conf.repo.update(changeset, query_opts(opts, conf))
+
   def update_all(conf, queryable, updates, opts \\ []),
     do: conf.repo.update_all(queryable, updates, query_opts(opts, conf))
 

@@ -219,13 +219,13 @@ defmodule Oban.Query do
     Exception.format(kind, blamed, stacktrace)
   end
 
-  defp insert_unique(%Config{repo: repo, prefix: prefix} = conf, changeset) do
+  defp insert_unique(%Config{prefix: prefix} = conf, changeset) do
     query_opts = [on_conflict: :nothing, prefix: prefix]
 
     with {:ok, query, lock_key} <- unique_query(changeset),
          :ok <- acquire_lock(conf, lock_key, query_opts),
          {:ok, job} <- unprepared_one(conf, query, query_opts) do
-      return_or_replace(repo, query_opts, job, changeset)
+      return_or_replace(conf, query_opts, job, changeset)
     else
       {:error, :locked} ->
         {:ok, Changeset.apply_changes(changeset)}
@@ -235,11 +235,13 @@ defmodule Oban.Query do
     end
   end
 
-  defp return_or_replace(repo, query_opts, job, changeset) do
+  defp return_or_replace(conf, query_opts, job, changeset) do
     if Changeset.get_change(changeset, :replace_args) do
-      job
-      |> Ecto.Changeset.change(%{args: changeset.changes.args})
-      |> repo.update(query_opts)
+      Repo.update(
+        conf,
+        Ecto.Changeset.change(job, %{args: changeset.changes.args}),
+        query_opts
+      )
     else
       {:ok, job}
     end
