@@ -219,8 +219,8 @@ defmodule Oban.Query do
     Exception.format(kind, blamed, stacktrace)
   end
 
-  defp insert_unique(%Config{prefix: prefix} = conf, changeset) do
-    query_opts = [on_conflict: :nothing, prefix: prefix]
+  defp insert_unique(%Config{} = conf, changeset) do
+    query_opts = [on_conflict: :nothing]
 
     with {:ok, query, lock_key} <- unique_query(changeset),
          :ok <- acquire_lock(conf, lock_key, query_opts),
@@ -310,9 +310,7 @@ defmodule Oban.Query do
   # provide a way to opt out of prepared statements for a single query, so this function works
   # around the issue by forcing a raw SQL query.
   defp unprepared_one(conf, query, opts) do
-    prefix = Keyword.get(opts, :prefix, "public")
-
-    {raw_sql, bindings} = conf.repo.to_sql(:all, %{query | prefix: prefix})
+    {raw_sql, bindings} = conf.repo.to_sql(:all, %{query | prefix: conf.prefix})
 
     case Repo.query(conf, raw_sql, bindings, opts) do
       {:ok, %{columns: columns, rows: [rows]}} -> {:ok, conf.repo.load(Job, {columns, rows})}
