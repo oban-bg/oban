@@ -12,6 +12,9 @@ defmodule Oban.Repo do
   def all(conf, queryable, opts \\ []),
     do: conf.repo.all(queryable, query_opts(opts, conf))
 
+  def insert(conf, struct_or_changeset, opts \\ []),
+    do: conf.repo.insert(struct_or_changeset, query_opts(opts, conf))
+
   defp query_opts(opts, conf) do
     opts
     |> with_default_opts(conf)

@@ -231,7 +231,7 @@ defmodule Oban.Query do
         {:ok, Changeset.apply_changes(changeset)}
 
       nil ->
-        repo.insert(changeset, query_opts)
+        Repo.insert(conf, changeset, query_opts)
     end
   end
 
