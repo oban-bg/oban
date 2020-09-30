@@ -404,11 +404,10 @@ defmodule Oban.Testing do
   defp get_job(repo, opts) do
     {prefix, opts} = extract_prefix(opts)
 
-    opts
-    |> base_query()
-    |> limit(1)
-    |> select([:id])
-    |> repo.one(prefix: prefix)
+    Repo.one(
+      %{prefix: prefix, repo: repo},
+      opts |> base_query() |> limit(1) |> select([:id])
+    )
   end
 
   defp wait_for_job(repo, opts, timeout) when timeout > 0 do

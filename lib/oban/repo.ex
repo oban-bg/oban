@@ -15,6 +15,9 @@ defmodule Oban.Repo do
   def all(conf, queryable, opts \\ []),
     do: conf.repo.all(queryable, query_opts(opts, conf))
 
+  def one(conf, queryable, opts \\ []),
+    do: conf.repo.one(queryable, query_opts(opts, conf))
+
   def insert(conf, struct_or_changeset, opts \\ []),
     do: conf.repo.insert(struct_or_changeset, query_opts(opts, conf))
 
