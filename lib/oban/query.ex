@@ -191,21 +191,19 @@ defmodule Oban.Query do
   end
 
   @spec notify(Config.t(), binary(), map()) :: :ok
-  def notify(%Config{} = conf, channel, %{} = payload) when is_binary(channel) do
-    %Config{prefix: prefix, repo: repo, log: log} = conf
-
-    repo.query(
+  def notify(%Config{prefix: prefix} = conf, channel, %{} = payload) when is_binary(channel) do
+    Repo.query(
+      conf,
       "SELECT pg_notify($1, $2)",
-      ["#{prefix}.#{channel}", Jason.encode!(payload)],
-      log: log
+      ["#{prefix}.#{channel}", Jason.encode!(payload)]
     )
 
     :ok
   end
 
   @spec acquire_lock?(Config.t(), pos_integer()) :: boolean()
-  def acquire_lock?(%Config{prefix: prefix, repo: repo, log: log}, lock_key) do
-    case acquire_lock(repo, lock_key, log: log, prefix: prefix) do
+  def acquire_lock?(%Config{} = conf, lock_key) do
+    case acquire_lock(conf, lock_key) do
       :ok -> true
       {:error, :locked} -> false
     end
@@ -221,12 +219,12 @@ defmodule Oban.Query do
     Exception.format(kind, blamed, stacktrace)
   end
 
-  defp insert_unique(%Config{prefix: prefix, repo: repo, log: log}, changeset) do
-    query_opts = [log: log, on_conflict: :nothing, prefix: prefix]
+  defp insert_unique(%Config{repo: repo, prefix: prefix} = conf, changeset) do
+    query_opts = [on_conflict: :nothing, prefix: prefix]
 
     with {:ok, query, lock_key} <- unique_query(changeset),
-         :ok <- acquire_lock(repo, lock_key, query_opts),
-         {:ok, job} <- unprepared_one(repo, query, query_opts) do
+         :ok <- acquire_lock(conf, lock_key, query_opts),
+         {:ok, job} <- unprepared_one(conf, query, query_opts) do
       return_or_replace(repo, query_opts, job, changeset)
     else
       {:error, :locked} ->
@@ -292,11 +290,11 @@ defmodule Oban.Query do
     where(query, [j], j.inserted_at > ^since)
   end
 
-  defp acquire_lock(repo, base_key, opts) do
-    pref_key = :erlang.phash2(opts[:prefix])
+  defp acquire_lock(conf, base_key, opts \\ []) do
+    pref_key = :erlang.phash2(conf.prefix)
     lock_key = pref_key + base_key
 
-    case repo.query("SELECT pg_try_advisory_xact_lock($1)", [lock_key], opts) do
+    case Repo.query(conf, "SELECT pg_try_advisory_xact_lock($1)", [lock_key], opts) do
       {:ok, %{rows: [[true]]}} ->
         :ok
 
@@ -309,13 +307,13 @@ defmodule Oban.Query do
   # of a `custom plan`, which *drastically* impacts the unique query performance. Ecto doesn't
   # provide a way to opt out of prepared statements for a single query, so this function works
   # around the issue by forcing a raw SQL query.
-  defp unprepared_one(repo, query, opts) do
+  defp unprepared_one(conf, query, opts) do
     prefix = Keyword.get(opts, :prefix, "public")
 
-    {raw_sql, bindings} = repo.to_sql(:all, %{query | prefix: prefix})
+    {raw_sql, bindings} = conf.repo.to_sql(:all, %{query | prefix: prefix})
 
-    case repo.query(raw_sql, bindings, opts) do
-      {:ok, %{columns: columns, rows: [rows]}} -> {:ok, repo.load(Job, {columns, rows})}
+    case Repo.query(conf, raw_sql, bindings, opts) do
+      {:ok, %{columns: columns, rows: [rows]}} -> {:ok, conf.repo.load(Job, {columns, rows})}
       _ -> nil
     end
   end
