@@ -61,12 +61,9 @@ defmodule Oban.Query do
 
   @spec insert_all_jobs(Config.t(), [Changeset.t(Job.t())]) :: [Job.t()]
   def insert_all_jobs(%Config{} = conf, changesets) when is_list(changesets) do
-    %Config{prefix: prefix, repo: repo, log: log} = conf
-
     entries = Enum.map(changesets, &Job.to_map/1)
-    opts = [log: log, on_conflict: :nothing, prefix: prefix, returning: true]
 
-    case repo.insert_all(Job, entries, opts) do
+    case Repo.insert_all(conf, Job, entries, on_conflict: :nothing, returning: true) do
       {0, _} -> []
       {_count, jobs} -> jobs
     end
