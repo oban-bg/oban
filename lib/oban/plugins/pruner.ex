@@ -3,7 +3,7 @@ defmodule Oban.Plugins.Pruner do
 
   use GenServer
 
-  alias Oban.{Config, Job, Query, Telemetry}
+  alias Oban.{Config, Job, Query, Repo, Telemetry}
 
   import Ecto.Query
 
@@ -50,7 +50,7 @@ defmodule Oban.Plugins.Pruner do
   @impl GenServer
   def handle_info(:prune, %State{conf: conf} = state) do
     Telemetry.span(:prune, fn ->
-      conf.repo.transaction(fn -> acquire_and_prune(state) end, log: conf.log)
+      Repo.transaction(conf, fn -> acquire_and_prune(state) end)
     end)
 
     {:noreply, schedule_prune(state)}

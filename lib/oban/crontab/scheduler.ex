@@ -6,7 +6,7 @@ defmodule Oban.Crontab.Scheduler do
   import Oban.Breaker, only: [open_circuit: 1, trip_errors: 0, trip_circuit: 3]
 
   alias Oban.Crontab.Cron
-  alias Oban.{Config, Query, Worker}
+  alias Oban.{Config, Query, Repo, Worker}
 
   # Make each job unique for 59 seconds to prevent double-enqueue if the node or scheduler
   # crashes. The minimum resolution for our cron jobs is 1 minute, so there is potentially
@@ -93,11 +93,9 @@ defmodule Oban.Crontab.Scheduler do
   defp lock_and_insert(%State{circuit: :disabled} = state), do: state
 
   defp lock_and_insert(%State{conf: conf, poll_interval: timeout} = state) do
-    %Config{repo: repo, log: log} = conf
-
-    repo.transaction(
+    Repo.transaction(
+      conf,
       fn -> if Query.acquire_lock?(conf, @lock_key), do: insert_jobs(state) end,
-      log: log,
       timeout: timeout
     )
 

@@ -5,7 +5,7 @@ defmodule Oban.Query do
   import DateTime, only: [utc_now: 0]
 
   alias Ecto.{Changeset, Multi}
-  alias Oban.{Config, Job}
+  alias Oban.{Config, Job, Repo}
 
   @spec fetch_available_jobs(Config.t(), binary(), binary(), pos_integer()) :: {:ok, [Job.t()]}
   def fetch_available_jobs(%Config{} = conf, queue, nonce, demand) do
@@ -25,7 +25,8 @@ defmodule Oban.Query do
       inc: [attempt: 1]
     ]
 
-    repo.transaction(
+    Repo.transaction(
+      conf,
       fn ->
         Job
         |> where([j], j.id in subquery(subset))
@@ -35,16 +36,14 @@ defmodule Oban.Query do
           {0, nil} -> []
           {_count, jobs} -> jobs
         end
-      end,
-      log: log
+      end
     )
   end
 
   @spec fetch_or_insert_job(Config.t(), Changeset.t()) :: {:ok, Job.t()} | {:error, Changeset.t()}
-  def fetch_or_insert_job(%Config{repo: repo, log: log} = conf, changeset) do
+  def fetch_or_insert_job(conf, changeset) do
     fun = fn -> insert_unique(conf, changeset) end
-
-    with {:ok, result} <- repo.transaction(fun, log: log), do: result
+    with {:ok, result} <- Repo.transaction(conf, fun), do: result
   end
 
   @spec fetch_or_insert_job(Config.t(), Multi.t(), Multi.name(), fun() | Changeset.t()) ::
@@ -95,13 +94,13 @@ defmodule Oban.Query do
       |> where([j], j.scheduled_at <= ^max_scheduled_at)
       |> lock("FOR UPDATE SKIP LOCKED")
 
-    repo.transaction(
+    Repo.transaction(
+      conf,
       fn ->
         Job
         |> where([j], j.id in subquery(subset))
         |> repo.update_all([set: [state: "available"]], log: log, prefix: prefix)
-      end,
-      log: log
+      end
     )
   end
 
