@@ -24,6 +24,9 @@ defmodule Oban.Repo do
   def insert_all(conf, schema_or_source, entries, opts \\ []),
     do: conf.repo.insert_all(schema_or_source, entries, query_opts(opts, conf))
 
+  def delete_all(conf, queryable, opts \\ []),
+    do: conf.repo.delete_all(queryable, query_opts(opts, conf))
+
   def checkout(conf, function, opts \\ []),
     do: conf.repo.checkout(function, query_opts(opts, conf))
 

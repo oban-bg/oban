@@ -3,7 +3,7 @@ defmodule Oban.Plugins.Pruner do
 
   use GenServer
 
-  alias Oban.{Config, Job, Query, Repo, Telemetry}
+  alias Oban.{Job, Query, Repo, Telemetry}
 
   import Ecto.Query
 
@@ -71,8 +71,6 @@ defmodule Oban.Plugins.Pruner do
   end
 
   defp delete_jobs(conf, seconds, limit) do
-    %Config{prefix: prefix, repo: repo, log: log} = conf
-
     outdated_at = DateTime.add(DateTime.utc_now(), -seconds)
 
     subquery =
@@ -82,8 +80,9 @@ defmodule Oban.Plugins.Pruner do
       |> select([:id])
       |> limit(^limit)
 
-    Job
-    |> join(:inner, [j], x in subquery(subquery, prefix: prefix), on: j.id == x.id)
-    |> repo.delete_all(log: log, prefix: prefix)
+    Repo.delete_all(
+      conf,
+      join(Job, :inner, [j], x in subquery(subquery), on: j.id == x.id)
+    )
   end
 end
