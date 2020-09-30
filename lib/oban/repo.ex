@@ -30,6 +30,16 @@ defmodule Oban.Repo do
   def checkout(conf, function, opts \\ []),
     do: conf.repo.checkout(function, query_opts(opts, conf))
 
+  def to_sql(conf, kind, queryable) do
+    queryable =
+      case Map.fetch(conf, :prefix) do
+        :error -> queryable
+        {:ok, prefix} -> queryable |> Ecto.Queryable.to_query() |> Map.put(:prefix, prefix)
+      end
+
+    conf.repo.to_sql(kind, queryable)
+  end
+
   defp query_opts(opts, conf) do
     opts
     |> with_default_opts(conf)

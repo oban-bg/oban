@@ -307,7 +307,7 @@ defmodule Oban.Query do
   # provide a way to opt out of prepared statements for a single query, so this function works
   # around the issue by forcing a raw SQL query.
   defp unprepared_one(conf, query, opts) do
-    {raw_sql, bindings} = conf.repo.to_sql(:all, %{query | prefix: conf.prefix})
+    {raw_sql, bindings} = Repo.to_sql(conf, :all, query)
 
     case Repo.query(conf, raw_sql, bindings, opts) do
       {:ok, %{columns: columns, rows: [rows]}} -> {:ok, conf.repo.load(Job, {columns, rows})}
