@@ -9,6 +9,9 @@ defmodule Oban.Repo do
   def query(conf, sql, params \\ [], opts \\ []),
     do: conf.repo.query(sql, params, query_opts(opts, conf))
 
+  def all(conf, queryable, opts \\ []),
+    do: conf.repo.all(queryable, query_opts(opts, conf))
+
   defp query_opts(opts, conf) do
     opts
     |> with_default_opts(conf)
