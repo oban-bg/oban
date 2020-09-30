@@ -8,9 +8,7 @@ defmodule Oban.Query do
   alias Oban.{Config, Job, Repo}
 
   @spec fetch_available_jobs(Config.t(), binary(), binary(), pos_integer()) :: {:ok, [Job.t()]}
-  def fetch_available_jobs(%Config{} = conf, queue, nonce, demand) do
-    %Config{node: node, prefix: prefix, repo: repo, log: log} = conf
-
+  def fetch_available_jobs(%Config{node: node} = conf, queue, nonce, demand) do
     subset =
       Job
       |> select([:id])
@@ -28,11 +26,12 @@ defmodule Oban.Query do
     Repo.transaction(
       conf,
       fn ->
-        Job
-        |> where([j], j.id in subquery(subset))
-        |> select([j, _], j)
-        |> repo.update_all(updates, log: log, prefix: prefix)
-        |> case do
+        query =
+          Job
+          |> where([j], j.id in subquery(subset))
+          |> select([j, _], j)
+
+        case Repo.update_all(conf, query, updates) do
           {0, nil} -> []
           {_count, jobs} -> jobs
         end
@@ -82,8 +81,6 @@ defmodule Oban.Query do
 
   @spec stage_scheduled_jobs(Config.t(), binary(), opts :: keyword()) :: {integer(), nil}
   def stage_scheduled_jobs(%Config{} = conf, queue, opts \\ []) do
-    %Config{prefix: prefix, repo: repo, log: log} = conf
-
     max_scheduled_at = Keyword.get(opts, :max_scheduled_at, utc_now())
 
     subset =
@@ -97,46 +94,45 @@ defmodule Oban.Query do
     Repo.transaction(
       conf,
       fn ->
-        Job
-        |> where([j], j.id in subquery(subset))
-        |> repo.update_all([set: [state: "available"]], log: log, prefix: prefix)
+        Repo.update_all(conf, where(Job, [j], j.id in subquery(subset)), set: [state: "available"])
       end
     )
   end
 
   @spec retry_job(Config.t(), pos_integer()) :: :ok
-  def retry_job(%Config{prefix: prefix, repo: repo, log: log}, id) do
-    Job
-    |> where([j], j.id == ^id)
-    |> where([j], j.state not in ["available", "executing", "scheduled"])
-    |> update([j],
-      set: [
-        state: "available",
-        max_attempts: fragment("GREATEST(?, ? + 1)", j.max_attempts, j.attempt),
-        scheduled_at: ^utc_now(),
-        completed_at: nil,
-        discarded_at: nil
-      ]
-    )
-    |> repo.update_all([], log: log, prefix: prefix)
+  def retry_job(conf, id) do
+    query =
+      Job
+      |> where([j], j.id == ^id)
+      |> where([j], j.state not in ["available", "executing", "scheduled"])
+      |> update([j],
+        set: [
+          state: "available",
+          max_attempts: fragment("GREATEST(?, ? + 1)", j.max_attempts, j.attempt),
+          scheduled_at: ^utc_now(),
+          completed_at: nil,
+          discarded_at: nil
+        ]
+      )
+
+    Repo.update_all(conf, query, [])
 
     :ok
   end
 
   @spec complete_job(Config.t(), Job.t()) :: :ok
-  def complete_job(%Config{prefix: prefix, repo: repo, log: log}, %Job{id: id}) do
-    repo.update_all(
+  def complete_job(%Config{} = conf, %Job{id: id}) do
+    Repo.update_all(
+      conf,
       where(Job, id: ^id),
-      [set: [state: "completed", completed_at: utc_now()]],
-      log: log,
-      prefix: prefix
+      set: [state: "completed", completed_at: utc_now()]
     )
 
     :ok
   end
 
   @spec discard_job(Config.t(), Job.t()) :: :ok
-  def discard_job(%Config{prefix: prefix, repo: repo, log: log}, %Job{} = job) do
+  def discard_job(%Config{} = conf, %Job{} = job) do
     updates = [
       set: [state: "discarded", discarded_at: utc_now()],
       push: [
@@ -144,31 +140,25 @@ defmodule Oban.Query do
       ]
     ]
 
-    repo.update_all(
-      where(Job, id: ^job.id),
-      updates,
-      log: log,
-      prefix: prefix
-    )
-
+    Repo.update_all(conf, where(Job, id: ^job.id), updates)
     :ok
   end
 
   @cancellable_states ~w(available scheduled retryable)
 
   @spec cancel_job(Config.t(), pos_integer()) :: :ok | :ignored
-  def cancel_job(%Config{prefix: prefix, repo: repo, log: log}, job_id) do
+  def cancel_job(%Config{} = conf, job_id) do
     query = where(Job, [j], j.id == ^job_id and j.state in @cancellable_states)
     updates = [set: [state: "discarded", discarded_at: utc_now()]]
 
-    case repo.update_all(query, updates, log: log, prefix: prefix) do
+    case Repo.update_all(conf, query, updates) do
       {1, nil} -> :ok
       {0, nil} -> :ignored
     end
   end
 
   @spec snooze_job(Config.t(), Job.t(), pos_integer()) :: :ok
-  def snooze_job(%Config{prefix: prefix, repo: repo, log: log}, %Job{id: id}, seconds) do
+  def snooze_job(%Config{} = conf, %Job{id: id}, seconds) do
     scheduled_at = DateTime.add(utc_now(), seconds)
 
     updates = [
@@ -176,14 +166,12 @@ defmodule Oban.Query do
       inc: [max_attempts: 1]
     ]
 
-    repo.update_all(where(Job, id: ^id), updates, log: log, prefix: prefix)
-
+    Repo.update_all(conf, where(Job, id: ^id), updates)
     :ok
   end
 
   @spec retry_job(Config.t(), Job.t(), pos_integer()) :: :ok
   def retry_job(%Config{} = conf, %Job{} = job, backoff) do
-    %Config{prefix: prefix, repo: repo, log: log} = conf
     %Job{attempt: attempt, id: id, max_attempts: max_attempts} = job
 
     set =
@@ -198,10 +186,7 @@ defmodule Oban.Query do
       push: [errors: %{attempt: attempt, at: utc_now(), error: format_blamed(job.unsaved_error)}]
     ]
 
-    Job
-    |> where(id: ^id)
-    |> repo.update_all(updates, log: log, prefix: prefix)
-
+    Repo.update_all(conf, where(Job, id: ^id), updates)
     :ok
   end
 
