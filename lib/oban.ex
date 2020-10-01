@@ -576,7 +576,7 @@ defmodule Oban do
   end
 
   @doc """
-  Sets a job as `available`, adding attempts if already maxed out. If the job is currently 
+  Sets a job as `available`, adding attempts if already maxed out. If the job is currently
   `available`, `executing` or `scheduled` it will be ignored. The job is scheduled for immediate
   execution.
 
@@ -587,6 +587,7 @@ defmodule Oban do
       Oban.retry_job(1)
       :ok
   """
+  @doc since: "2.2.0"
   @spec retry_job(name :: atom(), job_id :: pos_integer()) :: :ok
   def retry_job(name \\ __MODULE__, job_id) when is_integer(job_id) do
     name
