@@ -39,6 +39,7 @@ defmodule Oban do
           | {:shutdown_grace_period, timeout()}
           | {:timezone, Calendar.time_zone()}
           | {:log, false | Logger.level()}
+          | {:get_dynamic_repo, nil | (() -> pid() | atom())}
 
   @version Mix.Project.config()[:version]
 
@@ -576,7 +577,7 @@ defmodule Oban do
   end
 
   @doc """
-  Sets a job as `available`, adding attempts if already maxed out. If the job is currently 
+  Sets a job as `available`, adding attempts if already maxed out. If the job is currently
   `available`, `executing` or `scheduled` it will be ignored. The job is scheduled for immediate
   execution.
 

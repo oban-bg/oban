@@ -18,7 +18,8 @@ defmodule Oban.Config do
           repo: module(),
           shutdown_grace_period: timeout(),
           timezone: Calendar.time_zone(),
-          log: false | Logger.level()
+          log: false | Logger.level(),
+          get_dynamic_repo: nil | (() -> pid() | atom())
         }
 
   @type option :: {:name, module()} | {:conf, t()}
@@ -36,7 +37,8 @@ defmodule Oban.Config do
             repo: nil,
             shutdown_grace_period: :timer.seconds(15),
             timezone: "Etc/UTC",
-            log: false
+            log: false,
+            get_dynamic_repo: nil
 
   @spec new(Keyword.t()) :: t()
   def new(opts) when is_list(opts) do
@@ -158,6 +160,12 @@ defmodule Oban.Config do
   defp validate_opt!({:log, log}) do
     unless log in ~w(false error warn info debug)a do
       raise ArgumentError, "expected :log to be `false` or a log level"
+    end
+  end
+
+  defp validate_opt!({:get_dynamic_repo, fun}) do
+    unless is_nil(fun) or is_function(fun, 0) do
+      raise ArgumentError, "expected :gethostname to be `nil` or a zero arity function"
     end
   end
 
