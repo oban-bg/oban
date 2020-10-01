@@ -40,6 +40,8 @@ defmodule Oban.Repo do
     conf.repo.to_sql(kind, queryable)
   end
 
+  def config(conf), do: conf.repo.config()
+
   defp query_opts(opts, conf) do
     opts
     |> with_default_opts(conf)
