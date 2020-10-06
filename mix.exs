@@ -77,8 +77,9 @@ defmodule Oban.MixProject do
         "../oban_pro/guides/pro/overview.md": [filename: "pro_overview"],
         "../oban_pro/guides/pro/installation.md": [filename: "pro_installation"],
         "../oban_pro/guides/plugins/lifeline.md": [title: "Lifeline Plugin"],
-        "../oban_pro/guides/plugins/dynamic_pruning.md": [title: "Dynamic Pruning Plugin"],
-        "../oban_pro/guides/plugins/reprioritizer.md": [title: "Reprioritization Plugin"],
+        "../oban_pro/guides/plugins/dynamic_cron.md": [title: "Dynamic Cron Plugin"],
+        "../oban_pro/guides/plugins/dynamic_pruner.md": [title: "Dynamic Pruner Plugin"],
+        "../oban_pro/guides/plugins/reprioritizer.md": [title: "Reprioritizer Plugin"],
         "../oban_pro/guides/workers/batch.md": [title: "Batch Worker"],
         "../oban_pro/CHANGELOG.md": [filename: "pro-changelog", title: "Changelog"]
       ]
