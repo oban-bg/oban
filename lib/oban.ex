@@ -13,7 +13,7 @@ defmodule Oban do
   alias Ecto.{Changeset, Multi}
   alias Oban.{Config, Job, Midwife, Notifier, Query, Registry}
   alias Oban.Crontab.Scheduler
-  alias Oban.Queue.Drainer
+  alias Oban.Queue.{Drainer, Producer}
   alias Oban.Queue.Supervisor, as: QueueSupervisor
 
   @type name :: term
@@ -24,6 +24,16 @@ defmodule Oban do
           {:queue, queue_name()}
           | {:limit, pos_integer()}
           | {:local_only, boolean()}
+
+  @type queue_state :: %{
+          limit: pos_integer(),
+          node: binary(),
+          nonce: binary(),
+          paused: boolean(),
+          queue: queue_name(),
+          running: [pos_integer()],
+          started_at: DateTime.t()
+        }
 
   @type option ::
           {:circuit_backoff, timeout()}
@@ -363,7 +373,7 @@ defmodule Oban do
 
   ## Options
 
-  * `:queue` — the name of the queue to drain, required
+  * `:queue` - a string or atom specifying the queue to drain, required
   * `:with_scheduled` — whether to include any scheduled jobs when draining, default `false`
   * `:with_safety` — whether to silently catch errors when draining, default `true`
 
@@ -400,8 +410,8 @@ defmodule Oban do
 
   ## Options
 
-  * `:queue` - specifies the queue name
-  * `:limit` - set the concurrency limit
+  * `:queue` - a string or atom specifying the queue to start, required
+  * `:limit` - set the concurrency limit, required
   * `:local_only` - whether the queue will be started only on the local node, default: `false`
 
   ## Example
@@ -441,7 +451,7 @@ defmodule Oban do
 
   ## Options
 
-  * `:queue` - specifies the queue to pause
+  * `:queue` - a string or atom specifying the queue to pause, required
   * `:local_only` - whether the queue will be paused only on the local node, default: `false`
 
   ## Example
@@ -472,7 +482,7 @@ defmodule Oban do
 
   ## Options
 
-  * `:queue` - specifies the queue to resume
+  * `:queue` - a string or atom specifying the queue to resume, required
   * `:local_only` - whether the queue will be resumed only on the local node, default: `false`
 
   ## Example
@@ -503,7 +513,7 @@ defmodule Oban do
 
   ## Options
 
-  * `:queue` — specifies the queue to scale
+  * `:queue` - a string or atom specifying the queue to scale, required
   * `:limit` — the new concurrency limit
   * `:local_only` — whether the queue will be scaled only on the local node, default: `false`
 
@@ -553,7 +563,7 @@ defmodule Oban do
 
   ## Options
 
-  * `:queue` - specifies the queue to stop
+  * `:queue` - a string or atom specifying the queue to stop, required
   * `:local_only` - whether the queue will be stopped only on the local node, default: `false`
 
   ## Example
@@ -573,6 +583,40 @@ defmodule Oban do
     data = %{action: :stop, queue: opts[:queue], ident: scope_signal(conf, opts)}
 
     Notifier.notify(conf, :signal, data)
+  end
+
+  @doc """
+  Check the current state of a queue producer.
+
+  This allows you to introspect on a queue's health by retrieving key attributes of the producer's
+  state; values such as the current `limit`, the `running` job ids, and when the producer was
+  started.
+
+  ## Options
+
+  * `:queue` - a string or atom specifying the queue to check, required
+
+  ## Example
+
+      Oban.check_queue(queue: :default)
+      %{
+        limit: 10,
+        node: "me@local",
+        none: "a1b2c3d4",
+        paused: false,
+        queue: "default",
+        running: [100, 102],
+        started_at: ~D[2020-10-07 15:31:00]
+      }
+  """
+  @doc since: "2.2.0"
+  @spec check_queue(name(), opts :: [{:queue, queue_name()}]) :: queue_state()
+  def check_queue(name \\ __MODULE__, [_ | _] = opts) do
+    Enum.each(opts, &validate_queue_opt!/1)
+
+    name
+    |> Registry.via({:producer, to_string(opts[:queue])})
+    |> Producer.check()
   end
 
   @doc """

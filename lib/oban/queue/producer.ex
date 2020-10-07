@@ -44,10 +44,17 @@ defmodule Oban.Queue.Producer do
     GenServer.start_link(__MODULE__, opts, name: opts[:name])
   end
 
+  @spec check(GenServer.name()) :: Oban.queue_state()
+  def check(producer) do
+    GenServer.call(producer, :check)
+  end
+
   @spec pause(GenServer.name()) :: :ok
   def pause(producer) do
     GenServer.call(producer, :pause)
   end
+
+  # Callbacks
 
   @impl GenServer
   def init(opts) do
@@ -172,7 +179,7 @@ defmodule Oban.Queue.Producer do
   end
 
   @impl GenServer
-  def handle_call(:pulse, _from, %State{conf: conf, running: running} = state) do
+  def handle_call(:check, _from, %State{conf: conf, running: running} = state) do
     running_ids = for {_ref, {exec, _pid}} <- running, do: exec.job.id
 
     args =
