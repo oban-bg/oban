@@ -65,9 +65,9 @@ defmodule Oban.Queue.Executor do
     )
   end
 
-  @spec put(t(), atom(), any()) :: t()
-  def put(%__MODULE__{} = exec, key, value) when is_atom(key) do
-    %{exec | key => value}
+  @spec put(t(), :safe, boolean()) :: t()
+  def put(%__MODULE__{} = exec, :safe, value) when is_boolean(value) do
+    %{exec | safe: value}
   end
 
   @spec call(t()) :: :success | :failure
@@ -238,7 +238,7 @@ defmodule Oban.Queue.Executor do
     measurements = %{duration: exec.duration, queue_time: exec.queue_time}
 
     meta =
-      Map.merge(exec.meta(), %{kind: exec.kind, error: exec.error, stacktrace: exec.stacktrace})
+      Map.merge(exec.meta, %{kind: exec.kind, error: exec.error, stacktrace: exec.stacktrace})
 
     Telemetry.execute([:oban, :job, :exception], measurements, meta)
   end
