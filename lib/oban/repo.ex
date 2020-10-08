@@ -1,6 +1,9 @@
 defmodule Oban.Repo do
   def transaction(conf, fun_or_multi, opts \\ []) do
-    conf.repo.transaction(fun_or_multi, with_default_opts(opts, conf))
+    with_dynamic_repo(
+      conf,
+      fn -> conf.repo.transaction(fun_or_multi, with_default_opts(opts, conf)) end
+    )
   end
 
   def update(conf, changeset, opts \\ []) do
