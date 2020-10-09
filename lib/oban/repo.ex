@@ -1,4 +1,12 @@
 defmodule Oban.Repo do
+  @moduledoc """
+  Wrappers around `Ecto.Repo` callbacks.
+
+  These functions should be used when working with Ecto repo inside a plugin. These functions will
+  resolve the correct repo instance, and set the schema prefix and the log level, according to the
+  Oban configuration.
+  """
+
   @type config ::
           %{
             :repo => module,
@@ -8,6 +16,8 @@ defmodule Oban.Repo do
             optional(any) => any
           }
 
+  @doc "Wraps `c:Ecto.Repo.transaction/2`."
+  @doc since: "2.2.0"
   @spec transaction(config(), (... -> any()) | Ecto.Multi.t(), opts :: Keyword.t()) ::
           {:ok, any()}
           | {:error, any()}
@@ -19,6 +29,8 @@ defmodule Oban.Repo do
     )
   end
 
+  @doc "Wraps `c:Ecto.Repo.update/2`."
+  @doc since: "2.2.0"
   @spec update(config(), Ecto.Changeset.t(), Keyword.t()) ::
           {:ok, Ecto.Schema.t()} | {:error, Ecto.Changeset.t()}
   def update(conf, changeset, opts \\ []) do
@@ -28,6 +40,8 @@ defmodule Oban.Repo do
     )
   end
 
+  @doc "Wraps `c:Ecto.Repo.update_all/3`."
+  @doc since: "2.2.0"
   @spec update_all(config(), Ecto.Queryable.t(), Keyword.t(), Keyword.t()) ::
           {integer(), nil | [term()]}
   def update_all(conf, queryable, updates, opts \\ []) do
@@ -37,6 +51,8 @@ defmodule Oban.Repo do
     )
   end
 
+  @doc "Wraps `Ecto.Adapters.SQL.Repo.query/4`."
+  @doc since: "2.2.0"
   @spec query(config(), String.t(), [term()], Keyword.t()) ::
           {:ok,
            %{
@@ -52,6 +68,8 @@ defmodule Oban.Repo do
     )
   end
 
+  @doc "Wraps `c:Ecto.Repo.all/2`."
+  @doc since: "2.2.0"
   @spec all(config(), Ecto.Queryable.t(), Keyword.t()) :: [Ecto.Schema.t()]
   def all(conf, queryable, opts \\ []) do
     with_dynamic_repo(
@@ -60,6 +78,8 @@ defmodule Oban.Repo do
     )
   end
 
+  @doc "Wraps `c:Ecto.Repo.one/2`."
+  @doc since: "2.2.0"
   @spec one(config(), Ecto.Queryable.t(), Keyword.t()) :: Ecto.Schema.t() | nil
   def one(conf, queryable, opts \\ []) do
     with_dynamic_repo(
@@ -68,6 +88,8 @@ defmodule Oban.Repo do
     )
   end
 
+  @doc "Wraps `c:Ecto.Repo.insert/2`."
+  @doc since: "2.2.0"
   @spec insert(config(), Ecto.Schema.t() | Ecto.Changeset.t(), Keyword.t()) ::
           {:ok, Ecto.Schema.t()} | {:error, Ecto.Changeset.t()}
   def insert(conf, struct_or_changeset, opts \\ []) do
@@ -77,6 +99,8 @@ defmodule Oban.Repo do
     )
   end
 
+  @doc "Wraps `c:Ecto.Repo.insert_all/3`."
+  @doc since: "2.2.0"
   @spec insert_all(
           config(),
           binary() | {binary(), module()} | module(),
@@ -90,6 +114,8 @@ defmodule Oban.Repo do
     )
   end
 
+  @doc "Wraps `c:Ecto.Repo.delete_all/2`."
+  @doc since: "2.2.0"
   @spec delete_all(config(), Ecto.Queryable.t(), Keyword.t()) :: {integer(), nil | [term()]}
   def delete_all(conf, queryable, opts \\ []) do
     with_dynamic_repo(
@@ -98,6 +124,8 @@ defmodule Oban.Repo do
     )
   end
 
+  @doc "Wraps `c:Ecto.Repo.checkout/2`."
+  @doc since: "2.2.0"
   @spec checkout(config(), (() -> result), Keyword.t()) :: result when result: var
   def checkout(conf, function, opts \\ []) do
     with_dynamic_repo(
@@ -106,6 +134,8 @@ defmodule Oban.Repo do
     )
   end
 
+  @doc "Wraps `Ecto.Adapters.SQL.Repo.to_sql/2`."
+  @doc since: "2.2.0"
   @spec to_sql(config(), :all | :update_all | :delete_all, Ecto.Queryable.t()) ::
           {String.t(), [term()]}
   def to_sql(conf, kind, queryable) do
@@ -118,6 +148,8 @@ defmodule Oban.Repo do
     conf.repo.to_sql(kind, queryable)
   end
 
+  @doc "Wraps `c:Ecto.Repo.config/0`."
+  @doc since: "2.2.0"
   @spec config(config()) :: Keyword.t()
   def config(conf), do: with_dynamic_repo(conf, &conf.repo.config/0)
 
