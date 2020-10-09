@@ -1,8 +1,9 @@
 defmodule Oban.Migrations do
   @moduledoc false
 
-  alias Oban.Repo
   use Ecto.Migration
+  
+  alias Oban.Repo
 
   @initial_version 1
   @current_version 8
