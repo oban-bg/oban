@@ -44,7 +44,7 @@ defmodule Oban.Integration.DynamicRepoTest do
   end
 
   test "cron", context do
-    ref = :erlang.unique_integer([:positive, :monotonic])
+    ref = System.unique_integer([:positive, :monotonic])
 
     start_oban!(
       context.repo_pid,
@@ -73,7 +73,7 @@ defmodule Oban.Integration.DynamicRepoTest do
   end
 
   defp insert_job!(oban_name) do
-    ref = :erlang.unique_integer([:positive, :monotonic])
+    ref = System.unique_integer([:positive, :monotonic])
     {:ok, job} = Oban.insert(oban_name, Worker.new(%{ref: ref, action: "OK"}))
     %{ref: ref, job: job}
   end
