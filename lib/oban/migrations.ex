@@ -2,7 +2,7 @@ defmodule Oban.Migrations do
   @moduledoc false
 
   use Ecto.Migration
-  
+
   alias Oban.Repo
 
   @initial_version 1
