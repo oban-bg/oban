@@ -583,12 +583,14 @@ These jobs would be executed as follows:
 * `MyApp.HourlyWorker` — Executed at the first minute of every hour with custom args
 * `MyApp.DailyWorker` — Executed at midnight every day with no retries
 * `MyApp.MondayWorker` — Executed at noon every Monday in the "scheduled" queue
+* `MyApp.AnotherDailyWorker` — Executed at midnight every day with no retries
 
 The crontab format respects all [standard rules][cron] and has one minute
 resolution. Jobs are considered unique for most of each minute, which prevents
 duplicate jobs with multiple nodes and across node restarts.
 
-Like other jobs, recurring jobs will use the `:queue` specified by the worker module (or `:default` if one is not specified).
+Like other jobs, recurring jobs will use the `:queue` specified by the worker
+module (or `:default` if one is not specified).
 
 #### Cron Expressions
 

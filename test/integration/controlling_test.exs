@@ -157,16 +157,17 @@ defmodule Oban.Integration.ControllingTest do
       assert_invalid_opts(:scale_queue, local_only: -1)
     end
 
-    test "scaling individual queues" do
+    test "scaling queues up" do
       name = start_supervised_oban!(queues: [alpha: 1])
 
       sleep_for_notifier()
 
-      for ref <- 1..20, do: insert!(ref: ref, sleep: 500)
+      for ref <- 1..6, do: insert!(ref: ref, sleep: 500)
 
-      assert :ok = Oban.scale_queue(name, queue: :alpha, limit: 20)
+      assert :ok = Oban.scale_queue(name, queue: :alpha, limit: 5)
 
-      assert_receive {:started, 20}
+      assert_receive {:started, 5}
+      refute_receive {:started, 6}
     end
 
     test "scaling queues only on the local node" do
@@ -230,9 +231,7 @@ defmodule Oban.Integration.ControllingTest do
   test "dispatching jobs from a queue via database trigger" do
     start_supervised_oban!(queues: [alpha: 5], poll_interval: :timer.minutes(5))
 
-    # Producers start up asynchronously and we want to be sure the job doesn't run immediately on
-    # startup.
-    Process.sleep(50)
+    sleep_for_notifier()
 
     insert!(ref: 1, action: "OK")
 

@@ -92,7 +92,7 @@ defmodule Oban.Case do
 
         with_backoff(fun, count + 1, total, sleep)
       else
-        reraise(exception, System.stacktrace())
+        reraise(exception, __STACKTRACE__)
       end
   end
 

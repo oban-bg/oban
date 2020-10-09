@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 - [Oban.Telemetry] Include `tags` as part of the metadata for job events.
 
+- [Oban] Add `check_queue/1,2` for runtime introspection of a queue's state. It
+  displays a compactly formatted breakdown of the queue's configuration, a list
+  of running jobs, and static identity information.
+
 ### Changed
 
 - [Oban.Worker] The default backoff algorithm now includes a small amount of
