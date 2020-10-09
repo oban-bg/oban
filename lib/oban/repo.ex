@@ -1,4 +1,17 @@
 defmodule Oban.Repo do
+  @type config ::
+          %{
+            :repo => module,
+            optional(:get_dynamic_repo) => (() -> pid | atom),
+            optional(:log) => false | Logger.level(),
+            optional(:prefix) => binary(),
+            optional(any) => any
+          }
+
+  @spec transaction(config(), (... -> any()) | Ecto.Multi.t(), opts :: Keyword.t()) ::
+          {:ok, any()}
+          | {:error, any()}
+          | {:error, Ecto.Multi.name(), any(), %{required(Ecto.Multi.name()) => any()}}
   def transaction(conf, fun_or_multi, opts \\ []) do
     with_dynamic_repo(
       conf,
@@ -6,6 +19,8 @@ defmodule Oban.Repo do
     )
   end
 
+  @spec update(config(), Ecto.Changeset.t(), Keyword.t()) ::
+          {:ok, Ecto.Schema.t()} | {:error, Ecto.Changeset.t()}
   def update(conf, changeset, opts \\ []) do
     with_dynamic_repo(
       conf,
@@ -13,6 +28,8 @@ defmodule Oban.Repo do
     )
   end
 
+  @spec update_all(config(), Ecto.Queryable.t(), Keyword.t(), Keyword.t()) ::
+          {integer(), nil | [term()]}
   def update_all(conf, queryable, updates, opts \\ []) do
     with_dynamic_repo(
       conf,
@@ -20,6 +37,14 @@ defmodule Oban.Repo do
     )
   end
 
+  @spec query(config(), String.t(), [term()], Keyword.t()) ::
+          {:ok,
+           %{
+             :rows => nil | [[term()] | binary()],
+             :num_rows => non_neg_integer(),
+             optional(atom()) => any()
+           }}
+          | {:error, Exception.t()}
   def query(conf, sql, params \\ [], opts \\ []) do
     with_dynamic_repo(
       conf,
@@ -27,6 +52,7 @@ defmodule Oban.Repo do
     )
   end
 
+  @spec all(config(), Ecto.Queryable.t(), Keyword.t()) :: [Ecto.Schema.t()]
   def all(conf, queryable, opts \\ []) do
     with_dynamic_repo(
       conf,
@@ -34,6 +60,7 @@ defmodule Oban.Repo do
     )
   end
 
+  @spec one(config(), Ecto.Queryable.t(), Keyword.t()) :: Ecto.Schema.t() | nil
   def one(conf, queryable, opts \\ []) do
     with_dynamic_repo(
       conf,
@@ -41,6 +68,8 @@ defmodule Oban.Repo do
     )
   end
 
+  @spec insert(config(), Ecto.Schema.t() | Ecto.Changeset.t(), Keyword.t()) ::
+          {:ok, Ecto.Schema.t()} | {:error, Ecto.Changeset.t()}
   def insert(conf, struct_or_changeset, opts \\ []) do
     with_dynamic_repo(
       conf,
@@ -48,6 +77,12 @@ defmodule Oban.Repo do
     )
   end
 
+  @spec insert_all(
+          config(),
+          binary() | {binary(), module()} | module(),
+          [map() | [{atom(), term() | Ecto.Query.t()}]],
+          Keyword.t()
+        ) :: {integer(), nil | [term()]}
   def insert_all(conf, schema_or_source, entries, opts \\ []) do
     with_dynamic_repo(
       conf,
@@ -55,6 +90,7 @@ defmodule Oban.Repo do
     )
   end
 
+  @spec delete_all(config(), Ecto.Queryable.t(), Keyword.t()) :: {integer(), nil | [term()]}
   def delete_all(conf, queryable, opts \\ []) do
     with_dynamic_repo(
       conf,
@@ -62,6 +98,7 @@ defmodule Oban.Repo do
     )
   end
 
+  @spec checkout(config(), (() -> result), Keyword.t()) :: result when result: var
   def checkout(conf, function, opts \\ []) do
     with_dynamic_repo(
       conf,
@@ -69,6 +106,8 @@ defmodule Oban.Repo do
     )
   end
 
+  @spec to_sql(config(), :all | :update_all | :delete_all, Ecto.Queryable.t()) ::
+          {String.t(), [term()]}
   def to_sql(conf, kind, queryable) do
     queryable =
       case Map.fetch(conf, :prefix) do
@@ -79,6 +118,7 @@ defmodule Oban.Repo do
     conf.repo.to_sql(kind, queryable)
   end
 
+  @spec config(config()) :: Keyword.t()
   def config(conf), do: with_dynamic_repo(conf, &conf.repo.config/0)
 
   defp with_dynamic_repo(conf, fun) do
