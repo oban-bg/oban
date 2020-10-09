@@ -55,15 +55,6 @@ defmodule Oban.Integration.DynamicRepoTest do
     assert_receive {:ok, ^ref}
   end
 
-  test "telemetry", context do
-    name = start_oban!(context.repo_pid, queues: [alpha: 1])
-    events = [[:oban, :job, :start], [:oban, :job, :stop], [:oban, :job, :exception]]
-    :telemetry.attach_many("job-handler", events, &__MODULE__.TelemetryHandler.handle/4, self())
-
-    job_id = insert_job!(name).job.id
-    assert_receive {:event, :start, _started_time, %{id: ^job_id}}
-  end
-
   defp start_oban!(repo_pid, opts) do
     opts
     |> Keyword.merge(repo: DynamicRepo, get_dynamic_repo: fn -> repo_pid end)
@@ -81,19 +72,5 @@ defmodule Oban.Integration.DynamicRepoTest do
     |> select([j], j.id)
     |> order_by(asc: :id)
     |> Repo.all()
-  end
-
-  defmodule TelemetryHandler do
-    def handle([:oban, :job, :start], %{system_time: start_time}, meta, pid) do
-      send(pid, {:event, :start, start_time, meta})
-    end
-
-    def handle([:oban, :job, :stop], event_measurements, meta, pid) do
-      send(pid, {:event, :stop, event_measurements, meta})
-    end
-
-    def handle([:oban, :job, event], %{duration: duration}, meta, pid) do
-      send(pid, {:event, event, duration, meta})
-    end
   end
 end
