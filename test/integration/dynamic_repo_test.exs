@@ -8,13 +8,11 @@ defmodule Oban.Integration.DynamicRepoTest do
 
     DynamicRepo.put_dynamic_repo(repo_pid)
     Repo.delete_all(Job)
-    Repo.delete_all(Job, prefix: "private")
     DynamicRepo.put_dynamic_repo(nil)
 
     on_exit(fn ->
       DynamicRepo.put_dynamic_repo(repo_pid)
       Repo.delete_all(Job)
-      Repo.delete_all(Job, prefix: "private")
     end)
 
     {:ok, repo_pid: repo_pid}
