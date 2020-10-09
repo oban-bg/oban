@@ -53,7 +53,7 @@ defmodule MyApp.Workers.TimezoneWorker do
         next_id when is_integer(next_id) ->
           %{id: next_id, backfill: true}
           |> new(schedule_in: @backfill_delay)
-          |> Oban.insert!()
+          |> Oban.insert()
 
         nil ->
           :ok
