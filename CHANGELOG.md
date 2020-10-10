@@ -9,11 +9,46 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Added
 
-- [Oban.Telemetry] Include `tags` as part of the metadata for job events.
+- [Oban] Replace local dynamically composed names with a registry. This
+  dramatically simplifies locating nested children, avoids unnecessary atom
+  creation at runtime and improves the performance of config lookups.
 
-- [Oban] Add `check_queue/1,2` for runtime introspection of a queue's state. It
-  displays a compactly formatted breakdown of the queue's configuration, a list
-  of running jobs, and static identity information.
+- [Oban.Repo] The new `Oban.Repo` module wraps interactions with underlying Ecto
+  repos. This ensures consistent prefix and log level handling, while also
+  adding full dynamic repo support.
+
+  The `Oban.Repo` wrapper should be used when authoring plugins.
+
+- [Oban.Job] Augment the unique keys option with `replace_args`, which allows
+  enqueuing a unique job and replacing the args subsequently. For example, given
+  a job with these args:
+
+    ```elixir
+    %{some_value: 1, id: 123}
+    ```
+
+  Attempting to insert a new job:
+
+    ```elixir
+    %{some_value: 2, id: 123}
+    |> MyJob.new(schedule_in: 10, replace_args: true unique: [keys: [:id]])
+    |> Oban.insert()
+    ```
+
+  Will result in a single job with the args:
+
+    ```elixir
+    %{some_value: 2, id: 123}
+    ```
+
+- [Oban] Add `Oban.check_queue/1,2` for runtime introspection of a queue's
+  state. It displays a compactly formatted breakdown of the queue's
+  configuration, a list of running jobs, and static identity information.
+
+- [Oban] Add `Oban.retry_job/1,2`, used to manually retry a `discarded` or
+  `retryable` job.
+
+- [Oban.Telemetry] Include `tags` as part of the metadata for job events.
 
 ### Changed
 
@@ -25,6 +60,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 - [Oban.Job] Don't include `discarded` state by default when accounting for
   uniqueness.
+
+- [Oban.Cron] Fully support weekeday ranges in crontab expressions. Previously,
+  given a weekday range like `MON-WED` the parser would only retain the `MON`.
 
 ## [2.1.0] — 2020-08-21
 

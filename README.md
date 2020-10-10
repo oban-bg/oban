@@ -993,9 +993,12 @@ def start(_type, _args) do
 end
 ```
 
-### Dynamic repositories
+### Dynamic Repositories
 
-Oban supports [Ecto dynamic repositories](https://hexdocs.pm/ecto/replicas-and-dynamic-repositories.html#dynamic-repositories) through the `:get_dynamic_repo` option. To make this work, you need to run a separate Oban instance per each dynamic repo instance. Most often it's worth bundling each Oban and repo instance under the same supervisor:
+Oban supports [Ecto dynamic repositories][dynamic] through the
+`:get_dynamic_repo` option. To make this work, you need to run a separate Oban
+instance per each dynamic repo instance. Most often it's worth bundling each
+Oban and repo instance under the same supervisor:
 
 ```elixir
 def start_repo_and_oban(instance_id) do
@@ -1008,7 +1011,11 @@ def start_repo_and_oban(instance_id) do
 end
 ```
 
-The function `repo_pid/1` must return the pid of the repo for the given instance. You can use `Registry` to register the repo (for example in the repo's `init/2` callback) and discover it.
+The function `repo_pid/1` must return the pid of the repo for the given
+instance. You can use `Registry` to register the repo (for example in the repo's
+`init/2` callback) and discover it.
+
+[dynamic]: https://hexdocs.pm/ecto/replicas-and-dynamic-repositories.html#dynamic-repositories
 
 <!-- MDOC -->
 

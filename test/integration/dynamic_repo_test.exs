@@ -1,8 +1,8 @@
 defmodule Oban.Integration.DynamicRepoTest do
   use Oban.Case
-  
+
   import Ecto.Query
-  
+
   alias Oban.Test.DynamicRepo
 
   setup do

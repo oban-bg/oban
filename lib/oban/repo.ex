@@ -2,19 +2,18 @@ defmodule Oban.Repo do
   @moduledoc """
   Wrappers around `Ecto.Repo` callbacks.
 
-  These functions should be used when working with an Ecto repo inside a plugin. These functions will
-  resolve the correct repo instance, and set the schema prefix and the log level, according to the
-  Oban configuration.
+  These functions should be used when working with an Ecto repo inside a plugin. These functions
+  will resolve the correct repo instance, and set the schema prefix and the log level, according
+  to the Oban configuration.
   """
 
-  @type config ::
-          %{
-            :repo => module,
-            optional(:get_dynamic_repo) => (() -> pid | atom),
-            optional(:log) => false | Logger.level(),
-            optional(:prefix) => binary(),
-            optional(any) => any
-          }
+  @type config :: %{
+          :repo => module,
+          optional(:get_dynamic_repo) => (() -> pid | atom),
+          optional(:log) => false | Logger.level(),
+          optional(:prefix) => binary(),
+          optional(any) => any
+        }
 
   @doc "Wraps `c:Ecto.Repo.transaction/2`."
   @doc since: "2.2.0"
