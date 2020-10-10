@@ -1,6 +1,8 @@
 defmodule Oban.Integration.DynamicRepoTest do
   use Oban.Case
+  
   import Ecto.Query
+  
   alias Oban.Test.DynamicRepo
 
   setup do
@@ -21,14 +23,6 @@ defmodule Oban.Integration.DynamicRepoTest do
   test "job execution", context do
     name = start_oban!(context.repo_pid, queues: [alpha: 1])
     job_ref = insert_job!(name).ref
-    assert_receive {:ok, ^job_ref}
-  end
-
-  test "draining", context do
-    name = start_oban!(context.repo_pid, queues: false)
-    job_ref = insert_job!(name).ref
-
-    assert Oban.drain_queue(name, queue: :alpha) == %{failure: 0, success: 1}
     assert_receive {:ok, ^job_ref}
   end
 

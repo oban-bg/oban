@@ -2,7 +2,7 @@ defmodule Oban.Repo do
   @moduledoc """
   Wrappers around `Ecto.Repo` callbacks.
 
-  These functions should be used when working with Ecto repo inside a plugin. These functions will
+  These functions should be used when working with an Ecto repo inside a plugin. These functions will
   resolve the correct repo instance, and set the schema prefix and the log level, according to the
   Oban configuration.
   """
