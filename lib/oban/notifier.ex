@@ -70,7 +70,7 @@ defmodule Oban.Notifier do
 
   import Oban.Breaker, only: [open_circuit: 1, trip_circuit: 3]
 
-  alias Oban.{Config, Query}
+  alias Oban.{Config, Query, Repo}
   alias Postgrex.Notifications
 
   @type option :: {:name, module()} | {:conf, Config.t()}
@@ -243,7 +243,7 @@ defmodule Oban.Notifier do
   defp in_scope?(_decoded, _conf), do: true
 
   defp connect_and_listen(%State{conf: conf, conn: nil} = state) do
-    case Notifications.start_link(conf.repo.config()) do
+    case Notifications.start_link(Repo.config(conf)) do
       {:ok, conn} ->
         for {_, full} <- @mappings, do: Notifications.listen(conn, "#{conf.prefix}.#{full}")
 

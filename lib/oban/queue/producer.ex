@@ -5,7 +5,7 @@ defmodule Oban.Queue.Producer do
 
   import Oban.Breaker, only: [open_circuit: 1, trip_errors: 0, trip_circuit: 3]
 
-  alias Oban.{Breaker, Config, Notifier, Query, Registry, Telemetry}
+  alias Oban.{Breaker, Config, Notifier, Query, Registry, Repo, Telemetry}
   alias Oban.Queue.Executor
 
   @type option ::
@@ -162,7 +162,7 @@ defmodule Oban.Queue.Producer do
   end
 
   def handle_info(:poll, %State{conf: conf} = state) do
-    conf.repo.checkout(fn ->
+    Repo.checkout(conf, fn ->
       state
       |> schedule_poll()
       |> deschedule()

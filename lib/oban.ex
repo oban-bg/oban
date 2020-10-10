@@ -49,6 +49,7 @@ defmodule Oban do
           | {:shutdown_grace_period, timeout()}
           | {:timezone, Calendar.time_zone()}
           | {:log, false | Logger.level()}
+          | {:get_dynamic_repo, nil | (() -> pid() | atom())}
 
   @version Mix.Project.config()[:version]
 

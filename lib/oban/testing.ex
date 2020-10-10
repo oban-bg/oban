@@ -112,7 +112,7 @@ defmodule Oban.Testing do
   import Ecto.Query, only: [limit: 2, order_by: 2, select: 2, where: 2, where: 3]
 
   alias Ecto.Changeset
-  alias Oban.{Job, Worker}
+  alias Oban.{Job, Repo, Worker}
 
   @wait_interval 10
 
@@ -227,10 +227,10 @@ defmodule Oban.Testing do
   def all_enqueued(repo, [_ | _] = opts) do
     {prefix, opts} = extract_prefix(opts)
 
-    opts
-    |> base_query()
-    |> order_by(desc: :id)
-    |> repo.all(prefix: prefix)
+    Repo.all(
+      %{prefix: prefix, repo: repo},
+      opts |> base_query() |> order_by(desc: :id)
+    )
   end
 
   @doc """
@@ -404,11 +404,10 @@ defmodule Oban.Testing do
   defp get_job(repo, opts) do
     {prefix, opts} = extract_prefix(opts)
 
-    opts
-    |> base_query()
-    |> limit(1)
-    |> select([:id])
-    |> repo.one(prefix: prefix)
+    Repo.one(
+      %{prefix: prefix, repo: repo},
+      opts |> base_query() |> limit(1) |> select([:id])
+    )
   end
 
   defp wait_for_job(repo, opts, timeout) when timeout > 0 do
@@ -429,10 +428,8 @@ defmodule Oban.Testing do
     {prefix, opts} = extract_prefix(opts)
     fields = Keyword.keys(opts)
 
-    []
-    |> base_query()
-    |> select(^fields)
-    |> repo.all(prefix: prefix)
+    %{prefix: prefix, repo: repo}
+    |> Repo.all([] |> base_query() |> select(^fields))
     |> Enum.map(&Map.take(&1, fields))
   end
 

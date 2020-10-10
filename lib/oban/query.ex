@@ -5,12 +5,10 @@ defmodule Oban.Query do
   import DateTime, only: [utc_now: 0]
 
   alias Ecto.{Changeset, Multi}
-  alias Oban.{Config, Job}
+  alias Oban.{Config, Job, Repo}
 
   @spec fetch_available_jobs(Config.t(), binary(), binary(), pos_integer()) :: {:ok, [Job.t()]}
-  def fetch_available_jobs(%Config{} = conf, queue, nonce, demand) do
-    %Config{node: node, prefix: prefix, repo: repo, log: log} = conf
-
+  def fetch_available_jobs(%Config{node: node} = conf, queue, nonce, demand) do
     subset =
       Job
       |> select([:id])
@@ -25,26 +23,26 @@ defmodule Oban.Query do
       inc: [attempt: 1]
     ]
 
-    repo.transaction(
+    Repo.transaction(
+      conf,
       fn ->
-        Job
-        |> where([j], j.id in subquery(subset))
-        |> select([j, _], j)
-        |> repo.update_all(updates, log: log, prefix: prefix)
-        |> case do
+        query =
+          Job
+          |> where([j], j.id in subquery(subset))
+          |> select([j, _], j)
+
+        case Repo.update_all(conf, query, updates) do
           {0, nil} -> []
           {_count, jobs} -> jobs
         end
-      end,
-      log: log
+      end
     )
   end
 
   @spec fetch_or_insert_job(Config.t(), Changeset.t()) :: {:ok, Job.t()} | {:error, Changeset.t()}
-  def fetch_or_insert_job(%Config{repo: repo, log: log} = conf, changeset) do
+  def fetch_or_insert_job(conf, changeset) do
     fun = fn -> insert_unique(conf, changeset) end
-
-    with {:ok, result} <- repo.transaction(fun, log: log), do: result
+    with {:ok, result} <- Repo.transaction(conf, fun), do: result
   end
 
   @spec fetch_or_insert_job(Config.t(), Multi.t(), Multi.name(), fun() | Changeset.t()) ::
@@ -63,12 +61,9 @@ defmodule Oban.Query do
 
   @spec insert_all_jobs(Config.t(), [Changeset.t(Job.t())]) :: [Job.t()]
   def insert_all_jobs(%Config{} = conf, changesets) when is_list(changesets) do
-    %Config{prefix: prefix, repo: repo, log: log} = conf
-
     entries = Enum.map(changesets, &Job.to_map/1)
-    opts = [log: log, on_conflict: :nothing, prefix: prefix, returning: true]
 
-    case repo.insert_all(Job, entries, opts) do
+    case Repo.insert_all(conf, Job, entries, on_conflict: :nothing, returning: true) do
       {0, _} -> []
       {_count, jobs} -> jobs
     end
@@ -81,10 +76,8 @@ defmodule Oban.Query do
     end)
   end
 
-  @spec stage_scheduled_jobs(Config.t(), binary(), opts :: keyword()) :: {integer(), nil}
+  @spec stage_scheduled_jobs(Config.t(), binary(), opts :: keyword()) :: {:ok, {integer(), nil}}
   def stage_scheduled_jobs(%Config{} = conf, queue, opts \\ []) do
-    %Config{prefix: prefix, repo: repo, log: log} = conf
-
     max_scheduled_at = Keyword.get(opts, :max_scheduled_at, utc_now())
 
     subset =
@@ -95,49 +88,48 @@ defmodule Oban.Query do
       |> where([j], j.scheduled_at <= ^max_scheduled_at)
       |> lock("FOR UPDATE SKIP LOCKED")
 
-    repo.transaction(
+    Repo.transaction(
+      conf,
       fn ->
-        Job
-        |> where([j], j.id in subquery(subset))
-        |> repo.update_all([set: [state: "available"]], log: log, prefix: prefix)
-      end,
-      log: log
+        Repo.update_all(conf, where(Job, [j], j.id in subquery(subset)), set: [state: "available"])
+      end
     )
   end
 
   @spec retry_job(Config.t(), pos_integer()) :: :ok
-  def retry_job(%Config{prefix: prefix, repo: repo, log: log}, id) do
-    Job
-    |> where([j], j.id == ^id)
-    |> where([j], j.state not in ["available", "executing", "scheduled"])
-    |> update([j],
-      set: [
-        state: "available",
-        max_attempts: fragment("GREATEST(?, ? + 1)", j.max_attempts, j.attempt),
-        scheduled_at: ^utc_now(),
-        completed_at: nil,
-        discarded_at: nil
-      ]
-    )
-    |> repo.update_all([], log: log, prefix: prefix)
+  def retry_job(conf, id) do
+    query =
+      Job
+      |> where([j], j.id == ^id)
+      |> where([j], j.state not in ["available", "executing", "scheduled"])
+      |> update([j],
+        set: [
+          state: "available",
+          max_attempts: fragment("GREATEST(?, ? + 1)", j.max_attempts, j.attempt),
+          scheduled_at: ^utc_now(),
+          completed_at: nil,
+          discarded_at: nil
+        ]
+      )
+
+    Repo.update_all(conf, query, [])
 
     :ok
   end
 
   @spec complete_job(Config.t(), Job.t()) :: :ok
-  def complete_job(%Config{prefix: prefix, repo: repo, log: log}, %Job{id: id}) do
-    repo.update_all(
+  def complete_job(%Config{} = conf, %Job{id: id}) do
+    Repo.update_all(
+      conf,
       where(Job, id: ^id),
-      [set: [state: "completed", completed_at: utc_now()]],
-      log: log,
-      prefix: prefix
+      set: [state: "completed", completed_at: utc_now()]
     )
 
     :ok
   end
 
   @spec discard_job(Config.t(), Job.t()) :: :ok
-  def discard_job(%Config{prefix: prefix, repo: repo, log: log}, %Job{} = job) do
+  def discard_job(%Config{} = conf, %Job{} = job) do
     updates = [
       set: [state: "discarded", discarded_at: utc_now()],
       push: [
@@ -145,31 +137,25 @@ defmodule Oban.Query do
       ]
     ]
 
-    repo.update_all(
-      where(Job, id: ^job.id),
-      updates,
-      log: log,
-      prefix: prefix
-    )
-
+    Repo.update_all(conf, where(Job, id: ^job.id), updates)
     :ok
   end
 
   @cancellable_states ~w(available scheduled retryable)
 
   @spec cancel_job(Config.t(), pos_integer()) :: :ok | :ignored
-  def cancel_job(%Config{prefix: prefix, repo: repo, log: log}, job_id) do
+  def cancel_job(%Config{} = conf, job_id) do
     query = where(Job, [j], j.id == ^job_id and j.state in @cancellable_states)
     updates = [set: [state: "discarded", discarded_at: utc_now()]]
 
-    case repo.update_all(query, updates, log: log, prefix: prefix) do
+    case Repo.update_all(conf, query, updates) do
       {1, nil} -> :ok
       {0, nil} -> :ignored
     end
   end
 
   @spec snooze_job(Config.t(), Job.t(), pos_integer()) :: :ok
-  def snooze_job(%Config{prefix: prefix, repo: repo, log: log}, %Job{id: id}, seconds) do
+  def snooze_job(%Config{} = conf, %Job{id: id}, seconds) do
     scheduled_at = DateTime.add(utc_now(), seconds)
 
     updates = [
@@ -177,14 +163,12 @@ defmodule Oban.Query do
       inc: [max_attempts: 1]
     ]
 
-    repo.update_all(where(Job, id: ^id), updates, log: log, prefix: prefix)
-
+    Repo.update_all(conf, where(Job, id: ^id), updates)
     :ok
   end
 
   @spec retry_job(Config.t(), Job.t(), pos_integer()) :: :ok
   def retry_job(%Config{} = conf, %Job{} = job, backoff) do
-    %Config{prefix: prefix, repo: repo, log: log} = conf
     %Job{attempt: attempt, id: id, max_attempts: max_attempts} = job
 
     set =
@@ -199,29 +183,24 @@ defmodule Oban.Query do
       push: [errors: %{attempt: attempt, at: utc_now(), error: format_blamed(job.unsaved_error)}]
     ]
 
-    Job
-    |> where(id: ^id)
-    |> repo.update_all(updates, log: log, prefix: prefix)
-
+    Repo.update_all(conf, where(Job, id: ^id), updates)
     :ok
   end
 
   @spec notify(Config.t(), binary(), map()) :: :ok
-  def notify(%Config{} = conf, channel, %{} = payload) when is_binary(channel) do
-    %Config{prefix: prefix, repo: repo, log: log} = conf
-
-    repo.query(
+  def notify(%Config{prefix: prefix} = conf, channel, %{} = payload) when is_binary(channel) do
+    Repo.query(
+      conf,
       "SELECT pg_notify($1, $2)",
-      ["#{prefix}.#{channel}", Jason.encode!(payload)],
-      log: log
+      ["#{prefix}.#{channel}", Jason.encode!(payload)]
     )
 
     :ok
   end
 
   @spec acquire_lock?(Config.t(), pos_integer()) :: boolean()
-  def acquire_lock?(%Config{prefix: prefix, repo: repo, log: log}, lock_key) do
-    case acquire_lock(repo, lock_key, log: log, prefix: prefix) do
+  def acquire_lock?(%Config{} = conf, lock_key) do
+    case acquire_lock(conf, lock_key) do
       :ok -> true
       {:error, :locked} -> false
     end
@@ -237,27 +216,29 @@ defmodule Oban.Query do
     Exception.format(kind, blamed, stacktrace)
   end
 
-  defp insert_unique(%Config{prefix: prefix, repo: repo, log: log}, changeset) do
-    query_opts = [log: log, on_conflict: :nothing, prefix: prefix]
+  defp insert_unique(%Config{} = conf, changeset) do
+    query_opts = [on_conflict: :nothing]
 
     with {:ok, query, lock_key} <- unique_query(changeset),
-         :ok <- acquire_lock(repo, lock_key, query_opts),
-         {:ok, job} <- unprepared_one(repo, query, query_opts) do
-      return_or_replace(repo, query_opts, job, changeset)
+         :ok <- acquire_lock(conf, lock_key, query_opts),
+         {:ok, job} <- unprepared_one(conf, query, query_opts) do
+      return_or_replace(conf, query_opts, job, changeset)
     else
       {:error, :locked} ->
         {:ok, Changeset.apply_changes(changeset)}
 
       nil ->
-        repo.insert(changeset, query_opts)
+        Repo.insert(conf, changeset, query_opts)
     end
   end
 
-  defp return_or_replace(repo, query_opts, job, changeset) do
+  defp return_or_replace(conf, query_opts, job, changeset) do
     if Changeset.get_change(changeset, :replace_args) do
-      job
-      |> Ecto.Changeset.change(%{args: changeset.changes.args})
-      |> repo.update(query_opts)
+      Repo.update(
+        conf,
+        Ecto.Changeset.change(job, %{args: changeset.changes.args}),
+        query_opts
+      )
     else
       {:ok, job}
     end
@@ -308,11 +289,11 @@ defmodule Oban.Query do
     where(query, [j], j.inserted_at > ^since)
   end
 
-  defp acquire_lock(repo, base_key, opts) do
-    pref_key = :erlang.phash2(opts[:prefix])
+  defp acquire_lock(conf, base_key, opts \\ []) do
+    pref_key = :erlang.phash2(conf.prefix)
     lock_key = pref_key + base_key
 
-    case repo.query("SELECT pg_try_advisory_xact_lock($1)", [lock_key], opts) do
+    case Repo.query(conf, "SELECT pg_try_advisory_xact_lock($1)", [lock_key], opts) do
       {:ok, %{rows: [[true]]}} ->
         :ok
 
@@ -325,13 +306,11 @@ defmodule Oban.Query do
   # of a `custom plan`, which *drastically* impacts the unique query performance. Ecto doesn't
   # provide a way to opt out of prepared statements for a single query, so this function works
   # around the issue by forcing a raw SQL query.
-  defp unprepared_one(repo, query, opts) do
-    prefix = Keyword.get(opts, :prefix, "public")
+  defp unprepared_one(conf, query, opts) do
+    {raw_sql, bindings} = Repo.to_sql(conf, :all, query)
 
-    {raw_sql, bindings} = repo.to_sql(:all, %{query | prefix: prefix})
-
-    case repo.query(raw_sql, bindings, opts) do
-      {:ok, %{columns: columns, rows: [rows]}} -> {:ok, repo.load(Job, {columns, rows})}
+    case Repo.query(conf, raw_sql, bindings, opts) do
+      {:ok, %{columns: columns, rows: [rows]}} -> {:ok, conf.repo.load(Job, {columns, rows})}
       _ -> nil
     end
   end

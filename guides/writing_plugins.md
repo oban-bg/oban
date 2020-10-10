@@ -47,10 +47,12 @@ defmodule MyApp.Plugins.Breakdown do
   @impl GenServer
   def handle_info(:poll, %{conf: conf} = state) do
     breakdown =
-      Oban.Job
-      |> group_by([j], [j.queue, j.state])
-      |> select([j], {j.queue, j.state, count(j.id)})
-      |> conf.repo.all()
+      Oban.Repo.all(
+        conf,
+        Oban.Job
+        |> group_by([j], [j.queue, j.state])
+        |> select([j], {j.queue, j.state, count(j.id)})
+      )
 
     IO.inspect(breakdown)
 
