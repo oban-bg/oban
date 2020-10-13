@@ -126,8 +126,8 @@ defmodule Oban.Integration.ControllingTest do
 
       assert :ok = Oban.pause_queue(name2, queue: :alpha, local_only: true)
 
-      insert!(%{ref: 1, sleep: 500}, queue: :alpha)
-      insert!(%{ref: 2, sleep: 500}, queue: :alpha)
+      insert!(%{ref: 1, sleep: 1000}, queue: :alpha)
+      insert!(%{ref: 2, sleep: 1000}, queue: :alpha)
 
       assert_receive {:started, 1}
       refute_receive {:started, 2}
@@ -142,8 +142,8 @@ defmodule Oban.Integration.ControllingTest do
       assert :ok = Oban.pause_queue(name1, queue: :alpha)
       assert :ok = Oban.resume_queue(name1, queue: :alpha, local_only: true)
 
-      insert!(%{ref: 1, sleep: 500}, queue: :alpha)
-      insert!(%{ref: 2, sleep: 500}, queue: :alpha)
+      insert!(%{ref: 1, sleep: 1000}, queue: :alpha)
+      insert!(%{ref: 2, sleep: 1000}, queue: :alpha)
 
       assert_receive {:started, 1}
       refute_receive {:started, 2}
