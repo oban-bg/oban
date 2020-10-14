@@ -327,7 +327,7 @@ defmodule MyApp.Business do
   use Oban.Worker, queue: :events
 
   @impl Oban.Worker
-  def perform(%Oban.Job{args: %{"id" => id}}) do
+  def perform(%Oban.Job{args: %{"id" => id} = args}) do
     model = MyApp.Repo.get(MyApp.Business.Man, id)
 
     case args do
