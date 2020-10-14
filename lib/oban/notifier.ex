@@ -129,6 +129,7 @@ defmodule Oban.Notifier do
   """
   @spec listen(GenServer.server(), channels :: list(channel())) :: :ok
   def listen(server \\ __MODULE__, channels)
+
   def listen(pid, channels) when is_pid(pid) and is_list(channels) do
     :ok = validate_channels!(channels)
 
@@ -136,10 +137,10 @@ defmodule Oban.Notifier do
   end
 
   def listen(server, channels) when is_atom(server) and is_list(channels) do
-      Oban.config()
-      |> Map.get(:name, Oban)
-      |> Oban.Registry.whereis(server)
-      |> listen(channels)
+    Oban.config()
+    |> Map.get(:name, Oban)
+    |> Oban.Registry.whereis(server)
+    |> listen(channels)
   end
 
   @doc """
