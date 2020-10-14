@@ -109,44 +109,50 @@ defmodule Oban.Integration.ControllingTest do
 
       assert :ok = Oban.pause_queue(name, queue: :alpha)
 
-      insert!(ref: 1, action: "OK")
-
-      refute_receive {:ok, 1}
+      with_backoff(fn ->
+        assert %{paused: false} = Oban.check_queue(name, queue: :alpha)
+      end)
 
       assert :ok = Oban.resume_queue(name, queue: :alpha)
 
-      assert_receive {:ok, 1}
+      with_backoff(fn ->
+        assert %{paused: true} = Oban.check_queue(name, queue: :alpha)
+      end)
     end
 
     test "pausing queues only on the local node" do
-      start_supervised_oban!(queues: [alpha: 1])
+      name1 = start_supervised_oban!(queues: [alpha: 1])
       name2 = start_supervised_oban!(queues: [alpha: 1])
 
       sleep_for_notifier()
 
       assert :ok = Oban.pause_queue(name2, queue: :alpha, local_only: true)
 
-      insert!(%{ref: 1, sleep: 1000}, queue: :alpha)
-      insert!(%{ref: 2, sleep: 1000}, queue: :alpha)
-
-      assert_receive {:started, 1}
-      refute_receive {:started, 2}
+      with_backoff(fn ->
+        assert %{paused: false} = Oban.check_queue(name1, queue: :alpha)
+        assert %{paused: true} = Oban.check_queue(name2, queue: :alpha)
+      end)
     end
 
     test "resuming queues only on the local node" do
       name1 = start_supervised_oban!(queues: [alpha: 1])
-      start_supervised_oban!(queues: [alpha: 1])
+      name2 = start_supervised_oban!(queues: [alpha: 1])
 
       sleep_for_notifier()
 
       assert :ok = Oban.pause_queue(name1, queue: :alpha)
+
+      with_backoff(fn ->
+        assert %{paused: true} = Oban.check_queue(name1, queue: :alpha)
+        assert %{paused: true} = Oban.check_queue(name2, queue: :alpha)
+      end)
+
       assert :ok = Oban.resume_queue(name1, queue: :alpha, local_only: true)
 
-      insert!(%{ref: 1, sleep: 1000}, queue: :alpha)
-      insert!(%{ref: 2, sleep: 1000}, queue: :alpha)
-
-      assert_receive {:started, 1}
-      refute_receive {:started, 2}
+      with_backoff(fn ->
+        assert %{paused: false} = Oban.check_queue(name1, queue: :alpha)
+        assert %{paused: true} = Oban.check_queue(name2, queue: :alpha)
+      end)
     end
   end
 
