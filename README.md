@@ -254,7 +254,7 @@ end
 ```
 
 If you are running tests (which you should be) you'll want to disable plugins,
-enqueuing scheduled jobs and job dispatching altogether when testing:
+enqueueing scheduled jobs and job dispatching altogether when testing:
 
 ```elixir
 # config/test.exs
@@ -494,7 +494,7 @@ config :my_app, Oban,
 
 ### Unique Jobs
 
-The unique jobs feature lets you specify constraints to prevent enqueuing
+The unique jobs feature lets you specify constraints to prevent enqueueing
 duplicate jobs.  Uniqueness is based on a combination of `args`, `queue`,
 `worker`, `state` and insertion time. It is configured at the worker or job
 level using the following options:
