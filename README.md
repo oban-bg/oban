@@ -150,7 +150,7 @@ dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:oban, "~> 2.1"}
+    {:oban, "~> 2.2"}
   ]
 end
 ```
@@ -254,7 +254,7 @@ end
 ```
 
 If you are running tests (which you should be) you'll want to disable plugins,
-enqueuing scheduled jobs and job dispatching altogether when testing:
+enqueueing scheduled jobs and job dispatching altogether when testing:
 
 ```elixir
 # config/test.exs
@@ -327,7 +327,7 @@ defmodule MyApp.Business do
   use Oban.Worker, queue: :events
 
   @impl Oban.Worker
-  def perform(%Oban.Job{args: %{"id" => id}}) do
+  def perform(%Oban.Job{args: %{"id" => id} = args}) do
     model = MyApp.Repo.get(MyApp.Business.Man, id)
 
     case args do
@@ -494,7 +494,7 @@ config :my_app, Oban,
 
 ### Unique Jobs
 
-The unique jobs feature lets you specify constraints to prevent enqueuing
+The unique jobs feature lets you specify constraints to prevent enqueueing
 duplicate jobs.  Uniqueness is based on a combination of `args`, `queue`,
 `worker`, `state` and insertion time. It is configured at the worker or job
 level using the following options:
