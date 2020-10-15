@@ -128,7 +128,7 @@ defmodule Oban.Notifier do
       Oban.Notifier.listen([:gossip, :insert, :signal])
   """
   @spec listen(GenServer.server(), channels :: list(channel())) :: :ok
-  def listen(server \\ __MODULE__, channels)
+  def listen(server \\ Oban, channels)
 
   def listen(pid, channels) when is_pid(pid) and is_list(channels) do
     :ok = validate_channels!(channels)
@@ -136,10 +136,9 @@ defmodule Oban.Notifier do
     GenServer.call(pid, {:listen, channels})
   end
 
-  def listen(server, channels) when is_atom(server) and is_list(channels) do
-    Oban.config()
-    |> Map.get(:name, Oban)
-    |> Oban.Registry.whereis(server)
+  def listen(oban_name, channels) when is_atom(oban_name) and is_list(channels) do
+    oban_name
+    |> Oban.Registry.whereis(__MODULE__)
     |> listen(channels)
   end
 
