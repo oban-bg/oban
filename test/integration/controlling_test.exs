@@ -3,6 +3,8 @@ defmodule Oban.Integration.ControllingTest do
 
   @moduletag :integration
 
+  alias Oban.{Notifier, Registry}
+
   describe "start_queue/2" do
     test "validating options" do
       assert_invalid_opts(:start_queue, queue: nil)
@@ -32,7 +34,7 @@ defmodule Oban.Integration.ControllingTest do
       name1 = start_supervised_oban!(queues: [])
       name2 = start_supervised_oban!(queues: [])
 
-      sleep_for_notifier()
+      wait_for_notifier(name1)
 
       assert :ok = Oban.start_queue(name1, queue: :alpha, limit: 1, local_only: true)
 
@@ -82,7 +84,7 @@ defmodule Oban.Integration.ControllingTest do
       name1 = start_supervised_oban!(queues: [alpha: 1])
       name2 = start_supervised_oban!(queues: [alpha: 1])
 
-      sleep_for_notifier()
+      wait_for_notifier(name2)
 
       assert :ok = Oban.stop_queue(name2, queue: :alpha, local_only: true)
 
@@ -105,18 +107,18 @@ defmodule Oban.Integration.ControllingTest do
     test "pausing and resuming individual queues" do
       name = start_supervised_oban!(queues: [alpha: 5], poll_interval: 1_000)
 
-      sleep_for_notifier()
+      wait_for_notifier(name)
 
       assert :ok = Oban.pause_queue(name, queue: :alpha)
 
       with_backoff(fn ->
-        assert %{paused: false} = Oban.check_queue(name, queue: :alpha)
+        assert %{paused: true} = Oban.check_queue(name, queue: :alpha)
       end)
 
       assert :ok = Oban.resume_queue(name, queue: :alpha)
 
       with_backoff(fn ->
-        assert %{paused: true} = Oban.check_queue(name, queue: :alpha)
+        assert %{paused: false} = Oban.check_queue(name, queue: :alpha)
       end)
     end
 
@@ -124,7 +126,7 @@ defmodule Oban.Integration.ControllingTest do
       name1 = start_supervised_oban!(queues: [alpha: 1])
       name2 = start_supervised_oban!(queues: [alpha: 1])
 
-      sleep_for_notifier()
+      wait_for_notifier(name2)
 
       assert :ok = Oban.pause_queue(name2, queue: :alpha, local_only: true)
 
@@ -138,7 +140,8 @@ defmodule Oban.Integration.ControllingTest do
       name1 = start_supervised_oban!(queues: [alpha: 1])
       name2 = start_supervised_oban!(queues: [alpha: 1])
 
-      sleep_for_notifier()
+      wait_for_notifier(name1)
+      wait_for_notifier(name2)
 
       assert :ok = Oban.pause_queue(name1, queue: :alpha)
 
@@ -166,7 +169,7 @@ defmodule Oban.Integration.ControllingTest do
     test "scaling queues up" do
       name = start_supervised_oban!(queues: [alpha: 1])
 
-      sleep_for_notifier()
+      wait_for_notifier(name)
 
       for ref <- 1..6, do: insert!(ref: ref, sleep: 500)
 
@@ -177,10 +180,10 @@ defmodule Oban.Integration.ControllingTest do
     end
 
     test "scaling queues only on the local node" do
-      start_supervised_oban!(queues: [alpha: 2])
+      _name = start_supervised_oban!(queues: [alpha: 2])
       name2 = start_supervised_oban!(queues: [alpha: 2])
 
-      sleep_for_notifier()
+      wait_for_notifier(name2)
 
       assert :ok = Oban.scale_queue(name2, queue: :alpha, limit: 1, local_only: true)
 
@@ -235,9 +238,9 @@ defmodule Oban.Integration.ControllingTest do
   end
 
   test "dispatching jobs from a queue via database trigger" do
-    start_supervised_oban!(queues: [alpha: 5], poll_interval: :timer.minutes(5))
+    name = start_supervised_oban!(queues: [alpha: 5], poll_interval: :timer.minutes(5))
 
-    sleep_for_notifier()
+    wait_for_notifier(name)
 
     insert!(ref: 1, action: "OK")
 
@@ -271,13 +274,19 @@ defmodule Oban.Integration.ControllingTest do
 
   defp supervised_queue?(oban_name, queue_name) do
     oban_name
-    |> Oban.whereis()
-    |> Supervisor.which_children()
-    |> Enum.any?(fn {name, _, _, _} -> name == queue_name end)
+    |> Registry.whereis({:producer, queue_name})
+    |> is_pid()
   end
 
-  defp sleep_for_notifier do
-    Process.sleep(25)
+  defp wait_for_notifier(oban_name) do
+    with_backoff(fn ->
+      notifier_state =
+        oban_name
+        |> Registry.via(Notifier)
+        |> :sys.get_state()
+
+      assert is_pid(notifier_state.conn)
+    end)
   end
 
   defp assert_invalid_opts(function_name, opts) do
