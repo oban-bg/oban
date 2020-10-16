@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## Unreleased
 
+### Fixed
+
+- [Oban.Notifier] Fix resolution of `Oban.Notifier` child process in `Oban.Notifier.listen/2`.
+
 ## [2.2.0] — 2020-10-12
 
 ### Added

@@ -98,8 +98,6 @@ defmodule Oban.Notifier do
     ]
   end
 
-  defguardp is_server(server) when is_pid(server) or is_atom(server)
-
   defguardp is_channel(channel) when channel in @channels
 
   @doc false
@@ -130,10 +128,18 @@ defmodule Oban.Notifier do
       Oban.Notifier.listen([:gossip, :insert, :signal])
   """
   @spec listen(GenServer.server(), channels :: list(channel())) :: :ok
-  def listen(server \\ __MODULE__, channels) when is_server(server) and is_list(channels) do
+  def listen(server \\ Oban, channels)
+
+  def listen(pid, channels) when is_pid(pid) and is_list(channels) do
     :ok = validate_channels!(channels)
 
-    GenServer.call(server, {:listen, channels})
+    GenServer.call(pid, {:listen, channels})
+  end
+
+  def listen(oban_name, channels) when is_atom(oban_name) and is_list(channels) do
+    oban_name
+    |> Oban.Registry.whereis(__MODULE__)
+    |> listen(channels)
   end
 
   @doc """
