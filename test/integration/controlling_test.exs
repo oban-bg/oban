@@ -198,7 +198,7 @@ defmodule Oban.Integration.ControllingTest do
 
     refute_receive {:ok, 1}, 200
 
-    assert %Job{state: "canceled", discarded_at: %_{}, errors: [_]} = Repo.reload(job)
+    assert %Job{state: "cancelled", discarded_at: %_{}, errors: [_]} = Repo.reload(job)
 
     %{running: running} = :sys.get_state(Oban.Registry.whereis(name, {:producer, "alpha"}))
 
@@ -222,10 +222,10 @@ defmodule Oban.Integration.ControllingTest do
 
     refute_receive {:ok, 4}, 200
 
-    assert %Job{state: "canceled", discarded_at: %_{}} = Repo.reload(job_a)
-    assert %Job{state: "canceled", discarded_at: %_{}} = Repo.reload(job_b)
+    assert %Job{state: "cancelled", discarded_at: %_{}} = Repo.reload(job_a)
+    assert %Job{state: "cancelled", discarded_at: %_{}} = Repo.reload(job_b)
     assert %Job{state: "completed", discarded_at: nil} = Repo.reload(job_c)
-    assert %Job{state: "canceled", discarded_at: %_{}} = Repo.reload(job_d)
+    assert %Job{state: "cancelled", discarded_at: %_{}} = Repo.reload(job_d)
   end
 
   test "dispatching jobs from a queue via database trigger" do

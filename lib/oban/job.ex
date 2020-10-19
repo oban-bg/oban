@@ -27,7 +27,7 @@ defmodule Oban.Job do
           | :retryable
           | :completed
           | :discarded
-          | :canceled
+          | :cancelled
         ]
 
   @type unique_option ::
@@ -208,10 +208,10 @@ defmodule Oban.Job do
   ## Examples
 
       iex> Oban.Job.states() -- [:completed, :discarded]
-      [:scheduled, :available, :executing, :retryable, :canceled]
+      [:scheduled, :available, :executing, :retryable, :cancelled]
   """
   @doc since: "2.1.0"
-  def states, do: @unique_states ++ [:discarded, :canceled]
+  def states, do: @unique_states ++ [:discarded, :cancelled]
 
   @doc """
   Convert a Job changeset into a map suitable for database insertion.

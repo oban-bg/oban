@@ -469,7 +469,7 @@ defmodule Oban.Migrations do
             'retryable',
             'completed',
             'discarded',
-            'canceled'
+            'cancelled'
           );
 
           ALTER TABLE #{prefix}.oban_jobs RENAME column state TO _state;
