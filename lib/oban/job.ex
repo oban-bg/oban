@@ -67,6 +67,7 @@ defmodule Oban.Job do
           attempted_at: DateTime.t(),
           completed_at: DateTime.t(),
           discarded_at: DateTime.t(),
+          cancelled_at: DateTime.t(),
           unique: %{fields: [unique_field()], period: unique_period(), states: [unique_state()]},
           unsaved_error: %{kind: atom(), reason: term(), stacktrace: Exception.stacktrace()}
         }
@@ -86,6 +87,7 @@ defmodule Oban.Job do
     field :attempted_at, :utc_datetime_usec
     field :completed_at, :utc_datetime_usec
     field :discarded_at, :utc_datetime_usec
+    field :cancelled_at, :utc_datetime_usec
     field :inserted_at, :utc_datetime_usec
     field :scheduled_at, :utc_datetime_usec
     field :unique, :map, virtual: true
@@ -100,6 +102,7 @@ defmodule Oban.Job do
     attempted_at
     completed_at
     discarded_at
+    cancelled_at
     errors
     inserted_at
     max_attempts

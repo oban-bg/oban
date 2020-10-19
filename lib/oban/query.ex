@@ -160,7 +160,7 @@ defmodule Oban.Query do
   @spec cancel_job(Config.t(), pos_integer()) :: :ok | :ignored
   def cancel_job(%Config{prefix: prefix, repo: repo, log: log}, job_id) do
     query = where(Job, [j], j.id == ^job_id and j.state in @cancellable_states)
-    updates = [set: [state: "cancelled", discarded_at: utc_now()]]
+    updates = [set: [state: "cancelled", cancelled_at: utc_now()]]
 
     case repo.update_all(query, updates, log: log, prefix: prefix) do
       {1, nil} -> :ok
@@ -171,7 +171,7 @@ defmodule Oban.Query do
   @spec cancel_running_job(Config.t(), Job.t()) :: :ok
   def cancel_running_job(%Config{prefix: prefix, repo: repo, log: log}, job) do
     updates = [
-      set: [state: "cancelled", discarded_at: utc_now()],
+      set: [state: "cancelled", cancelled_at: utc_now()],
       push: [
         errors: %{attempt: job.attempt, at: utc_now(), error: format_blamed(job.unsaved_error)}
       ]

@@ -452,6 +452,7 @@ defmodule Oban.Migrations do
     def up(prefix) do
       alter table(:oban_jobs, prefix: prefix) do
         add_if_not_exists(:meta, :map)
+        add_if_not_exists(:cancelled_at, :utc_datetime_usec)
       end
 
       execute """
@@ -490,6 +491,7 @@ defmodule Oban.Migrations do
     def down(prefix) do
       alter table(:oban_jobs, prefix: prefix) do
         remove_if_exists(:meta, :map)
+        remove_if_exists(:cancelled_at, :utc_datetime_usec)
       end
 
       execute """
