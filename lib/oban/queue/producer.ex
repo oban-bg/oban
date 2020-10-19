@@ -148,7 +148,7 @@ defmodule Oban.Queue.Producer do
             with :ok <- DynamicSupervisor.terminate_child(foreman, pid) do
               uerror = %{kind: :error, reason: "None", stacktrace: []}
 
-              Query.discard_job(conf, %{exec.job | unsaved_error: uerror})
+              Query.cancel_running_job(conf, %{exec.job | unsaved_error: uerror})
             end
           end
 
