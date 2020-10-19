@@ -168,7 +168,7 @@ defmodule Oban.Query do
     end
   end
 
-  @spec cancel_running_job(Config.t(), pos_integer()) :: :ok | :ignored
+  @spec cancel_running_job(Config.t(), Job.t()) :: :ok
   def cancel_running_job(%Config{prefix: prefix, repo: repo, log: log}, job) do
     updates = [
       set: [state: "cancelled", discarded_at: utc_now()],
