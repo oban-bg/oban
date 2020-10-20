@@ -1,9 +1,9 @@
 defmodule Oban.Integration.ControllingTest do
   use Oban.Case
 
-  @moduletag :integration
-
   alias Oban.{Notifier, Registry}
+
+  @moduletag :integration
 
   describe "start_queue/2" do
     test "validating options" do

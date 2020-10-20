@@ -1,8 +1,6 @@
 defmodule Oban.Queue.Executor do
   @moduledoc false
 
-  require Logger
-
   alias Oban.{
     Breaker,
     Config,
@@ -14,6 +12,8 @@ defmodule Oban.Queue.Executor do
     TimeoutError,
     Worker
   }
+
+  require Logger
 
   @type success :: {:success, Job.t()}
   @type failure :: {:failure, Job.t(), Worker.t(), atom(), term()}

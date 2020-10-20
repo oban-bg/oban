@@ -17,6 +17,7 @@ defmodule Oban.WorkerTest do
   defmodule CustomWorker do
     # Using a module attribute to ensure that module attributes and other non-primitive values can
     # be used when compiling a worker.
+    # credo:disable-for-lines:3 Credo.Check.Readability.StrictModuleLayout
     @max_attempts 1
 
     use Worker,

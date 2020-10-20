@@ -1,9 +1,9 @@
 defmodule Oban.Breaker do
   @moduledoc false
 
-  require Logger
-
   alias Oban.{Config, Telemetry}
+
+  require Logger
 
   @type state_struct :: %{
           :circuit => :enabled | :disabled,

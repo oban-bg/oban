@@ -1,9 +1,9 @@
 defmodule Oban.Integration.MigratingTest do
   use Oban.Case
 
-  @moduletag :integration
-
   import Oban.Migrations, only: [initial_version: 0, current_version: 0, migrated_version: 2]
+
+  @moduletag :integration
 
   defmodule StepMigration do
     use Ecto.Migration

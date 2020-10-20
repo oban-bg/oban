@@ -3,9 +3,9 @@ defmodule Oban.Plugins.Pruner do
 
   use GenServer
 
-  alias Oban.{Job, Query, Repo, Telemetry}
-
   import Ecto.Query
+
+  alias Oban.{Job, Query, Repo, Telemetry}
 
   defmodule State do
     @moduledoc false
