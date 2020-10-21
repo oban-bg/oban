@@ -245,7 +245,8 @@ defmodule Oban.Queue.Executor do
 
   defp event_metadata(conf, job) do
     job
-    |> Map.take([:id, :args, :queue, :worker, :attempt, :max_attempts, :meta, :tags])
+    |> Map.take([:id, :args, :queue, :worker, :attempt, :max_attempts, :tags])
+    |> Map.put(:job, job)
     |> Map.put(:prefix, conf.prefix)
   end
 

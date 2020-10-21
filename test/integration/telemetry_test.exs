@@ -41,6 +41,7 @@ defmodule Oban.Integration.TelemetryTest do
     assert error_duration > 0
 
     assert %{
+             job: %Job{id: ^stop_id},
              id: ^stop_id,
              args: %{},
              queue: "alpha",
@@ -48,11 +49,11 @@ defmodule Oban.Integration.TelemetryTest do
              prefix: "public",
              attempt: 1,
              max_attempts: 20,
-             meta: %{},
              tags: ["baz"]
            } = stop_meta
 
     assert %{
+             job: %Job{id: ^error_id},
              id: ^error_id,
              args: %{},
              queue: "alpha",
@@ -63,7 +64,6 @@ defmodule Oban.Integration.TelemetryTest do
              kind: :error,
              error: %PerformError{},
              stacktrace: [],
-             meta: %{},
              tags: ["foo"]
            } = error_meta
   after
