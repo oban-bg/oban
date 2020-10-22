@@ -89,19 +89,16 @@ defmodule Oban.Queue.Executor do
   end
 
   @spec resolve_worker(t()) :: t()
-  def resolve_worker(%__MODULE__{safe: true} = exec) do
-    %{resolve_worker(%{exec | safe: false}) | safe: true}
-  rescue
-    error -> %{exec | state: :failure, error: error, stacktrace: __STACKTRACE__}
-  end
-
   def resolve_worker(%__MODULE__{} = exec) do
-    worker =
-      exec.job.worker
-      |> String.split(".")
-      |> Module.safe_concat()
+    case Worker.from_string(exec.job.worker) do
+      {:ok, worker} ->
+        %{exec | worker: worker}
 
-    %{exec | worker: worker}
+      {:error, error} ->
+        unless exec.safe, do: raise(error)
+
+        %{exec | state: :failure, error: error}
+    end
   end
 
   @spec perform(t()) :: t()

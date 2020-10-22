@@ -34,7 +34,7 @@ defmodule Oban.Queue.ExecutorTest do
     test "inability to resolve a worker is a failure" do
       job = %Job{args: %{}, worker: "Not.A.Real.Worker"}
 
-      assert %{state: :failure, error: %ArgumentError{}} =
+      assert %{state: :failure, error: %RuntimeError{message: "unknown worker" <> _}} =
                @conf
                |> Executor.new(job)
                |> Executor.resolve_worker()

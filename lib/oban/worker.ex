@@ -376,6 +376,38 @@ defmodule Oban.Worker do
   end
 
   def to_string("Elixir." <> val), do: val
-
   def to_string(worker) when is_binary(worker), do: worker
+
+  @doc """
+  Resolve a module from a worker string.
+
+  ## Examples
+
+      iex> Oban.Worker.from_string("Oban.Integration.Worker")
+      {:ok, Oban.Integration.Worker}
+
+      iex> defmodule NotAWorker, do: []
+      ...> Oban.Worker.from_string("NotAWorker")
+      {:error, %RuntimeError{message: "module is not a worker: NotAWorker"}}
+
+      iex> Oban.Worker.from_string("RandomWorker")
+      {:error, %RuntimeError{message: "unknown worker: RandomWorker"}}
+  """
+  @doc since: "2.3.0"
+  @spec from_string(String.t()) :: {:ok, module()} | {:error, Exception.t()}
+  def from_string(worker_name) when is_binary(worker_name) do
+    module =
+      worker_name
+      |> String.split(".")
+      |> Module.safe_concat()
+
+    if function_exported?(module, :perform, 1) do
+      {:ok, module}
+    else
+      {:error, %RuntimeError{message: "module is not a worker: #{inspect(module)}"}}
+    end
+  rescue
+    ArgumentError ->
+      {:error, %RuntimeError{message: "unknown worker: #{worker_name}"}}
+  end
 end
