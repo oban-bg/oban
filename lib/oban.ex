@@ -286,8 +286,11 @@ defmodule Oban do
       {:ok, job} ->
         job
 
-      {:error, changeset} ->
+      {:error, %Changeset{} = changeset} ->
         raise Ecto.InvalidChangesetError, action: :insert, changeset: changeset
+
+      {:error, reason} ->
+        raise RuntimeError, reason
     end
   end
 
