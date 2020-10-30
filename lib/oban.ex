@@ -229,7 +229,8 @@ defmodule Oban do
       {:ok, job} = Oban.insert(MyApp.Worker.new(%{id: 1}, unique: [period: 30]))
   """
   @doc since: "0.7.0"
-  @spec insert(name(), job_changeset()) :: {:ok, Job.t()} | {:error, job_changeset()}
+  @spec insert(name(), job_changeset()) ::
+          {:ok, Job.t()} | {:error, job_changeset()} | {:error, term()}
   def insert(name \\ __MODULE__, %Changeset{} = changeset) do
     name
     |> config()

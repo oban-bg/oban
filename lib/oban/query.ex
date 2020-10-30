@@ -39,7 +39,7 @@ defmodule Oban.Query do
     )
   end
 
-  @spec fetch_or_insert_job(Config.t(), Changeset.t()) :: {:ok, Job.t()} | {:error, Changeset.t()}
+  @spec fetch_or_insert_job(Config.t(), Changeset.t()) :: {:ok, Job.t()} | {:error, term()}
   def fetch_or_insert_job(conf, changeset) do
     fun = fn -> insert_unique(conf, changeset) end
     with {:ok, result} <- Repo.transaction(conf, fun), do: result
