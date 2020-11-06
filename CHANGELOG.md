@@ -7,12 +7,21 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## Unreleased
 
+## [2.3.1] — 2020-11-06
+
+- [Oban.Migration] Conditionally alter `oban_job_state` if the PG version is 12
+  or greater. This is **vastly** faster than the renaming, adding and dropping
+  required for older PG versions.
+
 ## [2.3.0] — 2020-11-06
 
 **Migration Required (V9)**
 
 This is the first required migration since 1.0.0, released in 01/2020. It brings
-the new `cancelled` state, a `cancelled_at` column, and job `meta`.
+the new `cancelled` state, a `cancelled_at` column, and job `meta`. For PG
+versions older than 12 this **requires a full table rewrite** and may be very
+slow. If possible, we highly recommended pruning aggressively before migrating
+to minimize the table size.
 
 First, generate a new migration:
 

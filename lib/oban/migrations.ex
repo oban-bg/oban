@@ -459,27 +459,35 @@ defmodule Oban.Migrations do
 
       execute """
       DO $$
+      DECLARE
+        version int;
       BEGIN
-        ALTER TYPE #{prefix}.oban_job_state RENAME TO _oban_job_state;
+        SELECT current_setting('server_version_num')::int INTO version;
 
-        CREATE TYPE #{prefix}.oban_job_state AS ENUM (
-          'available',
-          'scheduled',
-          'executing',
-          'retryable',
-          'completed',
-          'discarded',
-          'cancelled'
-        );
+        IF version >= 120000 THEN
+          ALTER TYPE #{prefix}.oban_job_state ADD VALUE IF NOT EXISTS 'cancelled';
+        ELSE
+          ALTER TYPE #{prefix}.oban_job_state RENAME TO _oban_job_state;
 
-        ALTER TABLE #{prefix}.oban_jobs RENAME column state TO _state;
+          CREATE TYPE #{prefix}.oban_job_state AS ENUM (
+            'available',
+            'scheduled',
+            'executing',
+            'retryable',
+            'completed',
+            'discarded',
+            'cancelled'
+          );
 
-        ALTER TABLE #{prefix}.oban_jobs ADD state #{prefix}.oban_job_state NOT NULL default 'available';
+          ALTER TABLE #{prefix}.oban_jobs RENAME column state TO _state;
 
-        UPDATE #{prefix}.oban_jobs SET state = _state::text::#{prefix}.oban_job_state;
+          ALTER TABLE #{prefix}.oban_jobs ADD state #{prefix}.oban_job_state NOT NULL default 'available';
 
-        ALTER TABLE #{prefix}.oban_jobs DROP column _state;
-        DROP TYPE #{prefix}._oban_job_state;
+          UPDATE #{prefix}.oban_jobs SET state = _state::text::#{prefix}.oban_job_state;
+
+          ALTER TABLE #{prefix}.oban_jobs DROP column _state;
+          DROP TYPE #{prefix}._oban_job_state;
+        END IF;
       END$$;
       """
 
@@ -495,6 +503,8 @@ defmodule Oban.Migrations do
       execute """
       DO $$
       BEGIN
+        UPDATE #{prefix}.oban_jobs SET state = 'discarded' WHERE state = 'cancelled';
+
         ALTER TYPE #{prefix}.oban_job_state RENAME TO _oban_job_state;
 
         CREATE TYPE #{prefix}.oban_job_state AS ENUM (
