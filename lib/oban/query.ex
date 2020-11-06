@@ -96,27 +96,6 @@ defmodule Oban.Query do
     )
   end
 
-  @spec retry_job(Config.t(), pos_integer()) :: :ok
-  def retry_job(conf, id) do
-    query =
-      Job
-      |> where([j], j.id == ^id)
-      |> where([j], j.state not in ["available", "executing", "scheduled"])
-      |> update([j],
-        set: [
-          state: "available",
-          max_attempts: fragment("GREATEST(?, ? + 1)", j.max_attempts, j.attempt),
-          scheduled_at: ^utc_now(),
-          completed_at: nil,
-          discarded_at: nil
-        ]
-      )
-
-    Repo.update_all(conf, query, [])
-
-    :ok
-  end
-
   @spec complete_job(Config.t(), Job.t()) :: :ok
   def complete_job(%Config{} = conf, %Job{id: id}) do
     Repo.update_all(
@@ -172,6 +151,28 @@ defmodule Oban.Query do
     ]
 
     Repo.update_all(conf, where(Job, id: ^id), updates)
+    :ok
+  end
+
+  @spec retry_job(Config.t(), pos_integer()) :: :ok
+  def retry_job(conf, id) do
+    query =
+      Job
+      |> where([j], j.id == ^id)
+      |> where([j], j.state not in ["available", "executing", "scheduled"])
+      |> update([j],
+        set: [
+          state: "available",
+          max_attempts: fragment("GREATEST(?, ? + 1)", j.max_attempts, j.attempt),
+          scheduled_at: ^utc_now(),
+          completed_at: nil,
+          cancelled_at: nil,
+          discarded_at: nil
+        ]
+      )
+
+    Repo.update_all(conf, query, [])
+
     :ok
   end
 

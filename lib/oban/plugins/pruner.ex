@@ -75,7 +75,7 @@ defmodule Oban.Plugins.Pruner do
 
     subquery =
       Job
-      |> where([j], j.state in ["completed", "discarded"])
+      |> where([j], j.state in ["completed", "cancelled", "discarded"])
       |> where([j], j.attempted_at < ^outdated_at)
       |> select([:id])
       |> limit(^limit)
