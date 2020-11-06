@@ -7,9 +7,60 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## Unreleased
 
+## [2.3.0] — 2020-11-06
+
+**Migration Required (V9)**
+
+This is the first required migration since 1.0.0, released in 01/2020. It brings
+the new `cancelled` state, a `cancelled_at` column, and job `meta`.
+
+First, generate a new migration:
+
+```bash
+mix ecto.gen.migration upgrade_oban_jobs_to_v9
+```
+
+Next, call `Oban.Migrations` in the generated migration:
+
+```elixir
+defmodule MyApp.Repo.Migrations.UpdateObanJobsToV8 do
+  use Ecto.Migration
+
+  defdelegate up, to: Oban.Migrations
+  defdelegate down, to: Oban.Migrations
+end
+```
+
+Oban will manage upgrading to V9 regardless of the version your application is
+currently using, and it will roll back a single version.
+
+### Added
+
+- [Oban.Job] Add new `meta` field for storing arbitrary job data that isn't
+  appropriate as `args`.
+
+- [Oban.Job] Introduce a `cancelled` state, along with a new `cancelled_at`
+  timestamp field. Cancelling a job via `Oban.cancel_job` (or via Oban Web) now
+  marks the job as `cancelled` rather than `discarded`.
+
+- [Oban.Worker] Add `from_string/1` for improved worker module resolution.
+
+- [Oban.Telemetry] Pass the full `job` schema in telemetry metadata, not only
+  select fields. Individual fields such as `args`, `worker`, etc. are still
+  passed for backward compatibility. However, their use is deprecated and they
+  are no longer documented.
+
 ### Fixed
 
 - [Oban.Notifier] Fix resolution of `Oban.Notifier` child process in `Oban.Notifier.listen/2`.
+
+- [Oban.Queue.Producer] Fix cancelling jobs without a supervised process. In
+  some circumstances, namely a hot code upgrade, the job's process could
+  terminate without the producer tracking it and leave the job un-killable.
+
+- [Oban] Only convert invalid changesets into `ChangesetError` from `insert!`.
+  This prevents unexpected errors when `insert!` is called within a transaction
+  after the transaction has rolled back.
 
 ## [2.2.0] — 2020-10-12
 
