@@ -491,6 +491,18 @@ defmodule Oban.Migrations do
       END$$;
       """
 
+      create_if_not_exists index(
+                             :oban_jobs,
+                             ["attempted_at desc", :id],
+                             where: "state not in ('available', 'scheduled', 'executing', 'retryable')",
+                             prefix: prefix,
+                             name: :oban_jobs_attempted_at_id_index
+                           )
+
+      create_if_not_exists index(:oban_jobs, [:queue, :state, :priority, :scheduled_at, :id],
+                             prefix: prefix
+                           )
+
       record_version(prefix, 9)
     end
 
