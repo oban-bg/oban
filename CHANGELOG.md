@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## Unreleased
 
+## [2.3.2] — 2020-11-06
+
+- [Oban.Migration] Restore indexes possibly removed by changing
+  `oban_job_state`. This only applies to PG older than version 12.
+
+- [Oban.Plugins.Pruner] Prune `cancelled` jobs along with `completed` or
+  `discarded`.
+
 ## [2.3.1] — 2020-11-06
 
 - [Oban.Migration] Conditionally alter `oban_job_state` if the PG version is 12
