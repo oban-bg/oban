@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## Unreleased
 
+## [2.3.3] — 2020-11-10
+
+- [Oban.Migration] Conditionally skip altering `oban_job_state` if the
+  `cancelled` state is already present. This allows for a smoother upgrade path
+  for users running PG < 12. See the notes for v2.3.0 for more details.
+
 ## [2.3.2] — 2020-11-06
 
 - [Oban.Migration] Restore indexes possibly removed by changing
@@ -25,13 +31,22 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 **Migration Required (V9)**
 
-This is the first required migration since 1.0.0, released in 01/2020. It brings
-the new `cancelled` state, a `cancelled_at` column, and job `meta`. For PG
-versions older than 12 this **requires a full table rewrite** and may be very
-slow. If possible, we highly recommended pruning aggressively before migrating
-to minimize the table size.
+Migration V9 brings the new `cancelled` state, a `cancelled_at` column, and job
+`meta`.
 
-First, generate a new migration:
+Older versions of PostgreSQL, prior to version 12, don't allow altering an enum
+within a transaction. If you're running an older version and want to prevent a
+table rewrite you can add the new cancelled at state before running the V9
+migration.
+
+Create a migration with `@disable_ddl_transaction true` declared and run the
+command `ALTER TYPE oban_job_state ADD VALUE IF NOT EXISTS 'cancelled'`. The V9
+migration will see that the cancelled value exists and won't attempt to modify
+the enum.
+
+After you've sorted adding the `cancelled` state (or ignored the issue, because
+you're either running PG >= 12 or don't have many jobs retained), generate a new
+migration:
 
 ```bash
 mix ecto.gen.migration upgrade_oban_jobs_to_v9
@@ -1212,7 +1227,12 @@ end
 
 - [Oban] Initial release with base functionality.
 
-[Unreleased]: https://github.com/sorentwo/oban/compare/v2.1.0...HEAD
+[Unreleased]: https://github.com/sorentwo/oban/compare/v2.3.3...HEAD
+[2.3.3]: https://github.com/sorentwo/oban/compare/v2.3.2...v2.3.3
+[2.3.2]: https://github.com/sorentwo/oban/compare/v2.3.1...v2.3.2
+[2.3.1]: https://github.com/sorentwo/oban/compare/v2.3.0...v2.3.1
+[2.3.0]: https://github.com/sorentwo/oban/compare/v2.2.0...v2.3.0
+[2.2.0]: https://github.com/sorentwo/oban/compare/v2.1.0...v2.2.0
 [2.1.0]: https://github.com/sorentwo/oban/compare/v2.0.0...v2.1.0
 [2.0.0]: https://github.com/sorentwo/oban/compare/v2.0.0-rc.3...v2.0.0
 [2.0.0-rc.3]: https://github.com/sorentwo/oban/compare/v2.0.0-rc.2...v2.0.0-rc.3
