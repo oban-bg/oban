@@ -461,10 +461,14 @@ defmodule Oban.Migrations do
       DO $$
       DECLARE
         version int;
+        already bool;
       BEGIN
         SELECT current_setting('server_version_num')::int INTO version;
+        SELECT '{cancelled}' <@ enum_range(NULL::#{prefix}.oban_job_state)::text[] INTO already;
 
-        IF version >= 120000 THEN
+        IF already THEN
+          RETURN;
+        ELSIF version >= 120000 THEN
           ALTER TYPE #{prefix}.oban_job_state ADD VALUE IF NOT EXISTS 'cancelled';
         ELSE
           ALTER TYPE #{prefix}.oban_job_state RENAME TO _oban_job_state;
@@ -480,7 +484,6 @@ defmodule Oban.Migrations do
           );
 
           ALTER TABLE #{prefix}.oban_jobs RENAME column state TO _state;
-
           ALTER TABLE #{prefix}.oban_jobs ADD state #{prefix}.oban_job_state NOT NULL default 'available';
 
           UPDATE #{prefix}.oban_jobs SET state = _state::text::#{prefix}.oban_job_state;
@@ -490,15 +493,6 @@ defmodule Oban.Migrations do
         END IF;
       END$$;
       """
-
-      create_if_not_exists index(
-                             :oban_jobs,
-                             ["attempted_at desc", :id],
-                             where:
-                               "state not in ('available', 'scheduled', 'executing', 'retryable')",
-                             prefix: prefix,
-                             name: :oban_jobs_attempted_at_id_index
-                           )
 
       create_if_not_exists index(:oban_jobs, [:queue, :state, :priority, :scheduled_at, :id],
                              prefix: prefix
