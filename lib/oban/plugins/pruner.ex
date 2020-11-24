@@ -15,6 +15,7 @@ defmodule Oban.Plugins.Pruner do
       :name,
       :timer,
       max_age: 60,
+      outdated: 60,
       interval: :timer.seconds(30),
       limit: 10_000,
       lock_key: 1_159_969_450_252_858_340
@@ -66,13 +67,12 @@ defmodule Oban.Plugins.Pruner do
 
   defp acquire_and_prune(state) do
     if Query.acquire_lock?(state.conf, state.lock_key) do
-      delete_jobs(state.conf, state.max_age, state.limit)
+      delete_jobs(state.conf, state.max_age, state.limit, state.outdated)
     end
   end
 
-  defp delete_jobs(conf, seconds, limit) do
-    outdated_at = DateTime.add(DateTime.utc_now(), -seconds)
-
+  defp delete_jobs(conf, seconds, limit, outdated) do
+    outdated_at = DateTime.add(DateTime.utc_now(), -outdated)
     subquery =
       Job
       |> where([j], j.state in ["completed", "discarded"])

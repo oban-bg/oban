@@ -207,7 +207,7 @@ defmodule Oban.Integration.ControllingTest do
 
     refute_receive {:ok, 1}, 200
 
-    assert %Job{state: "cancelled", cancelled_at: %_{}} = Repo.reload(job)
+    assert %Job{state: "cancelled", cancelled_at: %_{}, errors: []} = Repo.reload(job)
 
     %{running: running} = :sys.get_state(Oban.Registry.whereis(name, {:producer, "alpha"}))
 
