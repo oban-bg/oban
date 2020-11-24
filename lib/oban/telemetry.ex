@@ -50,8 +50,8 @@ defmodule Oban.Telemetry do
   ### Circuit Events
 
   All processes that interact with the database have circuit breakers to prevent errors from
-  crashing the entire supervision tree. Processes emit a `[:oban, :trip_circuit]` event when a
-  circuit is tripped and `[:oban, :open_circuit]` when the breaker is subsequently opened again.
+  crashing the entire supervision tree. Processes emit a `[:oban, :circuit, :trip]` event when a
+  circuit is tripped and `[:oban, :circuit, :open]` when the breaker is subsequently opened again.
 
   | event                      | measures | metadata                               |
   | -------------------------- | -------- | -------------------------------------- |

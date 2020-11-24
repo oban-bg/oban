@@ -39,6 +39,8 @@ defmodule Oban do
           {:circuit_backoff, timeout()}
           | {:crontab, [Config.cronjob()]}
           | {:dispatch_cooldown, pos_integer()}
+          | {:get_dynamic_repo, nil | (() -> pid() | atom())}
+          | {:log, false | Logger.level()}
           | {:name, name()}
           | {:node, binary()}
           | {:plugins, [module() | {module() | Keyword.t()}]}
@@ -48,8 +50,8 @@ defmodule Oban do
           | {:repo, module()}
           | {:shutdown_grace_period, timeout()}
           | {:timezone, Calendar.time_zone()}
-          | {:log, false | Logger.level()}
-          | {:get_dynamic_repo, nil | (() -> pid() | atom())}
+
+  @type job_changeset :: Changeset.t(Job.t())
 
   @version Mix.Project.config()[:version]
 
@@ -227,8 +229,8 @@ defmodule Oban do
       {:ok, job} = Oban.insert(MyApp.Worker.new(%{id: 1}, unique: [period: 30]))
   """
   @doc since: "0.7.0"
-  @spec insert(name(), changeset :: Changeset.t(Job.t())) ::
-          {:ok, Job.t()} | {:error, Changeset.t()}
+  @spec insert(name(), job_changeset()) ::
+          {:ok, Job.t()} | {:error, job_changeset()} | {:error, term()}
   def insert(name \\ __MODULE__, %Changeset{} = changeset) do
     name
     |> config()
@@ -255,7 +257,7 @@ defmodule Oban do
           name,
           multi :: Multi.t(),
           multi_name :: Multi.name(),
-          changeset_or_fun :: Changeset.t(Job.t()) | fun()
+          changeset_or_fun :: job_changeset() | fun()
         ) :: Multi.t()
   def insert(name \\ __MODULE__, multi, multi_name, changeset_or_fun)
 
@@ -279,14 +281,17 @@ defmodule Oban do
       job = Oban.insert!(MyApp.Worker.new(%{id: 1}))
   """
   @doc since: "0.7.0"
-  @spec insert!(name(), changeset :: Changeset.t(Job.t())) :: Job.t()
+  @spec insert!(name(), job_changeset()) :: Job.t()
   def insert!(name \\ __MODULE__, %Changeset{} = changeset) do
     case insert(name, changeset) do
       {:ok, job} ->
         job
 
-      {:error, changeset} ->
+      {:error, %Changeset{} = changeset} ->
         raise Ecto.InvalidChangesetError, action: :insert, changeset: changeset
+
+      {:error, reason} ->
+        raise RuntimeError, reason
     end
   end
 
@@ -308,8 +313,17 @@ defmodule Oban do
       |> Oban.insert_all()
   """
   @doc since: "0.9.0"
-  @spec insert_all(name(), jobs :: [Changeset.t(Job.t())]) :: [Job.t()]
-  def insert_all(name \\ __MODULE__, changesets) when is_list(changesets) do
+  @spec insert_all(
+          name(),
+          changesets_or_wrapper :: [job_changeset()] | %{changesets: [job_changeset()]}
+        ) :: [Job.t()]
+  def insert_all(name \\ __MODULE__, changesets_or_wrapper)
+
+  def insert_all(name, %{changesets: [_ | _] = changesets}) do
+    insert_all(name, changesets)
+  end
+
+  def insert_all(name, changesets) when is_list(changesets) do
     name
     |> config()
     |> Query.insert_all_jobs(changesets)
@@ -330,13 +344,18 @@ defmodule Oban do
   """
   @doc since: "0.9.0"
   @spec insert_all(
-          name,
+          name(),
           multi :: Multi.t(),
           multi_name :: Multi.name(),
-          changeset :: [Changeset.t(Job.t())]
+          changesets_or_wrapper :: [job_changeset()] | %{changesets: [job_changeset()]}
         ) :: Multi.t()
-  def insert_all(name \\ __MODULE__, %Multi{} = multi, multi_name, changesets)
-      when is_list(changesets) do
+  def insert_all(name \\ __MODULE__, multi, multi_name, changesets_or_wrapper)
+
+  def insert_all(name, multi, multi_name, %{changesets: [_ | _] = changesets}) do
+    insert_all(name, multi, multi_name, changesets)
+  end
+
+  def insert_all(name, %Multi{} = multi, multi_name, changesets) when is_list(changesets) do
     name
     |> config()
     |> Query.insert_all_jobs(multi, multi_name, changesets)

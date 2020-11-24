@@ -39,7 +39,7 @@ defmodule Oban.Query do
     )
   end
 
-  @spec fetch_or_insert_job(Config.t(), Changeset.t()) :: {:ok, Job.t()} | {:error, Changeset.t()}
+  @spec fetch_or_insert_job(Config.t(), Changeset.t()) :: {:ok, Job.t()} | {:error, term()}
   def fetch_or_insert_job(conf, changeset) do
     fun = fn -> insert_unique(conf, changeset) end
     with {:ok, result} <- Repo.transaction(conf, fun), do: result
@@ -94,27 +94,6 @@ defmodule Oban.Query do
         Repo.update_all(conf, where(Job, [j], j.id in subquery(subset)), set: [state: "available"])
       end
     )
-  end
-
-  @spec retry_job(Config.t(), pos_integer()) :: :ok
-  def retry_job(conf, id) do
-    query =
-      Job
-      |> where([j], j.id == ^id)
-      |> where([j], j.state not in ["available", "executing", "scheduled"])
-      |> update([j],
-        set: [
-          state: "available",
-          max_attempts: fragment("GREATEST(?, ? + 1)", j.max_attempts, j.attempt),
-          scheduled_at: ^utc_now(),
-          completed_at: nil,
-          discarded_at: nil
-        ]
-      )
-
-    Repo.update_all(conf, query, [])
-
-    :ok
   end
 
   @spec complete_job(Config.t(), Job.t()) :: :ok
@@ -172,6 +151,28 @@ defmodule Oban.Query do
     ]
 
     Repo.update_all(conf, where(Job, id: ^id), updates)
+    :ok
+  end
+
+  @spec retry_job(Config.t(), pos_integer()) :: :ok
+  def retry_job(conf, id) do
+    query =
+      Job
+      |> where([j], j.id == ^id)
+      |> where([j], j.state not in ["available", "executing", "scheduled"])
+      |> update([j],
+        set: [
+          state: "available",
+          max_attempts: fragment("GREATEST(?, ? + 1)", j.max_attempts, j.attempt),
+          scheduled_at: ^utc_now(),
+          completed_at: nil,
+          cancelled_at: nil,
+          discarded_at: nil
+        ]
+      )
+
+    Repo.update_all(conf, query, [])
+
     :ok
   end
 

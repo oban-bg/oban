@@ -37,6 +37,13 @@ defmodule Oban.Integration.InsertingTest do
     assert job.scheduled_at
   end
 
+  test "inserting multiple jobs from a changeset wrapper with insert_all/2" do
+    name = start_supervised_oban!(queues: false)
+    wrap = %{changesets: [Worker.new(%{ref: 0}), Worker.new(%{ref: 1})]}
+
+    [_job_1, _job_2] = Oban.insert_all(name, wrap)
+  end
+
   test "inserting multiple jobs within a multi using insert_all/4" do
     name = start_supervised_oban!(queues: false)
 
@@ -61,5 +68,15 @@ defmodule Oban.Integration.InsertingTest do
 
     assert job.id
     assert job.args
+  end
+
+  test "inserting multiple jobs from a changeset wrapper using insert_all/4" do
+    name = start_supervised_oban!(queues: false)
+    wrap = %{changesets: [Worker.new(%{ref: 0}), Worker.new(%{ref: 1})]}
+
+    {:ok, %{"jobs" => [_job_1, _job_2]}} =
+      name
+      |> Oban.insert_all(Ecto.Multi.new(), "jobs", wrap)
+      |> Repo.transaction()
   end
 end

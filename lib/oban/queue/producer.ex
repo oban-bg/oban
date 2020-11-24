@@ -129,9 +129,7 @@ defmodule Oban.Queue.Producer do
     end
   end
 
-  def handle_info({:notification, :signal, payload}, state) do
-    %State{conf: conf, foreman: foreman, queue: queue, running: running} = state
-
+  def handle_info({:notification, :signal, payload}, %State{queue: queue} = state) do
     state =
       case payload do
         %{"action" => "pause", "queue" => ^queue} ->
@@ -143,11 +141,9 @@ defmodule Oban.Queue.Producer do
         %{"action" => "scale", "queue" => ^queue, "limit" => limit} ->
           %{state | limit: limit}
 
-        %{"action" => "pkill", "job_id" => kid} ->
-          for {_ref, {exec, pid}} <- running, exec.job.id == kid do
-            with :ok <- DynamicSupervisor.terminate_child(foreman, pid) do
-              Query.cancel_job(conf, exec.job)
-            end
+        %{"action" => "pkill", "job_id" => jid} ->
+          for {ref, {exec, pid}} <- state.running, exec.job.id == jid do
+            pkill(ref, exec.job, pid, state)
           end
 
           state
@@ -212,6 +208,24 @@ defmodule Oban.Queue.Producer do
 
   defp schedule_poll(%State{conf: conf} = state) do
     %{state | timer: Process.send_after(self(), :poll, conf.poll_interval)}
+  end
+
+  # Killing
+
+  defp pkill(ref, job, pid, state) do
+    %State{conf: conf, foreman: foreman, running: running} = state
+
+    case DynamicSupervisor.terminate_child(foreman, pid) do
+      :ok ->
+        Query.cancel_job(conf, job)
+
+        state
+
+      {:error, :not_found} ->
+        Process.demonitor(ref, [:flush])
+
+        %{state | running: Map.delete(running, ref)}
+    end
   end
 
   # Dispatching
