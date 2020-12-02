@@ -95,6 +95,16 @@ defmodule Oban.WorkerTest do
     end
   end
 
+  describe "from_string/1" do
+    test "finds workers that are not loaded" do
+      :code.delete(Oban.Integration.Worker)
+
+      {:ok, worker_module} = Worker.from_string("Oban.Integration.Worker")
+
+      assert worker_module == Oban.Integration.Worker
+    end
+  end
+
   test "validating __using__ macro options" do
     assert_raise ArgumentError, ~r/unknown option/, fn ->
       defmodule UnknownOption do

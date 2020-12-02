@@ -401,7 +401,7 @@ defmodule Oban.Worker do
       |> String.split(".")
       |> Module.safe_concat()
 
-    if function_exported?(module, :perform, 1) do
+    if Code.ensure_loaded?(module) && function_exported?(module, :perform, 1) do
       {:ok, module}
     else
       {:error, %RuntimeError{message: "module is not a worker: #{inspect(module)}"}}
