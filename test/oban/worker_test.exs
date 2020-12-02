@@ -1,5 +1,5 @@
 defmodule Oban.WorkerTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case, async: false
 
   doctest Oban.Worker
 
@@ -92,6 +92,14 @@ defmodule Oban.WorkerTest do
 
       assert 5 == CustomWorker.perform(%Job{args: args})
       assert 4 == CustomWorker.perform(%Job{attempt: 4, args: args})
+    end
+  end
+
+  describe "from_string/1" do
+    test "finds workers that are not loaded" do
+      :code.delete(Oban.Integration.Worker)
+
+      assert {:ok, Oban.Integration.Worker} = Worker.from_string("Oban.Integration.Worker")
     end
   end
 
