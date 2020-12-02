@@ -7,13 +7,24 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## Unreleased
 
+## [2.3.4] — 2020-12-02
+
+### Fixed
+
+- [Oban.Worker] Update `from_string/1` to correctly work with modules that
+  weren't loaded.
+
 ## [2.3.3] — 2020-11-10
+
+### Changed
 
 - [Oban.Migration] Conditionally skip altering `oban_job_state` if the
   `cancelled` state is already present. This allows for a smoother upgrade path
   for users running PG < 12. See the notes for v2.3.0 for more details.
 
 ## [2.3.2] — 2020-11-06
+
+### Fixed
 
 - [Oban.Migration] Restore indexes possibly removed by changing
   `oban_job_state`. This only applies to PG older than version 12.
@@ -22,6 +33,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   `discarded`.
 
 ## [2.3.1] — 2020-11-06
+
+### Changed
 
 - [Oban.Migration] Conditionally alter `oban_job_state` if the PG version is 12
   or greater. This is **vastly** faster than the renaming, adding and dropping
