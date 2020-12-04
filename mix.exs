@@ -147,6 +147,7 @@ defmodule Oban.MixProject do
       "test.setup": ["ecto.create", "ecto.migrate"],
       ci: [
         "format --check-formatted",
+        "deps.unlock -- check-unused",
         "credo --strict",
         "test --raise",
         "dialyzer"
