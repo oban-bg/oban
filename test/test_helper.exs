@@ -1,3 +1,4 @@
+Code.put_compiler_option(:warnings_as_errors, true)
 Logger.configure(level: :warn)
 
 ExUnit.start()
