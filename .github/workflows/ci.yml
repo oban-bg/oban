@@ -14,9 +14,9 @@ jobs:
   ci:
     strategy:
       matrix:
-        elixir: ['1.8', '1.9', '1.10']
-        otp: ['22.2']
-        postgres: ['11.7-alpine', '12.2-alpine']
+        elixir: ['1.10', '1.11']
+        otp: ['23.1']
+        postgres: ['12.5-alpine', '13.1-alpine']
 
     runs-on: ubuntu-latest
 
