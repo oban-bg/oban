@@ -120,7 +120,8 @@ defmodule Oban.MixProject do
       links: %{
         Website: "https://getoban.pro",
         Changelog: "https://github.com/sorentwo/oban/blob/master/CHANGELOG.md",
-        GitHub: "https://github.com/sorentwo/oban"
+        GitHub: "https://github.com/sorentwo/oban",
+        Sponsor: "https://getoban.pro"
       }
     ]
   end
