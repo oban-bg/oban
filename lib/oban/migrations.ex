@@ -471,7 +471,7 @@ defmodule Oban.Migrations do
         ELSIF version >= 120000 THEN
           ALTER TYPE #{prefix}.oban_job_state ADD VALUE IF NOT EXISTS 'cancelled';
         ELSE
-          ALTER TYPE #{prefix}.oban_job_state RENAME TO _oban_job_state;
+          ALTER TYPE #{prefix}.oban_job_state RENAME TO old_oban_job_state;
 
           CREATE TYPE #{prefix}.oban_job_state AS ENUM (
             'available',
@@ -489,7 +489,7 @@ defmodule Oban.Migrations do
           UPDATE #{prefix}.oban_jobs SET state = _state::text::#{prefix}.oban_job_state;
 
           ALTER TABLE #{prefix}.oban_jobs DROP column _state;
-          DROP TYPE #{prefix}._oban_job_state;
+          DROP TYPE #{prefix}.old_oban_job_state;
         END IF;
       END$$;
       """
@@ -512,7 +512,7 @@ defmodule Oban.Migrations do
       BEGIN
         UPDATE #{prefix}.oban_jobs SET state = 'discarded' WHERE state = 'cancelled';
 
-        ALTER TYPE #{prefix}.oban_job_state RENAME TO _oban_job_state;
+        ALTER TYPE #{prefix}.oban_job_state RENAME TO old_oban_job_state;
 
         CREATE TYPE #{prefix}.oban_job_state AS ENUM (
           'available',
@@ -531,7 +531,7 @@ defmodule Oban.Migrations do
 
         ALTER TABLE #{prefix}.oban_jobs DROP column _state;
 
-        DROP TYPE #{prefix}._oban_job_state;
+        DROP TYPE #{prefix}.old_oban_job_state;
       END$$;
       """
 
