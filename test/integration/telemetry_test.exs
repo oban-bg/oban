@@ -19,6 +19,24 @@ defmodule Oban.Integration.TelemetryTest do
     def handle([:oban, :job, event], %{duration: duration}, meta, pid) do
       send(pid, {:event, event, duration, meta})
     end
+
+    def handle([:oban, :supervisor, :init] = event, measurements, meta, pid) do
+      send(pid, {:event, event, measurements, meta})
+    end
+  end
+
+  test "telemetry event is emitted for supervisor initialization" do
+    event = [:oban, :supervisor, :init]
+    :telemetry.attach("init-handler", event, &Handler.handle/4, self())
+
+    name = start_supervised_oban!(queues: [alpha: 2])
+    pid = Oban.Registry.whereis(name)
+    config = Oban.config(name)
+
+    assert_receive {:event, [:oban, :supervisor, :init], %{system_time: _},
+                    %{config: ^config, pid: ^pid}}
+  after
+    :telemetry.detach("init-handler")
   end
 
   test "telemetry events are emitted for executed jobs" do
@@ -26,7 +44,7 @@ defmodule Oban.Integration.TelemetryTest do
 
     :telemetry.attach_many("job-handler", events, &Handler.handle/4, self())
 
-    start_supervised_oban!(queues: [alpha: 2])
+    name = start_supervised_oban!(queues: [alpha: 2])
 
     %Job{id: stop_id} = insert!([ref: 1, action: "OK"], tags: ["baz"])
     %Job{id: error_id} = insert!([ref: 2, action: "ERROR"], tags: ["foo"])
@@ -49,6 +67,8 @@ defmodule Oban.Integration.TelemetryTest do
              prefix: "public",
              attempt: 1,
              max_attempts: 20,
+             name: ^name,
+             state: :success,
              tags: ["baz"]
            } = stop_meta
 
@@ -61,9 +81,11 @@ defmodule Oban.Integration.TelemetryTest do
              prefix: "public",
              attempt: 1,
              max_attempts: 20,
+             name: ^name,
              kind: :error,
              error: %PerformError{},
              stacktrace: [],
+             state: :failure,
              tags: ["foo"]
            } = error_meta
   after

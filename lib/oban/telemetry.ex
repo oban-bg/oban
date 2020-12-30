@@ -2,6 +2,21 @@ defmodule Oban.Telemetry do
   @moduledoc """
   Telemetry integration for event metrics, logging and error reporting.
 
+  ### Initialization Events
+
+  Oban emits the following telemetry event when an Oban supervisor is started:
+
+  * `[:oban, :supervisor, :init]` - when the Oban supervisor is started this will execute
+
+  The initialization event contains the following measurements:
+
+  * `:system_time` - The system's time when Oban was started
+
+  The initialization event contains the following metadata:
+
+  * `:config` - The configuration used for the Oban supervisor instance
+  * `:pid` - The PID of the supervisor instance
+
   ### Job Events
 
   Oban emits the following telemetry events for each job:
@@ -14,7 +29,7 @@ defmodule Oban.Telemetry do
   provide the error type, the error itself, and the stacktrace. The following chart shows which
   metadata you can expect for each event:
 
-  | event        | measures                   | metadata                                                                                                  |
+  | event        | measures                   | metadata                                    |
   | ------------ | -------------------------- | ------------------------------------------- |
   | `:start`     | `:system_time`             | `:job, :prefix`                             |
   | `:stop`      | `:duration`, `:queue_time` | `:job, :prefix`                             |

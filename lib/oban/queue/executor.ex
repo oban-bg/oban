@@ -227,15 +227,21 @@ defmodule Oban.Queue.Executor do
 
   defp execute_stop(exec) do
     measurements = %{duration: exec.duration, queue_time: exec.queue_time}
+    metadata = Map.put(exec.meta, :state, exec.state)
 
-    Telemetry.execute([:oban, :job, :stop], measurements, exec.meta)
+    Telemetry.execute([:oban, :job, :stop], measurements, metadata)
   end
 
   defp execute_exception(exec) do
     measurements = %{duration: exec.duration, queue_time: exec.queue_time}
 
     meta =
-      Map.merge(exec.meta, %{kind: exec.kind, error: exec.error, stacktrace: exec.stacktrace})
+      Map.merge(exec.meta, %{
+        kind: exec.kind,
+        error: exec.error,
+        stacktrace: exec.stacktrace,
+        state: exec.state
+      })
 
     Telemetry.execute([:oban, :job, :exception], measurements, meta)
   end
@@ -245,6 +251,7 @@ defmodule Oban.Queue.Executor do
     |> Map.take([:id, :args, :queue, :worker, :attempt, :max_attempts, :tags])
     |> Map.put(:job, job)
     |> Map.put(:prefix, conf.prefix)
+    |> Map.put(:name, conf.name)
   end
 
   defp job_with_unsaved_error(%__MODULE__{} = exec) do
