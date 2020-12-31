@@ -11,7 +11,7 @@ defmodule Oban do
   use Supervisor
 
   alias Ecto.{Changeset, Multi}
-  alias Oban.{Config, Job, Midwife, Notifier, Query, Registry}
+  alias Oban.{Config, Job, Midwife, Notifier, Query, Registry, Telemetry}
   alias Oban.Crontab.Scheduler
   alias Oban.Queue.{Drainer, Producer}
   alias Oban.Queue.Supervisor, as: QueueSupervisor
@@ -185,7 +185,16 @@ defmodule Oban do
     children = children ++ Enum.map(plugins, &plugin_child_spec(&1, conf))
     children = children ++ Enum.map(queues, &QueueSupervisor.child_spec(&1, conf))
 
+    execute_init(conf)
+
     Supervisor.init(children, strategy: :one_for_one)
+  end
+
+  defp execute_init(conf) do
+    measurements = %{system_time: System.system_time()}
+    metadata = %{pid: self(), config: conf}
+
+    Telemetry.execute([:oban, :supervisor, :init], measurements, metadata)
   end
 
   defp plugin_child_spec({module, opts}, conf) do

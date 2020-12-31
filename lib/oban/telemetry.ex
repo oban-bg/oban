@@ -2,6 +2,21 @@ defmodule Oban.Telemetry do
   @moduledoc """
   Telemetry integration for event metrics, logging and error reporting.
 
+  ### Initialization Events
+
+  Oban emits the following telemetry event when an Oban supervisor is started:
+
+  * `[:oban, :supervisor, :init]` - when the Oban supervisor is started this will execute
+
+  The initialization event contains the following measurements:
+
+  * `:system_time` - The system's time when Oban was started
+
+  The initialization event contains the following metadata:
+
+  * `:config` - The configuration used for the Oban supervisor instance
+  * `:pid` - The PID of the supervisor instance
+
   ### Job Events
 
   Oban emits the following telemetry events for each job:
@@ -14,11 +29,11 @@ defmodule Oban.Telemetry do
   provide the error type, the error itself, and the stacktrace. The following chart shows which
   metadata you can expect for each event:
 
-  | event        | measures                   | metadata                                                                                                  |
-  | ------------ | -------------------------- | ------------------------------------------- |
-  | `:start`     | `:system_time`             | `:job, :prefix`                             |
-  | `:stop`      | `:duration`, `:queue_time` | `:job, :prefix`                             |
-  | `:exception` | `:duration`, `:queue_time` | `:job, :prefix, :kind, :error, :stacktrace` |
+  | event        | measures                   | metadata                                            |
+  | ------------ | -------------------------- | --------------------------------------------------- |
+  | `:start`     | `:system_time`             | `:job, :config, :state`                             |
+  | `:stop`      | `:duration`, `:queue_time` | `:job, :config, :state`                             |
+  | `:exception` | `:duration`, `:queue_time` | `:job, :config, :state, :kind, :error, :stacktrace` |
 
   For `:exception` events the metadata includes details about what caused the failure. The `:kind`
   value is determined by how an error occurred. Here are the possible kinds:
