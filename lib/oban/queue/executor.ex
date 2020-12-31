@@ -251,7 +251,7 @@ defmodule Oban.Queue.Executor do
     |> Map.take([:id, :args, :queue, :worker, :attempt, :max_attempts, :tags])
     |> Map.put(:job, job)
     |> Map.put(:prefix, conf.prefix)
-    |> Map.put(:name, conf.name)
+    |> Map.put(:config, conf)
   end
 
   defp job_with_unsaved_error(%__MODULE__{} = exec) do
