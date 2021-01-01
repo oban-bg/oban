@@ -38,66 +38,17 @@ defmodule Oban.Crontab.CronTest do
     end
 
     test "parsing non-standard expressions" do
-      yearly = %Cron{
-        minutes: [0],
-        hours: [0],
-        days: [1],
-        months: [1],
-        weekdays: [:*]
-      }
-
-      assert yearly == Cron.parse!("@yearly")
-
-      assert yearly == Cron.parse!("@annually")
-
-      assert %Cron{
-               minutes: [0],
-               hours: [0],
-               days: [1],
-               months: [:*],
-               weekdays: [:*]
-             } == Cron.parse!("@monthly")
-
-      assert %Cron{
-               minutes: [0],
-               hours: [0],
-               days: [:*],
-               months: [:*],
-               weekdays: [0]
-             } == Cron.parse!("@weekly")
-
-      daily = %Cron{
-        minutes: [0],
-        hours: [0],
-        days: [:*],
-        months: [:*],
-        weekdays: [:*]
-      }
-
-      assert daily == Cron.parse!("@daily")
-      assert daily == Cron.parse!("@midnight")
-
-      assert %Cron{
-               minutes: [0],
-               hours: [:*],
-               days: [:*],
-               months: [:*],
-               weekdays: [:*]
-             } == Cron.parse!("@hourly")
-
-      assert %Cron{reboot: true} == Cron.parse!("@reboot")
+      assert Cron.parse!("0 0 1 1 *") == Cron.parse!("@annually")
+      assert Cron.parse!("0 0 1 1 *") == Cron.parse!("@yearly")
+      assert Cron.parse!("0 0 1 * *") == Cron.parse!("@monthly")
+      assert Cron.parse!("0 0 * * 0") == Cron.parse!("@weekly")
+      assert Cron.parse!("0 0 * * *") == Cron.parse!("@midnight")
+      assert Cron.parse!("0 0 * * *") == Cron.parse!("@daily")
+      assert Cron.parse!("0 * * * *") == Cron.parse!("@hourly")
     end
 
     test "parsing non-standard weekday ranges" do
-      working_days = %Cron{
-        minutes: [:*],
-        hours: [:*],
-        days: [:*],
-        months: [:*],
-        weekdays: [1, 2, 3, 4, 5]
-      }
-
-      assert working_days == Cron.parse!("* * * * MON-FRI")
+      assert MapSet.new([1, 2, 3, 4, 5]) == Cron.parse!("* * * * MON-FRI").weekdays
     end
   end
 
@@ -107,7 +58,13 @@ defmodule Oban.Crontab.CronTest do
                 hour <- integer(1..23),
                 day <- integer(2..28),
                 month <- integer(2..12) do
-        crontab = %Cron{minutes: [minute], hours: [hour], days: [day], months: [month]}
+        crontab = %Cron{
+          minutes: MapSet.new([minute]),
+          hours: MapSet.new([hour]),
+          days: MapSet.new([day]),
+          months: MapSet.new([month])
+        }
+
         datetime = %{DateTime.utc_now() | minute: minute, hour: hour, day: day, month: month}
 
         assert Cron.now?(crontab, datetime)
@@ -118,40 +75,31 @@ defmodule Oban.Crontab.CronTest do
       end
     end
 
+    test "the @reboot special expression initiall evaluates to now" do
+      cron = Cron.parse!("@reboot")
+
+      assert Cron.now?(cron)
+      refute Cron.now?(cron, DateTime.add(DateTime.utc_now(), -60, :second))
+      refute Cron.now?(cron, DateTime.add(DateTime.utc_now(), 60, :second))
+    end
+
     test "literal days of the week match the current datetime" do
       sunday_base = DateTime.from_naive!(~N[2020-03-15 22:00:00], "Etc/UTC")
 
       for day_of_week <- 0..6 do
-        crontab = %Cron{weekdays: [day_of_week]}
+        crontab = %Cron{weekdays: MapSet.new([day_of_week])}
         datetime = %{sunday_base | day: sunday_base.day + day_of_week}
 
         assert Cron.now?(crontab, datetime)
       end
     end
-
-    test "reboot never matches" do
-      refute Cron.now?(%Cron{reboot: true})
-    end
   end
 
-  describe "reboot?/1" do
-    test "only reboot matches" do
-      assert Cron.reboot?(%Cron{reboot: true})
-      refute Cron.reboot?(%Cron{reboot: false})
-    end
-  end
+  defp minutes, do: expression(0..59)
 
-  defp minutes do
-    expression(0..59)
-  end
+  defp hours, do: expression(0..23)
 
-  defp hours do
-    expression(0..23)
-  end
-
-  defp days do
-    expression(1..31)
-  end
+  defp days, do: expression(1..31)
 
   defp months do
     one_of([

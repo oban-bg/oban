@@ -1,49 +1,57 @@
 defmodule Oban.Crontab.Cron do
   @moduledoc false
 
-  alias Oban.Crontab.Parser
-
-  @type expression :: [:*] | list(non_neg_integer())
-
   @type t :: %__MODULE__{
-          minutes: expression(),
-          hours: expression(),
-          days: expression(),
-          months: expression(),
-          weekdays: expression(),
-          reboot: boolean()
+          minutes: MapSet.t(),
+          hours: MapSet.t(),
+          days: MapSet.t(),
+          months: MapSet.t(),
+          weekdays: MapSet.t()
         }
 
-  @part_ranges %{
-    minutes: {0, 59},
-    hours: {0, 23},
-    days: {1, 31},
-    months: {1, 12},
-    weekdays: {0, 6}
+  defstruct minutes: :*, hours: :*, days: :*, months: :*, weekdays: :*
+
+  @dow_map %{
+    "SUN" => "0",
+    "MON" => "1",
+    "TUE" => "2",
+    "WED" => "3",
+    "THU" => "4",
+    "FRI" => "5",
+    "SAT" => "6"
   }
 
-  defstruct minutes: [:*], hours: [:*], days: [:*], months: [:*], weekdays: [:*], reboot: false
+  @mon_map %{
+    "JAN" => "1",
+    "FEB" => "2",
+    "MAR" => "3",
+    "APR" => "4",
+    "MAY" => "5",
+    "JUN" => "6",
+    "JUL" => "7",
+    "AUG" => "8",
+    "SEP" => "9",
+    "OCT" => "10",
+    "NOV" => "11",
+    "DEC" => "12"
+  }
 
+  @doc """
+  Evaluate whether a cron struct overlaps with the current date time.
+  """
   @spec now?(cron :: t(), datetime :: DateTime.t()) :: boolean()
-  def now?(cron, datetime \\ DateTime.utc_now())
-
-  def now?(%__MODULE__{reboot: true}, _datetime), do: false
-
-  def now?(%__MODULE__{} = cron, datetime) do
+  def now?(%__MODULE__{} = cron, datetime \\ DateTime.utc_now()) do
     cron
     |> Map.from_struct()
-    |> Map.drop([:reboot])
-    |> Enum.all?(fn {part, values} ->
-      Enum.any?(values, &matches_rule?(part, &1, datetime))
-    end)
+    |> Enum.all?(&included?(&1, datetime))
   end
 
-  defp matches_rule?(_part, :*, _date_time), do: true
-  defp matches_rule?(:minutes, minute, datetime), do: minute == datetime.minute
-  defp matches_rule?(:hours, hour, datetime), do: hour == datetime.hour
-  defp matches_rule?(:days, day, datetime), do: day == datetime.day
-  defp matches_rule?(:months, month, datetime), do: month == datetime.month
-  defp matches_rule?(:weekdays, weekday, datetime), do: weekday == day_of_week(datetime)
+  defp included?({_, :*}, _datetime), do: true
+  defp included?({:minutes, set}, datetime), do: MapSet.member?(set, datetime.minute)
+  defp included?({:hours, set}, datetime), do: MapSet.member?(set, datetime.hour)
+  defp included?({:days, set}, datetime), do: MapSet.member?(set, datetime.day)
+  defp included?({:months, set}, datetime), do: MapSet.member?(set, datetime.month)
+  defp included?({:weekdays, set}, datetime), do: MapSet.member?(set, day_of_week(datetime))
 
   defp day_of_week(datetime) do
     datetime
@@ -82,62 +90,92 @@ defmodule Oban.Crontab.Cron do
       ** (ArgumentError)
   """
   @spec parse!(input :: binary()) :: t()
-  def parse!("@annually"), do: parse!("@yearly")
+  def parse!("@annually"), do: parse!("0 0 1 1 *")
   def parse!("@yearly"), do: parse!("0 0 1 1 *")
   def parse!("@monthly"), do: parse!("0 0 1 * *")
   def parse!("@weekly"), do: parse!("0 0 * * 0")
-  def parse!("@midnight"), do: parse!("@daily")
+  def parse!("@midnight"), do: parse!("0 0 * * *")
   def parse!("@daily"), do: parse!("0 0 * * *")
   def parse!("@hourly"), do: parse!("0 * * * *")
-  def parse!("@reboot"), do: struct!(__MODULE__, reboot: true)
+
+  def parse!("@reboot") do
+    now = DateTime.utc_now()
+
+    [now.minute, now.hour, now.day, now.month, day_of_week(now)]
+    |> Enum.join(" ")
+    |> parse!()
+  end
 
   def parse!(input) when is_binary(input) do
-    input
-    |> String.trim()
-    |> Parser.cron()
-    |> case do
-      {:ok, parsed, _, _, _, _} ->
-        struct!(__MODULE__, expand(parsed))
+    [mip, hrp, dap, mop, wdp] =
+      input
+      |> String.trim()
+      |> String.split(~r/\s+/, parts: 5)
 
-      {:error, message, _, _, _, _} ->
-        raise ArgumentError, message
+    %__MODULE__{
+      minutes: parse_expr(mip, 0..59),
+      hours: parse_expr(hrp, 0..23),
+      days: parse_expr(dap, 1..31),
+      months: mop |> trans_expr(@mon_map) |> parse_expr(1..12),
+      weekdays: wdp |> trans_expr(@dow_map) |> parse_expr(0..6)
+    }
+  end
+
+  defp parse_expr(expr, range) do
+    range_set = MapSet.new(range)
+
+    parsed =
+      expr
+      |> String.split(~r/\s*,\s*/)
+      |> Enum.flat_map(&parse_part(&1, range))
+      |> MapSet.new()
+
+    unless MapSet.subset?(parsed, range_set) do
+      raise ArgumentError, "expression #{expr} is out of range #{inspect(range)}"
+    end
+
+    parsed
+  end
+
+  defp trans_expr(expr, map) do
+    Enum.reduce(map, expr, fn {val, rep}, acc -> String.replace(acc, val, rep) end)
+  end
+
+  defp parse_part(part, range) do
+    cond do
+      part == "*" -> range
+      part =~ ~r/^\d+$/ -> parse_literal(part)
+      part =~ ~r/^\*\/[1-9]\d?$/ -> parse_step(part, range)
+      part =~ ~r/^\d+\-\d+\/[1-9]\d?$/ -> parse_range_step(part)
+      part =~ ~r/^\d+\-\d+$/ -> parse_range(part)
+      true -> raise ArgumentError, "unrecognized cron expression: #{part}"
     end
   end
 
-  defp expand(parsed) when is_list(parsed), do: Enum.map(parsed, &expand/1)
-
-  defp expand({part, expressions}) do
-    {min, max} = Map.get(@part_ranges, part)
-
-    expanded =
-      expressions
-      |> Enum.flat_map(&expand(&1, min, max))
-      |> :lists.usort()
-
-    {part, expanded}
+  defp parse_literal(part) do
+    part
+    |> String.to_integer()
+    |> List.wrap()
   end
 
-  defp expand({:wild, _value}, _min, _max), do: [:*]
+  defp parse_step(part, range) do
+    step =
+      part
+      |> String.replace_leading("*/", "")
+      |> String.to_integer()
 
-  defp expand({:literal, value}, min, max) when value in min..max, do: [value]
-
-  defp expand({:step, [{:wild, _}, value]}, min, max) when value > 0 and value in min..max do
-    for step <- min..max, rem(step, value) == 0, do: step
+    Enum.filter(range, &(rem(&1, step) == 0))
   end
 
-  defp expand({:step, [{:range, [first, last]}, value]}, min, max)
-       when first >= min and last <= max and last > first and value <= last - first do
-    for step <- first..last, rem(step, value) == 0, do: step
+  defp parse_range(part) do
+    [rmin, rmax] = String.split(part, "-", parts: 2)
+
+    String.to_integer(rmin)..String.to_integer(rmax)
   end
 
-  defp expand({:range, [first, last]}, min, max) when first >= min and last <= max do
-    for step <- first..last, do: step
-  end
+  defp parse_range_step(part) do
+    [range, step] = String.split(part, "/")
 
-  defp expand({_type, value}, min, max) do
-    raise ArgumentError, "Unexpected value #{inspect(value)} outside of range #{min}..#{max}"
+    parse_step(step, parse_range(range))
   end
-
-  @spec reboot?(cron :: t()) :: boolean()
-  def reboot?(%__MODULE__{reboot: reboot}), do: reboot
 end
