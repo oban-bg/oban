@@ -22,6 +22,7 @@ defmodule Oban.Breaker do
   @spec trip_circuit(Exception.t(), Exception.stacktrace(), state_struct()) :: state_struct()
   def trip_circuit(exception, stacktrace, state) do
     meta = %{
+      config: state.conf,
       error: exception,
       message: error_message(exception),
       name: state.name,
@@ -38,8 +39,8 @@ defmodule Oban.Breaker do
   end
 
   @spec open_circuit(state_struct()) :: state_struct()
-  def open_circuit(%{circuit: _, name: name} = state) do
-    Telemetry.execute([:oban, :circuit, :open], %{}, %{name: name})
+  def open_circuit(%{circuit: _, name: name, conf: conf} = state) do
+    Telemetry.execute([:oban, :circuit, :open], %{}, %{name: name, config: conf})
 
     %{state | circuit: :enabled}
   end
