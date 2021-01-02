@@ -51,16 +51,17 @@ defmodule Oban.Telemetry do
   * `[:oban, :producer, :start | :stop | :exception]` — when a producer deschedules or dispatches
     new jobs
 
-  | event        | measures       | metadata          |
-  | ------------ | -------------- | ----------------- |
-  | `:start`     | `:system_time` | `:action, :queue` |
-  | `:stop`      | `:duration`    | `:action, :queue` |
-  | `:exception` | `:duration`    | `:action, :queue` |
+  | event        | measures       | metadata                   |
+  | ------------ | -------------- | -------------------------- |
+  | `:start`     | `:system_time` | `:action, :queue, :config` |
+  | `:stop`      | `:duration`    | `:action, :queue, :config` |
+  | `:exception` | `:duration`    | `:action, :queue, :config` |
 
   Metadata
 
   * `:action` — one of `:deschedule` or `:dispatch`
   * `:queue` — the name of the queue as a string, e.g. "default" or "mailers"
+  * `:config` — the config of the Oban supervisor that the producer is for
 
   ### Circuit Events
 
