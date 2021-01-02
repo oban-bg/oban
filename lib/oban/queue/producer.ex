@@ -238,7 +238,7 @@ defmodule Oban.Queue.Producer do
     Telemetry.span(
       :producer,
       fn -> Query.stage_scheduled_jobs(conf, queue) end,
-      %{action: :deschedule, queue: queue}
+      %{action: :deschedule, queue: queue, config: conf}
     )
 
     state
@@ -272,7 +272,7 @@ defmodule Oban.Queue.Producer do
               |> start_jobs(state)
               |> Map.merge(running)
             end,
-            %{action: :dispatch, queue: queue}
+            %{action: :dispatch, queue: queue, config: conf}
           )
 
         {:noreply, %{state | cooldown_ref: nil, dispatched_at: system_now(), running: running}}
