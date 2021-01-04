@@ -23,6 +23,7 @@ defmodule Oban.Integration.DynamicRepoTest do
   test "job execution", context do
     name = start_oban!(context.repo_pid, queues: [alpha: 1])
     job_ref = insert_job!(name).ref
+
     assert_receive {:ok, ^job_ref}
   end
 
@@ -30,23 +31,10 @@ defmodule Oban.Integration.DynamicRepoTest do
     start_oban!(context.repo_pid, plugins: [{Oban.Plugins.Pruner, interval: 10, max_age: 60}])
 
     DynamicRepo.put_dynamic_repo(context.repo_pid)
+
     insert!(%{}, state: "completed", attempted_at: seconds_ago(62))
 
     with_backoff(fn -> assert retained_ids() == [] end)
-  end
-
-  test "cron", context do
-    ref = System.unique_integer([:positive, :monotonic])
-
-    start_oban!(
-      context.repo_pid,
-      queues: [alpha: 1],
-      crontab: [
-        {"* * * * *", Worker, args: %{ref: ref, action: "OK", bin_pid: Worker.pid_to_bin()}}
-      ]
-    )
-
-    assert_receive {:ok, ^ref}
   end
 
   defp start_oban!(repo_pid, opts) do

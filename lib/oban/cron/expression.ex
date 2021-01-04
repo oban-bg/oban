@@ -1,4 +1,4 @@
-defmodule Oban.Crontab.Cron do
+defmodule Oban.Cron.Expression do
   @moduledoc false
 
   @type t :: %__MODULE__{
@@ -9,7 +9,7 @@ defmodule Oban.Crontab.Cron do
           weekdays: MapSet.t()
         }
 
-  defstruct minutes: :*, hours: :*, days: :*, months: :*, weekdays: :*
+  defstruct [:minutes, :hours, :days, :months, :weekdays]
 
   @dow_map %{
     "SUN" => "0",
@@ -113,32 +113,32 @@ defmodule Oban.Crontab.Cron do
       |> String.split(~r/\s+/, parts: 5)
 
     %__MODULE__{
-      minutes: parse_expr(mip, 0..59),
-      hours: parse_expr(hrp, 0..23),
-      days: parse_expr(dap, 1..31),
-      months: mop |> trans_expr(@mon_map) |> parse_expr(1..12),
-      weekdays: wdp |> trans_expr(@dow_map) |> parse_expr(0..6)
+      minutes: parse_field(mip, 0..59),
+      hours: parse_field(hrp, 0..23),
+      days: parse_field(dap, 1..31),
+      months: mop |> trans_field(@mon_map) |> parse_field(1..12),
+      weekdays: wdp |> trans_field(@dow_map) |> parse_field(0..6)
     }
   end
 
-  defp parse_expr(expr, range) do
+  defp parse_field(field, range) do
     range_set = MapSet.new(range)
 
     parsed =
-      expr
+      field
       |> String.split(~r/\s*,\s*/)
       |> Enum.flat_map(&parse_part(&1, range))
       |> MapSet.new()
 
     unless MapSet.subset?(parsed, range_set) do
-      raise ArgumentError, "expression #{expr} is out of range #{inspect(range)}"
+      raise ArgumentError, "expression field #{field} is out of range #{inspect(range)}"
     end
 
     parsed
   end
 
-  defp trans_expr(expr, map) do
-    Enum.reduce(map, expr, fn {val, rep}, acc -> String.replace(acc, val, rep) end)
+  defp trans_field(field, map) do
+    Enum.reduce(map, field, fn {val, rep}, acc -> String.replace(acc, val, rep) end)
   end
 
   defp parse_part(part, range) do

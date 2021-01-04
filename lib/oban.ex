@@ -12,7 +12,6 @@ defmodule Oban do
 
   alias Ecto.{Changeset, Multi}
   alias Oban.{Config, Job, Midwife, Notifier, Query, Registry, Telemetry}
-  alias Oban.Crontab.Scheduler
   alias Oban.Queue.{Drainer, Producer}
   alias Oban.Queue.Supervisor, as: QueueSupervisor
 
@@ -145,9 +144,26 @@ defmodule Oban do
   @doc since: "0.1.0"
   @spec start_link([option()]) :: Supervisor.on_start()
   def start_link(opts) when is_list(opts) do
-    conf = Config.new(opts)
+    conf =
+      opts
+      |> crontab_to_plugin()
+      |> Config.new()
 
     Supervisor.start_link(__MODULE__, conf, name: Registry.via(conf.name, nil, conf))
+  end
+
+  defp crontab_to_plugin(opts) do
+    {timezone, opts} = Keyword.pop(opts, :timezone, "Etc/UTC")
+
+    case Keyword.pop(opts, :crontab) do
+      {[_ | _] = crontab, opts} ->
+        plugin = {Oban.Plugins.Cron, crontab: crontab, timezone: timezone}
+
+        Keyword.update(opts, :plugins, [plugin], &[&1 | plugin])
+
+      _ ->
+        opts
+    end
   end
 
   @spec child_spec([option]) :: Supervisor.child_spec()
@@ -178,8 +194,7 @@ defmodule Oban do
   def init(%Config{plugins: plugins, queues: queues} = conf) do
     children = [
       {Notifier, conf: conf, name: Registry.via(conf.name, Notifier)},
-      {Midwife, conf: conf, name: Registry.via(conf.name, Midwife)},
-      {Scheduler, conf: conf, name: Registry.via(conf.name, Scheduler)}
+      {Midwife, conf: conf, name: Registry.via(conf.name, Midwife)}
     ]
 
     children = children ++ Enum.map(plugins, &plugin_child_spec(&1, conf))
@@ -188,13 +203,6 @@ defmodule Oban do
     execute_init(conf)
 
     Supervisor.init(children, strategy: :one_for_one)
-  end
-
-  defp execute_init(conf) do
-    measurements = %{system_time: System.system_time()}
-    metadata = %{pid: self(), config: conf}
-
-    Telemetry.execute([:oban, :supervisor, :init], measurements, metadata)
   end
 
   defp plugin_child_spec({module, opts}, conf) do
@@ -210,6 +218,13 @@ defmodule Oban do
 
   defp plugin_child_spec(module, conf) do
     plugin_child_spec({module, []}, conf)
+  end
+
+  defp execute_init(conf) do
+    measurements = %{system_time: System.system_time()}
+    metadata = %{pid: self(), config: conf}
+
+    Telemetry.execute([:oban, :supervisor, :init], measurements, metadata)
   end
 
   @doc """
