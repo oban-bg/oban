@@ -36,7 +36,6 @@ defmodule Oban do
 
   @type option ::
           {:circuit_backoff, timeout()}
-          | {:crontab, [Config.cronjob()]}
           | {:dispatch_cooldown, pos_integer()}
           | {:get_dynamic_repo, nil | (() -> pid() | atom())}
           | {:log, false | Logger.level()}
@@ -48,7 +47,6 @@ defmodule Oban do
           | {:queues, [{queue_name(), pos_integer() | Keyword.t()}]}
           | {:repo, module()}
           | {:shutdown_grace_period, timeout()}
-          | {:timezone, Calendar.time_zone()}
 
   @type job_changeset :: Changeset.t(Job.t())
 
@@ -71,16 +69,17 @@ defmodule Oban do
 
   These options determine what the system does at a high level, i.e. which queues to run.
 
-  * `:crontab` — a list of cron expressions that enqueue jobs on a periodic basis. See "Periodic
-    (CRON) Jobs" in the module docs.
-
-    For testing purposes `:crontab` may be set to `false` or `nil`, which disables scheduling.
   * `:node` — used to identify the node that the supervision tree is running in. If no value is
     provided it will use the `node` name in a distributed system, or the `hostname` in an isolated
     node. See "Node Name" below.
+
+  * `:plugins` — a list or modules or module/option tuples that are started as children of an Oban
+    supervisor. Any supervisable module is a valid plugin, i.e. a `GenServer` or an `Agent`.
+
   * `:prefix` — the query prefix, or schema, to use for inserting and executing jobs. An
     `oban_jobs` table must exist within the prefix. See the "Prefix Support" section in the module
     documentation for more details.
+
   * `:queues` — a keyword list where the keys are queue names and the values are the concurrency
     setting or a keyword list of queue options. For example, setting queues to `[default: 10,
     exports: 5]` would start the queues `default` and `exports` with a combined concurrency level
@@ -91,14 +90,10 @@ defmodule Oban do
 
     For testing purposes `:queues` may be set to `false` or `nil`, which effectively disables all
     job dispatching.
-  * `:timezone` — which timezone to use when scheduling cron jobs. To use a timezone other than
-    the default of "Etc/UTC" you *must* have a timezone database like [tzdata][tzdata] installed
-    and configured.
+
   * `:log` — either `false` to disable logging or a standard log level (`:error`, `:warn`,
     `:info`, `:debug`). This determines whether queries are logged or not; overriding the repo's
     configured log level. Defaults to `false`, where no queries are logged.
-
-  [tzdata]: https://hexdocs.pm/tzdata
 
   ### Twiddly Options
 

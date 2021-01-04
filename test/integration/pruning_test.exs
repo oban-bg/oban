@@ -5,13 +5,6 @@ defmodule Oban.Integration.PruningTest do
 
   @moduletag :integration
 
-  defmodule FakeWorker do
-    use Oban.Worker, queue: :default
-
-    @impl Worker
-    def perform(_job), do: :ok
-  end
-
   test "historic jobs are pruned when they are older than the configured age" do
     %Job{id: _id_} = insert!(%{}, state: "completed", attempted_at: seconds_ago(62))
     %Job{id: _id_} = insert!(%{}, state: "completed", attempted_at: seconds_ago(61))
