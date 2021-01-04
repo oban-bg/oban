@@ -27,8 +27,7 @@ defmodule Oban.Crontab.Scheduler do
       :poll_ref,
       circuit: :enabled,
       reset_timer: nil,
-      poll_interval: :timer.seconds(60),
-      first_run?: true
+      poll_interval: :timer.seconds(60)
     ]
   end
 
@@ -69,7 +68,7 @@ defmodule Oban.Crontab.Scheduler do
       |> send_poll_after()
       |> lock_and_insert()
 
-    {:noreply, %{state | first_run?: false}}
+    {:noreply, state}
   end
 
   def handle_info({:EXIT, _pid, error}, %State{} = state) do
@@ -104,9 +103,7 @@ defmodule Oban.Crontab.Scheduler do
     exception in trip_errors() -> trip_circuit(exception, __STACKTRACE__, state)
   end
 
-  defp insert_jobs(%State{conf: conf, first_run?: first_run?}) do
-    if first_run?, do: insert_reboot_jobs(conf)
-
+  defp insert_jobs(%State{conf: conf}) do
     insert_scheduled_jobs(conf)
   end
 
@@ -114,12 +111,6 @@ defmodule Oban.Crontab.Scheduler do
     {:ok, datetime} = DateTime.now(timezone)
 
     for {cron, worker, opts} <- crontab, Cron.now?(cron, datetime) do
-      insert_job(worker, opts, conf)
-    end
-  end
-
-  defp insert_reboot_jobs(%Config{crontab: crontab} = conf) do
-    for {cron, worker, opts} <- crontab, Cron.reboot?(cron) do
       insert_job(worker, opts, conf)
     end
   end
