@@ -48,6 +48,7 @@ defmodule Oban.Crontab.CronTest do
     end
 
     test "parsing non-standard weekday ranges" do
+      assert MapSet.new([1, 2]) == Cron.parse!("* * * * MON-TUE").weekdays
       assert MapSet.new([1, 2, 3, 4, 5]) == Cron.parse!("* * * * MON-FRI").weekdays
     end
   end
@@ -58,24 +59,22 @@ defmodule Oban.Crontab.CronTest do
                 hour <- integer(1..23),
                 day <- integer(2..28),
                 month <- integer(2..12) do
-        crontab = %Cron{
-          minutes: MapSet.new([minute]),
-          hours: MapSet.new([hour]),
-          days: MapSet.new([day]),
-          months: MapSet.new([month])
-        }
+        cron =
+          [minute, hour, day, month, "*"]
+          |> Enum.join(" ")
+          |> Cron.parse!()
 
         datetime = %{DateTime.utc_now() | minute: minute, hour: hour, day: day, month: month}
 
-        assert Cron.now?(crontab, datetime)
-        refute Cron.now?(crontab, %{datetime | minute: minute - 1})
-        refute Cron.now?(crontab, %{datetime | hour: hour - 1})
-        refute Cron.now?(crontab, %{datetime | day: day - 1})
-        refute Cron.now?(crontab, %{datetime | month: month - 1})
+        assert Cron.now?(cron, datetime)
+        refute Cron.now?(cron, %{datetime | minute: minute - 1})
+        refute Cron.now?(cron, %{datetime | hour: hour - 1})
+        refute Cron.now?(cron, %{datetime | day: day - 1})
+        refute Cron.now?(cron, %{datetime | month: month - 1})
       end
     end
 
-    test "the @reboot special expression initiall evaluates to now" do
+    test "the @reboot special expression initially evaluates to now" do
       cron = Cron.parse!("@reboot")
 
       assert Cron.now?(cron)
@@ -87,10 +86,11 @@ defmodule Oban.Crontab.CronTest do
       sunday_base = DateTime.from_naive!(~N[2020-03-15 22:00:00], "Etc/UTC")
 
       for day_of_week <- 0..6 do
-        crontab = %Cron{weekdays: MapSet.new([day_of_week])}
         datetime = %{sunday_base | day: sunday_base.day + day_of_week}
 
-        assert Cron.now?(crontab, datetime)
+        assert ("* * * * " <> to_string(day_of_week))
+               |> Cron.parse!()
+               |> Cron.now?(datetime)
       end
     end
   end
@@ -133,7 +133,7 @@ defmodule Oban.Crontab.CronTest do
   end
 
   defp spaces do
-    list_of(one_of([constant(" "), constant("\t")]), min_length: 1, max_length: 4)
+    list_of(one_of([constant(" "), constant("\t")]), min_length: 1)
   end
 
   defp expression(min..max) do
