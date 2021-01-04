@@ -51,16 +51,17 @@ defmodule Oban.Telemetry do
   * `[:oban, :producer, :start | :stop | :exception]` — when a producer deschedules or dispatches
     new jobs
 
-  | event        | measures       | metadata          |
-  | ------------ | -------------- | ----------------- |
-  | `:start`     | `:system_time` | `:action, :queue` |
-  | `:stop`      | `:duration`    | `:action, :queue` |
-  | `:exception` | `:duration`    | `:action, :queue` |
+  | event        | measures       | metadata                   |
+  | ------------ | -------------- | -------------------------- |
+  | `:start`     | `:system_time` | `:action, :queue, :config` |
+  | `:stop`      | `:duration`    | `:action, :queue, :config` |
+  | `:exception` | `:duration`    | `:action, :queue, :config` |
 
   Metadata
 
   * `:action` — one of `:deschedule` or `:dispatch`
   * `:queue` — the name of the queue as a string, e.g. "default" or "mailers"
+  * `:config` — the config of the Oban supervisor that the producer is for
 
   ### Circuit Events
 
@@ -68,10 +69,10 @@ defmodule Oban.Telemetry do
   crashing the entire supervision tree. Processes emit a `[:oban, :circuit, :trip]` event when a
   circuit is tripped and `[:oban, :circuit, :open]` when the breaker is subsequently opened again.
 
-  | event                      | measures | metadata                               |
-  | -------------------------- | -------- | -------------------------------------- |
-  | `[:oban, :circuit, :trip]` |          | `:error, :message, :name, :stacktrace` |
-  | `[:oban, :circuit, :open]` |          | `:name`                                |
+  | event                      | measures | metadata                                        |
+  | -------------------------- | -------- | ----------------------------------------------- |
+  | `[:oban, :circuit, :trip]` |          | `:error, :message, :name, :stacktrace, :config` |
+  | `[:oban, :circuit, :open]` |          | `:name, :config`                                |
 
   Metadata
 
@@ -79,6 +80,7 @@ defmodule Oban.Telemetry do
   * `:name` — the registered name of the process that tripped a circuit, i.e. `Oban.Notifier`
   * `:message` — a formatted error message describing what went wrong
   * `:stacktrace` — exception stacktrace, when available
+  * `:config` — the config of the Oban supervisor that the producer is for
 
   ## Default Logger
 
