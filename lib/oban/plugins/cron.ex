@@ -34,7 +34,7 @@ defmodule Oban.Plugins.Cron do
   use GenServer
 
   alias Oban.Cron.Expression
-  alias Oban.{Config, Query, Repo, Worker}
+  alias Oban.{Config, Job, Query, Repo, Worker}
 
   @type cron_opt ::
           {:args, Job.args()}

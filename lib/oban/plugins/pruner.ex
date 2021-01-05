@@ -29,7 +29,7 @@ defmodule Oban.Plugins.Pruner do
 
   import Ecto.Query
 
-  alias Oban.{Job, Query, Repo}
+  alias Oban.{Config, Job, Query, Repo}
 
   @type option ::
           {:conf, Config.t()}
