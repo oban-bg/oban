@@ -62,17 +62,25 @@ defmodule Oban.Integration.CrontabTest do
   end
 
   test "translating deprecated crontab/timezone config into plugin usage" do
-    name = start_supervised_oban!(timezone: "America/Chicago", crontab: [{"* * * * *", Worker}])
+    assert [timezone: "America/Chicago", crontab: [{"* * * * *", Worker}]]
+           |> start_supervised_oban!()
+           |> Registry.whereis({:plugin, Cron})
 
-    assert Registry.whereis(name, {:plugin, Cron})
+    assert [crontab: [{"* * * * *", Worker}]]
+           |> start_supervised_oban!()
+           |> Registry.whereis({:plugin, Cron})
 
-    name = start_supervised_oban!(crontab: [{"* * * * *", Worker}])
+    assert [plugins: [Oban.Plugins.Pruner], crontab: [{"* * * * *", Worker}]]
+           |> start_supervised_oban!()
+           |> Registry.whereis({:plugin, Cron})
 
-    assert Registry.whereis(name, {:plugin, Cron})
+    refute [plugins: false, crontab: [{"* * * * *", Worker}]]
+           |> start_supervised_oban!()
+           |> Registry.whereis({:plugin, Cron})
 
-    name = start_supervised_oban!(timezone: "America/Chicago")
-
-    refute Registry.whereis(name, {:plugin, Cron})
+    refute [timezone: "America/Chicago"]
+           |> start_supervised_oban!()
+           |> Registry.whereis({:plugin, Cron})
   end
 
   defp worker_args(ref) do

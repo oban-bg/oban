@@ -36,9 +36,10 @@ defmodule Oban.Config do
   def new(opts) when is_list(opts) do
     opts =
       opts
+      |> crontab_to_plugin()
       |> Keyword.put_new(:node, node_name())
-      |> Keyword.put(:plugins, opts[:plugins] || [])
-      |> Keyword.put(:queues, opts[:queues] || [])
+      |> Keyword.update(:plugins, [], &(&1 || []))
+      |> Keyword.update(:queues, [], &(&1 || []))
 
     Enum.each(opts, &validate_opt!/1)
 
@@ -74,6 +75,22 @@ defmodule Oban.Config do
   end
 
   # Helpers
+
+  @cron_keys [:crontab, :timezone]
+
+  defp crontab_to_plugin(opts) do
+    case {opts[:plugins], opts[:crontab]} do
+      {plugins, [_ | _]} when is_list(plugins) or is_nil(plugins) ->
+        {cron_opts, base_opts} = Keyword.split(opts, @cron_keys)
+
+        plugin = {Oban.Plugins.Cron, cron_opts}
+
+        Keyword.update(base_opts, :plugins, [plugin], &[plugin | &1])
+
+      _ ->
+        Keyword.drop(opts, @cron_keys)
+    end
+  end
 
   defp validate_opt!({:circuit_backoff, interval}) do
     unless is_integer(interval) and interval > 0 do

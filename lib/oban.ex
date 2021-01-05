@@ -103,6 +103,7 @@ defmodule Oban do
   * `:circuit_backoff` — the number of milliseconds until queries are attempted after a database
     error. All processes communicating with the database are equipped with circuit breakers and
     will use this for the backoff. Defaults to `30_000ms`.
+
   * `:dispatch_cooldown` — the minimum number of milliseconds a producer will wait before fetching
     and running more jobs. A slight cooldown period prevents a producer from flooding with
     messages and thrashing the database. The cooldown period _directly impacts_ a producer's
@@ -112,9 +113,11 @@ defmodule Oban do
 
     The default is `5ms` and the minimum is `1ms`, which is likely faster than the database can
     return new jobs to run.
+
   * `:poll_interval` - the number of milliseconds between polling for new jobs in a queue. This
     is directly tied to the resolution of _scheduled_ jobs. For example, with a `poll_interval` of
     `5_000ms`, scheduled jobs are checked every 5 seconds. The default is `1_000ms`.
+
   * `:shutdown_grace_period` - the amount of time a queue will wait for executing jobs to complete
     before hard shutdown, specified in milliseconds. The default is `15_000`, or 15 seconds.
 
@@ -139,26 +142,9 @@ defmodule Oban do
   @doc since: "0.1.0"
   @spec start_link([option()]) :: Supervisor.on_start()
   def start_link(opts) when is_list(opts) do
-    conf =
-      opts
-      |> crontab_to_plugin()
-      |> Config.new()
+    conf = Config.new(opts)
 
     Supervisor.start_link(__MODULE__, conf, name: Registry.via(conf.name, nil, conf))
-  end
-
-  defp crontab_to_plugin(opts) do
-    {timezone, opts} = Keyword.pop(opts, :timezone, "Etc/UTC")
-
-    case Keyword.pop(opts, :crontab) do
-      {[_ | _] = crontab, opts} ->
-        plugin = {Oban.Plugins.Cron, crontab: crontab, timezone: timezone}
-
-        Keyword.update(opts, :plugins, [plugin], &[&1 | plugin])
-
-      _ ->
-        opts
-    end
   end
 
   @spec child_spec([option]) :: Supervisor.child_spec()
