@@ -469,10 +469,11 @@ Job stats and queue introspection are built on keeping job rows in the database
 after they have completed. This allows administrators to review completed jobs
 and build informative aggregates, at the expense of storage and an unbounded
 table size. To prevent the `oban_jobs` table from growing indefinitely, Oban
-provides active pruning of `completed` and `discarded` jobs.
+provides active pruning of `completed`, `cancelled` and `discarded` jobs.
 
-By default, pruning retains jobs for 60 seconds. You can configure a longer
-retention period by providing a `max_age` in seconds to the `Pruner` plugin.
+By default, the `Pruner` plugin retains jobs for 60 seconds. You can configure a
+longer retention period by providing a `max_age` in seconds to the `Pruner`
+plugin.
 
 ```elixir
 # Set the max_age for 5 minutes
@@ -487,10 +488,9 @@ config :my_app, Oban,
   are soft; jobs beyond a specified age may not be pruned immediately after jobs
   complete.
 
-* Pruning is only applied to jobs that are `completed` or `discarded` (has
-  reached the maximum number of retries or has been manually killed). It'll
-  never delete a new job, a scheduled job or a job that failed and will be
-  retried.
+* Pruning is only applied to jobs that are `completed`, `cancelled` or
+  `discarded`. It'll never delete a new job, a scheduled job or a job that
+  failed and will be retried.
 
 ### Unique Jobs
 

@@ -185,7 +185,7 @@ defmodule Oban.Telemetry do
 
   ## Examples
 
-  Emit span timing events for a prune function:
+  Emit span timing events for a custom prune function:
 
       :ok = Oban.Telemetry.span(:prune, &MyApp.Pruner.prune/0, %{extra: :data})
 

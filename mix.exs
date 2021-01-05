@@ -40,7 +40,8 @@ defmodule Oban.MixProject do
         extra_section: "GUIDES",
         formatters: ["html"],
         extras: extras() ++ pro_extras() ++ web_extras(),
-        groups_for_extras: groups_for_extras()
+        groups_for_extras: groups_for_extras(),
+        groups_for_modules: groups_for_modules()
       ]
     ]
   end
@@ -110,6 +111,15 @@ defmodule Oban.MixProject do
       "Upgrade Guides": ~r{guides/upgrading/.*},
       "Oban Pro": ~r{oban_pro/.?},
       "Oban Web": ~r{oban_web/.?}
+    ]
+  end
+
+  defp groups_for_modules do
+    [
+      Plugins: [
+        Oban.Plugins.Cron,
+        Oban.Plugins.Pruner
+      ]
     ]
   end
 

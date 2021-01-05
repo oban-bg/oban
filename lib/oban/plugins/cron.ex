@@ -1,8 +1,34 @@
 defmodule Oban.Plugins.Cron do
   @moduledoc """
-  - Overview of the plugin
-  - Example of how to use it
-  - Outline of the available options
+  Periodically enqueue jobs through CRON based scheduling.
+
+  ## Using the Plugin
+
+  Schedule various jobs using `{expr, worker}` and `{expr, worker, opts}` syntaxes:
+
+      config :my_app, Oban,
+        plugins: [
+          {Oban.Plugins.Cron,
+           crontab: [
+             {"* * * * *", MyApp.MinuteWorker},
+             {"0 * * * *", MyApp.HourlyWorker, args: %{custom: "arg"}},
+             {"0 0 * * *", MyApp.DailyWorker, max_attempts: 1},
+             {"0 12 * * MON", MyApp.MondayWorker, queue: :scheduled, tags: ["mondays"]},
+             {"@daily", MyApp.AnotherDailyWorker}
+           ]}
+        ]
+
+  ## Options
+
+  * `:crontab` — a list of cron expressions that enqueue jobs on a periodic basis. See [Periodic
+    Jobs][perjob] in the Oban module docs for syntax and details.
+
+  * `:timezone` — which timezone to use when scheduling cron jobs. To use a timezone other than
+    the default of "Etc/UTC" you *must* have a timezone database like [tzdata][tzdata] installed
+    and configured.
+
+  [tzdata]: https://hexdocs.pm/tzdata
+  [perjob]: oban.html#module-periodic-jobs
   """
 
   use GenServer
@@ -83,7 +109,7 @@ defmodule Oban.Plugins.Cron do
     state =
       state
       |> schedule_evaluate()
-      |> lock_and_insert()
+      |> acquire_and_insert()
 
     {:noreply, state}
   end
@@ -137,7 +163,7 @@ defmodule Oban.Plugins.Cron do
 
   # Inserting Helpers
 
-  defp lock_and_insert(%State{conf: conf, lock_key: key, interval: timeout} = state) do
+  defp acquire_and_insert(%State{conf: conf, lock_key: key, interval: timeout} = state) do
     Repo.transaction(
       conf,
       fn -> if Query.acquire_lock?(conf, key), do: insert_jobs(state) end,
