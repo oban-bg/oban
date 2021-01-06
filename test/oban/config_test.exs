@@ -14,20 +14,6 @@ defmodule Oban.ConfigTest do
       assert_valid(circuit_backoff: 10)
     end
 
-    test ":crontab is validated as a list of cron job expressions" do
-      assert_invalid(crontab: ["* * * * *"])
-      assert_invalid(crontab: [["* * * * *", Fake]])
-      assert_invalid(crontab: [Worker])
-
-      config = assert_valid(crontab: [{"* * * * *", Worker}])
-      assert [{%_{minutes: _}, Worker, []}] = config.crontab
-
-      config = assert_valid(crontab: [{"* * * * *", Worker, queue: "special"}])
-      assert [{%_{minutes: _}, Worker, [queue: "special"]}] = config.crontab
-
-      assert %Config{crontab: []} = conf(crontab: false)
-    end
-
     test ":node is validated as a binary" do
       assert_invalid(node: nil)
       assert_invalid(node: '')
@@ -87,17 +73,6 @@ defmodule Oban.ConfigTest do
       assert_invalid(shutdown_grace_period: 1.0)
 
       assert_valid(shutdown_grace_period: 10)
-    end
-
-    test ":timezone is validated as a known timezone" do
-      assert_invalid(timezone: "")
-      assert_invalid(timezone: nil)
-      assert_invalid(timezone: "america")
-      assert_invalid(timezone: "america/chicago")
-
-      assert_valid(timezone: "Etc/UTC")
-      assert_valid(timezone: "Europe/Copenhagen")
-      assert_valid(timezone: "America/Chicago")
     end
 
     test ":log is validated as `false` or a valid log level" do

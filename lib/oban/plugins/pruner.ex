@@ -1,11 +1,41 @@
 defmodule Oban.Plugins.Pruner do
-  @moduledoc false
+  @moduledoc """
+  Periodically delete completed, cancelled and discarded jobs based on age.
+
+  ## Using the Plugin
+
+  The following example demonstrates using the plugin without any configuration, which will prune
+  jobs older than the default of 60 seconds:
+
+      config :my_app, Oban,
+        plugins: [Oban.Plugins.Pruner],
+        ...
+
+  Override the default options to prune jobs after 5 minutes:
+
+      config :my_app, Oban,
+        plugins: [{Oban.Plugins.Pruner, max_age: 300}],
+        ...
+
+  ## Options
+
+  * `:max_age` — the number of seconds after which a job may be pruned
+  * `:limit` — the maximum number of jobs to prune at one time. The default is 10,000 to prevent
+    request timeouts. Applications that steadily generate more than 10k jobs a minute should increase
+    this value.
+  """
 
   use GenServer
 
   import Ecto.Query
 
-  alias Oban.{Job, Query, Repo, Telemetry}
+  alias Oban.{Config, Job, Query, Repo}
+
+  @type option ::
+          {:conf, Config.t()}
+          | {:name, GenServer.name()}
+          | {:limit, pos_integer()}
+          | {:max_age, pos_integer()}
 
   defmodule State do
     @moduledoc false
@@ -21,11 +51,10 @@ defmodule Oban.Plugins.Pruner do
     ]
   end
 
-  @spec start_link(Keyword.t()) :: GenServer.on_start()
+  @doc false
+  @spec start_link([option()]) :: GenServer.on_start()
   def start_link(opts) do
-    name = Keyword.get(opts, :name, __MODULE__)
-
-    GenServer.start_link(__MODULE__, opts, name: name)
+    GenServer.start_link(__MODULE__, opts, name: opts[:name])
   end
 
   @impl GenServer
@@ -49,9 +78,7 @@ defmodule Oban.Plugins.Pruner do
 
   @impl GenServer
   def handle_info(:prune, %State{conf: conf} = state) do
-    Telemetry.span(:prune, fn ->
-      Repo.transaction(conf, fn -> acquire_and_prune(state) end)
-    end)
+    Repo.transaction(conf, fn -> acquire_and_prune(state) end)
 
     {:noreply, schedule_prune(state)}
   end

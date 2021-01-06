@@ -1,7 +1,7 @@
-defmodule Oban.Crontab.CronTest do
+defmodule Oban.Cron.ExpressionTest do
   use Oban.Case, async: true
 
-  alias Oban.Crontab.Cron
+  alias Oban.Cron.Expression, as: Expr
 
   describe "parse!/1" do
     property "expressions with literals, wildcards, ranges, steps and lists are parsed" do
@@ -15,7 +15,7 @@ defmodule Oban.Crontab.CronTest do
 
         [minutes, hours, days, months, weekdays]
         |> Enum.join(spacing)
-        |> Cron.parse!()
+        |> Expr.parse!()
       end
     end
 
@@ -33,23 +33,23 @@ defmodule Oban.Crontab.CronTest do
       ]
 
       for expression <- expressions do
-        assert_raise ArgumentError, fn -> Cron.parse!(expression) end
+        assert_raise ArgumentError, fn -> Expr.parse!(expression) end
       end
     end
 
     test "parsing non-standard expressions" do
-      assert Cron.parse!("0 0 1 1 *") == Cron.parse!("@annually")
-      assert Cron.parse!("0 0 1 1 *") == Cron.parse!("@yearly")
-      assert Cron.parse!("0 0 1 * *") == Cron.parse!("@monthly")
-      assert Cron.parse!("0 0 * * 0") == Cron.parse!("@weekly")
-      assert Cron.parse!("0 0 * * *") == Cron.parse!("@midnight")
-      assert Cron.parse!("0 0 * * *") == Cron.parse!("@daily")
-      assert Cron.parse!("0 * * * *") == Cron.parse!("@hourly")
+      assert Expr.parse!("0 0 1 1 *") == Expr.parse!("@annually")
+      assert Expr.parse!("0 0 1 1 *") == Expr.parse!("@yearly")
+      assert Expr.parse!("0 0 1 * *") == Expr.parse!("@monthly")
+      assert Expr.parse!("0 0 * * 0") == Expr.parse!("@weekly")
+      assert Expr.parse!("0 0 * * *") == Expr.parse!("@midnight")
+      assert Expr.parse!("0 0 * * *") == Expr.parse!("@daily")
+      assert Expr.parse!("0 * * * *") == Expr.parse!("@hourly")
     end
 
     test "parsing non-standard weekday ranges" do
-      assert MapSet.new([1, 2]) == Cron.parse!("* * * * MON-TUE").weekdays
-      assert MapSet.new([1, 2, 3, 4, 5]) == Cron.parse!("* * * * MON-FRI").weekdays
+      assert MapSet.new([1, 2]) == Expr.parse!("* * * * MON-TUE").weekdays
+      assert MapSet.new([1, 2, 3, 4, 5]) == Expr.parse!("* * * * MON-FRI").weekdays
     end
   end
 
@@ -62,24 +62,24 @@ defmodule Oban.Crontab.CronTest do
         cron =
           [minute, hour, day, month, "*"]
           |> Enum.join(" ")
-          |> Cron.parse!()
+          |> Expr.parse!()
 
         datetime = %{DateTime.utc_now() | minute: minute, hour: hour, day: day, month: month}
 
-        assert Cron.now?(cron, datetime)
-        refute Cron.now?(cron, %{datetime | minute: minute - 1})
-        refute Cron.now?(cron, %{datetime | hour: hour - 1})
-        refute Cron.now?(cron, %{datetime | day: day - 1})
-        refute Cron.now?(cron, %{datetime | month: month - 1})
+        assert Expr.now?(cron, datetime)
+        refute Expr.now?(cron, %{datetime | minute: minute - 1})
+        refute Expr.now?(cron, %{datetime | hour: hour - 1})
+        refute Expr.now?(cron, %{datetime | day: day - 1})
+        refute Expr.now?(cron, %{datetime | month: month - 1})
       end
     end
 
     test "the @reboot special expression initially evaluates to now" do
-      cron = Cron.parse!("@reboot")
+      cron = Expr.parse!("@reboot")
 
-      assert Cron.now?(cron)
-      refute Cron.now?(cron, DateTime.add(DateTime.utc_now(), -60, :second))
-      refute Cron.now?(cron, DateTime.add(DateTime.utc_now(), 60, :second))
+      assert Expr.now?(cron)
+      refute Expr.now?(cron, DateTime.add(DateTime.utc_now(), -60, :second))
+      refute Expr.now?(cron, DateTime.add(DateTime.utc_now(), 60, :second))
     end
 
     test "literal days of the week match the current datetime" do
@@ -89,8 +89,8 @@ defmodule Oban.Crontab.CronTest do
         datetime = %{sunday_base | day: sunday_base.day + day_of_week}
 
         assert ("* * * * " <> to_string(day_of_week))
-               |> Cron.parse!()
-               |> Cron.now?(datetime)
+               |> Expr.parse!()
+               |> Expr.now?(datetime)
       end
     end
   end

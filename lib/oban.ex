@@ -12,7 +12,6 @@ defmodule Oban do
 
   alias Ecto.{Changeset, Multi}
   alias Oban.{Config, Job, Midwife, Notifier, Query, Registry, Telemetry}
-  alias Oban.Crontab.Scheduler
   alias Oban.Queue.{Drainer, Producer}
   alias Oban.Queue.Supervisor, as: QueueSupervisor
 
@@ -37,7 +36,6 @@ defmodule Oban do
 
   @type option ::
           {:circuit_backoff, timeout()}
-          | {:crontab, [Config.cronjob()]}
           | {:dispatch_cooldown, pos_integer()}
           | {:get_dynamic_repo, nil | (() -> pid() | atom())}
           | {:log, false | Logger.level()}
@@ -49,7 +47,6 @@ defmodule Oban do
           | {:queues, [{queue_name(), pos_integer() | Keyword.t()}]}
           | {:repo, module()}
           | {:shutdown_grace_period, timeout()}
-          | {:timezone, Calendar.time_zone()}
 
   @type job_changeset :: Changeset.t(Job.t())
 
@@ -72,16 +69,17 @@ defmodule Oban do
 
   These options determine what the system does at a high level, i.e. which queues to run.
 
-  * `:crontab` — a list of cron expressions that enqueue jobs on a periodic basis. See "Periodic
-    (CRON) Jobs" in the module docs.
-
-    For testing purposes `:crontab` may be set to `false` or `nil`, which disables scheduling.
   * `:node` — used to identify the node that the supervision tree is running in. If no value is
     provided it will use the `node` name in a distributed system, or the `hostname` in an isolated
     node. See "Node Name" below.
+
+  * `:plugins` — a list or modules or module/option tuples that are started as children of an Oban
+    supervisor. Any supervisable module is a valid plugin, i.e. a `GenServer` or an `Agent`.
+
   * `:prefix` — the query prefix, or schema, to use for inserting and executing jobs. An
     `oban_jobs` table must exist within the prefix. See the "Prefix Support" section in the module
     documentation for more details.
+
   * `:queues` — a keyword list where the keys are queue names and the values are the concurrency
     setting or a keyword list of queue options. For example, setting queues to `[default: 10,
     exports: 5]` would start the queues `default` and `exports` with a combined concurrency level
@@ -92,14 +90,10 @@ defmodule Oban do
 
     For testing purposes `:queues` may be set to `false` or `nil`, which effectively disables all
     job dispatching.
-  * `:timezone` — which timezone to use when scheduling cron jobs. To use a timezone other than
-    the default of "Etc/UTC" you *must* have a timezone database like [tzdata][tzdata] installed
-    and configured.
+
   * `:log` — either `false` to disable logging or a standard log level (`:error`, `:warn`,
     `:info`, `:debug`). This determines whether queries are logged or not; overriding the repo's
     configured log level. Defaults to `false`, where no queries are logged.
-
-  [tzdata]: https://hexdocs.pm/tzdata
 
   ### Twiddly Options
 
@@ -109,6 +103,7 @@ defmodule Oban do
   * `:circuit_backoff` — the number of milliseconds until queries are attempted after a database
     error. All processes communicating with the database are equipped with circuit breakers and
     will use this for the backoff. Defaults to `30_000ms`.
+
   * `:dispatch_cooldown` — the minimum number of milliseconds a producer will wait before fetching
     and running more jobs. A slight cooldown period prevents a producer from flooding with
     messages and thrashing the database. The cooldown period _directly impacts_ a producer's
@@ -118,9 +113,11 @@ defmodule Oban do
 
     The default is `5ms` and the minimum is `1ms`, which is likely faster than the database can
     return new jobs to run.
+
   * `:poll_interval` - the number of milliseconds between polling for new jobs in a queue. This
     is directly tied to the resolution of _scheduled_ jobs. For example, with a `poll_interval` of
     `5_000ms`, scheduled jobs are checked every 5 seconds. The default is `1_000ms`.
+
   * `:shutdown_grace_period` - the amount of time a queue will wait for executing jobs to complete
     before hard shutdown, specified in milliseconds. The default is `15_000`, or 15 seconds.
 
@@ -178,8 +175,7 @@ defmodule Oban do
   def init(%Config{plugins: plugins, queues: queues} = conf) do
     children = [
       {Notifier, conf: conf, name: Registry.via(conf.name, Notifier)},
-      {Midwife, conf: conf, name: Registry.via(conf.name, Midwife)},
-      {Scheduler, conf: conf, name: Registry.via(conf.name, Scheduler)}
+      {Midwife, conf: conf, name: Registry.via(conf.name, Midwife)}
     ]
 
     children = children ++ Enum.map(plugins, &plugin_child_spec(&1, conf))
@@ -188,13 +184,6 @@ defmodule Oban do
     execute_init(conf)
 
     Supervisor.init(children, strategy: :one_for_one)
-  end
-
-  defp execute_init(conf) do
-    measurements = %{system_time: System.system_time()}
-    metadata = %{pid: self(), config: conf}
-
-    Telemetry.execute([:oban, :supervisor, :init], measurements, metadata)
   end
 
   defp plugin_child_spec({module, opts}, conf) do
@@ -210,6 +199,13 @@ defmodule Oban do
 
   defp plugin_child_spec(module, conf) do
     plugin_child_spec({module, []}, conf)
+  end
+
+  defp execute_init(conf) do
+    measurements = %{system_time: System.system_time()}
+    metadata = %{pid: self(), config: conf}
+
+    Telemetry.execute([:oban, :supervisor, :init], measurements, metadata)
   end
 
   @doc """

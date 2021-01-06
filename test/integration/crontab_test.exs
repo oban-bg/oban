@@ -1,86 +1,50 @@
 defmodule Oban.Integration.CrontabTest do
   use Oban.Case
 
-  import Ecto.Query, only: [select: 2]
+  alias Oban.Plugins.Cron
+  alias Oban.Registry
 
   @moduletag :integration
 
   test "cron jobs are enqueued on startup" do
-    start_supervised_oban!(
-      queues: [alpha: 5],
+    run_with_opts(
       crontab: [
         {"* * * * *", Worker, args: worker_args(1)},
         {"59 23 31 12 0", Worker, args: worker_args(2)},
-        {"* * * * *", Worker, args: worker_args(3)},
-        {"* * * * *", Worker, args: worker_args(4), queue: "gamma"}
+        {"* * * * *", Worker, args: worker_args(3)}
       ]
     )
 
-    assert_receive {:ok, 1}
-    refute_receive {:ok, 2}
-    assert_receive {:ok, 3}
-    refute_receive {:ok, 4}
+    assert inserted_refs() == [1, 3]
   end
 
   test "cron jobs are not enqueued twice within the same minute" do
-    oban_opts = [
-      queues: [alpha: 5],
-      crontab: [{"* * * * *", Worker, args: worker_args(1)}]
-    ]
+    run_with_opts(crontab: [{"* * * * *", Worker, args: worker_args(1)}])
 
-    name = start_supervised_oban!(oban_opts)
+    assert inserted_refs() == [1]
 
-    assert_receive {:ok, 1}
+    run_with_opts(crontab: [{"* * * * *", Worker, args: worker_args(1)}])
 
-    :ok = stop_supervised(name)
-
-    start_supervised_oban!(oban_opts)
-
-    refute_receive {:ok, 1}
+    assert inserted_refs() == [1]
   end
 
   test "cron jobs are only enqueued once between nodes" do
-    base_opts = [
-      queues: [alpha: 5],
-      crontab: [{"* * * * *", Worker, args: worker_args(1)}]
-    ]
+    opts = [crontab: [{"* * * * *", Worker, args: worker_args(1)}]]
 
-    name1 = start_supervised_oban!(base_opts)
-    name2 = start_supervised_oban!(base_opts)
+    name1 = start_supervised_oban!(plugins: [{Cron, opts}])
+    name2 = start_supervised_oban!(plugins: [{Cron, opts}])
+    name3 = start_supervised_oban!(plugins: [{Cron, opts}])
 
-    assert_receive {:ok, 1}
+    for name <- [name1, name2, name3], do: stop_supervised(name)
 
-    :ok = stop_supervised(name1)
-    :ok = stop_supervised(name2)
-
-    assert 1 == Job |> select(count()) |> Repo.one()
-  end
-
-  test "cron jobs are scheduled within a prefix" do
-    base_opts = [
-      queues: [alpha: 5],
-      crontab: [{"* * * * *", Worker, args: worker_args(1)}]
-    ]
-
-    name1 = start_supervised_oban!(base_opts ++ [prefix: "public"])
-    name2 = start_supervised_oban!(base_opts ++ [prefix: "private"])
-
-    assert_receive {:ok, 1}
-    assert_receive {:ok, 1}
-
-    :ok = stop_supervised(name1)
-    :ok = stop_supervised(name2)
-
-    assert 1 == Job |> select(count()) |> Repo.one(prefix: "public")
-    assert 1 == Job |> select(count()) |> Repo.one(prefix: "private")
+    assert inserted_refs() == [1]
   end
 
   test "cron jobs are scheduled using the configured timezone" do
     {:ok, %DateTime{hour: chi_hour}} = DateTime.now("America/Chicago")
     {:ok, %DateTime{hour: utc_hour}} = DateTime.now("Etc/UTC")
 
-    start_supervised_oban!(
-      queues: [alpha: 5],
+    run_with_opts(
       timezone: "America/Chicago",
       crontab: [
         {"* #{chi_hour} * * *", Worker, args: worker_args(1)},
@@ -88,38 +52,51 @@ defmodule Oban.Integration.CrontabTest do
       ]
     )
 
-    assert_receive {:ok, 1}
-    refute_receive {:ok, 2}
+    assert inserted_refs() == [1]
   end
 
   test "reboot jobs are enqueued on startup" do
-    name =
-      start_supervised_oban!(
-        queues: false,
-        crontab: [{"@reboot", Worker, args: worker_args(1)}]
-      )
+    run_with_opts(crontab: [{"@reboot", Worker, args: worker_args(1)}])
 
-    :ok = stop_supervised(name)
-
-    assert 1 == Job |> select(count()) |> Repo.one()
+    assert inserted_refs() == [1]
   end
 
-  test "reboot jobs are only enqueued once between nodes" do
-    base_opts = [
-      queues: false,
-      crontab: [{"@reboot", Worker, args: worker_args(1)}]
-    ]
+  test "translating deprecated crontab/timezone config into plugin usage" do
+    assert [timezone: "America/Chicago", crontab: [{"* * * * *", Worker}]]
+           |> start_supervised_oban!()
+           |> Registry.whereis({:plugin, Cron})
 
-    name1 = start_supervised_oban!(base_opts)
-    name2 = start_supervised_oban!(base_opts)
+    assert [crontab: [{"* * * * *", Worker}]]
+           |> start_supervised_oban!()
+           |> Registry.whereis({:plugin, Cron})
 
-    :ok = stop_supervised(name1)
-    :ok = stop_supervised(name2)
+    assert [plugins: [Oban.Plugins.Pruner], crontab: [{"* * * * *", Worker}]]
+           |> start_supervised_oban!()
+           |> Registry.whereis({:plugin, Cron})
 
-    assert 1 == Job |> select(count()) |> Repo.one()
+    refute [plugins: false, crontab: [{"* * * * *", Worker}]]
+           |> start_supervised_oban!()
+           |> Registry.whereis({:plugin, Cron})
+
+    refute [timezone: "America/Chicago"]
+           |> start_supervised_oban!()
+           |> Registry.whereis({:plugin, Cron})
   end
 
   defp worker_args(ref) do
     %{ref: ref, action: "OK", bin_pid: Worker.pid_to_bin()}
+  end
+
+  defp run_with_opts(opts) do
+    [plugins: [{Cron, opts}]]
+    |> start_supervised_oban!()
+    |> stop_supervised()
+  end
+
+  defp inserted_refs do
+    Job
+    |> Repo.all()
+    |> Enum.map(fn job -> job.args["ref"] end)
+    |> Enum.sort()
   end
 end
