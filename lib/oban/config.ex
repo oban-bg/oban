@@ -32,6 +32,8 @@ defmodule Oban.Config do
             log: false,
             get_dynamic_repo: nil
 
+  defguardp is_pos_integer(interval) when is_integer(interval) and interval > 0
+
   @spec new(Keyword.t()) :: t()
   def new(opts) when is_list(opts) do
     opts =
@@ -92,71 +94,86 @@ defmodule Oban.Config do
     end
   end
 
-  defp validate_opt!({:circuit_backoff, interval}) do
-    unless is_integer(interval) and interval > 0 do
-      raise ArgumentError, "expected :circuit_backoff to be a positive integer"
+  defp validate_opt!({:circuit_backoff, backoff}) do
+    unless is_pos_integer(backoff) do
+      raise ArgumentError,
+            "expected :circuit_backoff to be a positive integer, got: #{inspect(backoff)}"
     end
   end
 
-  defp validate_opt!({:dispatch_cooldown, period}) do
-    unless is_integer(period) and period > 0 do
-      raise ArgumentError, "expected :dispatch_cooldown to be a positive integer"
+  defp validate_opt!({:dispatch_cooldown, cooldown}) do
+    unless is_pos_integer(cooldown) do
+      raise ArgumentError,
+            "expected :dispatch_cooldown to be a positive integer, got: #{inspect(cooldown)}"
     end
   end
 
   defp validate_opt!({:name, _}), do: :ok
 
   defp validate_opt!({:node, node}) do
-    unless is_binary(node) and node != "" do
-      raise ArgumentError, "expected :node to be a non-empty binary"
+    unless is_binary(node) and String.trim(node) != "" do
+      raise ArgumentError,
+            "expected :node to be a non-empty binary, got: #{inspect(node)}"
     end
   end
 
   defp validate_opt!({:plugins, plugins}) do
     unless is_list(plugins) and Enum.all?(plugins, &valid_plugin?/1) do
-      raise ArgumentError, "expected a list of modules or {module, keyword} tuples"
+      raise ArgumentError,
+            "expected :plugins to be a list of modules or {module, keyword} tuples " <>
+              ", got: #{inspect(plugins)}"
     end
   end
 
   defp validate_opt!({:poll_interval, interval}) do
-    unless is_integer(interval) and interval > 0 do
-      raise ArgumentError, "expected :poll_interval to be a positive integer"
+    unless is_pos_integer(interval) do
+      raise ArgumentError,
+            "expected :poll_interval to be a positive integer, got: #{inspect(interval)}"
     end
   end
 
   defp validate_opt!({:prefix, prefix}) do
     unless is_binary(prefix) and Regex.match?(~r/^[a-z0-9_]+$/i, prefix) do
-      raise ArgumentError, "expected :prefix to be a binary with alphanumeric characters"
+      raise ArgumentError,
+            "expected :prefix to be a binary with alphanumeric characters, got: #{inspect(prefix)}"
     end
   end
 
   defp validate_opt!({:queues, queues}) do
     unless Keyword.keyword?(queues) and Enum.all?(queues, &valid_queue?/1) do
-      raise ArgumentError, "expected :queues to be a keyword list of {atom, integer} pairs"
+      raise ArgumentError,
+            "expected :queues to be a keyword list of {atom, integer} pairs or " <>
+              "a list of {atom, keyword} pairs, got: #{inspect(queues)}"
     end
   end
 
   defp validate_opt!({:repo, repo}) do
     unless Code.ensure_loaded?(repo) and function_exported?(repo, :__adapter__, 0) do
-      raise ArgumentError, "expected :repo to be an Ecto.Repo"
+      raise ArgumentError,
+            "expected :repo to be an Ecto.Repo, got: #{inspect(repo)}"
     end
   end
 
-  defp validate_opt!({:shutdown_grace_period, interval}) do
-    unless is_integer(interval) and interval > 0 do
-      raise ArgumentError, "expected :shutdown_grace_period to be a positive integer"
+  defp validate_opt!({:shutdown_grace_period, period}) do
+    unless is_pos_integer(period) do
+      raise ArgumentError,
+            "expected :shutdown_grace_period to be a positive integer, got: #{inspect(period)}"
     end
   end
+
+  @log_levels ~w(false emergency alert critical error warning warn notice info debug)a
 
   defp validate_opt!({:log, log}) do
-    unless log in ~w(false error warn info debug)a do
-      raise ArgumentError, "expected :log to be `false` or a log level"
+    unless log in @log_levels do
+      raise ArgumentError,
+            "expected :log to be one of #{inspect(@log_levels)}, got: #{inspect(log)}"
     end
   end
 
   defp validate_opt!({:get_dynamic_repo, fun}) do
     unless is_nil(fun) or is_function(fun, 0) do
-      raise ArgumentError, "expected :gethostname to be `nil` or a zero arity function"
+      raise ArgumentError,
+            "expected :get_dynamic_repo to be nil or a zero arity function, got: #{inspect(fun)}"
     end
   end
 
@@ -165,7 +182,7 @@ defmodule Oban.Config do
   end
 
   defp valid_queue?({_name, opts}) do
-    (is_integer(opts) and opts > 0) or Keyword.keyword?(opts)
+    is_pos_integer(opts) or Keyword.keyword?(opts)
   end
 
   defp valid_plugin?({plugin, opts}) do
