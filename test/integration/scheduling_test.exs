@@ -1,6 +1,9 @@
 defmodule Oban.Integration.SchedulingTest do
   use Oban.Case
 
+  alias Oban.Plugins.Stager
+  alias Oban.Registry
+
   @moduletag :integration
 
   test "descheduling jobs to make them available for execution" do
@@ -10,7 +13,7 @@ defmodule Oban.Integration.SchedulingTest do
     job_4 = insert!([ref: 4, sleep: 5000], schedule_in: -1, queue: :gamma)
     job_5 = insert!([ref: 5, sleep: 5000], schedule_in: 10, queue: :alpha)
 
-    name = start_supervised_oban!(queues: [alpha: 2])
+    name = start_supervised_oban!(queues: [alpha: 2], plugins: [{Stager, interval: 10}])
 
     assert_receive {:started, 1}
     assert_receive {:started, 2}
@@ -18,16 +21,26 @@ defmodule Oban.Integration.SchedulingTest do
     # Not started because the queue limit is 2
     refute_received {:started, 3}
 
-    # Not descheduled because it is in a different queue
+    # Not running because it is in a different queue
     refute_received {:started, 4}
 
-    # Not descheduled because it is in the future
+    # Not staged because it is in the future
     refute_received {:started, 5}
 
     :ok = stop_supervised(name)
 
     assert %{state: "available"} = Repo.reload(job_3)
-    assert %{state: "scheduled"} = Repo.reload(job_4)
+    assert %{state: "available"} = Repo.reload(job_4)
     assert %{state: "scheduled"} = Repo.reload(job_5)
+  end
+
+  test "translating poll_interval config into plugin usage" do
+    assert [poll_interval: 2000]
+           |> start_supervised_oban!()
+           |> Registry.whereis({:plugin, Stager})
+
+    refute [plugins: false, poll_interval: 2000]
+           |> start_supervised_oban!()
+           |> Registry.whereis({:plugin, Stager})
   end
 end

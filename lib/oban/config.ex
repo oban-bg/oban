@@ -7,7 +7,6 @@ defmodule Oban.Config do
           name: Oban.name(),
           node: binary(),
           plugins: [module() | {module() | Keyword.t()}],
-          poll_interval: pos_integer(),
           prefix: binary(),
           queues: [{atom(), Keyword.t()}],
           repo: module(),
@@ -24,7 +23,6 @@ defmodule Oban.Config do
             name: Oban,
             node: nil,
             plugins: [],
-            poll_interval: :timer.seconds(1),
             prefix: "public",
             queues: [],
             repo: nil,
@@ -39,6 +37,7 @@ defmodule Oban.Config do
     opts =
       opts
       |> crontab_to_plugin()
+      |> poll_interval_to_plugin()
       |> Keyword.put_new(:node, node_name())
       |> Keyword.update(:plugins, [], &(&1 || []))
       |> Keyword.update(:queues, [], &(&1 || []))
@@ -94,6 +93,20 @@ defmodule Oban.Config do
     end
   end
 
+  defp poll_interval_to_plugin(opts) do
+    case {opts[:plugins], opts[:poll_interval]} do
+      {plugins, interval} when (is_list(plugins) or is_nil(plugins)) and is_integer(interval) ->
+        plugin = {Oban.Plugins.Stager, interval: interval}
+
+        opts
+        |> Keyword.delete(:poll_interval)
+        |> Keyword.update(:plugins, [plugin], &[plugin | &1])
+
+      _ ->
+        Keyword.drop(opts, [:poll_interval])
+    end
+  end
+
   defp validate_opt!({:circuit_backoff, backoff}) do
     unless is_pos_integer(backoff) do
       raise ArgumentError,
@@ -122,13 +135,6 @@ defmodule Oban.Config do
       raise ArgumentError,
             "expected :plugins to be a list of modules or {module, keyword} tuples " <>
               ", got: #{inspect(plugins)}"
-    end
-  end
-
-  defp validate_opt!({:poll_interval, interval}) do
-    unless is_pos_integer(interval) do
-      raise ArgumentError,
-            "expected :poll_interval to be a positive integer, got: #{inspect(interval)}"
     end
   end
 

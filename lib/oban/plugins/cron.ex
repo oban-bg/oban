@@ -55,7 +55,6 @@ defmodule Oban.Plugins.Cron do
   defmodule State do
     @moduledoc false
 
-    @enforce_keys [:conf]
     defstruct [
       :conf,
       :name,

@@ -76,24 +76,23 @@ defmodule Oban.Query do
     end)
   end
 
-  @spec stage_scheduled_jobs(Config.t(), binary(), opts :: keyword()) :: {:ok, {integer(), nil}}
-  def stage_scheduled_jobs(%Config{} = conf, queue, opts \\ []) do
+  @spec stage_scheduled_jobs(Config.t(), opts :: keyword()) :: {:ok, [binary()]}
+  def stage_scheduled_jobs(%Config{} = conf, opts \\ []) do
     max_scheduled_at = Keyword.get(opts, :max_scheduled_at, utc_now())
 
-    subset =
-      Job
-      |> select([j], j.id)
-      |> where([j], j.state in ["scheduled", "retryable"])
-      |> where([j], j.queue == ^queue)
-      |> where([j], j.scheduled_at <= ^max_scheduled_at)
-      |> lock("FOR UPDATE SKIP LOCKED")
+    Repo.transaction(conf, fn ->
+      query =
+        Job
+        |> where([j], j.state in ["scheduled", "retryable"])
+        |> where([j], not is_nil(j.queue))
+        |> where([j], j.scheduled_at <= ^max_scheduled_at)
+        |> select([j], j.queue)
 
-    Repo.transaction(
-      conf,
-      fn ->
-        Repo.update_all(conf, where(Job, [j], j.id in subquery(subset)), set: [state: "available"])
+      case Repo.update_all(conf, query, set: [state: "available"]) do
+        {0, _} -> []
+        {_, queues} -> queues
       end
-    )
+    end)
   end
 
   @spec complete_job(Config.t(), Job.t()) :: :ok
@@ -117,6 +116,7 @@ defmodule Oban.Query do
     ]
 
     Repo.update_all(conf, where(Job, id: ^job.id), updates)
+
     :ok
   end
 
@@ -151,6 +151,7 @@ defmodule Oban.Query do
     ]
 
     Repo.update_all(conf, where(Job, id: ^id), updates)
+
     :ok
   end
 
@@ -193,6 +194,7 @@ defmodule Oban.Query do
     ]
 
     Repo.update_all(conf, where(Job, id: ^id), updates)
+
     :ok
   end
 

@@ -21,7 +21,7 @@ defmodule Oban.Queue.Drainer do
       |> Keyword.fetch!(:queue)
       |> to_string()
 
-    if Keyword.get(opts, :with_scheduled, false), do: schedule_jobs(conf, queue)
+    if Keyword.get(opts, :with_scheduled, false), do: schedule_jobs(conf)
 
     conf
     |> fetch_jobs(queue)
@@ -36,8 +36,8 @@ defmodule Oban.Queue.Drainer do
     end)
   end
 
-  defp schedule_jobs(conf, queue) do
-    Query.stage_scheduled_jobs(conf, queue, max_scheduled_at: @far_future)
+  defp schedule_jobs(conf) do
+    Query.stage_scheduled_jobs(conf, max_scheduled_at: @far_future)
   end
 
   defp fetch_jobs(conf, queue) do
