@@ -105,7 +105,7 @@ defmodule Oban.Integration.ControllingTest do
     end
 
     test "pausing and resuming individual queues" do
-      name = start_supervised_oban!(queues: [alpha: 5], poll_interval: 1_000)
+      name = start_supervised_oban!(queues: [alpha: 5])
 
       wait_for_notifier(name)
 
@@ -171,7 +171,7 @@ defmodule Oban.Integration.ControllingTest do
 
       wait_for_notifier(name)
 
-      for ref <- 1..6, do: insert!(ref: ref, sleep: 500)
+      for ref <- 1..6, do: insert!(ref: ref, sleep: 2000)
 
       assert :ok = Oban.scale_queue(name, queue: :alpha, limit: 5)
 
@@ -238,7 +238,7 @@ defmodule Oban.Integration.ControllingTest do
   end
 
   test "dispatching jobs from a queue via database trigger" do
-    name = start_supervised_oban!(queues: [alpha: 5], poll_interval: :timer.minutes(5))
+    name = start_supervised_oban!(queues: [alpha: 5])
 
     wait_for_notifier(name)
 

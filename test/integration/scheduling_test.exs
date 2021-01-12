@@ -35,6 +35,10 @@ defmodule Oban.Integration.SchedulingTest do
   end
 
   test "translating poll_interval config into plugin usage" do
+    assert []
+           |> start_supervised_oban!()
+           |> Registry.whereis({:plugin, Stager})
+
     assert [poll_interval: 2000]
            |> start_supervised_oban!()
            |> Registry.whereis({:plugin, Stager})

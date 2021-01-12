@@ -94,6 +94,10 @@ defmodule Oban.Config do
   end
 
   defp poll_interval_to_plugin(opts) do
+    # This is necessary for backward compatibility with configurations that didn't set any
+    # `poll_interval`.
+    opts = Keyword.put_new(opts, :poll_interval, :timer.seconds(1))
+
     case {opts[:plugins], opts[:poll_interval]} do
       {plugins, interval} when (is_list(plugins) or is_nil(plugins)) and is_integer(interval) ->
         plugin = {Oban.Plugins.Stager, interval: interval}

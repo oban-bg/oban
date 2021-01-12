@@ -42,7 +42,6 @@ defmodule Oban do
           | {:name, name()}
           | {:node, binary()}
           | {:plugins, [module() | {module() | Keyword.t()}]}
-          | {:poll_interval, pos_integer()}
           | {:prefix, binary()}
           | {:queues, [{queue_name(), pos_integer() | Keyword.t()}]}
           | {:repo, module()}
@@ -113,10 +112,6 @@ defmodule Oban do
 
     The default is `5ms` and the minimum is `1ms`, which is likely faster than the database can
     return new jobs to run.
-
-  * `:poll_interval` - the number of milliseconds between polling for new jobs in a queue. This
-    is directly tied to the resolution of _scheduled_ jobs. For example, with a `poll_interval` of
-    `5_000ms`, scheduled jobs are checked every 5 seconds. The default is `1_000ms`.
 
   * `:shutdown_grace_period` - the amount of time a queue will wait for executing jobs to complete
     before hard shutdown, specified in milliseconds. The default is `15_000`, or 15 seconds.

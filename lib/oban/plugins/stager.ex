@@ -3,6 +3,12 @@ defmodule Oban.Plugins.Stager do
   Transition jobs to the `available` state when they reach their scheduled time.
 
   This module is necessary for the execution of scheduled and retryable jobs.
+
+  ## Options
+
+  * `:interval` - the number of milliseconds between database updates. This is directly tied to
+    the resolution of _scheduled_ jobs. For example, with an `interval` of `5_000ms`, scheduled
+    jobs are checked every 5 seconds. The default is `1_000ms`.
   """
 
   use GenServer
@@ -45,15 +51,6 @@ defmodule Oban.Plugins.Stager do
 
     :ok
   end
-
-  # TODO: Wrap in an xact lock
-  # TODO: Add telemetry span function
-  #
-  # Telemetry.span(
-  #   :producer,
-  #   fn -> Query.stage_scheduled_jobs(conf, queue) end,
-  #   %{action: :deschedule, queue: queue, config: conf}
-  # )
 
   @impl GenServer
   def handle_info(:stage, %State{conf: conf} = state) do

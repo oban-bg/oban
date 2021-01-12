@@ -38,15 +38,6 @@ defmodule Oban.ConfigTest do
       assert_valid(plugins: [{Pruner, [name: "Something"]}])
     end
 
-    test ":poll_interval is validated as an integer" do
-      refute_valid(poll_interval: -1)
-      refute_valid(poll_interval: 0)
-      refute_valid(poll_interval: "5")
-      refute_valid(poll_interval: 1.0)
-
-      assert_valid(poll_interval: 10)
-    end
-
     test ":prefix is validated as a binary" do
       refute_valid(prefix: :private)
       refute_valid(prefix: " private schema ")
@@ -62,7 +53,7 @@ defmodule Oban.ConfigTest do
       refute_valid(queues: [default: 3.5])
 
       assert_valid(queues: [default: 1])
-      assert_valid(queues: [default: [poll_interval: 50, limit: 1]])
+      assert_valid(queues: [default: [limit: 1]])
 
       assert %Config{queues: []} = conf(queues: false)
     end
