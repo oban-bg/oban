@@ -296,7 +296,7 @@ defmodule Oban do
         raise Ecto.InvalidChangesetError, action: :insert, changeset: changeset
 
       {:error, reason} ->
-        raise RuntimeError, reason
+        raise RuntimeError, inspect(reason)
     end
   end
 
