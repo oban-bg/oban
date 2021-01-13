@@ -70,7 +70,7 @@ defmodule Oban.Notifier do
 
   import Oban.Breaker, only: [open_circuit: 1, trip_circuit: 3]
 
-  alias Oban.{Config, Query, Repo}
+  alias Oban.{Config, Query, Registry, Repo}
   alias Postgrex.Notifications
 
   @type option :: {:name, module()} | {:conf, Config.t()}
@@ -126,6 +126,10 @@ defmodule Oban.Notifier do
   Listen for messages on all channels:
 
       Oban.Notifier.listen([:gossip, :insert, :signal])
+
+  Listen for messages when using a custom Oban name:
+
+      Oban.Notifier.listen(MyApp.Oban, [:gossip, :insert, :signal])
   """
   @spec listen(GenServer.server(), channels :: list(channel())) :: :ok
   def listen(server \\ Oban, channels)
@@ -136,9 +140,9 @@ defmodule Oban.Notifier do
     GenServer.call(pid, {:listen, channels})
   end
 
-  def listen(oban_name, channels) when is_atom(oban_name) and is_list(channels) do
+  def listen(oban_name, channels) when is_list(channels) do
     oban_name
-    |> Oban.Registry.whereis(__MODULE__)
+    |> Registry.whereis(__MODULE__)
     |> listen(channels)
   end
 

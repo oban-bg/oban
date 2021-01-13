@@ -44,7 +44,10 @@ defmodule Oban.Config do
 
     Enum.each(opts, &validate_opt!/1)
 
-    opts = Keyword.update!(opts, :queues, &parse_queues/1)
+    opts =
+      opts
+      |> Keyword.update!(:queues, &parse_queues/1)
+      |> Keyword.update!(:plugins, &normalize_plugins/1)
 
     struct!(__MODULE__, opts)
   end
@@ -94,10 +97,6 @@ defmodule Oban.Config do
   end
 
   defp poll_interval_to_plugin(opts) do
-    # This is necessary for backward compatibility with configurations that didn't set any
-    # `poll_interval`.
-    opts = Keyword.put_new(opts, :poll_interval, :timer.seconds(1))
-
     case {opts[:plugins], opts[:poll_interval]} do
       {plugins, interval} when (is_list(plugins) or is_nil(plugins)) and is_integer(interval) ->
         plugin = {Oban.Plugins.Stager, interval: interval}
@@ -105,6 +104,11 @@ defmodule Oban.Config do
         opts
         |> Keyword.delete(:poll_interval)
         |> Keyword.update(:plugins, [plugin], &[plugin | &1])
+
+      {plugins, nil} when is_list(plugins) or is_nil(plugins) ->
+        plugin = Oban.Plugins.Stager
+
+        Keyword.update(opts, :plugins, [plugin], &[plugin | &1])
 
       _ ->
         Keyword.drop(opts, [:poll_interval])
@@ -210,5 +214,16 @@ defmodule Oban.Config do
 
       {name, opts}
     end
+  end
+
+  # Manually specified plugins will be overwritten by auto-specified plugins unless we reverse the
+  # plugin list. The order doesn't matter as they are supervised one-for-one.
+  defp normalize_plugins(plugins) do
+    plugins
+    |> Enum.reverse()
+    |> Enum.uniq_by(fn
+      {module, _opts} -> module
+      module -> module
+    end)
   end
 end
