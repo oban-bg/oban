@@ -1,6 +1,6 @@
 # Recursive Jobs
 
-Recursive jobs, like recursive functions, call themselves after they have have
+Recursive jobs, like recursive functions, call themselves after they have
 executed. Except unlike recursive functions, where recursion happens in a tight
 loop, a recursive job enqueues a new version of itself and may add a slight
 delay to alleviate pressure on the queue.

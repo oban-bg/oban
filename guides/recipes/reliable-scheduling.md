@@ -13,7 +13,7 @@ Time for illustrative example!
 
 When a new user signs up to use our site we need to start sending them daily
 digest emails. We want to deliver the emails around the same time a user signed
-up every, repeating every 24 hours. It is important that we don't spam them with
+up, repeating every 24 hours. It is important that we don't spam them with
 duplicate emails, so we ensure that the next email is only scheduled on our
 first attempt.
 

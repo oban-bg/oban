@@ -51,7 +51,7 @@ a `JSON` configuration file. Once the JSON is loaded we must extract the
 The use of `String.to_atom/1` is safe because all of our queues names are
 already defined.
 
-Then you include this in your `mix.ex` file, where your release is configured:
+Then you include this in your `mix.exs` file, where your release is configured:
 
 ```elixir
 releases: [
