@@ -55,9 +55,12 @@ defmodule Oban.Plugins.Stager do
   @impl GenServer
   def handle_info(:stage, %State{conf: conf} = state) do
     with {:ok, [_ | _] = queues} <- Query.stage_scheduled_jobs(conf) do
-      queues
-      |> Enum.uniq()
-      |> Enum.each(&Query.notify(conf, "oban_insert", %{queue: &1}))
+      payloads =
+        queues
+        |> Enum.uniq()
+        |> Enum.map(&%{queue: &1})
+
+      Query.notify(conf, "oban_insert", payloads)
     end
 
     {:noreply, state}
