@@ -34,7 +34,7 @@ defmodule Oban.Plugins.Cron do
   use GenServer
 
   alias Oban.Cron.Expression
-  alias Oban.{Config, Job, Query, Repo, Worker}
+  alias Oban.{Config, Job, Query, Worker}
 
   @type cron_opt ::
           {:args, Job.args()}
@@ -55,13 +55,12 @@ defmodule Oban.Plugins.Cron do
   defmodule State do
     @moduledoc false
 
-    @enforce_keys [:conf]
     defstruct [
       :conf,
       :name,
       :timer,
       crontab: [],
-      lock_key: 1_149_979_440_242_868_330,
+      lock_key: 1_149_979_440_242_868_001,
       interval: :timer.seconds(60),
       timezone: "Etc/UTC"
     ]
@@ -105,11 +104,12 @@ defmodule Oban.Plugins.Cron do
   end
 
   @impl GenServer
-  def handle_info(:evaluate, state) do
-    state =
-      state
-      |> schedule_evaluate()
-      |> acquire_and_insert()
+  def handle_info(:evaluate, %State{} = state) do
+    state = schedule_evaluate(state)
+
+    Query.with_xact_lock(state.conf, state.lock_key, fn ->
+      insert_jobs(state.conf, state.crontab, state.timezone)
+    end)
 
     {:noreply, state}
   end
@@ -163,17 +163,7 @@ defmodule Oban.Plugins.Cron do
 
   # Inserting Helpers
 
-  defp acquire_and_insert(%State{conf: conf, lock_key: key, interval: timeout} = state) do
-    Repo.transaction(
-      conf,
-      fn -> if Query.acquire_lock?(conf, key), do: insert_jobs(state) end,
-      timeout: timeout
-    )
-
-    state
-  end
-
-  defp insert_jobs(%State{conf: conf, crontab: crontab, timezone: timezone}) do
+  defp insert_jobs(conf, crontab, timezone) do
     {:ok, datetime} = DateTime.now(timezone)
 
     for {expr, worker, opts} <- crontab, Expression.now?(expr, datetime) do

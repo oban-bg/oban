@@ -16,9 +16,13 @@ defmodule Oban.Integration.ResiliencyTest do
   end
 
   test "logging producer connection errors" do
+    name = start_supervised_oban!(queues: [alpha: 1])
+
     mangle_jobs_table!()
 
-    start_supervised_oban!(queues: [alpha: 1])
+    name
+    |> Oban.Registry.whereis({:producer, "alpha"})
+    |> send(:dispatch)
 
     assert_receive {:tripped, %{message: message, name: name}}
 
@@ -31,14 +35,17 @@ defmodule Oban.Integration.ResiliencyTest do
   test "reporting notification connection errors" do
     name = start_supervised_oban!(queues: [alpha: 1])
 
-    assert %{conn: conn} = :sys.get_state(Oban.Registry.whereis(name, Oban.Notifier))
-    assert Process.exit(conn, :forced_exit)
-
     # This verifies that producer's are isolated from the notifier
     insert!(ref: 1, action: "OK")
 
-    assert_receive {:ok, 1}
+    assert %{conn: conn} =
+             name
+             |> Oban.Registry.whereis(Oban.Notifier)
+             |> :sys.get_state()
 
+    assert Process.exit(conn, :forced_exit)
+
+    assert_receive {:ok, 1}
     assert_receive {:tripped, %{message: ":forced_exit"}}
   end
 

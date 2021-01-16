@@ -28,9 +28,7 @@ defmodule Oban.Midwife do
 
   @impl GenServer
   def handle_continue(:start, %State{conf: conf} = state) do
-    conf.name
-    |> Registry.whereis(Notifier)
-    |> Notifier.listen([:signal])
+    Notifier.listen(conf.name, [:signal])
 
     {:noreply, state}
   end

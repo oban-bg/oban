@@ -47,7 +47,6 @@ defmodule Oban.Case do
       opts
       |> Keyword.put_new(:name, make_ref())
       |> Keyword.put_new(:repo, Repo)
-      |> Keyword.put_new(:poll_interval, 25)
       |> Keyword.put_new(:shutdown_grace_period, 1)
 
     name = opts[:name]

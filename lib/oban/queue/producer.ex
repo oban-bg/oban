@@ -5,7 +5,7 @@ defmodule Oban.Queue.Producer do
 
   import Oban.Breaker, only: [open_circuit: 1, trip_errors: 0, trip_circuit: 3]
 
-  alias Oban.{Breaker, Config, Notifier, Query, Registry, Repo, Telemetry}
+  alias Oban.{Breaker, Config, Notifier, Query, Telemetry}
   alias Oban.Queue.Executor
 
   @type option ::
@@ -30,11 +30,9 @@ defmodule Oban.Queue.Producer do
       :queue,
       :reset_timer,
       :started_at,
-      :timer,
       circuit: :enabled,
       dispatch_cooldown: 5,
       paused: false,
-      poll_interval: :timer.seconds(1),
       running: %{}
     ]
   end
@@ -65,24 +63,12 @@ defmodule Oban.Queue.Producer do
       |> Keyword.put(:nonce, nonce())
       |> Keyword.put(:started_at, DateTime.utc_now())
 
-    {:ok, struct!(State, opts), {:continue, :start}}
-  end
-
-  @impl GenServer
-  def handle_continue(:start, state) do
     state =
-      state
+      State
+      |> struct!(opts)
       |> start_listener()
-      |> schedule_poll()
 
-    {:noreply, state}
-  end
-
-  @impl GenServer
-  def terminate(_reason, %State{timer: timer}) do
-    if is_reference(timer), do: Process.cancel_timer(timer)
-
-    :ok
+    {:ok, state}
   end
 
   @impl GenServer
@@ -155,15 +141,6 @@ defmodule Oban.Queue.Producer do
     dispatch(state)
   end
 
-  def handle_info(:poll, %State{conf: conf} = state) do
-    Repo.checkout(conf, fn ->
-      state
-      |> schedule_poll()
-      |> deschedule()
-      |> dispatch()
-    end)
-  end
-
   def handle_info(:reset_circuit, state) do
     {:noreply, open_circuit(state)}
   end
@@ -199,15 +176,9 @@ defmodule Oban.Queue.Producer do
   end
 
   defp start_listener(%State{conf: conf} = state) do
-    conf.name
-    |> Registry.whereis(Notifier)
-    |> Notifier.listen([:insert, :signal])
+    Notifier.listen(conf.name, [:insert, :signal])
 
     state
-  end
-
-  defp schedule_poll(%State{conf: conf} = state) do
-    %{state | timer: Process.send_after(self(), :poll, conf.poll_interval)}
   end
 
   # Killing
@@ -229,22 +200,6 @@ defmodule Oban.Queue.Producer do
   end
 
   # Dispatching
-
-  defp deschedule(%State{circuit: :disabled} = state) do
-    state
-  end
-
-  defp deschedule(%State{conf: conf, queue: queue} = state) do
-    Telemetry.span(
-      :producer,
-      fn -> Query.stage_scheduled_jobs(conf, queue) end,
-      %{action: :deschedule, queue: queue, config: conf}
-    )
-
-    state
-  rescue
-    exception in trip_errors() -> trip_circuit(exception, __STACKTRACE__, state)
-  end
 
   defp dispatch(%State{paused: true} = state) do
     {:noreply, state}

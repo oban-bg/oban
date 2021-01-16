@@ -1,4 +1,4 @@
-defmodule Oban.Integration.PruningTest do
+defmodule Oban.Plugins.PrunerTest do
   use Oban.Case
 
   import Ecto.Query
@@ -15,9 +15,7 @@ defmodule Oban.Integration.PruningTest do
 
     start_supervised_oban!(plugins: [{Oban.Plugins.Pruner, interval: 10, max_age: 60}])
 
-    with_backoff(fn ->
-      assert retained_ids() == [id_1, id_2]
-    end)
+    with_backoff(fn -> assert retained_ids() == [id_1, id_2] end)
   end
 
   defp retained_ids do
