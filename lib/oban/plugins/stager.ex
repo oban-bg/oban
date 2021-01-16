@@ -56,7 +56,7 @@ defmodule Oban.Plugins.Stager do
   @impl GenServer
   def handle_info(:stage, %State{} = state) do
     Query.with_xact_lock(state.conf, state.lock_key, fn ->
-      with {:ok, [_ | _] = queues} <- Query.stage_scheduled_jobs(state.conf) do
+      with [_ | _] = queues <- Query.stage_scheduled_jobs(state.conf) do
         payloads =
           queues
           |> Enum.uniq()
