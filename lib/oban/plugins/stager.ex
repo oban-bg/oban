@@ -24,7 +24,8 @@ defmodule Oban.Plugins.Stager do
       :conf,
       :name,
       :timer,
-      interval: :timer.seconds(1)
+      interval: :timer.seconds(1),
+      lock_key: 1_149_979_440_242_868_003
     ]
   end
 
@@ -53,15 +54,17 @@ defmodule Oban.Plugins.Stager do
   end
 
   @impl GenServer
-  def handle_info(:stage, %State{conf: conf} = state) do
-    with {:ok, [_ | _] = queues} <- Query.stage_scheduled_jobs(conf) do
-      payloads =
-        queues
-        |> Enum.uniq()
-        |> Enum.map(&%{queue: &1})
+  def handle_info(:stage, %State{} = state) do
+    Query.with_xact_lock(state.conf, state.lock_key, fn ->
+      with {:ok, [_ | _] = queues} <- Query.stage_scheduled_jobs(state.conf) do
+        payloads =
+          queues
+          |> Enum.uniq()
+          |> Enum.map(&%{queue: &1})
 
-      Query.notify(conf, "oban_insert", payloads)
-    end
+        Query.notify(state.conf, "oban_insert", payloads)
+      end
+    end)
 
     {:noreply, state}
   end

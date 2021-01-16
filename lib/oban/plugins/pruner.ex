@@ -47,7 +47,7 @@ defmodule Oban.Plugins.Pruner do
       max_age: 60,
       interval: :timer.seconds(30),
       limit: 10_000,
-      lock_key: 1_159_969_450_252_858_340
+      lock_key: 1_149_979_440_242_868_002
     ]
   end
 
@@ -77,8 +77,10 @@ defmodule Oban.Plugins.Pruner do
   end
 
   @impl GenServer
-  def handle_info(:prune, %State{conf: conf} = state) do
-    Repo.transaction(conf, fn -> acquire_and_prune(state) end)
+  def handle_info(:prune, %State{} = state) do
+    Query.with_xact_lock(state.conf, state.lock_key, fn ->
+      delete_jobs(state.conf, state.max_age, state.limit)
+    end)
 
     {:noreply, schedule_prune(state)}
   end
@@ -90,12 +92,6 @@ defmodule Oban.Plugins.Pruner do
   end
 
   # Query
-
-  defp acquire_and_prune(state) do
-    if Query.acquire_lock?(state.conf, state.lock_key) do
-      delete_jobs(state.conf, state.max_age, state.limit)
-    end
-  end
 
   defp delete_jobs(conf, seconds, limit) do
     outdated_at = DateTime.add(DateTime.utc_now(), -seconds)
