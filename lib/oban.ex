@@ -47,6 +47,13 @@ defmodule Oban do
           | {:repo, module()}
           | {:shutdown_grace_period, timeout()}
 
+  @type drain_option ::
+          {:queue, queue_name()}
+          | {:with_safety, boolean()}
+          | {:with_scheduled, boolean()}
+
+  @type drain_result :: %{failure: non_neg_integer(), success: non_neg_integer()}
+
   @type job_changeset :: Changeset.t(Job.t())
 
   @version Mix.Project.config()[:version]
@@ -414,7 +421,7 @@ defmodule Oban do
       assert_raise RuntimeError, fn -> Oban.drain_queue(queue: :risky, with_safety: false) end
   """
   @doc since: "0.4.0"
-  @spec drain_queue(name(), [Drainer.drain_option()]) :: Drainer.drain_result()
+  @spec drain_queue(name(), [drain_option()]) :: drain_result()
   def drain_queue(name \\ __MODULE__, [_ | _] = opts) do
     name
     |> config()

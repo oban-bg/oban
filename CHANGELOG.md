@@ -288,9 +288,10 @@ No changes from [2.0.0-rc.3][].
 
 ### Removed
 
-- [Oban] Removed `Oban.kill_job/2`, which wasn't as flexible as
-  `Oban.cancel_job/2`. Use `Oban.cancel_job/2` instead to safely discard
-  scheduled jobs or killing executing jobs.
+- [Oban] Removed `kill_job/2`, which wasn't as flexible as `Oban.cancel_job/2`.
+
+  Use `Oban.cancel_job/2` instead to safely discard scheduled jobs or killing
+  executing jobs.
 
 ## [2.0.0-rc.1] — 2020-06-12
 
@@ -434,7 +435,7 @@ No changes from [2.0.0-rc.3][].
 ### Added
 
 - [Oban] Bubble up errors and exits when draining queues by passing
-  `with_safety: false` as an option to `Oban.drain_queue/3`.
+  `with_safety: false` as an option to `Oban.drain_queue/2`.
 
 - [Oban] Add `Oban.cancel_job/2` for safely discarding scheduled jobs or killing
   executing jobs. This deprecates `kill_job/2`, which isn't as flexible.

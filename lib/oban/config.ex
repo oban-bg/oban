@@ -1,5 +1,10 @@
 defmodule Oban.Config do
-  @moduledoc false
+  @moduledoc """
+  The Config struct validates and encapsulates Oban instance state.
+
+  Options passed to `Oban.start_link/1` are validated and stored in a config struct. Internal
+  modules and plugins are always passed the config with a `:conf` key.
+  """
 
   @type t :: %__MODULE__{
           circuit_backoff: timeout(),
@@ -32,6 +37,7 @@ defmodule Oban.Config do
 
   defguardp is_pos_integer(interval) when is_integer(interval) and interval > 0
 
+  @doc false
   @spec new(Keyword.t()) :: t()
   def new(opts) when is_list(opts) do
     opts =
@@ -52,6 +58,7 @@ defmodule Oban.Config do
     struct!(__MODULE__, opts)
   end
 
+  @doc false
   @spec node_name(%{optional(binary()) => binary()}) :: binary()
   def node_name(env \\ System.get_env()) do
     cond do
@@ -68,11 +75,13 @@ defmodule Oban.Config do
     end
   end
 
+  @doc false
   @spec to_ident(t()) :: binary()
   def to_ident(%__MODULE__{name: name, node: node}) do
     inspect(name) <> "." <> to_string(node)
   end
 
+  @doc false
   @spec match_ident?(t(), binary()) :: boolean()
   def match_ident?(%__MODULE__{} = conf, ident) when is_binary(ident) do
     to_ident(conf) == ident

@@ -7,14 +7,6 @@ defmodule Oban.Queue.Drainer do
   @unlimited 100_000_000
   @far_future DateTime.from_unix!(9_999_999_999)
 
-  @type drain_option ::
-          {:queue, binary() | atom()}
-          | {:with_scheduled, boolean()}
-          | {:with_safety, boolean()}
-
-  @type drain_result :: %{success: non_neg_integer(), failure: non_neg_integer()}
-
-  @spec drain(Config.t(), [drain_option()]) :: drain_result()
   def drain(%Config{} = conf, [_ | _] = opts) do
     queue =
       opts
