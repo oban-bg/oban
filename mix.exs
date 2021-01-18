@@ -120,7 +120,8 @@ defmodule Oban.MixProject do
     [
       Plugins: [
         Oban.Plugins.Cron,
-        Oban.Plugins.Pruner
+        Oban.Plugins.Pruner,
+        Oban.Plugins.Stager
       ]
     ]
   end
