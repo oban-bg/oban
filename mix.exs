@@ -122,6 +122,12 @@ defmodule Oban.MixProject do
         Oban.Plugins.Cron,
         Oban.Plugins.Pruner,
         Oban.Plugins.Stager
+      ],
+      Extending: [
+        Oban.Config,
+        Oban.Notifier,
+        Oban.Registry,
+        Oban.Repo
       ]
     ]
   end
