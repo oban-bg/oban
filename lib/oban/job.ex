@@ -197,6 +197,8 @@ defmodule Oban.Job do
     |> validate_length(:worker, min: 1, max: 128)
     |> validate_number(:max_attempts, greater_than: 0)
     |> validate_number(:priority, greater_than: -1, less_than: 4)
+    |> check_constraint(:attempt, name: :attempt_range)
+    |> check_constraint(:scheduled_at, name: :future_schedule_check)
   end
 
   @unique_fields ~w(args queue worker)a

@@ -66,7 +66,7 @@ defmodule Oban.Migrations do
   alias Oban.Repo
 
   @initial_version 1
-  @current_version 9
+  @current_version 10
   @default_prefix "public"
 
   @doc """
@@ -91,7 +91,7 @@ defmodule Oban.Migrations do
     version = Keyword.get(opts, :version, @current_version)
     initial = min(migrated_version(repo(), prefix) + 1, @current_version)
 
-    if initial <= version do
+    if initial < version do
       change(prefix, initial..version, :up)
       record_version(prefix, version)
     end
@@ -150,7 +150,9 @@ defmodule Oban.Migrations do
 
   defp change(prefix, range, direction) do
     for index <- range do
-      [__MODULE__, "V0#{index}"]
+      pad_idx = String.pad_leading(to_string(index), 2, "0")
+
+      [__MODULE__, "V#{pad_idx}"]
       |> Module.concat()
       |> apply(direction, [prefix])
     end
