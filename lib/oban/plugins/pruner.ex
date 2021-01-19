@@ -107,7 +107,7 @@ defmodule Oban.Plugins.Pruner do
           {:ok, {pruned_count, _}} ->
             {:ok, Map.put(start_metadata, :pruned_count, pruned_count)}
 
-          false ->
+          {:ok, false} ->
             {:ok, Map.put(start_metadata, :pruned_count, 0)}
 
           error ->
