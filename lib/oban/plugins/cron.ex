@@ -132,18 +132,12 @@ defmodule Oban.Plugins.Cron do
       [:oban, :plugin],
       start_metadata,
       fn ->
-        state.conf
-        |> Query.with_xact_lock(state.lock_key, fn ->
-          insert_jobs(state.conf, state.crontab, state.timezone)
-        end)
-        |> case do
+        case lock_and_insert_jobs(state) do
           {:ok, inserted_jobs} when is_list(inserted_jobs) ->
-            metadata = %{jobs: extract_jobs_from_insert(inserted_jobs)}
-            {:ok, Map.merge(start_metadata, metadata)}
+            {:ok, Map.put(start_metadata, :jobs, inserted_jobs)}
 
           error ->
-            metadata = %{error: error}
-            {:error, Map.merge(start_metadata, metadata)}
+            {:error, Map.put(start_metadata, :error, error)}
         end
       end
     )
@@ -160,12 +154,6 @@ defmodule Oban.Plugins.Cron do
   end
 
   # Parsing & Validation Helpers
-
-  defp extract_jobs_from_insert(jobs) do
-    Enum.map(jobs, fn {_, job} ->
-      job
-    end)
-  end
 
   defp parse_crontab(%State{crontab: crontab} = state) do
     parsed =
@@ -206,6 +194,12 @@ defmodule Oban.Plugins.Cron do
 
   # Inserting Helpers
 
+  defp lock_and_insert_jobs(state) do
+    Query.with_xact_lock(state.conf, state.lock_key, fn ->
+      insert_jobs(state.conf, state.crontab, state.timezone)
+    end)
+  end
+
   defp insert_jobs(conf, crontab, timezone) do
     {:ok, datetime} = DateTime.now(timezone)
 
@@ -214,7 +208,9 @@ defmodule Oban.Plugins.Cron do
 
       opts = unique_opts(worker.__opts__(), opts)
 
-      {:ok, _job} = Query.fetch_or_insert_job(conf, worker.new(args, opts))
+      {:ok, job} = Query.fetch_or_insert_job(conf, worker.new(args, opts))
+
+      job
     end
   end
 

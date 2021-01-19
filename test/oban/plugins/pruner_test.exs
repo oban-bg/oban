@@ -35,8 +35,7 @@ defmodule Oban.Plugins.PrunerTest do
 
     assert_receive {:event, :start, %{system_time: _}, %{config: _, plugin: Pruner}}
 
-    assert_receive {:event, :stop, %{duration: _},
-                    %{config: _, plugin: Pruner, jobs_pruned_count: 4}}
+    assert_receive {:event, :stop, %{duration: _}, %{config: _, plugin: Pruner, pruned_count: 4}}
   after
     :telemetry.detach("plugin-pruner-handler")
   end

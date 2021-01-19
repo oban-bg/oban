@@ -34,8 +34,7 @@ defmodule Oban.Plugins.StagerTest do
 
     assert_receive {:event, :start, %{system_time: _}, %{config: _, plugin: Stager}}
 
-    assert_receive {:event, :stop, %{duration: _},
-                    %{config: _, plugin: Stager, jobs_staged_count: 2}}
+    assert_receive {:event, :stop, %{duration: _}, %{config: _, plugin: Stager, staged_count: 2}}
   after
     :telemetry.detach("plugin-stager-handler")
   end

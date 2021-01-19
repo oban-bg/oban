@@ -26,7 +26,7 @@ defmodule Oban.Plugins.Stager do
   | event        | measures       | metadata                                       |
   | ------------ | ---------------| -----------------------------------------------|
   | `:start`     | `:system_time` | `:config, :plugin`                             |
-  | `:stop`      | `:duration`    | `:jobs_staged_count, :config, :plugin`         |
+  | `:stop`      | `:duration`    | `:staged_count, :config, :plugin`         |
   | `:exception` | `:duration`    | `:error, :kind, :stacktrace, :config, :plugin` |
   """
 
@@ -80,32 +80,32 @@ defmodule Oban.Plugins.Stager do
       [:oban, :plugin],
       start_metadata,
       fn ->
-        state.conf
-        |> Query.with_xact_lock(state.lock_key, fn ->
-          with {jobs_staged_count, [_ | _] = queues} <- Query.stage_scheduled_jobs(state.conf) do
-            payloads =
-              queues
-              |> Enum.uniq()
-              |> Enum.map(&%{queue: &1})
-
-            Query.notify(state.conf, "oban_insert", payloads)
-
-            jobs_staged_count
-          end
-        end)
-        |> case do
-          {:ok, jobs_staged_count} ->
-            metadata = %{jobs_staged_count: jobs_staged_count}
-            {:ok, Map.merge(start_metadata, metadata)}
+        case lock_and_schedule_jobs(state) do
+          {:ok, staged_count} ->
+            {:ok, Map.put(start_metadata, :staged_count, staged_count)}
 
           error ->
-            metadata = %{error: error}
-            {:error, Map.merge(start_metadata, metadata)}
+            {:error, Map.put(start_metadata, :error, error)}
         end
       end
     )
 
     {:noreply, state}
+  end
+
+  defp lock_and_schedule_jobs(state) do
+    Query.with_xact_lock(state.conf, state.lock_key, fn ->
+      with {staged_count, [_ | _] = queues} <- Query.stage_scheduled_jobs(state.conf) do
+        payloads =
+          queues
+          |> Enum.uniq()
+          |> Enum.map(&%{queue: &1})
+
+        Query.notify(state.conf, "oban_insert", payloads)
+
+        staged_count
+      end
+    end)
   end
 
   defp schedule_staging(state) do

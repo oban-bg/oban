@@ -40,7 +40,7 @@ defmodule Oban.Plugins.Pruner do
   | event        | measures       | metadata                                       |
   | ------------ | ---------------| -----------------------------------------------|
   | `:start`     | `:system_time` | `:config, :plugin`                             |
-  | `:stop`      | `:duration`    | `:jobs_pruned_count, :config, :plugin`         |
+  | `:stop`      | `:duration`    | `:pruned_count, :config, :plugin`         |
   | `:exception` | `:duration`    | `:error, :kind, :stacktrace, :config, :plugin` |
   """
 
@@ -103,18 +103,15 @@ defmodule Oban.Plugins.Pruner do
       [:oban, :plugin],
       start_metadata,
       fn ->
-        state.conf
-        |> Query.with_xact_lock(state.lock_key, fn ->
-          delete_jobs(state.conf, state.max_age, state.limit)
-        end)
-        |> case do
-          {:ok, {jobs_pruned_count, _}} ->
-            metadata = %{jobs_pruned_count: jobs_pruned_count}
-            {:ok, Map.merge(start_metadata, metadata)}
+        case lock_and_delete_jobs(state) do
+          {:ok, {pruned_count, _}} ->
+            {:ok, Map.put(start_metadata, :pruned_count, pruned_count)}
+
+          false ->
+            {:ok, Map.put(start_metadata, :pruned_count, 0)}
 
           error ->
-            metadata = %{error: error}
-            {:error, Map.merge(start_metadata, metadata)}
+            {:error, Map.put(start_metadata, :error, error)}
         end
       end
     )
@@ -123,6 +120,12 @@ defmodule Oban.Plugins.Pruner do
   end
 
   # Scheduling
+
+  defp lock_and_delete_jobs(state) do
+    Query.with_xact_lock(state.conf, state.lock_key, fn ->
+      delete_jobs(state.conf, state.max_age, state.limit)
+    end)
+  end
 
   defp schedule_prune(state) do
     %{state | timer: Process.send_after(self(), :prune, state.interval)}
