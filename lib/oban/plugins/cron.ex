@@ -128,19 +128,18 @@ defmodule Oban.Plugins.Cron do
 
     start_metadata = %{config: state.conf, plugin: __MODULE__}
 
-    :telemetry.span(
-      [:oban, :plugin],
-      start_metadata,
-      fn ->
-        case lock_and_insert_jobs(state) do
-          {:ok, inserted_jobs} when is_list(inserted_jobs) ->
-            {:ok, Map.put(start_metadata, :jobs, inserted_jobs)}
+    :telemetry.span([:oban, :plugin], start_metadata, fn ->
+      case lock_and_insert_jobs(state) do
+        {:ok, inserted_jobs} when is_list(inserted_jobs) ->
+          {:ok, Map.put(start_metadata, :jobs, inserted_jobs)}
 
-          error ->
-            {:error, Map.put(start_metadata, :error, error)}
-        end
+        {:ok, false} ->
+          {:ok, Map.put(start_metadata, :jobs, [])}
+
+        error ->
+          {:error, Map.put(start_metadata, :error, error)}
       end
-    )
+    end)
 
     {:noreply, state}
   end

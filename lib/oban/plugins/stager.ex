@@ -76,19 +76,18 @@ defmodule Oban.Plugins.Stager do
   def handle_info(:stage, %State{} = state) do
     start_metadata = %{config: state.conf, plugin: __MODULE__}
 
-    :telemetry.span(
-      [:oban, :plugin],
-      start_metadata,
-      fn ->
-        case lock_and_schedule_jobs(state) do
-          {:ok, staged_count} ->
-            {:ok, Map.put(start_metadata, :staged_count, staged_count)}
+    :telemetry.span([:oban, :plugin], start_metadata, fn ->
+      case lock_and_schedule_jobs(state) do
+        {:ok, staged_count} when is_integer(staged_count) ->
+          {:ok, Map.put(start_metadata, :staged_count, staged_count)}
 
-          error ->
-            {:error, Map.put(start_metadata, :error, error)}
-        end
+        {:ok, false} ->
+          {:ok, Map.put(start_metadata, :staged_count, 0)}
+
+        error ->
+          {:error, Map.put(start_metadata, :error, error)}
       end
-    )
+    end)
 
     {:noreply, state}
   end
