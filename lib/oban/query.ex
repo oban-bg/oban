@@ -78,7 +78,7 @@ defmodule Oban.Query do
     end)
   end
 
-  @spec stage_scheduled_jobs(Config.t(), opts :: keyword()) :: [binary()]
+  @spec stage_scheduled_jobs(Config.t(), opts :: keyword()) :: {non_neg_integer(), [binary()]}
   def stage_scheduled_jobs(%Config{} = conf, opts \\ []) do
     max_scheduled_at = Keyword.get(opts, :max_scheduled_at, utc_now())
 
