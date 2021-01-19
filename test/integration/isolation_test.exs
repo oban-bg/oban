@@ -1,18 +1,16 @@
 defmodule Oban.Integration.IsolationTest do
   use Oban.Case
 
-  use Oban.Testing, repo: Oban.Test.Repo
+  use Oban.Testing, repo: Oban.Test.Repo, prefix: "private"
 
   @moduletag :integration
 
   test "inserting and executing jobs with a custom prefix" do
     name = start_supervised_oban!(prefix: "private", queues: [alpha: 5])
 
-    job = insert!(name, %{ref: 1, action: "OK"}, [])
+    insert!(name, %{ref: 1, action: "OK"}, [])
 
-    assert Ecto.get_meta(job, :prefix) == "private"
-
-    assert_receive {:ok, 1}
+    assert_enqueued worker: Worker
   end
 
   test "inserting and executing unique jobs with a custom prefix" do

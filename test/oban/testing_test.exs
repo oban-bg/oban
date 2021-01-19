@@ -106,6 +106,7 @@ defmodule Oban.TestingTest do
       assert_enqueued worker: "Pong", queue: "gamma", args: %{message: "hello"}
       assert_enqueued args: %{id: 1}
       assert_enqueued args: %{message: "hello"}
+      assert_enqueued worker: Ping, prefix: "public"
     end
 
     test "checking for jobs with matching timestamps with delta" do
@@ -145,7 +146,7 @@ defmodule Oban.TestingTest do
 
           %{args: %{dest: "other_node"}, worker: Ping}
 
-          to be enqueued. Instead found:
+          to be enqueued in the "public" schema. Instead found:
 
           [%{args: %{"dest" => "some_node"}, worker: "Ping"}]
           """
@@ -169,6 +170,7 @@ defmodule Oban.TestingTest do
       refute_enqueued worker: Pong, args: %{id: 4}
       refute_enqueued worker: Ping, queue: :gamma
       refute_enqueued worker: Pong, queue: :gamma, args: %{message: "helo"}
+      refute_enqueued worker: Ping, prefix: "private"
     end
 
     test "refuting that jobs are now or will eventually be enqueued" do

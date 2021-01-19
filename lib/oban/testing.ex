@@ -17,7 +17,11 @@ defmodule Oban.Testing do
   `all_enqueued/1`. The functions can then be used to make assertions on the jobs that have been
   inserted in the database while testing.
 
-  Some small examples:
+  You can also specify an alternate prefix to use in all assertions:
+
+      use Oban.Testing, repo: MyApp.Repo, prefix: "business"
+
+  Some examples:
 
   ```elixir
   # Assert that a job was already enqueued
@@ -117,17 +121,24 @@ defmodule Oban.Testing do
   @wait_interval 10
 
   @doc false
-  defmacro __using__(repo: repo) do
+  defmacro __using__(opts) do
+    repo = Keyword.fetch!(opts, :repo)
+    prefix = Keyword.get(opts, :prefix, "public")
+
     quote do
       alias Oban.Testing
 
       import Oban.Testing, only: [perform_job: 2, perform_job: 3]
 
       def all_enqueued(opts) do
+        opts = Keyword.put_new(opts, :prefix, unquote(prefix))
+
         Testing.all_enqueued(unquote(repo), opts)
       end
 
       def assert_enqueued(opts, timeout \\ :none) do
+        opts = Keyword.put_new(opts, :prefix, unquote(prefix))
+
         if timeout == :none do
           Testing.assert_enqueued(unquote(repo), opts)
         else
@@ -136,6 +147,8 @@ defmodule Oban.Testing do
       end
 
       def refute_enqueued(opts, timeout \\ :none) do
+        opts = Keyword.put_new(opts, :prefix, unquote(prefix))
+
         if timeout == :none do
           Testing.refute_enqueued(unquote(repo), opts)
         else
@@ -245,9 +258,9 @@ defmodule Oban.Testing do
     error_message = """
     Expected a job matching:
 
-    #{inspect(Map.new(opts), pretty: true)}
+    #{inspect_opts(opts)}
 
-    to be enqueued. Instead found:
+    to be enqueued in the #{inspect(opts[:prefix])} schema. Instead found:
 
     #{inspect(available_jobs(repo, opts), pretty: true)}
     """
@@ -272,9 +285,9 @@ defmodule Oban.Testing do
     error_message = """
     Expected a job matching:
 
-    #{inspect(Map.new(opts), pretty: true)}
+    #{inspect_opts(opts)}
 
-    to be enqueued within #{timeout}ms
+    to be enqueued in the #{inspect(opts[:prefix])} schema within #{timeout}ms
     """
 
     assert wait_for_job(repo, opts, timeout), error_message
@@ -291,9 +304,9 @@ defmodule Oban.Testing do
     error_message = """
     Expected no jobs matching:
 
-    #{inspect(opts, pretty: true)}
+    #{inspect_opts(opts)}
 
-    to be enqueued
+    to be enqueued in the #{inspect(opts[:prefix])} schema
     """
 
     refute get_job(repo, opts), error_message
@@ -318,12 +331,21 @@ defmodule Oban.Testing do
     error_message = """
     Expected no jobs matching:
 
-    #{inspect(opts, pretty: true)}
+    #{inspect_opts(opts)}
 
-    to be enqueued within #{timeout}ms
+    to be enqueued in the #{inspect(opts[:prefix])} schema within #{timeout}ms
     """
 
     refute wait_for_job(repo, opts, timeout), error_message
+  end
+
+  # Assert Helpers
+
+  defp inspect_opts(opts) do
+    opts
+    |> Map.new()
+    |> Map.drop([:prefix])
+    |> inspect(pretty: true)
   end
 
   # Perform Helpers
