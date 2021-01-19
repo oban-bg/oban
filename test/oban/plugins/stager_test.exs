@@ -19,7 +19,7 @@ defmodule Oban.Plugins.StagerTest do
       &PluginTelemetryHandler.handle/4,
       self()
     )
-    
+
     then = DateTime.add(DateTime.utc_now(), -30)
 
     job_1 = insert!([ref: 1, action: "OK"], inserted_at: then, schedule_in: -9, queue: :alpha)
