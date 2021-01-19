@@ -29,6 +29,21 @@ defmodule Oban.Plugins.Cron do
 
   [tzdata]: https://hexdocs.pm/tzdata
   [perjob]: oban.html#module-periodic-jobs
+
+  ## Instrumenting with Telemetry
+  Oban emits the following telemetry event whenever the Cron plugin executes:
+
+  * `[:oban, :plugin, :cron, :start]` — at the point that the `Cron` plugin begins evaluating what cron jobs to enqueue
+  * `[:oban, :plugin, :cron, :stop]` — after the `Cron` plugin has enqueued any cron jobs
+  * `[:oban, :plugin, :cron, :exception]` — after the `Cron` plugin fails to insert cron jobs
+
+  The following chart shows which metadata you can expect for each event:
+
+  | event        | measures       | metadata                                     |
+  | ------------ | ---------------| ---------------------------------------------|
+  | `:start`     | `:system_time` | `:config, :interval, :name, :crontab`        |
+  | `:stop`      | `:duration`    | `:jobs, :config, :interval, :name, :crontab` |
+  | `:exception` | `:duration`    | `:error, :kind, :error, :stacktrace`         |
   """
 
   use GenServer
@@ -107,9 +122,32 @@ defmodule Oban.Plugins.Cron do
   def handle_info(:evaluate, %State{} = state) do
     state = schedule_evaluate(state)
 
-    Query.with_xact_lock(state.conf, state.lock_key, fn ->
-      insert_jobs(state.conf, state.crontab, state.timezone)
-    end)
+    start_metadata = %{
+      config: state.conf,
+      crontab: state.crontab,
+      name: state.name,
+      interval: state.interval
+    }
+
+    :telemetry.span(
+      [:oban, :plugin, :cron],
+      start_metadata,
+      fn ->
+        state.conf
+        |> Query.with_xact_lock(state.lock_key, fn ->
+          insert_jobs(state.conf, state.crontab, state.timezone)
+        end)
+        |> case do
+          {:ok, inserted_jobs} when is_list(inserted_jobs) ->
+            metadata = %{jobs: extract_jobs_from_insert(inserted_jobs)}
+            {:ok, Map.merge(start_metadata, metadata)}
+
+          error ->
+            metadata = %{error: error}
+            {:error, Map.merge(start_metadata, metadata)}
+        end
+      end
+    )
 
     {:noreply, state}
   end
@@ -123,6 +161,12 @@ defmodule Oban.Plugins.Cron do
   end
 
   # Parsing & Validation Helpers
+
+  defp extract_jobs_from_insert(jobs) do
+    Enum.map(jobs, fn {_, job} ->
+      job
+    end)
+  end
 
   defp parse_crontab(%State{crontab: crontab} = state) do
     parsed =
