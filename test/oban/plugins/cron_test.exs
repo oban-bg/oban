@@ -2,23 +2,9 @@ defmodule Oban.Plugins.CronTest do
   use Oban.Case
 
   alias Oban.Plugins.Cron
-  alias Oban.{Job, Registry}
+  alias Oban.{Job, PluginTelemetryHandler, Registry}
 
   @moduletag :integration
-
-  defmodule Handler do
-    def handle([:oban, :plugin, :cron, :start], measurements, meta, pid) do
-      send(pid, {:event, :start, measurements, meta})
-    end
-
-    def handle([:oban, :plugin, :cron, :stop], measurements, meta, pid) do
-      send(pid, {:event, :stop, measurements, meta})
-    end
-
-    def handle([:oban, :plugin, :cron, :exception], measurements, meta, pid) do
-      send(pid, {:event, :exception, measurements, meta})
-    end
-  end
 
   describe "validate/1" do
     test ":crontab is validated as a list of cron job expressions" do
@@ -44,12 +30,17 @@ defmodule Oban.Plugins.CronTest do
 
   test "cron jobs are enqueued on startup and telemetry events are emitted" do
     events = [
-      [:oban, :plugin, :cron, :start],
-      [:oban, :plugin, :cron, :stop],
-      [:oban, :plugin, :cron, :exception]
+      [:oban, :plugin, :start],
+      [:oban, :plugin, :stop],
+      [:oban, :plugin, :exception]
     ]
 
-    :telemetry.attach_many("plugin-cron-handler", events, &Handler.handle/4, self())
+    :telemetry.attach_many(
+      "plugin-cron-handler",
+      events,
+      &PluginTelemetryHandler.handle/4,
+      self()
+    )
 
     run_with_opts(
       crontab: [
@@ -59,11 +50,10 @@ defmodule Oban.Plugins.CronTest do
       ]
     )
 
-    assert_receive {:event, :start, %{system_time: _},
-                    %{config: _, name: _, crontab: _, interval: _}}
+    assert_receive {:event, :start, %{system_time: _}, %{config: _, plugin: Cron}}
 
     assert_receive {:event, :stop, %{duration: _},
-                    %{config: _, name: _, crontab: _, interval: _, jobs: [%Job{}, %Job{}]}}
+                    %{config: _, jobs: [%Job{}, %Job{}], plugin: Cron}}
 
     assert inserted_refs() == [1, 3]
   after

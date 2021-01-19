@@ -9,6 +9,25 @@ defmodule Oban.Plugins.Stager do
   * `:interval` - the number of milliseconds between database updates. This is directly tied to
     the resolution of _scheduled_ jobs. For example, with an `interval` of `5_000ms`, scheduled
     jobs are checked every 5 seconds. The default is `1_000ms`.
+
+  ## Instrumenting with Telemetry
+
+  Given that all the Oban plugins emit telemetry events under the `[:oban, :plugin, *]` pattern,
+  you can filter out for `Stager` specific events by filtering for telemetry events with a metadata
+  key/value of `plugin: Oban.Plugins.Stager`. Oban emits the following telemetry event whenever the
+  `Stager` plugin executes.
+
+  * `[:oban, :plugin, :start]` — at the point that the `Stager` plugin begins evaluating what jobs need to be staged
+  * `[:oban, :plugin, :stop]` — after the `Stager` plugin has completed transition jobs to the available state
+  * `[:oban, :plugin, :exception]` — after the `Stager` plugin fails to transition jobs to the available state
+
+  The following chart shows which metadata you can expect for each event:
+
+  | event        | measures       | metadata                                       |
+  | ------------ | ---------------| -----------------------------------------------|
+  | `:start`     | `:system_time` | `:config, :plugin`                             |
+  | `:stop`      | `:duration`    | `:jobs_staged_count, :config, :plugin`         |
+  | `:exception` | `:duration`    | `:error, :kind, :stacktrace, :config, :plugin` |
   """
 
   use GenServer
@@ -55,16 +74,36 @@ defmodule Oban.Plugins.Stager do
 
   @impl GenServer
   def handle_info(:stage, %State{} = state) do
-    Query.with_xact_lock(state.conf, state.lock_key, fn ->
-      with [_ | _] = queues <- Query.stage_scheduled_jobs(state.conf) do
-        payloads =
-          queues
-          |> Enum.uniq()
-          |> Enum.map(&%{queue: &1})
+    start_metadata = %{config: state.conf, plugin: __MODULE__}
 
-        Query.notify(state.conf, "oban_insert", payloads)
+    :telemetry.span(
+      [:oban, :plugin],
+      start_metadata,
+      fn ->
+        state.conf
+        |> Query.with_xact_lock(state.lock_key, fn ->
+          with {jobs_staged_count, [_ | _] = queues} <- Query.stage_scheduled_jobs(state.conf) do
+            payloads =
+              queues
+              |> Enum.uniq()
+              |> Enum.map(&%{queue: &1})
+
+            Query.notify(state.conf, "oban_insert", payloads)
+
+            jobs_staged_count
+          end
+        end)
+        |> case do
+          {:ok, jobs_staged_count} ->
+            metadata = %{jobs_staged_count: jobs_staged_count}
+            {:ok, Map.merge(start_metadata, metadata)}
+
+          error ->
+            metadata = %{error: error}
+            {:error, Map.merge(start_metadata, metadata)}
+        end
       end
-    end)
+    )
 
     {:noreply, state}
   end

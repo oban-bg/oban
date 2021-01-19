@@ -3,9 +3,25 @@ defmodule Oban.Plugins.PrunerTest do
 
   import Ecto.Query
 
+  alias Oban.Plugins.Pruner
+  alias Oban.PluginTelemetryHandler
+
   @moduletag :integration
 
   test "historic jobs are pruned when they are older than the configured age" do
+    events = [
+      [:oban, :plugin, :start],
+      [:oban, :plugin, :stop],
+      [:oban, :plugin, :exception]
+    ]
+
+    :telemetry.attach_many(
+      "plugin-pruner-handler",
+      events,
+      &PluginTelemetryHandler.handle/4,
+      self()
+    )
+
     %Job{id: _id_} = insert!(%{}, state: "completed", attempted_at: seconds_ago(62))
     %Job{id: _id_} = insert!(%{}, state: "completed", attempted_at: seconds_ago(61))
     %Job{id: _id_} = insert!(%{}, state: "cancelled", attempted_at: seconds_ago(61))
@@ -13,9 +29,16 @@ defmodule Oban.Plugins.PrunerTest do
     %Job{id: id_1} = insert!(%{}, state: "completed", attempted_at: seconds_ago(59))
     %Job{id: id_2} = insert!(%{}, state: "completed", attempted_at: seconds_ago(10))
 
-    start_supervised_oban!(plugins: [{Oban.Plugins.Pruner, interval: 10, max_age: 60}])
+    start_supervised_oban!(plugins: [{Pruner, interval: 10, max_age: 60}])
 
     with_backoff(fn -> assert retained_ids() == [id_1, id_2] end)
+
+    assert_receive {:event, :start, %{system_time: _}, %{config: _, plugin: Pruner}}
+
+    assert_receive {:event, :stop, %{duration: _},
+                    %{config: _, plugin: Pruner, jobs_pruned_count: 4}}
+  after
+    :telemetry.detach("plugin-pruner-handler")
   end
 
   defp retained_ids do

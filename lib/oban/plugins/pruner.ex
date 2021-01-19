@@ -23,6 +23,25 @@ defmodule Oban.Plugins.Pruner do
   * `:limit` — the maximum number of jobs to prune at one time. The default is 10,000 to prevent
     request timeouts. Applications that steadily generate more than 10k jobs a minute should increase
     this value.
+
+  ## Instrumenting with Telemetry
+
+  Given that all the Oban plugins emit telemetry events under the `[:oban, :plugin, *]` pattern,
+  you can filter out for `Pruner` specific events by filtering for telemetry events with a metadata
+  key/value of `plugin: Oban.Plugins.Pruner`. Oban emits the following telemetry event whenever the
+  `Pruner` plugin executes.
+
+  * `[:oban, :plugin, :start]` — at the point that the `Pruner` plugin begins evaluating what old jobs to prune
+  * `[:oban, :plugin, :stop]` — after the `Pruner` plugin has deleted any old jobs
+  * `[:oban, :plugin, :exception]` — after the `Pruner` plugin fails to delete old jobs
+
+  The following chart shows which metadata you can expect for each event:
+
+  | event        | measures       | metadata                                       |
+  | ------------ | ---------------| -----------------------------------------------|
+  | `:start`     | `:system_time` | `:config, :plugin`                             |
+  | `:stop`      | `:duration`    | `:jobs_pruned_count, :config, :plugin`         |
+  | `:exception` | `:duration`    | `:error, :kind, :stacktrace, :config, :plugin` |
   """
 
   use GenServer
@@ -78,9 +97,27 @@ defmodule Oban.Plugins.Pruner do
 
   @impl GenServer
   def handle_info(:prune, %State{} = state) do
-    Query.with_xact_lock(state.conf, state.lock_key, fn ->
-      delete_jobs(state.conf, state.max_age, state.limit)
-    end)
+    start_metadata = %{config: state.conf, plugin: __MODULE__}
+
+    :telemetry.span(
+      [:oban, :plugin],
+      start_metadata,
+      fn ->
+        state.conf
+        |> Query.with_xact_lock(state.lock_key, fn ->
+          delete_jobs(state.conf, state.max_age, state.limit)
+        end)
+        |> case do
+          {:ok, {jobs_pruned_count, _}} ->
+            metadata = %{jobs_pruned_count: jobs_pruned_count}
+            {:ok, Map.merge(start_metadata, metadata)}
+
+          error ->
+            metadata = %{error: error}
+            {:error, Map.merge(start_metadata, metadata)}
+        end
+      end
+    )
 
     {:noreply, schedule_prune(state)}
   end

@@ -31,19 +31,23 @@ defmodule Oban.Plugins.Cron do
   [perjob]: oban.html#module-periodic-jobs
 
   ## Instrumenting with Telemetry
-  Oban emits the following telemetry event whenever the Cron plugin executes:
 
-  * `[:oban, :plugin, :cron, :start]` — at the point that the `Cron` plugin begins evaluating what cron jobs to enqueue
-  * `[:oban, :plugin, :cron, :stop]` — after the `Cron` plugin has enqueued any cron jobs
-  * `[:oban, :plugin, :cron, :exception]` — after the `Cron` plugin fails to insert cron jobs
+  Given that all the Oban plugins emit telemetry events under the `[:oban, :plugin, *]` pattern,
+  you can filter out for `Cron` specific events by filtering for telemetry events with a metadata
+  key/value of `plugin: Oban.Plugins.Cron`. Oban emits the following telemetry event whenever the
+  `Cron` plugin executes.
+
+  * `[:oban, :plugin, :start]` — at the point that the `Cron` plugin begins evaluating what cron jobs to enqueue
+  * `[:oban, :plugin, :stop]` — after the `Cron` plugin has enqueued any cron jobs
+  * `[:oban, :plugin, :exception]` — after the `Cron` plugin fails to insert cron jobs
 
   The following chart shows which metadata you can expect for each event:
 
-  | event        | measures       | metadata                                     |
-  | ------------ | ---------------| ---------------------------------------------|
-  | `:start`     | `:system_time` | `:config, :interval, :name, :crontab`        |
-  | `:stop`      | `:duration`    | `:jobs, :config, :interval, :name, :crontab` |
-  | `:exception` | `:duration`    | `:error, :kind, :error, :stacktrace`         |
+  | event        | measures       | metadata                                       |
+  | ------------ | ---------------| -----------------------------------------------|
+  | `:start`     | `:system_time` | `:config, :plugin`                             |
+  | `:stop`      | `:duration`    | `:jobs, :config, :plugin`                      |
+  | `:exception` | `:duration`    | `:error, :kind, :stacktrace, :config, :plugin` |
   """
 
   use GenServer
@@ -122,15 +126,10 @@ defmodule Oban.Plugins.Cron do
   def handle_info(:evaluate, %State{} = state) do
     state = schedule_evaluate(state)
 
-    start_metadata = %{
-      config: state.conf,
-      crontab: state.crontab,
-      name: state.name,
-      interval: state.interval
-    }
+    start_metadata = %{config: state.conf, plugin: __MODULE__}
 
     :telemetry.span(
-      [:oban, :plugin, :cron],
+      [:oban, :plugin],
       start_metadata,
       fn ->
         state.conf

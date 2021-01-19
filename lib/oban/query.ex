@@ -91,7 +91,7 @@ defmodule Oban.Query do
 
     case Repo.update_all(conf, query, set: [state: "available"]) do
       {0, _} -> []
-      {_, queues} -> queues
+      {count, queues} -> {count, queues}
     end
   end
 
