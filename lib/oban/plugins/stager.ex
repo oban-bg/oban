@@ -9,25 +9,6 @@ defmodule Oban.Plugins.Stager do
   * `:interval` - the number of milliseconds between database updates. This is directly tied to
     the resolution of _scheduled_ jobs. For example, with an `interval` of `5_000ms`, scheduled
     jobs are checked every 5 seconds. The default is `1_000ms`.
-
-  ## Instrumenting with Telemetry
-
-  Given that all the Oban plugins emit telemetry events under the `[:oban, :plugin, *]` pattern,
-  you can filter out for `Stager` specific events by filtering for telemetry events with a metadata
-  key/value of `plugin: Oban.Plugins.Stager`. Oban emits the following telemetry event whenever the
-  `Stager` plugin executes.
-
-  * `[:oban, :plugin, :start]` — at the point that the `Stager` plugin begins evaluating what jobs need to be staged
-  * `[:oban, :plugin, :stop]` — after the `Stager` plugin has completed transition jobs to the available state
-  * `[:oban, :plugin, :exception]` — after the `Stager` plugin fails to transition jobs to the available state
-
-  The following chart shows which metadata you can expect for each event:
-
-  | event        | measures       | metadata                                       |
-  | ------------ | ---------------| -----------------------------------------------|
-  | `:start`     | `:system_time` | `:config, :plugin`                             |
-  | `:stop`      | `:duration`    | `:staged_count, :config, :plugin`         |
-  | `:exception` | `:duration`    | `:error, :kind, :stacktrace, :config, :plugin` |
   """
 
   use GenServer

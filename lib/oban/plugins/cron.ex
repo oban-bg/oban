@@ -29,25 +29,6 @@ defmodule Oban.Plugins.Cron do
 
   [tzdata]: https://hexdocs.pm/tzdata
   [perjob]: oban.html#module-periodic-jobs
-
-  ## Instrumenting with Telemetry
-
-  Given that all the Oban plugins emit telemetry events under the `[:oban, :plugin, *]` pattern,
-  you can filter out for `Cron` specific events by filtering for telemetry events with a metadata
-  key/value of `plugin: Oban.Plugins.Cron`. Oban emits the following telemetry event whenever the
-  `Cron` plugin executes.
-
-  * `[:oban, :plugin, :start]` — at the point that the `Cron` plugin begins evaluating what cron jobs to enqueue
-  * `[:oban, :plugin, :stop]` — after the `Cron` plugin has enqueued any cron jobs
-  * `[:oban, :plugin, :exception]` — after the `Cron` plugin fails to insert cron jobs
-
-  The following chart shows which metadata you can expect for each event:
-
-  | event        | measures       | metadata                                       |
-  | ------------ | ---------------| -----------------------------------------------|
-  | `:start`     | `:system_time` | `:config, :plugin`                             |
-  | `:stop`      | `:duration`    | `:jobs, :config, :plugin`                      |
-  | `:exception` | `:duration`    | `:error, :kind, :stacktrace, :config, :plugin` |
   """
 
   use GenServer
