@@ -5,8 +5,8 @@ defmodule Oban.Integration.IsolationTest do
 
   @moduletag :integration
 
-  test "inserting and executing jobs with a custom prefix" do
-    name = start_supervised_oban!(prefix: "private", queues: [alpha: 5])
+  test "inserting jobs with a custom prefix" do
+    name = start_supervised_oban!(prefix: "private")
 
     insert!(name, %{ref: 1, action: "OK"}, [])
 
@@ -14,9 +14,6 @@ defmodule Oban.Integration.IsolationTest do
   end
 
   test "inserting and executing unique jobs with a custom prefix" do
-    # Make sure the public table isn't available when we're attempting to query
-    mangle_jobs_table!()
-
     name = start_supervised_oban!(prefix: "private", queues: [alpha: 5])
 
     insert!(name, %{ref: 1, action: "OK"}, unique: [period: 60, fields: [:worker]])
@@ -24,13 +21,5 @@ defmodule Oban.Integration.IsolationTest do
 
     assert_receive {:ok, 1}
     refute_receive {:ok, 2}
-  after
-    reform_jobs_table!()
-  end
-
-  defp insert!(oban, args, opts) do
-    changeset = build(args, opts)
-
-    Oban.insert!(oban, changeset)
   end
 end
