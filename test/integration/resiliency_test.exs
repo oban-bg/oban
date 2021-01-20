@@ -35,9 +35,6 @@ defmodule Oban.Integration.ResiliencyTest do
   test "reporting notification connection errors" do
     name = start_supervised_oban!(queues: [alpha: 1])
 
-    # This verifies that producer's are isolated from the notifier
-    insert!(ref: 1, action: "OK")
-
     assert %{conn: conn} =
              name
              |> Oban.Registry.whereis(Oban.Notifier)
@@ -45,7 +42,6 @@ defmodule Oban.Integration.ResiliencyTest do
 
     assert Process.exit(conn, :forced_exit)
 
-    assert_receive {:ok, 1}
     assert_receive {:tripped, %{message: ":forced_exit"}}
   end
 

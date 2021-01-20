@@ -68,6 +68,12 @@ defmodule Oban.Case do
     |> Repo.insert!()
   end
 
+  def insert!(oban, args, opts) do
+    changeset = build(args, opts)
+
+    Oban.insert!(oban, changeset)
+  end
+
   def seconds_from_now(seconds) do
     DateTime.add(DateTime.utc_now(), seconds, :second)
   end
