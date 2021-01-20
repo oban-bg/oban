@@ -23,6 +23,12 @@ defmodule Oban.Plugins.Pruner do
   * `:limit` — the maximum number of jobs to prune at one time. The default is 10,000 to prevent
     request timeouts. Applications that steadily generate more than 10k jobs a minute should increase
     this value.
+
+  ## Instrumenting with Telemetry
+
+  The `Oban.Plugins.Pruner` plugin adds the following metadata to the `[:oban, :plugin, :stop]` event:
+
+  * :pruned_count - the number of jobs that were pruned from the database
   """
 
   use GenServer

@@ -29,6 +29,12 @@ defmodule Oban.Plugins.Cron do
 
   [tzdata]: https://hexdocs.pm/tzdata
   [perjob]: oban.html#module-periodic-jobs
+
+  ## Instrumenting with Telemetry
+
+  The `Oban.Plugins.Cron` plugin adds the following metadata to the `[:oban, :plugin, :stop]` event:
+
+  * :jobs - a list of jobs that were inserted into the database for processes
   """
 
   use GenServer
