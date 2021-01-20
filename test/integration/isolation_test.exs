@@ -10,7 +10,7 @@ defmodule Oban.Integration.IsolationTest do
 
     insert!(name, %{ref: 1, action: "OK"}, [])
 
-    assert_enqueued [worker: Worker], 250
+    assert_enqueued worker: Worker
   end
 
   test "inserting and executing unique jobs with a custom prefix" do
