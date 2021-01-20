@@ -29,6 +29,12 @@ defmodule Oban.Plugins.Cron do
 
   [tzdata]: https://hexdocs.pm/tzdata
   [perjob]: oban.html#module-periodic-jobs
+
+  ## Instrumenting with Telemetry
+
+  The `Oban.Plugins.Cron` plugin adds the following metadata to the `[:oban, :plugin, :stop]` event:
+
+  * :jobs - a list of jobs that were inserted into the database for processes
   """
 
   use GenServer
@@ -107,8 +113,19 @@ defmodule Oban.Plugins.Cron do
   def handle_info(:evaluate, %State{} = state) do
     state = schedule_evaluate(state)
 
-    Query.with_xact_lock(state.conf, state.lock_key, fn ->
-      insert_jobs(state.conf, state.crontab, state.timezone)
+    start_metadata = %{config: state.conf, plugin: __MODULE__}
+
+    :telemetry.span([:oban, :plugin], start_metadata, fn ->
+      case lock_and_insert_jobs(state) do
+        {:ok, inserted_jobs} when is_list(inserted_jobs) ->
+          {:ok, Map.put(start_metadata, :jobs, inserted_jobs)}
+
+        {:ok, false} ->
+          {:ok, Map.put(start_metadata, :jobs, [])}
+
+        error ->
+          {:error, Map.put(start_metadata, :error, error)}
+      end
     end)
 
     {:noreply, state}
@@ -163,6 +180,12 @@ defmodule Oban.Plugins.Cron do
 
   # Inserting Helpers
 
+  defp lock_and_insert_jobs(state) do
+    Query.with_xact_lock(state.conf, state.lock_key, fn ->
+      insert_jobs(state.conf, state.crontab, state.timezone)
+    end)
+  end
+
   defp insert_jobs(conf, crontab, timezone) do
     {:ok, datetime} = DateTime.now(timezone)
 
@@ -171,7 +194,9 @@ defmodule Oban.Plugins.Cron do
 
       opts = unique_opts(worker.__opts__(), opts)
 
-      {:ok, _job} = Query.fetch_or_insert_job(conf, worker.new(args, opts))
+      {:ok, job} = Query.fetch_or_insert_job(conf, worker.new(args, opts))
+
+      job
     end
   end
 

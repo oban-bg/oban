@@ -23,6 +23,12 @@ defmodule Oban.Plugins.Pruner do
   * `:limit` — the maximum number of jobs to prune at one time. The default is 10,000 to prevent
     request timeouts. Applications that steadily generate more than 10k jobs a minute should increase
     this value.
+
+  ## Instrumenting with Telemetry
+
+  The `Oban.Plugins.Pruner` plugin adds the following metadata to the `[:oban, :plugin, :stop]` event:
+
+  * :pruned_count - the number of jobs that were pruned from the database
   """
 
   use GenServer
@@ -78,14 +84,31 @@ defmodule Oban.Plugins.Pruner do
 
   @impl GenServer
   def handle_info(:prune, %State{} = state) do
-    Query.with_xact_lock(state.conf, state.lock_key, fn ->
-      delete_jobs(state.conf, state.max_age, state.limit)
+    start_metadata = %{config: state.conf, plugin: __MODULE__}
+
+    :telemetry.span([:oban, :plugin], start_metadata, fn ->
+      case lock_and_delete_jobs(state) do
+        {:ok, {pruned_count, _}} when is_integer(pruned_count) ->
+          {:ok, Map.put(start_metadata, :pruned_count, pruned_count)}
+
+        {:ok, false} ->
+          {:ok, Map.put(start_metadata, :pruned_count, 0)}
+
+        error ->
+          {:error, Map.put(start_metadata, :error, error)}
+      end
     end)
 
     {:noreply, schedule_prune(state)}
   end
 
   # Scheduling
+
+  defp lock_and_delete_jobs(state) do
+    Query.with_xact_lock(state.conf, state.lock_key, fn ->
+      delete_jobs(state.conf, state.max_age, state.limit)
+    end)
+  end
 
   defp schedule_prune(state) do
     %{state | timer: Process.send_after(self(), :prune, state.interval)}

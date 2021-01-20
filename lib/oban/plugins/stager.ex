@@ -9,6 +9,12 @@ defmodule Oban.Plugins.Stager do
   * `:interval` - the number of milliseconds between database updates. This is directly tied to
     the resolution of _scheduled_ jobs. For example, with an `interval` of `5_000ms`, scheduled
     jobs are checked every 5 seconds. The default is `1_000ms`.
+
+  ## Instrumenting with Telemetry
+
+  The `Oban.Plugins.Stager` plugin adds the following metadata to the `[:oban, :plugin, :stop]` event:
+
+  * :staged_count - the number of jobs that were staged in the database
   """
 
   use GenServer
@@ -55,18 +61,37 @@ defmodule Oban.Plugins.Stager do
 
   @impl GenServer
   def handle_info(:stage, %State{} = state) do
+    start_metadata = %{config: state.conf, plugin: __MODULE__}
+
+    :telemetry.span([:oban, :plugin], start_metadata, fn ->
+      case lock_and_schedule_jobs(state) do
+        {:ok, staged_count} when is_integer(staged_count) ->
+          {:ok, Map.put(start_metadata, :staged_count, staged_count)}
+
+        {:ok, false} ->
+          {:ok, Map.put(start_metadata, :staged_count, 0)}
+
+        error ->
+          {:error, Map.put(start_metadata, :error, error)}
+      end
+    end)
+
+    {:noreply, state}
+  end
+
+  defp lock_and_schedule_jobs(state) do
     Query.with_xact_lock(state.conf, state.lock_key, fn ->
-      with [_ | _] = queues <- Query.stage_scheduled_jobs(state.conf) do
+      with {staged_count, [_ | _] = queues} <- Query.stage_scheduled_jobs(state.conf) do
         payloads =
           queues
           |> Enum.uniq()
           |> Enum.map(&%{queue: &1})
 
         Query.notify(state.conf, "oban_insert", payloads)
+
+        staged_count
       end
     end)
-
-    {:noreply, state}
   end
 
   defp schedule_staging(state) do
