@@ -84,10 +84,12 @@ defmodule Oban.Telemetry do
 
   ### Plugin Events
 
-  All the Oban plugins emit telemetry events under the `[:oban, :plugin, *]` pattern (where `*` is either `:start`, `:stop`, or `:exception`).
-  You can filter out for plugin events by looking into the metadata of the event and checking the value of `:plugin`. The `:plugin` key will contain
-  the module name of the plugin module that emitted the event. For example, to get `Oban.Plugins.Cron` specific events, you can filter for telemetry events with a metadata
-  key/value of `plugin: Oban.Plugins.Cron`.
+  All the Oban plugins emit telemetry events under the `[:oban, :plugin, *]` pattern (where `*` is
+  either `:start`, `:stop`, or `:exception`).  You can filter out for plugin events by looking into
+  the metadata of the event and checking the value of `:plugin`. The `:plugin` key will contain the
+  module name of the plugin module that emitted the event. For example, to get `Oban.Plugins.Cron`
+  specific events, you can filter for telemetry events with a metadata key/value of
+  `plugin: Oban.Plugins.Cron`.
 
   Oban emits the following telemetry event whenever a plugin executes.
 
