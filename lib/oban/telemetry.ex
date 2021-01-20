@@ -48,20 +48,19 @@ defmodule Oban.Telemetry do
 
   Oban emits the following telemetry span events for each queue's producer:
 
-  * `[:oban, :producer, :start | :stop | :exception]` — when a producer deschedules or dispatches
-    new jobs
+  * `[:oban, :producer, :start | :stop | :exception]` — when a producer dispatches new jobs
 
-  | event        | measures       | metadata                   |
-  | ------------ | -------------- | -------------------------- |
-  | `:start`     | `:system_time` | `:action, :queue, :config` |
-  | `:stop`      | `:duration`    | `:action, :queue, :config` |
-  | `:exception` | `:duration`    | `:action, :queue, :config` |
+  | event        | measures       | metadata                             |
+  | ------------ | -------------- | ------------------------------------ |
+  | `:start`     | `:system_time` | `:queue, :config`                    |
+  | `:stop`      | `:duration`    | `:queue, :config, :dispatched_count` |
+  | `:exception` | `:duration`    | `:queue, :config`                    |
 
   Metadata
 
-  * `:action` — one of `:deschedule` or `:dispatch`
   * `:queue` — the name of the queue as a string, e.g. "default" or "mailers"
   * `:config` — the config of the Oban supervisor that the producer is for
+  * `:dispatched_count` — the number of jobs fetched and started by the producer
 
   ### Circuit Events
 
@@ -205,21 +204,7 @@ defmodule Oban.Telemetry do
     :telemetry.attach_many("oban-default-logger", events, &handle_event/4, level)
   end
 
-  @doc """
-  Measure and report `:start`, `:stop` and `:exception` events for a function.
-
-  ## Examples
-
-  Emit span timing events for a custom prune function:
-
-      :ok = Oban.Telemetry.span(:prune, &MyApp.Pruner.prune/0, %{extra: :data})
-
-  That will emit the following events:
-
-  * `[:oban, :prune, :start]` — before the function is invoked
-  * `[:oban, :prune, :stop]` — when the function completes successfully
-  * `[:oban, :prune, :exception]` — reported if the function throws, crashes or raises an error
-  """
+  @deprecated "Use the official :telemetry.span/3 instead"
   @spec span(name :: atom(), fun :: (() -> term()), meta :: map()) :: term()
   def span(name, fun, meta \\ %{}) when is_atom(name) and is_function(fun, 0) do
     start_time = System.system_time()

@@ -5,7 +5,7 @@ defmodule Oban.Queue.Producer do
 
   import Oban.Breaker, only: [open_circuit: 1, trip_errors: 0, trip_circuit: 3]
 
-  alias Oban.{Breaker, Config, Notifier, Query, Telemetry}
+  alias Oban.{Breaker, Config, Notifier, Query}
   alias Oban.Queue.Executor
 
   @type option ::
@@ -218,17 +218,18 @@ defmodule Oban.Queue.Producer do
       dispatch_now?(state) ->
         %State{conf: conf, limit: limit, nonce: nonce, queue: queue, running: running} = state
 
+        start_meta = %{queue: queue, config: conf}
+
         running =
-          Telemetry.span(
-            :producer,
-            fn ->
+          :telemetry.span([:oban, :producer], start_meta, fn ->
+            dispatched =
               conf
               |> fetch_jobs(queue, nonce, limit - map_size(running))
               |> start_jobs(state)
-              |> Map.merge(running)
-            end,
-            %{action: :dispatch, queue: queue, config: conf}
-          )
+
+            {Map.merge(dispatched, running),
+             Map.put(start_meta, :dispatched_count, map_size(dispatched))}
+          end)
 
         {:noreply, %{state | cooldown_ref: nil, dispatched_at: system_now(), running: running}}
 
