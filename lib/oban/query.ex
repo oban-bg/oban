@@ -282,12 +282,18 @@ defmodule Oban.Query do
 
   defp unique_query(_changeset), do: nil
 
-  defp unique_field({changeset, :args, [_ | _] = keys}, acc) do
+  defp unique_field({changeset, :args, keys}, acc) do
     args =
-      changeset
-      |> Changeset.get_field(:args)
-      |> Map.new(fn {key, val} -> {to_string(key), val} end)
-      |> Map.take(keys)
+      case keys do
+        [] ->
+          Changeset.get_field(changeset, :args)
+
+        [_ | _] ->
+          changeset
+          |> Changeset.get_field(:args)
+          |> Map.new(fn {key, val} -> {to_string(key), val} end)
+          |> Map.take(keys)
+      end
 
     dynamic([j], fragment("? @> ?", j.args, ^args) and ^acc)
   end
