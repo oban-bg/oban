@@ -1,11 +1,113 @@
 # Changelog
 
-All notable changes to this project will be documented in this file.
+All notable changes to `Oban` are documented in this file.
 
-The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
-and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
+## [2.4.0] — 2021-01-26
 
-## Unreleased
+### Centralized Stager Plugin
+
+Queue producers no longer poll every second to stage scheduled jobs. Instead,
+the new `Oban.Plugins.Stager` plugin efficiently handles staging from a single
+location. This reduces overall load on the BEAM and PostgreSQL, allowing apps to
+easily run hundreds of queues simultaneously with little additional overhead.
+
+In a test with a single Ecto connection and **512 queues** the CPU load went
+from 60.0% BEAM / 21.5% PostgreSQL in v2.3.4 to 0.5% BEAM / 0.0% PostgreSQL.
+
+The stager plugin is automatically injected into Oban instances and there isn't
+any additional configuration necessary. However, if you've set a `poll_interval`
+for Oban or an individual queue you can safely remove it.
+
+The lack of polling also means there is no need to set `queues: false` in your
+test environment. Disabling plugins with `plugins: false` will eliminate all
+intermittent activity while testing.
+
+### Overhauled Cron
+
+The CRON parser is entirely rewritten to be simpler and _dramatically_ smaller.
+The previous parser was built on `nimble_parsec` and while it was fast, the
+compiled parser added ~5,500LOC to the code base. Thanks to a suite of property
+tests we can be confident that the new parser behaves identically to the
+previous one, and has much clearer error messages when parsing fails.
+
+Along with a new parser the `crontab` functionality is extracted into the
+`Oban.Plugins.Cron` plugin. For backward compatibility, top-level `crontab` and
+`timezone` options are transformed into a plugin declaration. If you'd like to
+start configuring the plugin directly change your config from:
+
+    config :my_app, Oban,
+      crontab: [{"* * * * *", MyApp.Worker}],
+      timezone: "America/Chicago"
+      ...
+
+To this:
+
+    config :my_app, Oban,
+      plugins: [
+        {Oban.Plugins.Cron,
+         crontab: [{"* * * * *", MyApp.Worker}],
+         timezone: "America/Chicago"}
+      ]
+
+The plugin brings a cleaner implementation, simplified supervision tree, and
+eliminates the need to set `crontab: false` in test configuration.
+
+### Improved Indexes for Unique Jobs
+
+Applications may have thousands to millions of completed jobs in storage. As the
+table grows the performance of inserting unique jobs can slow drastically. A new
+V10 migration adds necessary indexes, and paired with improved query logic it
+alleviates insert slowdown entirely.
+
+For comparison, a local benchmark showed that in v2.3.4 inserting a unique job
+into a table of 1 million jobs runs around 4.81 IPS. In v2.4.0 it runs at 925.34
+IPS, nearly **200x faster**.
+
+The V10 migration is optional. If you decide to migrate, first create a new
+migration:
+
+```bash
+mix ecto.gen.migration upgrade_oban_jobs_to_v10
+```
+
+Next, call `Oban.Migrations` in the generated migration:
+
+```elixir
+defmodule MyApp.Repo.Migrations.UpdateObanJobsToV9 do
+  use Ecto.Migration
+
+  defdelegate up, to: Oban.Migrations
+  defdelegate down, to: Oban.Migrations
+end
+```
+
+### Added
+
+- [Oban.Testing] Support specifying a default prefix for all test assertions.
+  This comes with improved assertion messages that now include the prefix.
+
+- [Oban.Config] Improve the error messages raised during initial validation.
+  Also, the `Config` module is now public with light documentation.
+
+- [Oban.Telemetry] Wrap built-in plugins with telemetry spans and consistently
+  include `config` in all telemetry events.
+
+- [Oban.Repo] Add `delete/3` as a convenient wrapper around
+  `Ecto.Repo.delete/2`.
+
+### Changed
+
+- [Oban] Add `[:oban, :supervisor, :init]` event emitted when an Oban supervisor
+  starts.
+
+- [Oban.Telemetry] Deprecate and replace `span/3` usage in favor of the official
+  `:telemetry.span/3`, which wasn't available when `span/3` was implemented.
+
+### Fixed
+
+- [Oban] Inspect the error reason for a failed `insert!/2` call before it is
+  raised as an error. When `insert!/2` was called in a transaction the error
+  could be `:rollback`, which wasn't a valid error.
 
 ## [2.3.4] — 2020-12-02
 
@@ -1241,7 +1343,9 @@ end
 
 - [Oban] Initial release with base functionality.
 
-[Unreleased]: https://github.com/sorentwo/oban/compare/v2.3.3...HEAD
+[Unreleased]: https://github.com/sorentwo/oban/compare/v2.4.0...HEAD
+[2.4.0]: https://github.com/sorentwo/oban/compare/v2.3.4...v2.4.0
+[2.3.4]: https://github.com/sorentwo/oban/compare/v2.3.3...v2.3.4
 [2.3.3]: https://github.com/sorentwo/oban/compare/v2.3.2...v2.3.3
 [2.3.2]: https://github.com/sorentwo/oban/compare/v2.3.1...v2.3.2
 [2.3.1]: https://github.com/sorentwo/oban/compare/v2.3.0...v2.3.1
