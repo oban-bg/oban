@@ -198,7 +198,8 @@ defmodule Oban.Job do
     |> validate_number(:max_attempts, greater_than: 0)
     |> validate_number(:priority, greater_than: -1, less_than: 4)
     |> check_constraint(:attempt, name: :attempt_range)
-    |> check_constraint(:scheduled_at, name: :future_schedule_check)
+    |> check_constraint(:max_attempts, name: :positive_max_attempts)
+    |> check_constraint(:priority, name: :priority_range)
   end
 
   @unique_fields ~w(args queue worker)a

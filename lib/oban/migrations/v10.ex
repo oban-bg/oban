@@ -26,11 +26,6 @@ defmodule Oban.Migrations.V10 do
              prefix: prefix
            )
 
-    create constraint(:oban_jobs, :future_schedule_check,
-             check: "scheduled_at >= inserted_at",
-             prefix: prefix
-           )
-
     # These are unused or unnecessary
     drop_if_exists index(:oban_jobs, [:args], name: :oban_jobs_args_vector, prefix: prefix)
     drop_if_exists index(:oban_jobs, [:worker], name: :oban_jobs_worker_gist, prefix: prefix)
@@ -52,7 +47,6 @@ defmodule Oban.Migrations.V10 do
     end
 
     drop constraint(:oban_jobs, :attempt_range, prefix: prefix)
-    drop constraint(:oban_jobs, :future_schedule_check, prefix: prefix)
     drop constraint(:oban_jobs, :positive_max_attempts, prefix: prefix)
     drop constraint(:oban_jobs, :priority_range, prefix: prefix)
   end
