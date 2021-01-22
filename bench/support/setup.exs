@@ -1,5 +1,3 @@
-Oban.Test.Repo.start_link()
-
 defmodule BenchHelper do
   def reset_db do
     Oban.Test.Repo.query!("TRUNCATE oban_beats", [], log: false)
@@ -19,3 +17,5 @@ defmodule BenchHelper do
   end
 end
 
+Oban.Test.Repo.start_link()
+BenchHelper.reset_db()
