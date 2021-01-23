@@ -512,9 +512,9 @@ level using the following options:
 
 * `:states` — The job states that are checked for duplicates. The available
   states are `:available`, `:scheduled`, `:executing`, `:retryable`,
-  `:completed` and `:discarded`. By default all states except for `:discarded`
-  are checked, which prevents duplicates even if the previous job has been
-  completed.
+  `:completed`, `:cancelled` and `:discarded`. By default all states except for
+  `:discarded` and `:cancelled` are checked, which prevents duplicates even if
+  the previous job has been completed.
 
 For example, configure a worker to be unique across all fields and states for 60
 seconds:
