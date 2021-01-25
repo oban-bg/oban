@@ -49,11 +49,14 @@ defmodule Oban.Integration.InsertingTest do
 
     changesets_1 = Enum.map(1..2, &Worker.new(%{ref: &1}))
     changesets_2 = Enum.map(3..4, &Worker.new(%{ref: &1}))
+    changesets_3 = Enum.map(5..6, &Worker.new(%{ref: &1}))
 
     multi = Ecto.Multi.new()
     multi = Oban.insert_all(name, multi, "jobs-1", changesets_1)
     multi = Oban.insert_all(name, multi, "jobs-2", changesets_2)
-    {:ok, %{"jobs-1" => jobs_1, "jobs-2" => jobs_2}} = Repo.transaction(multi)
+    multi = Ecto.Multi.run(multi, "build-jobs-3", fn _, _ -> {:ok, changesets_3} end)
+    multi = Oban.insert_all(name, multi, "jobs-3", & &1["build-jobs-3"])
+    {:ok, %{"jobs-1" => jobs_1, "jobs-2" => jobs_2, "jobs-3" => jobs_3}} = Repo.transaction(multi)
 
     assert is_list(jobs_1)
     assert length(jobs_1) == 2
@@ -65,6 +68,13 @@ defmodule Oban.Integration.InsertingTest do
     assert is_list(jobs_2)
     assert length(jobs_2) == 2
     assert [%Job{} = job | _] = jobs_2
+
+    assert job.id
+    assert job.args
+
+    assert is_list(jobs_3)
+    assert length(jobs_3) == 2
+    assert [%Job{} = job | _] = jobs_3
 
     assert job.id
     assert job.args

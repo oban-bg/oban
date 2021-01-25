@@ -343,7 +343,7 @@ defmodule Oban do
 
   ## Example
 
-      changesets = Enum.map(0..100, MyApp.Worker.new(%{id: &1}))
+      changesets = Enum.map(0..100, &MyApp.Worker.new(%{id: &1}))
 
       Ecto.Multi.new()
       |> Oban.insert_all(:jobs, changesets)
@@ -354,7 +354,8 @@ defmodule Oban do
           name(),
           multi :: Multi.t(),
           multi_name :: Multi.name(),
-          changesets_or_wrapper :: [job_changeset()] | %{changesets: [job_changeset()]}
+          changesets_or_wrapper ::
+            [job_changeset()] | %{changesets: [job_changeset()]} | (map -> [job_changeset()])
         ) :: Multi.t()
   def insert_all(name \\ __MODULE__, multi, multi_name, changesets_or_wrapper)
 
@@ -362,7 +363,8 @@ defmodule Oban do
     insert_all(name, multi, multi_name, changesets)
   end
 
-  def insert_all(name, %Multi{} = multi, multi_name, changesets) when is_list(changesets) do
+  def insert_all(name, %Multi{} = multi, multi_name, changesets)
+      when is_list(changesets) or is_function(changesets, 1) do
     name
     |> config()
     |> Query.insert_all_jobs(multi, multi_name, changesets)

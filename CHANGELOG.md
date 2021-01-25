@@ -139,6 +139,8 @@ end
   raised as an error. When `insert!/2` was called in a transaction the error
   could be `:rollback`, which wasn't a valid error.
 
+- [Oban] Update `insert_all/4` to accept a changes function.
+
 ## [2.3.4] — 2020-12-02
 
 ### Fixed

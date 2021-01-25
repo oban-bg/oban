@@ -71,10 +71,21 @@ defmodule Oban.Query do
     end
   end
 
-  @spec insert_all_jobs(Config.t(), Multi.t(), Multi.name(), [Changeset.t()]) :: Multi.t()
+  @spec insert_all_jobs(
+          Config.t(),
+          Multi.t(),
+          Multi.name(),
+          [Changeset.t()] | (map -> [Changeset.t()])
+        ) :: Multi.t()
   def insert_all_jobs(conf, multi, name, changesets) when is_list(changesets) do
     Multi.run(multi, name, fn repo, _changes ->
       {:ok, insert_all_jobs(%{conf | repo: repo}, changesets)}
+    end)
+  end
+
+  def insert_all_jobs(conf, multi, name, changeset_fn) when is_function(changeset_fn, 1) do
+    Multi.run(multi, name, fn repo, changes ->
+      {:ok, insert_all_jobs(%{conf | repo: repo}, changeset_fn.(changes))}
     end)
   end
 
