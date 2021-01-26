@@ -73,7 +73,7 @@ mix ecto.gen.migration upgrade_oban_jobs_to_v10
 Next, call `Oban.Migrations` in the generated migration:
 
 ```elixir
-defmodule MyApp.Repo.Migrations.UpdateObanJobsToV9 do
+defmodule MyApp.Repo.Migrations.UpdateObanJobsToV10 do
   use Ecto.Migration
 
   defdelegate up, to: Oban.Migrations
