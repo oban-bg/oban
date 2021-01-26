@@ -87,6 +87,20 @@ defmodule Oban.Repo do
     )
   end
 
+  @doc "Wraps `c:Ecto.Repo.delete/2`."
+  @doc since: "2.4.0"
+  @spec delete(
+          config(),
+          struct_or_changeset :: Ecto.Schema.t() | Ecto.Changeset.t(),
+          opts :: Keyword.t()
+        ) :: {:ok, Ecto.Schema.t()} | {:error, Ecto.Changeset.t()}
+  def delete(conf, struct_or_changeset, opts \\ []) do
+    with_dynamic_repo(
+      conf,
+      fn -> conf.repo.delete(struct_or_changeset, query_opts(opts, conf)) end
+    )
+  end
+
   @doc "Wraps `c:Ecto.Repo.insert/2`."
   @doc since: "2.2.0"
   @spec insert(config(), Ecto.Schema.t() | Ecto.Changeset.t(), Keyword.t()) ::
