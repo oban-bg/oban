@@ -1,6 +1,6 @@
 <p align="center">
   <a href="https://github.com/sorentwo/oban">
-    <img alt="oban" src="https://raw.githubusercontent.com/sorentwo/oban/master/logotype.png" width="435">
+    <img alt="oban" src="https://raw.githubusercontent.com/sorentwo/oban/master/assets/oban-logotype-large.png" width="435">
   </a>
 </p>
 

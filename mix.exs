@@ -35,6 +35,7 @@ defmodule Oban.MixProject do
       name: "Oban",
       docs: [
         main: "Oban",
+        logo: "assets/oban-logo.png",
         source_ref: "v#{@version}",
         source_url: "https://github.com/sorentwo/oban",
         extra_section: "GUIDES",
@@ -59,11 +60,15 @@ defmodule Oban.MixProject do
   defp extras do
     [
       "CHANGELOG.md",
+
+      # Guides
       "guides/installation.md",
       "guides/troubleshooting.md",
+      "guides/release_configuration.md",
       "guides/writing_plugins.md",
       "guides/upgrading/v2.0.md",
-      "guides/release_configuration.md",
+
+      # Recipes
       "guides/recipes/recursive-jobs.md",
       "guides/recipes/reliable-scheduling.md",
       "guides/recipes/reporting-progress.md",
@@ -109,7 +114,6 @@ defmodule Oban.MixProject do
     [
       Guides: ~r{guides/[^\/]+\.md},
       Recipes: ~r{guides/recipes/.?},
-      Extras: ~r{^CHANGELOG.md},
       "Upgrade Guides": ~r{guides/upgrading/.*},
       "Oban Pro": ~r{oban_pro/.?},
       "Oban Web": ~r{oban_web/.?}
