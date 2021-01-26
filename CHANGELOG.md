@@ -83,22 +83,22 @@ end
 
 ### Added
 
-- [Oban.Testing] Support specifying a default prefix for all test assertions.
-  This comes with improved assertion messages that now include the prefix.
+- [Oban] Add `[:oban, :supervisor, :init]` event emitted when an Oban supervisor
+  starts.
+
+- [Oban.Telemetry] Wrap built-in plugins with telemetry spans and consistently
+  include `conf` in all telemetry events.
 
 - [Oban.Config] Improve the error messages raised during initial validation.
   Also, the `Config` module is now public with light documentation.
 
-- [Oban.Telemetry] Wrap built-in plugins with telemetry spans and consistently
-  include `config` in all telemetry events.
+- [Oban.Testing] Support specifying a default prefix for all test assertions.
+  This comes with improved assertion messages that now include the prefix.
 
 - [Oban.Repo] Add `delete/3` as a convenient wrapper around
   `c:Ecto.Repo.delete/2`.
 
 ### Changed
-
-- [Oban] Add `[:oban, :supervisor, :init]` event emitted when an Oban supervisor
-  starts.
 
 - [Oban.Telemetry] Deprecate and replace `span/3` usage in favor of the official
   `:telemetry.span/3`, which wasn't available when `span/3` was implemented.

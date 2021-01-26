@@ -84,18 +84,18 @@ defmodule Oban.Plugins.Pruner do
 
   @impl GenServer
   def handle_info(:prune, %State{} = state) do
-    start_metadata = %{config: state.conf, plugin: __MODULE__}
+    meta = %{conf: state.conf, plugin: __MODULE__}
 
-    :telemetry.span([:oban, :plugin], start_metadata, fn ->
+    :telemetry.span([:oban, :plugin], meta, fn ->
       case lock_and_delete_jobs(state) do
         {:ok, {pruned_count, _}} when is_integer(pruned_count) ->
-          {:ok, Map.put(start_metadata, :pruned_count, pruned_count)}
+          {:ok, Map.put(meta, :pruned_count, pruned_count)}
 
         {:ok, false} ->
-          {:ok, Map.put(start_metadata, :pruned_count, 0)}
+          {:ok, Map.put(meta, :pruned_count, 0)}
 
         error ->
-          {:error, Map.put(start_metadata, :error, error)}
+          {:error, Map.put(meta, :error, error)}
       end
     end)
 

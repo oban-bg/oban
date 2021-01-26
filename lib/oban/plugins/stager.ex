@@ -61,18 +61,18 @@ defmodule Oban.Plugins.Stager do
 
   @impl GenServer
   def handle_info(:stage, %State{} = state) do
-    start_metadata = %{config: state.conf, plugin: __MODULE__}
+    meta = %{conf: state.conf, plugin: __MODULE__}
 
-    :telemetry.span([:oban, :plugin], start_metadata, fn ->
+    :telemetry.span([:oban, :plugin], meta, fn ->
       case lock_and_schedule_jobs(state) do
         {:ok, staged_count} when is_integer(staged_count) ->
-          {:ok, Map.put(start_metadata, :staged_count, staged_count)}
+          {:ok, Map.put(meta, :staged_count, staged_count)}
 
         {:ok, false} ->
-          {:ok, Map.put(start_metadata, :staged_count, 0)}
+          {:ok, Map.put(meta, :staged_count, 0)}
 
         error ->
-          {:error, Map.put(start_metadata, :error, error)}
+          {:error, Map.put(meta, :error, error)}
       end
     end)
 

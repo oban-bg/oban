@@ -33,9 +33,9 @@ defmodule Oban.Plugins.PrunerTest do
 
     with_backoff(fn -> assert retained_ids() == [id_1, id_2] end)
 
-    assert_receive {:event, :start, %{system_time: _}, %{config: _, plugin: Pruner}}
+    assert_receive {:event, :start, %{system_time: _}, %{conf: _, plugin: Pruner}}
 
-    assert_receive {:event, :stop, %{duration: _}, %{config: _, plugin: Pruner, pruned_count: 4}}
+    assert_receive {:event, :stop, %{duration: _}, %{conf: _, plugin: Pruner, pruned_count: 4}}
   after
     :telemetry.detach("plugin-pruner-handler")
   end

@@ -34,7 +34,7 @@ defmodule Oban.Plugins.Cron do
 
   The `Oban.Plugins.Cron` plugin adds the following metadata to the `[:oban, :plugin, :stop]` event:
 
-  * :jobs - a list of jobs that were inserted into the database for processes
+  * :jobs - a list of jobs that were inserted into the database
   """
 
   use GenServer
@@ -113,18 +113,18 @@ defmodule Oban.Plugins.Cron do
   def handle_info(:evaluate, %State{} = state) do
     state = schedule_evaluate(state)
 
-    start_metadata = %{config: state.conf, plugin: __MODULE__}
+    meta = %{conf: state.conf, plugin: __MODULE__}
 
-    :telemetry.span([:oban, :plugin], start_metadata, fn ->
+    :telemetry.span([:oban, :plugin], meta, fn ->
       case lock_and_insert_jobs(state) do
         {:ok, inserted_jobs} when is_list(inserted_jobs) ->
-          {:ok, Map.put(start_metadata, :jobs, inserted_jobs)}
+          {:ok, Map.put(meta, :jobs, inserted_jobs)}
 
         {:ok, false} ->
-          {:ok, Map.put(start_metadata, :jobs, [])}
+          {:ok, Map.put(meta, :jobs, [])}
 
         error ->
-          {:error, Map.put(start_metadata, :error, error)}
+          {:error, Map.put(meta, :error, error)}
       end
     end)
 

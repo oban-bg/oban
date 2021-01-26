@@ -218,17 +218,17 @@ defmodule Oban.Queue.Producer do
       dispatch_now?(state) ->
         %State{conf: conf, limit: limit, nonce: nonce, queue: queue, running: running} = state
 
-        start_meta = %{queue: queue, config: conf}
+        meta = %{queue: queue, conf: conf}
 
         running =
-          :telemetry.span([:oban, :producer], start_meta, fn ->
+          :telemetry.span([:oban, :producer], meta, fn ->
             dispatched =
               conf
               |> fetch_jobs(queue, nonce, limit - map_size(running))
               |> start_jobs(state)
 
             {Map.merge(dispatched, running),
-             Map.put(start_meta, :dispatched_count, map_size(dispatched))}
+             Map.put(meta, :dispatched_count, map_size(dispatched))}
           end)
 
         {:noreply, %{state | cooldown_ref: nil, dispatched_at: system_now(), running: running}}

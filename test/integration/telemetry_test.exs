@@ -31,10 +31,10 @@ defmodule Oban.Integration.TelemetryTest do
 
     name = start_supervised_oban!(queues: [alpha: 2])
     pid = Oban.Registry.whereis(name)
-    config = Oban.config(name)
+    conf = Oban.config(name)
 
     assert_receive {:event, [:oban, :supervisor, :init], %{system_time: _},
-                    %{config: ^config, pid: ^pid}}
+                    %{conf: ^conf, pid: ^pid}}
   after
     :telemetry.detach("init-handler")
   end

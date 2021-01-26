@@ -50,10 +50,10 @@ defmodule Oban.Plugins.CronTest do
       ]
     )
 
-    assert_receive {:event, :start, %{system_time: _}, %{config: _, plugin: Cron}}
+    assert_receive {:event, :start, %{system_time: _}, %{conf: _, plugin: Cron}}
 
     assert_receive {:event, :stop, %{duration: _},
-                    %{config: _, jobs: [%Job{}, %Job{}], plugin: Cron}}
+                    %{conf: _, jobs: [%Job{}, %Job{}], plugin: Cron}}
 
     assert inserted_refs() == [1, 3]
   after

@@ -14,7 +14,7 @@ defmodule Oban.Telemetry do
 
   The initialization event contains the following metadata:
 
-  * `:config` - The configuration used for the Oban supervisor instance
+  * `:conf` - The configuration used for the Oban supervisor instance
   * `:pid` - The PID of the supervisor instance
 
   ### Job Events
@@ -31,9 +31,9 @@ defmodule Oban.Telemetry do
 
   | event        | measures                   | metadata                                            |
   | ------------ | -------------------------- | --------------------------------------------------- |
-  | `:start`     | `:system_time`             | `:job, :config, :state`                             |
-  | `:stop`      | `:duration`, `:queue_time` | `:job, :config, :state`                             |
-  | `:exception` | `:duration`, `:queue_time` | `:job, :config, :state, :kind, :error, :stacktrace` |
+  | `:start`     | `:system_time`             | `:job, :conf, :state`                             |
+  | `:stop`      | `:duration`, `:queue_time` | `:job, :conf, :state`                             |
+  | `:exception` | `:duration`, `:queue_time` | `:job, :conf, :state, :kind, :error, :stacktrace` |
 
   For `:exception` events the metadata includes details about what caused the failure. The `:kind`
   value is determined by how an error occurred. Here are the possible kinds:
@@ -52,14 +52,14 @@ defmodule Oban.Telemetry do
 
   | event        | measures       | metadata                             |
   | ------------ | -------------- | ------------------------------------ |
-  | `:start`     | `:system_time` | `:queue, :config`                    |
-  | `:stop`      | `:duration`    | `:queue, :config, :dispatched_count` |
-  | `:exception` | `:duration`    | `:queue, :config`                    |
+  | `:start`     | `:system_time` | `:queue, :conf`                    |
+  | `:stop`      | `:duration`    | `:queue, :conf, :dispatched_count` |
+  | `:exception` | `:duration`    | `:queue, :conf`                    |
 
   Metadata
 
   * `:queue` — the name of the queue as a string, e.g. "default" or "mailers"
-  * `:config` — the config of the Oban supervisor that the producer is for
+  * `:conf` — the config of the Oban supervisor that the producer is for
   * `:dispatched_count` — the number of jobs fetched and started by the producer
 
   ### Circuit Events
@@ -70,8 +70,8 @@ defmodule Oban.Telemetry do
 
   | event                      | measures | metadata                                        |
   | -------------------------- | -------- | ----------------------------------------------- |
-  | `[:oban, :circuit, :trip]` |          | `:error, :message, :name, :stacktrace, :config` |
-  | `[:oban, :circuit, :open]` |          | `:name, :config`                                |
+  | `[:oban, :circuit, :trip]` |          | `:error, :message, :name, :stacktrace, :conf` |
+  | `[:oban, :circuit, :open]` |          | `:name, :conf`                                |
 
   Metadata
 
@@ -79,7 +79,7 @@ defmodule Oban.Telemetry do
   * `:name` — the registered name of the process that tripped a circuit, i.e. `Oban.Notifier`
   * `:message` — a formatted error message describing what went wrong
   * `:stacktrace` — exception stacktrace, when available
-  * `:config` — the config of the Oban supervisor that the producer is for
+  * `:conf` — the config of the Oban supervisor that the producer is for
 
   ### Plugin Events
 
@@ -102,9 +102,9 @@ defmodule Oban.Telemetry do
 
   | event        | measures       | metadata                                       |
   | ------------ | ---------------| -----------------------------------------------|
-  | `:start`     | `:system_time` | `:config, :plugin`                             |
-  | `:stop`      | `:duration`    | `:config, :plugin`                             |
-  | `:exception` | `:duration`    | `:error, :kind, :stacktrace, :config, :plugin` |
+  | `:start`     | `:system_time` | `:conf, :plugin`                             |
+  | `:stop`      | `:duration`    | `:conf, :plugin`                             |
+  | `:exception` | `:duration`    | `:error, :kind, :stacktrace, :conf, :plugin` |
 
   ## Default Logger
 

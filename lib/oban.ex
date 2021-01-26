@@ -205,7 +205,7 @@ defmodule Oban do
 
   defp execute_init(conf) do
     measurements = %{system_time: System.system_time()}
-    metadata = %{pid: self(), config: conf}
+    metadata = %{pid: self(), conf: conf}
 
     Telemetry.execute([:oban, :supervisor, :init], measurements, metadata)
   end
