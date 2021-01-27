@@ -76,7 +76,7 @@ defmodule Oban.Plugins.Stager do
       end
     end)
 
-    {:noreply, state}
+    {:noreply, schedule_staging(state)}
   end
 
   defp lock_and_schedule_jobs(state) do
