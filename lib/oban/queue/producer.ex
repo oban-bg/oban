@@ -32,6 +32,7 @@ defmodule Oban.Queue.Producer do
       :started_at,
       circuit: :enabled,
       dispatch_cooldown: 5,
+      initial_dispatch_delay: :timer.seconds(1),
       paused: false,
       running: %{}
     ]
@@ -67,6 +68,7 @@ defmodule Oban.Queue.Producer do
       State
       |> struct!(opts)
       |> start_listener()
+      |> initial_dispatch()
 
     {:ok, state}
   end
@@ -181,6 +183,10 @@ defmodule Oban.Queue.Producer do
     state
   end
 
+  defp initial_dispatch(%State{} = state) do
+    dispatch_after(state, state.initial_dispatch_delay)
+  end
+
   # Killing
 
   defp pkill(ref, job, pid, state) do
@@ -234,10 +240,9 @@ defmodule Oban.Queue.Producer do
         {:noreply, %{state | cooldown_ref: nil, dispatched_at: system_now(), running: running}}
 
       cooldown_available?(state) ->
-        dispatch_after = system_now() - state.dispatched_at + state.dispatch_cooldown
-        cooldown_ref = Process.send_after(self(), :dispatch, dispatch_after)
+        interval = system_now() - state.dispatched_at + state.dispatch_cooldown
 
-        {:noreply, %{state | cooldown_ref: cooldown_ref}}
+        {:noreply, dispatch_after(state, interval)}
 
       true ->
         {:noreply, state}
@@ -253,6 +258,12 @@ defmodule Oban.Queue.Producer do
   end
 
   defp cooldown_available?(%State{cooldown_ref: ref}), do: is_nil(ref)
+
+  defp dispatch_after(%State{} = state, interval) do
+    cooldown_ref = Process.send_after(self(), :dispatch, interval)
+
+    %{state | cooldown_ref: cooldown_ref}
+  end
 
   defp fetch_jobs(conf, queue, nonce, count) do
     {:ok, jobs} = Query.fetch_available_jobs(conf, queue, nonce, count)
