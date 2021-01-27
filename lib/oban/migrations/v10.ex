@@ -46,8 +46,8 @@ defmodule Oban.Migrations.V10 do
       modify :priority, :integer, null: true
     end
 
-    drop constraint(:oban_jobs, :attempt_range, prefix: prefix)
-    drop constraint(:oban_jobs, :positive_max_attempts, prefix: prefix)
-    drop constraint(:oban_jobs, :priority_range, prefix: prefix)
+    drop_if_exists constraint(:oban_jobs, :attempt_range, prefix: prefix)
+    drop_if_exists constraint(:oban_jobs, :positive_max_attempts, prefix: prefix)
+    drop_if_exists constraint(:oban_jobs, :priority_range, prefix: prefix)
   end
 end

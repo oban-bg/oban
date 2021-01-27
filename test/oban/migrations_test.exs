@@ -44,6 +44,7 @@ defmodule Oban.MigrationsTest do
       Application.put_env(:oban, :up_version, up)
 
       assert :ok = Ecto.Migrator.up(Repo, @base_version + up, StepMigration)
+      assert migrated_version() == up
     end
 
     assert table_exists?("oban_jobs")

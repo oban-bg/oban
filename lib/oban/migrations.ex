@@ -89,11 +89,12 @@ defmodule Oban.Migrations do
   def up(opts \\ []) when is_list(opts) do
     prefix = Keyword.get(opts, :prefix, @default_prefix)
     version = Keyword.get(opts, :version, @current_version)
-    initial = min(migrated_version(repo(), prefix) + 1, @current_version)
+    initial = migrated_version(repo(), prefix)
 
-    if initial < version do
-      change(prefix, initial..version, :up)
-      record_version(prefix, version)
+    cond do
+      initial == 0 -> change(prefix, @initial_version..version, :up)
+      initial < version -> change(prefix, (initial + 1)..version, :up)
+      true -> :ok
     end
   end
 
@@ -121,7 +122,6 @@ defmodule Oban.Migrations do
 
     if initial >= version do
       change(prefix, initial..version, :down)
-      record_version(prefix, version - 1)
     end
   end
 
@@ -155,6 +155,11 @@ defmodule Oban.Migrations do
       [__MODULE__, "V#{pad_idx}"]
       |> Module.concat()
       |> apply(direction, [prefix])
+    end
+
+    case direction do
+      :up -> record_version(prefix, Enum.max(range))
+      :down -> record_version(prefix, Enum.min(range) - 1)
     end
   end
 
