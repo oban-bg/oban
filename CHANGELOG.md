@@ -87,8 +87,13 @@ Next, call `Oban.Migrations` in the generated migration:
 defmodule MyApp.Repo.Migrations.UpdateObanJobsToV10 do
   use Ecto.Migration
 
-  defdelegate up, to: Oban.Migrations
-  defdelegate down, to: Oban.Migrations
+  def up do
+    Oban.Migrations.up(version: 10)
+  end
+
+  def down do
+    Oban.Migrations.down(version: 9)
+  end
 end
 ```
 
