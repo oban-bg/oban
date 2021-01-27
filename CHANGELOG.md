@@ -2,6 +2,21 @@
 
 All notable changes to `Oban` are documented in this file.
 
+## [2.4.1] — 2021-01-27
+
+### Fixed
+
+- [Oban.Migrations] Correctly migrate up between sequential versions. The V10
+  migration adds check constraints, which can't be re-run safely. An attempted
+  work-around prevented re-runs, but broke sequential upgrades like 9->10.
+
+- [Oban.Queue.Producer] Kick off an initial dispatch to start processing
+  available jobs on startup, to compensate for a lack of incoming jobs or
+  scheduling.
+
+- [Oban.Plugins.Stager] Keep rescheduling staging messages after the initial
+  run.
+
 ## [2.4.0] — 2021-01-26
 
 ### Centralized Stager Plugin
@@ -17,10 +32,6 @@ from 60.0% BEAM / 21.5% PostgreSQL in v2.3.4 to 0.5% BEAM / 0.0% PostgreSQL.
 The stager plugin is automatically injected into Oban instances and there isn't
 any additional configuration necessary. However, if you've set a `poll_interval`
 for Oban or an individual queue you can safely remove it.
-
-The lack of polling also means there is no need to set `queues: false` in your
-test environment. Disabling plugins with `plugins: false` will eliminate all
-intermittent activity while testing.
 
 ### Overhauled Cron
 
@@ -97,6 +108,9 @@ end
 
 - [Oban.Repo] Add `delete/3` as a convenient wrapper around
   `c:Ecto.Repo.delete/2`.
+
+- [Oban.Job] New check constraints prevent inserting jobs with an invalid
+  `priority`, negative `max_attempts` or an `attempt` number beyond the maximum.
 
 ### Changed
 
