@@ -50,7 +50,9 @@ defmodule Oban.Case do
       |> Keyword.put_new(:shutdown_grace_period, 1)
 
     name = opts[:name]
+
     start_supervised!({Oban, opts})
+
     name
   end
 

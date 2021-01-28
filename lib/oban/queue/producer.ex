@@ -32,7 +32,6 @@ defmodule Oban.Queue.Producer do
       :started_at,
       circuit: :enabled,
       dispatch_cooldown: 5,
-      initial_dispatch_delay: :timer.seconds(1),
       paused: false,
       running: %{}
     ]
@@ -68,7 +67,6 @@ defmodule Oban.Queue.Producer do
       State
       |> struct!(opts)
       |> start_listener()
-      |> initial_dispatch()
 
     {:ok, state}
   end
@@ -181,10 +179,6 @@ defmodule Oban.Queue.Producer do
     Notifier.listen(conf.name, [:insert, :signal])
 
     state
-  end
-
-  defp initial_dispatch(%State{} = state) do
-    dispatch_after(state, state.initial_dispatch_delay)
   end
 
   # Killing

@@ -89,10 +89,25 @@ defmodule Oban.Query do
       |> where([j], j.scheduled_at <= ^max_scheduled_at)
       |> select([j], j.queue)
 
-    case Repo.update_all(conf, query, set: [state: "available"]) do
-      {0, _} -> {0, []}
-      {count, queues} -> {count, queues}
-    end
+    Repo.update_all(conf, query, set: [state: "available"])
+  end
+
+  @spec notify_available_jobs(Config.t()) :: :ok
+  def notify_available_jobs(%Config{} = conf) do
+    channel = "#{conf.prefix}.oban_insert"
+
+    query =
+      Job
+      |> where([j], j.state == "available")
+      |> where([j], not is_nil(j.queue))
+      |> select(
+        [j],
+        fragment("pg_notify(?, json_build_object('queue', ?)::text)", ^channel, j.queue)
+      )
+
+    Repo.all(conf, query)
+
+    :ok
   end
 
   @spec complete_job(Config.t(), Job.t()) :: :ok

@@ -81,16 +81,11 @@ defmodule Oban.Plugins.Stager do
 
   defp lock_and_schedule_jobs(state) do
     Query.with_xact_lock(state.conf, state.lock_key, fn ->
-      with {staged_count, [_ | _] = queues} <- Query.stage_scheduled_jobs(state.conf) do
-        payloads =
-          queues
-          |> Enum.uniq()
-          |> Enum.map(&%{queue: &1})
+      {sched_count, _queues} = Query.stage_scheduled_jobs(state.conf)
 
-        Query.notify(state.conf, "oban_insert", payloads)
+      :ok = Query.notify_available_jobs(state.conf)
 
-        staged_count
-      end
+      sched_count
     end)
   end
 

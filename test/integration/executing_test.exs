@@ -3,53 +3,70 @@ defmodule Oban.Integration.ExecutingTest do
 
   import ExUnit.CaptureLog
 
+  alias Oban.Plugins.Stager
+
   @moduletag :integration
 
-  setup do
-    name = start_supervised_oban!(queues: [alpha: 3, beta: 3, gamma: 3, delta: 3])
+  describe "properties" do
+    setup do
+      name = start_supervised_oban!(queues: [alpha: 3, beta: 3, gamma: 3, delta: 3])
 
-    {:ok, name: name}
+      {:ok, name: name}
+    end
+
+    property "jobs inserted into running queues are executed", context do
+      check all jobs <- list_of(job()), max_runs: 20 do
+        capture_log(fn ->
+          for job <- Oban.insert_all(context.name, jobs) do
+            %{args: %{"ref" => ref, "action" => action}, id: id, max_attempts: max} = job
+
+            assert_receive {_, ^ref}
+
+            with_backoff(fn ->
+              job = Repo.get(Job, id)
+
+              assert job.attempt == 1
+              assert job.attempted_at
+              assert job.state == action_to_state(action, max)
+
+              case job.state do
+                "completed" ->
+                  assert job.completed_at
+
+                "discarded" ->
+                  refute job.completed_at
+                  assert job.discarded_at
+                  assert [%{"attempt" => _, "at" => _, "error" => _} | _] = job.errors
+
+                "retryable" ->
+                  refute job.completed_at
+                  assert DateTime.compare(job.scheduled_at, DateTime.utc_now()) == :gt
+                  assert length(job.errors) > 0
+                  assert [%{"attempt" => 1, "at" => _, "error" => _} | _] = job.errors
+
+                "scheduled" ->
+                  refute job.completed_at
+                  assert DateTime.compare(job.scheduled_at, DateTime.utc_now()) == :gt
+                  assert job.max_attempts > 1
+              end
+            end)
+          end
+        end)
+      end
+    end
   end
 
-  property "individual jobs inserted into running queues are executed", context do
-    check all jobs <- list_of(job()), max_runs: 20 do
-      capture_log(fn ->
-        for job <- Oban.insert_all(context.name, jobs) do
-          %{args: %{"ref" => ref, "action" => action}, id: id, max_attempts: max} = job
+  test "jobs transitioned to available for running queues are executed" do
+    name = start_supervised_oban!(plugins: [{Stager, interval: 25}], queues: [alpha: 3])
 
-          assert_receive {_, ^ref}
+    job_1 = insert!(%{ref: 1, action: "OK"}, queue: "alpha", state: "completed")
+    job_2 = insert!(%{ref: 2, action: "OK"}, queue: "alpha", state: "discarded")
 
-          with_backoff(fn ->
-            job = Repo.get(Job, id)
+    Oban.retry_job(name, job_1.id)
+    Oban.retry_job(name, job_2.id)
 
-            assert job.attempt == 1
-            assert job.attempted_at
-            assert job.state == action_to_state(action, max)
-
-            case job.state do
-              "completed" ->
-                assert job.completed_at
-
-              "discarded" ->
-                refute job.completed_at
-                assert job.discarded_at
-                assert [%{"attempt" => _, "at" => _, "error" => _} | _] = job.errors
-
-              "retryable" ->
-                refute job.completed_at
-                assert DateTime.compare(job.scheduled_at, DateTime.utc_now()) == :gt
-                assert length(job.errors) > 0
-                assert [%{"attempt" => 1, "at" => _, "error" => _} | _] = job.errors
-
-              "scheduled" ->
-                refute job.completed_at
-                assert DateTime.compare(job.scheduled_at, DateTime.utc_now()) == :gt
-                assert job.max_attempts > 1
-            end
-          end)
-        end
-      end)
-    end
+    assert_receive {:ok, 1}
+    assert_receive {:ok, 2}
   end
 
   defp job do
