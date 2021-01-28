@@ -2,6 +2,12 @@
 
 All notable changes to `Oban` are documented in this file.
 
+## [2.4.2] — 2021-01-28
+
+- [Oban.Plugins.Stager] Notify queues of all available jobs, not only jobs that
+  were most recently staged. In some circumstances, such as reboot or retries,
+  jobs are available without previously being scheduled.
+
 ## [2.4.1] — 2021-01-27
 
 ### Fixed
@@ -647,7 +653,9 @@ No changes from [2.0.0-rc.3][].
 
 For changes prior to 2.0 see the [1.2 branch][1.2]
 
-[Unreleased]: https://github.com/sorentwo/oban/compare/v2.4.0...HEAD
+[Unreleased]: https://github.com/sorentwo/oban/compare/v2.4.2...HEAD
+[2.4.2]: https://github.com/sorentwo/oban/compare/v2.4.2...v2.4.2
+[2.4.1]: https://github.com/sorentwo/oban/compare/v2.4.0...v2.4.1
 [2.4.0]: https://github.com/sorentwo/oban/compare/v2.3.4...v2.4.0
 [2.3.4]: https://github.com/sorentwo/oban/compare/v2.3.3...v2.3.4
 [2.3.3]: https://github.com/sorentwo/oban/compare/v2.3.2...v2.3.3
