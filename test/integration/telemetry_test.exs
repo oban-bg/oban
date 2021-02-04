@@ -67,7 +67,7 @@ defmodule Oban.Integration.TelemetryTest do
              prefix: "public",
              attempt: 1,
              max_attempts: 20,
-             config: %Oban.Config{name: ^name},
+             conf: %Oban.Config{name: ^name},
              state: :success,
              tags: ["baz"]
            } = stop_meta
@@ -81,7 +81,7 @@ defmodule Oban.Integration.TelemetryTest do
              prefix: "public",
              attempt: 1,
              max_attempts: 20,
-             config: %Oban.Config{name: ^name},
+             conf: %Oban.Config{name: ^name},
              kind: :error,
              error: %PerformError{},
              stacktrace: [],
