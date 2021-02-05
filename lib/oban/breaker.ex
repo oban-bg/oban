@@ -40,7 +40,7 @@ defmodule Oban.Breaker do
 
   @spec open_circuit(state_struct()) :: state_struct()
   def open_circuit(%{circuit: _, name: name, conf: conf} = state) do
-    Telemetry.execute([:oban, :circuit, :open], %{}, %{name: name, config: conf})
+    Telemetry.execute([:oban, :circuit, :open], %{}, %{name: name, conf: conf})
 
     %{state | circuit: :enabled}
   end

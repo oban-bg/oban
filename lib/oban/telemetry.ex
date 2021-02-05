@@ -29,8 +29,8 @@ defmodule Oban.Telemetry do
   provide the error type, the error itself, and the stacktrace. The following chart shows which
   metadata you can expect for each event:
 
-  | event        | measures                   | metadata                                            |
-  | ------------ | -------------------------- | --------------------------------------------------- |
+  | event        | measures                   | metadata                                          |
+  | ------------ | -------------------------- | ------------------------------------------------- |
   | `:start`     | `:system_time`             | `:job, :conf, :state`                             |
   | `:stop`      | `:duration`, `:queue_time` | `:job, :conf, :state`                             |
   | `:exception` | `:duration`, `:queue_time` | `:job, :conf, :state, :kind, :error, :stacktrace` |
@@ -50,8 +50,8 @@ defmodule Oban.Telemetry do
 
   * `[:oban, :producer, :start | :stop | :exception]` — when a producer dispatches new jobs
 
-  | event        | measures       | metadata                             |
-  | ------------ | -------------- | ------------------------------------ |
+  | event        | measures       | metadata                           |
+  | ------------ | -------------- | ---------------------------------- |
   | `:start`     | `:system_time` | `:queue, :conf`                    |
   | `:stop`      | `:duration`    | `:queue, :conf, :dispatched_count` |
   | `:exception` | `:duration`    | `:queue, :conf`                    |
@@ -68,8 +68,8 @@ defmodule Oban.Telemetry do
   crashing the entire supervision tree. Processes emit a `[:oban, :circuit, :trip]` event when a
   circuit is tripped and `[:oban, :circuit, :open]` when the breaker is subsequently opened again.
 
-  | event                      | measures | metadata                                        |
-  | -------------------------- | -------- | ----------------------------------------------- |
+  | event                      | measures | metadata                                      |
+  | -------------------------- | -------- | --------------------------------------------- |
   | `[:oban, :circuit, :trip]` |          | `:error, :message, :name, :stacktrace, :conf` |
   | `[:oban, :circuit, :open]` |          | `:name, :conf`                                |
 
@@ -100,8 +100,8 @@ defmodule Oban.Telemetry do
 
   The following chart shows which metadata you can expect for each event:
 
-  | event        | measures       | metadata                                       |
-  | ------------ | ---------------| -----------------------------------------------|
+  | event        | measures       | metadata                                     |
+  | ------------ | ---------------| ---------------------------------------------|
   | `:start`     | `:system_time` | `:conf, :plugin`                             |
   | `:stop`      | `:duration`    | `:conf, :plugin`                             |
   | `:exception` | `:duration`    | `:error, :kind, :stacktrace, :conf, :plugin` |
