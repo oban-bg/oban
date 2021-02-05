@@ -629,7 +629,7 @@ defmodule Oban do
       %{
         limit: 10,
         node: "me@local",
-        none: "a1b2c3d4",
+        nonce: "a1b2c3d4",
         paused: false,
         queue: "default",
         running: [100, 102],
