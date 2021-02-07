@@ -25,6 +25,7 @@ defmodule Oban.Queue.Executor do
           kind: any(),
           meta: map(),
           queue_time: integer(),
+          result: term(),
           start_mono: integer(),
           start_time: integer(),
           stop_mono: integer(),
@@ -41,6 +42,7 @@ defmodule Oban.Queue.Executor do
     :error,
     :job,
     :meta,
+    :result,
     :snooze,
     :start_mono,
     :start_time,
@@ -167,10 +169,10 @@ defmodule Oban.Queue.Executor do
   defp perform_inline(%{worker: worker, job: job} = exec) do
     case worker.perform(job) do
       :ok ->
-        %{exec | state: :success}
+        %{exec | state: :success, result: :ok}
 
-      {:ok, _result} ->
-        %{exec | state: :success}
+      {:ok, _value} = result ->
+        %{exec | state: :success, result: result}
 
       :discard ->
         %{exec | state: :discard, error: PerformError.exception({worker, :discard})}
@@ -227,9 +229,13 @@ defmodule Oban.Queue.Executor do
 
   defp execute_stop(exec) do
     measurements = %{duration: exec.duration, queue_time: exec.queue_time}
-    metadata = Map.put(exec.meta, :state, exec.state)
 
-    Telemetry.execute([:oban, :job, :stop], measurements, metadata)
+    meta =
+      exec.meta
+      |> Map.put(:state, exec.state)
+      |> Map.put(:result, exec.result)
+
+    Telemetry.execute([:oban, :job, :stop], measurements, meta)
   end
 
   defp execute_exception(exec) do
@@ -249,9 +255,9 @@ defmodule Oban.Queue.Executor do
   defp event_metadata(conf, job) do
     job
     |> Map.take([:id, :args, :queue, :worker, :attempt, :max_attempts, :tags])
+    |> Map.put(:conf, conf)
     |> Map.put(:job, job)
     |> Map.put(:prefix, conf.prefix)
-    |> Map.put(:conf, conf)
   end
 
   defp job_with_unsaved_error(%__MODULE__{} = exec) do

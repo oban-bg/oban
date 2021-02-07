@@ -3,7 +3,7 @@ defmodule Oban.Integration.TelemetryTest do
 
   import ExUnit.CaptureLog
 
-  alias Oban.{PerformError, Telemetry}
+  alias Oban.{Config, PerformError, Telemetry}
 
   @moduletag :integration
 
@@ -58,8 +58,12 @@ defmodule Oban.Integration.TelemetryTest do
     assert queue_time > 0
     assert error_duration > 0
 
+    assert %{conf: %Config{name: ^name}, job: %Job{id: ^stop_id}, result: :ok} = stop_meta
+    assert %{conf: %Config{name: ^name}, job: %Job{id: ^error_id}} = error_meta
+
+    # Deprecated Meta
+
     assert %{
-             job: %Job{id: ^stop_id},
              id: ^stop_id,
              args: %{},
              queue: "alpha",
@@ -67,13 +71,11 @@ defmodule Oban.Integration.TelemetryTest do
              prefix: "public",
              attempt: 1,
              max_attempts: 20,
-             conf: %Oban.Config{name: ^name},
              state: :success,
              tags: ["baz"]
            } = stop_meta
 
     assert %{
-             job: %Job{id: ^error_id},
              id: ^error_id,
              args: %{},
              queue: "alpha",
@@ -81,7 +83,6 @@ defmodule Oban.Integration.TelemetryTest do
              prefix: "public",
              attempt: 1,
              max_attempts: 20,
-             conf: %Oban.Config{name: ^name},
              kind: :error,
              error: %PerformError{},
              stacktrace: [],

@@ -32,8 +32,15 @@ defmodule Oban.Telemetry do
   | event        | measures                   | metadata                                          |
   | ------------ | -------------------------- | ------------------------------------------------- |
   | `:start`     | `:system_time`             | `:job, :conf, :state`                             |
-  | `:stop`      | `:duration`, `:queue_time` | `:job, :conf, :state`                             |
+  | `:stop`      | `:duration`, `:queue_time` | `:job, :conf, :state, :result`                    |
   | `:exception` | `:duration`, `:queue_time` | `:job, :conf, :state, :kind, :error, :stacktrace` |
+
+  Metadata
+
+  * `:conf` — the config of the Oban supervised producer
+  * `:job` — the executing `Oban.Job`
+  * `:state` — one of `:success`, `:discard` or `:snoozed`
+  * `:result` — the `perform/1` return value, only included when the state is `:success`
 
   For `:exception` events the metadata includes details about what caused the failure. The `:kind`
   value is determined by how an error occurred. Here are the possible kinds:
@@ -59,7 +66,7 @@ defmodule Oban.Telemetry do
   Metadata
 
   * `:queue` — the name of the queue as a string, e.g. "default" or "mailers"
-  * `:conf` — the config of the Oban supervisor that the producer is for
+  * `:conf` — the config of the Oban supervised producer
   * `:dispatched_count` — the number of jobs fetched and started by the producer
 
   ### Circuit Events

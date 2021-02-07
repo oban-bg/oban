@@ -11,6 +11,7 @@ defmodule Oban.Queue.ExecutorTest do
 
     @impl Worker
     def perform(%{args: %{"mode" => "ok"}}), do: :ok
+    def perform(%{args: %{"mode" => "result"}}), do: {:ok, :result}
     def perform(%{args: %{"mode" => "warn"}}), do: {:bad, :this_will_warn}
     def perform(%{args: %{"mode" => "raise"}}), do: raise(ArgumentError)
     def perform(%{args: %{"mode" => "catch"}}), do: throw(:no_reason)
@@ -22,7 +23,8 @@ defmodule Oban.Queue.ExecutorTest do
 
   describe "perform/1" do
     test "accepting :ok as a success" do
-      assert %{state: :success} = call_with_mode("ok")
+      assert %{state: :success, result: :ok} = call_with_mode("ok")
+      assert %{state: :success, result: {:ok, :result}} = call_with_mode("result")
     end
 
     test "raising, catching and error tuples are failures" do
