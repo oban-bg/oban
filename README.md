@@ -118,7 +118,7 @@ orphaned due to crashes.
   These are used to monitor queue health across nodes and may be used for
   analytics.
 
-- **Queue Draining** — Queue shutdown is delayed so that slow jobs can finish
+- **Graceful Shutdown** — Queue shutdown is delayed so that slow jobs can finish
   executing before shutdown. When shutdown starts queues are paused and stop
   executing new jobs. Any jobs left running after the shutdown grace period may
   be rescued later.
@@ -778,7 +778,7 @@ defmodule MyApp.BusinessTest do
   test "we stay in the business of doing business" do
     :ok = Business.schedule_a_meeting(%{email: "monty@brewster.com"})
 
-    assert %{success: 1, failure: 0} == Oban.drain_queue(queue: :mailer)
+    assert %{success: 1, failure: 0} = Oban.drain_queue(queue: :mailer)
 
     # Now, make an assertion about the email delivery
   end
