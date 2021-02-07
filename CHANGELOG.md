@@ -2,6 +2,11 @@
 
 All notable changes to `Oban` are documented in this file.
 
+## [2.4.3] — 2021-02-07
+
+- [Oban.Telemetry] Use `conf` rather than `config` in meta for `:job` and
+  `:circuit` telemtry events.
+
 ## [2.4.2] — 2021-01-28
 
 - [Oban.Plugins.Stager] Notify queues of all available jobs, not only jobs that
@@ -198,8 +203,13 @@ Next, call `Oban.Migrations` in the generated migration:
 defmodule MyApp.Repo.Migrations.UpdateObanJobsToV9 do
   use Ecto.Migration
 
-  defdelegate up, to: Oban.Migrations
-  defdelegate down, to: Oban.Migrations
+  def up do
+    Oban.Migrations.up(version: 9)
+  end
+
+  def down do
+    Oban.Migrations.down(version: 8)
+  end
 end
 ```
 
@@ -653,8 +663,9 @@ No changes from [2.0.0-rc.3][].
 
 For changes prior to 2.0 see the [1.2 branch][1.2]
 
-[Unreleased]: https://github.com/sorentwo/oban/compare/v2.4.2...HEAD
-[2.4.2]: https://github.com/sorentwo/oban/compare/v2.4.2...v2.4.2
+[Unreleased]: https://github.com/sorentwo/oban/compare/v2.4.3...HEAD
+[2.4.3]: https://github.com/sorentwo/oban/compare/v2.4.2...v2.4.3
+[2.4.2]: https://github.com/sorentwo/oban/compare/v2.4.1...v2.4.2
 [2.4.1]: https://github.com/sorentwo/oban/compare/v2.4.0...v2.4.1
 [2.4.0]: https://github.com/sorentwo/oban/compare/v2.3.4...v2.4.0
 [2.3.4]: https://github.com/sorentwo/oban/compare/v2.3.3...v2.3.4
