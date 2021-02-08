@@ -212,7 +212,7 @@ defmodule Oban.Worker do
 
   See `Oban.Job.new/2` for the available options.
   """
-  @callback new(args :: Job.args(), opts :: [Job.option()]) :: Ecto.Changeset.t()
+  @callback new(args :: Job.args(), opts :: [Job.option()]) :: Job.changeset()
 
   @doc """
   Calculate the execution backoff.

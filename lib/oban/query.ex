@@ -41,13 +41,18 @@ defmodule Oban.Query do
     )
   end
 
-  @spec fetch_or_insert_job(Config.t(), Changeset.t()) :: {:ok, Job.t()} | {:error, term()}
+  @spec fetch_or_insert_job(Config.t(), Job.changeset()) :: {:ok, Job.t()} | {:error, term()}
   def fetch_or_insert_job(conf, changeset) do
     fun = fn -> insert_unique(conf, changeset) end
     with {:ok, result} <- Repo.transaction(conf, fun), do: result
   end
 
-  @spec fetch_or_insert_job(Config.t(), Multi.t(), Multi.name(), fun() | Changeset.t()) ::
+  @spec fetch_or_insert_job(
+          Config.t(),
+          Multi.t(),
+          Multi.name(),
+          Job.changeset() | Job.changeset_fun()
+        ) ::
           Multi.t()
   def fetch_or_insert_job(conf, multi, name, fun) when is_function(fun, 1) do
     Multi.run(multi, name, fn repo, changes ->
@@ -61,7 +66,7 @@ defmodule Oban.Query do
     end)
   end
 
-  @spec insert_all_jobs(Config.t(), [Changeset.t(Job.t())]) :: [Job.t()]
+  @spec insert_all_jobs(Config.t(), Job.changeset_list()) :: [Job.t()]
   def insert_all_jobs(%Config{} = conf, changesets) when is_list(changesets) do
     entries = Enum.map(changesets, &Job.to_map/1)
 
@@ -71,10 +76,21 @@ defmodule Oban.Query do
     end
   end
 
-  @spec insert_all_jobs(Config.t(), Multi.t(), Multi.name(), [Changeset.t()]) :: Multi.t()
+  @spec insert_all_jobs(
+          Config.t(),
+          Multi.t(),
+          Multi.name(),
+          Job.changeset_list() | Job.changeset_list_fun()
+        ) :: Multi.t()
   def insert_all_jobs(conf, multi, name, changesets) when is_list(changesets) do
     Multi.run(multi, name, fn repo, _changes ->
       {:ok, insert_all_jobs(%{conf | repo: repo}, changesets)}
+    end)
+  end
+
+  def insert_all_jobs(conf, multi, name, changesets_fun) when is_function(changesets_fun, 1) do
+    Multi.run(multi, name, fn repo, changes ->
+      {:ok, insert_all_jobs(%{conf | repo: repo}, changesets_fun.(changes))}
     end)
   end
 

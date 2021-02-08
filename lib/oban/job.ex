@@ -72,6 +72,11 @@ defmodule Oban.Job do
           unsaved_error: %{kind: atom(), reason: term(), stacktrace: Exception.stacktrace()}
         }
 
+  @type changeset :: Ecto.Changeset.t(t())
+  @type changeset_fun :: (map() -> changeset())
+  @type changeset_list :: [changeset()]
+  @type changeset_list_fun :: (map() -> changeset_list())
+
   schema "oban_jobs" do
     field :state, :string, default: "available"
     field :queue, :string, default: "default"

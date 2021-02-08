@@ -54,7 +54,7 @@ defmodule Oban do
 
   @type drain_result :: %{failure: non_neg_integer(), success: non_neg_integer()}
 
-  @type job_changeset :: Changeset.t(Job.t())
+  @type changesets_or_wrapper :: Job.changeset_list() | %{changesets: Job.changeset_list()}
 
   @version Mix.Project.config()[:version]
 
@@ -236,8 +236,8 @@ defmodule Oban do
       {:ok, job} = Oban.insert(MyApp.Worker.new(%{id: 1}, unique: [period: 30]))
   """
   @doc since: "0.7.0"
-  @spec insert(name(), job_changeset()) ::
-          {:ok, Job.t()} | {:error, job_changeset()} | {:error, term()}
+  @spec insert(name(), Job.changeset()) ::
+          {:ok, Job.t()} | {:error, Job.changeset()} | {:error, term()}
   def insert(name \\ __MODULE__, %Changeset{} = changeset) do
     name
     |> config()
@@ -264,7 +264,7 @@ defmodule Oban do
           name,
           multi :: Multi.t(),
           multi_name :: Multi.name(),
-          changeset_or_fun :: job_changeset() | fun()
+          changeset_or_fun :: Job.changeset() | Job.changeset_fun()
         ) :: Multi.t()
   def insert(name \\ __MODULE__, multi, multi_name, changeset_or_fun)
 
@@ -288,7 +288,7 @@ defmodule Oban do
       job = Oban.insert!(MyApp.Worker.new(%{id: 1}))
   """
   @doc since: "0.7.0"
-  @spec insert!(name(), job_changeset()) :: Job.t()
+  @spec insert!(name(), Job.changeset()) :: Job.t()
   def insert!(name \\ __MODULE__, %Changeset{} = changeset) do
     case insert(name, changeset) do
       {:ok, job} ->
@@ -320,10 +320,7 @@ defmodule Oban do
       |> Oban.insert_all()
   """
   @doc since: "0.9.0"
-  @spec insert_all(
-          name(),
-          changesets_or_wrapper :: [job_changeset()] | %{changesets: [job_changeset()]}
-        ) :: [Job.t()]
+  @spec insert_all(name(), changesets_or_wrapper()) :: [Job.t()]
   def insert_all(name \\ __MODULE__, changesets_or_wrapper)
 
   def insert_all(name, %{changesets: [_ | _] = changesets}) do
@@ -343,7 +340,7 @@ defmodule Oban do
 
   ## Example
 
-      changesets = Enum.map(0..100, MyApp.Worker.new(%{id: &1}))
+      changesets = Enum.map(0..100, &MyApp.Worker.new(%{id: &1}))
 
       Ecto.Multi.new()
       |> Oban.insert_all(:jobs, changesets)
@@ -354,7 +351,7 @@ defmodule Oban do
           name(),
           multi :: Multi.t(),
           multi_name :: Multi.name(),
-          changesets_or_wrapper :: [job_changeset()] | %{changesets: [job_changeset()]}
+          changesets_or_wrapper() | Job.changeset_list_fun()
         ) :: Multi.t()
   def insert_all(name \\ __MODULE__, multi, multi_name, changesets_or_wrapper)
 
@@ -362,7 +359,8 @@ defmodule Oban do
     insert_all(name, multi, multi_name, changesets)
   end
 
-  def insert_all(name, %Multi{} = multi, multi_name, changesets) when is_list(changesets) do
+  def insert_all(name, %Multi{} = multi, multi_name, changesets)
+      when is_list(changesets) or is_function(changesets, 1) do
     name
     |> config()
     |> Query.insert_all_jobs(multi, multi_name, changesets)
