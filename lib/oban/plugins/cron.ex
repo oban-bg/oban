@@ -170,9 +170,17 @@ defmodule Oban.Plugins.Cron do
   defp valid_crontab?({expression, worker, opts}) do
     %Expression{} = Expression.parse!(expression)
 
-    Code.ensure_loaded?(worker) and
-      function_exported?(worker, :perform, 1) and
-      Keyword.keyword?(opts)
+    !Code.ensure_loaded?(worker) and
+      raise ArgumentError, "#{inspect(worker)} worker is not found or can't be loaded"
+
+    !function_exported?(worker, :perform, 1) and
+      raise ArgumentError, "#{inspect(worker)} worker does not implement `perform/1` callback"
+
+    !Keyword.keyword?(opts) and
+      raise ArgumentError,
+            "crontab options to #{inspect(worker)} worker should be provided as a keyword list"
+
+    true
   end
 
   defp valid_crontab?({expression, worker}), do: valid_crontab?({expression, worker, []})
