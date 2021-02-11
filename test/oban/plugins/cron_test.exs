@@ -11,31 +11,41 @@ defmodule Oban.Plugins.CronTest do
 
   describe "validate/1" do
     test ":crontab is validated as a list of cron job expressions" do
-      refute_valid(crontab: ["* * * * *"])
-      refute_valid(crontab: [["* * * * *", Fake]])
-      refute_valid(crontab: [Worker])
+      assert_raise ArgumentError,
+                   "expected :crontab to be a list of {expression, worker} or {expression, worker, options} tuples",
+                   fn ->
+                     Cron.validate!(crontab: %{worker1: "foo"})
+                   end
+    end
+
+    test "job format is validated" do
+      assert_raise ArgumentError,
+                   "\"* * * * *\" is invalid cronjob declaration, expected {expression, worker} or {expression, worker, options} tuples",
+                   fn ->
+                     Cron.validate!(crontab: ["* * * * *"])
+                   end
 
       assert_valid(crontab: [{"* * * * *", Worker}])
       assert_valid(crontab: [{"* * * * *", Worker, queue: "special"}])
     end
 
-    test "workers exitence is validated" do
-      assert_raise ArgumentError, "Fake worker is not found or can't be loaded", fn ->
+    test "worker existence is validated" do
+      assert_raise ArgumentError, "Fake not found or can't be loaded", fn ->
         Cron.validate!(crontab: [{"* * * * *", Worker}, {"* * * * *", Fake}])
       end
     end
 
-    test "workers perform/1 callback is validated" do
+    test "worker perform/1 callback is validated" do
       assert_raise ArgumentError,
-                   "Oban.Plugins.CronTest.WorkerWithoutPerform worker does not implement `perform/1` callback",
+                   "Oban.Plugins.CronTest.WorkerWithoutPerform does not implement `perform/1` callback",
                    fn ->
                      Cron.validate!(crontab: [{"* * * * *", WorkerWithoutPerform}])
                    end
     end
 
-    test "workers options format is validated" do
+    test "worker options format is validated" do
       assert_raise ArgumentError,
-                   "crontab options to Oban.Integration.Worker worker should be provided as a keyword list",
+                   "options for Oban.Integration.Worker must be as a keyword list",
                    fn ->
                      Cron.validate!(crontab: [{"* * * * *", Worker, %{foo: "bar"}}])
                    end

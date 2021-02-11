@@ -152,11 +152,13 @@ defmodule Oban.Plugins.Cron do
   end
 
   defp validate_opt!({:crontab, crontab}) do
-    unless is_list(crontab) and Enum.all?(crontab, &valid_crontab?/1) do
+    unless is_list(crontab) do
       raise ArgumentError,
             "expected :crontab to be a list of {expression, worker} or " <>
               "{expression, worker, options} tuples"
     end
+
+    Enum.each(crontab, &validate_crontab!/1)
   end
 
   defp validate_opt!({:timezone, timezone}) do
@@ -167,24 +169,31 @@ defmodule Oban.Plugins.Cron do
 
   defp validate_opt!(_opt), do: :ok
 
-  defp valid_crontab?({expression, worker, opts}) do
+  defp validate_crontab!({expression, worker, opts}) do
     %Expression{} = Expression.parse!(expression)
 
-    !Code.ensure_loaded?(worker) and
-      raise ArgumentError, "#{inspect(worker)} worker is not found or can't be loaded"
+    unless Code.ensure_loaded?(worker) do
+      raise ArgumentError, "#{inspect(worker)} not found or can't be loaded"
+    end
 
-    !function_exported?(worker, :perform, 1) and
-      raise ArgumentError, "#{inspect(worker)} worker does not implement `perform/1` callback"
+    unless function_exported?(worker, :perform, 1) do
+      raise ArgumentError, "#{inspect(worker)} does not implement `perform/1` callback"
+    end
 
-    !Keyword.keyword?(opts) and
-      raise ArgumentError,
-            "crontab options to #{inspect(worker)} worker should be provided as a keyword list"
-
-    true
+    unless Keyword.keyword?(opts) do
+      raise ArgumentError, "options for #{inspect(worker)} must be as a keyword list"
+    end
   end
 
-  defp valid_crontab?({expression, worker}), do: valid_crontab?({expression, worker, []})
-  defp valid_crontab?(_crontab), do: false
+  defp validate_crontab!({expression, worker}) do
+    validate_crontab!({expression, worker, []})
+  end
+
+  defp validate_crontab!(invalid) do
+    raise ArgumentError,
+          "#{inspect(invalid)} is invalid cronjob declaration, expected {expression, worker} or " <>
+            "{expression, worker, options} tuples"
+  end
 
   # Inserting Helpers
 
