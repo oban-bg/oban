@@ -152,11 +152,11 @@ defmodule Oban.Plugins.Cron do
   end
 
   defp validate_opt!({:crontab, crontab}) do
-    unless is_list(crontab) and Enum.all?(crontab, &valid_crontab?/1) do
-      raise ArgumentError,
-            "expected :crontab to be a list of {expression, worker} or " <>
-              "{expression, worker, options} tuples"
+    unless is_list(crontab) do
+      raise ArgumentError, "expected :crontab to be a list, got: #{inspect(crontab)}"
     end
+
+    Enum.each(crontab, &validate_crontab!/1)
   end
 
   defp validate_opt!({:timezone, timezone}) do
@@ -167,16 +167,32 @@ defmodule Oban.Plugins.Cron do
 
   defp validate_opt!(_opt), do: :ok
 
-  defp valid_crontab?({expression, worker, opts}) do
+  defp validate_crontab!({expression, worker, opts}) do
     %Expression{} = Expression.parse!(expression)
 
-    Code.ensure_loaded?(worker) and
-      function_exported?(worker, :perform, 1) and
-      Keyword.keyword?(opts)
+    unless Code.ensure_loaded?(worker) do
+      raise ArgumentError, "#{inspect(worker)} not found or can't be loaded"
+    end
+
+    unless function_exported?(worker, :perform, 1) do
+      raise ArgumentError, "#{inspect(worker)} does not implement `perform/1` callback"
+    end
+
+    unless Keyword.keyword?(opts) do
+      raise ArgumentError,
+            "#{inspect(worker)} options must be a keyword list, got: #{inspect(opts)}"
+    end
   end
 
-  defp valid_crontab?({expression, worker}), do: valid_crontab?({expression, worker, []})
-  defp valid_crontab?(_crontab), do: false
+  defp validate_crontab!({expression, worker}) do
+    validate_crontab!({expression, worker, []})
+  end
+
+  defp validate_crontab!(invalid) do
+    raise ArgumentError,
+          "expected crontab entry to be an {expression, worker} or " <>
+            "{expression, worker, options} tuple, got: #{inspect(invalid)}"
+  end
 
   # Inserting Helpers
 

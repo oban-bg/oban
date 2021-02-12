@@ -6,14 +6,41 @@ defmodule Oban.Plugins.CronTest do
 
   @moduletag :integration
 
+  defmodule WorkerWithoutPerform do
+  end
+
   describe "validate/1" do
     test ":crontab is validated as a list of cron job expressions" do
-      refute_valid(crontab: ["* * * * *"])
-      refute_valid(crontab: [["* * * * *", Fake]])
-      refute_valid(crontab: [Worker])
+      assert_raise ArgumentError, ~r/expected :crontab to be a list/, fn ->
+        Cron.validate!(crontab: %{worker1: "foo"})
+      end
+    end
+
+    test "job format is validated" do
+      assert_raise ArgumentError, ~r/expected crontab entry to be an {expression, worker}/, fn ->
+        Cron.validate!(crontab: ["* * * * *"])
+      end
 
       assert_valid(crontab: [{"* * * * *", Worker}])
       assert_valid(crontab: [{"* * * * *", Worker, queue: "special"}])
+    end
+
+    test "worker existence is validated" do
+      assert_raise ArgumentError, "Fake not found or can't be loaded", fn ->
+        Cron.validate!(crontab: [{"* * * * *", Worker}, {"* * * * *", Fake}])
+      end
+    end
+
+    test "worker perform/1 callback is validated" do
+      assert_raise ArgumentError, ~r|WorkerWithoutPerform does not implement `perform/1`|, fn ->
+        Cron.validate!(crontab: [{"* * * * *", WorkerWithoutPerform}])
+      end
+    end
+
+    test "worker options format is validated" do
+      assert_raise ArgumentError, ~r/Worker options must be a keyword list/, fn ->
+        Cron.validate!(crontab: [{"* * * * *", Worker, %{foo: "bar"}}])
+      end
     end
 
     test ":timezone is validated as a known timezone" do
