@@ -11,19 +11,15 @@ defmodule Oban.Plugins.CronTest do
 
   describe "validate/1" do
     test ":crontab is validated as a list of cron job expressions" do
-      assert_raise ArgumentError,
-                   "expected :crontab to be a list of {expression, worker} or {expression, worker, options} tuples",
-                   fn ->
-                     Cron.validate!(crontab: %{worker1: "foo"})
-                   end
+      assert_raise ArgumentError, "expected :crontab to be a list", fn ->
+        Cron.validate!(crontab: %{worker1: "foo"})
+      end
     end
 
     test "job format is validated" do
-      assert_raise ArgumentError,
-                   "\"* * * * *\" is invalid cronjob declaration, expected {expression, worker} or {expression, worker, options} tuples",
-                   fn ->
-                     Cron.validate!(crontab: ["* * * * *"])
-                   end
+      assert_raise ArgumentError, ~r/expected crontab entry to be an {expression, worker}/, fn ->
+        Cron.validate!(crontab: ["* * * * *"])
+      end
 
       assert_valid(crontab: [{"* * * * *", Worker}])
       assert_valid(crontab: [{"* * * * *", Worker, queue: "special"}])
@@ -36,19 +32,15 @@ defmodule Oban.Plugins.CronTest do
     end
 
     test "worker perform/1 callback is validated" do
-      assert_raise ArgumentError,
-                   "Oban.Plugins.CronTest.WorkerWithoutPerform does not implement `perform/1` callback",
-                   fn ->
-                     Cron.validate!(crontab: [{"* * * * *", WorkerWithoutPerform}])
-                   end
+      assert_raise ArgumentError, ~r|WorkerWithoutPerform does not implement `perform/1`|, fn ->
+        Cron.validate!(crontab: [{"* * * * *", WorkerWithoutPerform}])
+      end
     end
 
     test "worker options format is validated" do
-      assert_raise ArgumentError,
-                   "options for Oban.Integration.Worker must be as a keyword list",
-                   fn ->
-                     Cron.validate!(crontab: [{"* * * * *", Worker, %{foo: "bar"}}])
-                   end
+      assert_raise ArgumentError, ~r/Worker options must be as a keyword list/, fn ->
+        Cron.validate!(crontab: [{"* * * * *", Worker, %{foo: "bar"}}])
+      end
     end
 
     test ":timezone is validated as a known timezone" do

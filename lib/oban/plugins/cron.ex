@@ -153,9 +153,7 @@ defmodule Oban.Plugins.Cron do
 
   defp validate_opt!({:crontab, crontab}) do
     unless is_list(crontab) do
-      raise ArgumentError,
-            "expected :crontab to be a list of {expression, worker} or " <>
-              "{expression, worker, options} tuples"
+      raise ArgumentError, "expected :crontab to be a list, got: #{inspect(crontab)}"
     end
 
     Enum.each(crontab, &validate_crontab!/1)
@@ -181,7 +179,7 @@ defmodule Oban.Plugins.Cron do
     end
 
     unless Keyword.keyword?(opts) do
-      raise ArgumentError, "options for #{inspect(worker)} must be as a keyword list"
+      raise ArgumentError, "#{inspect(worker)} options must be a keyword list, got: #{inspect(opts)}"
     end
   end
 
@@ -191,8 +189,8 @@ defmodule Oban.Plugins.Cron do
 
   defp validate_crontab!(invalid) do
     raise ArgumentError,
-          "#{inspect(invalid)} is invalid cronjob declaration, expected {expression, worker} or " <>
-            "{expression, worker, options} tuples"
+          "expected crontab entry to be an {expression, worker} or " <>
+            "{expression, worker, options} tuple, got: #{inspect(invalid)}"
   end
 
   # Inserting Helpers
