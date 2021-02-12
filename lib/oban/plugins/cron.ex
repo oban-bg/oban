@@ -179,7 +179,8 @@ defmodule Oban.Plugins.Cron do
     end
 
     unless Keyword.keyword?(opts) do
-      raise ArgumentError, "#{inspect(worker)} options must be a keyword list, got: #{inspect(opts)}"
+      raise ArgumentError,
+            "#{inspect(worker)} options must be a keyword list, got: #{inspect(opts)}"
     end
   end
 
