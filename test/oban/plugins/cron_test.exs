@@ -11,7 +11,7 @@ defmodule Oban.Plugins.CronTest do
 
   describe "validate/1" do
     test ":crontab is validated as a list of cron job expressions" do
-      assert_raise ArgumentError, "expected :crontab to be a list", fn ->
+      assert_raise ArgumentError, ~r/expected :crontab to be a list/, fn ->
         Cron.validate!(crontab: %{worker1: "foo"})
       end
     end
@@ -38,7 +38,7 @@ defmodule Oban.Plugins.CronTest do
     end
 
     test "worker options format is validated" do
-      assert_raise ArgumentError, ~r/Worker options must be as a keyword list/, fn ->
+      assert_raise ArgumentError, ~r/Worker options must be a keyword list/, fn ->
         Cron.validate!(crontab: [{"* * * * *", Worker, %{foo: "bar"}}])
       end
     end
