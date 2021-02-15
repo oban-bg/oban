@@ -54,7 +54,9 @@ defmodule Oban do
 
   @type drain_result :: %{failure: non_neg_integer(), success: non_neg_integer()}
 
-  @type changesets_or_wrapper :: Job.changeset_list() | %{changesets: Job.changeset_list()}
+  @type wrapper :: %{:changesets => Job.changeset_list(), optional(atom()) => term()}
+
+  @type changesets_or_wrapper :: Job.changeset_list() | wrapper()
 
   @version Mix.Project.config()[:version]
 
