@@ -19,7 +19,7 @@ defmodule Oban.Plugins.Stager do
 
   use GenServer
 
-  import Ecto.Query, only: [select: 3, where: 3]
+  import Ecto.Query, only: [distinct: 2, from: 2, select: 2, subquery: 1, where: 3]
 
   alias Oban.{Config, Job, Query, Repo}
 
@@ -101,17 +101,19 @@ defmodule Oban.Plugins.Stager do
     Repo.update_all(conf, query, set: [state: "available"])
   end
 
+  @pg_notify "pg_notify(?, json_build_object('queue', ?)::text)"
+
   defp notify_queues(conf) do
     channel = "#{conf.prefix}.oban_insert"
 
-    query =
+    subquery =
       Job
       |> where([j], j.state == "available")
       |> where([j], not is_nil(j.queue))
-      |> select(
-        [j],
-        fragment("pg_notify(?, json_build_object('queue', ?)::text)", ^channel, j.queue)
-      )
+      |> select([:queue])
+      |> distinct(true)
+
+    query = from job in subquery(subquery), select: fragment(@pg_notify, ^channel, job.queue)
 
     Repo.all(conf, query)
 
