@@ -197,21 +197,6 @@ defmodule Oban.Query do
     :ok
   end
 
-  @spec notify(Config.t(), binary(), map() | [map()]) :: :ok
-  def notify(conf, channel, %{} = payload) do
-    notify(conf, channel, [payload])
-  end
-
-  def notify(%Config{prefix: prefix} = conf, channel, [_ | _] = payload) do
-    Repo.query(
-      conf,
-      "SELECT pg_notify($1, payload) FROM json_array_elements_text($2::json) AS payload",
-      ["#{prefix}.#{channel}", Enum.map(payload, &Jason.encode!/1)]
-    )
-
-    :ok
-  end
-
   @spec with_xact_lock(Config.t(), lock_key(), fun()) :: {:ok, any()} | {:error, any()}
   def with_xact_lock(%Config{} = conf, lock_key, fun) when is_function(fun, 0) do
     Repo.transaction(conf, fn ->

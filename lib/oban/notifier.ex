@@ -70,7 +70,7 @@ defmodule Oban.Notifier do
 
   import Oban.Breaker, only: [open_circuit: 1, trip_circuit: 3]
 
-  alias Oban.{Config, Query, Registry, Repo}
+  alias Oban.{Config, Registry, Repo}
   alias Postgrex.Notifications
 
   @type option :: {:name, module()} | {:conf, Config.t()}
@@ -161,7 +161,12 @@ defmodule Oban.Notifier do
   """
   @spec notify(Config.t(), channel :: channel(), payload :: map()) :: :ok
   def notify(%Config{} = conf, channel, %{} = payload) when is_channel(channel) do
-    Query.notify(conf, @mappings[channel], payload)
+    channel = "#{conf.prefix}.#{@mappings[channel]}"
+    payload = Jason.encode!(payload)
+
+    {:ok, _} = Repo.query(conf, "SELECT pg_notify($1, $2)", [channel, payload])
+
+    :ok
   end
 
   @impl GenServer
