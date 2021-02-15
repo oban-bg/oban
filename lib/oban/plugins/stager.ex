@@ -19,7 +19,9 @@ defmodule Oban.Plugins.Stager do
 
   use GenServer
 
-  alias Oban.{Config, Query}
+  import Ecto.Query, only: [select: 3, where: 3]
+
+  alias Oban.{Config, Job, Query, Repo}
 
   @type option :: {:conf, Config.t()} | {:name, GenServer.name()}
 
@@ -64,7 +66,7 @@ defmodule Oban.Plugins.Stager do
     meta = %{conf: state.conf, plugin: __MODULE__}
 
     :telemetry.span([:oban, :plugin], meta, fn ->
-      case lock_and_schedule_jobs(state) do
+      case lock_and_stage(state) do
         {:ok, staged_count} when is_integer(staged_count) ->
           {:ok, Map.put(meta, :staged_count, staged_count)}
 
@@ -79,14 +81,41 @@ defmodule Oban.Plugins.Stager do
     {:noreply, schedule_staging(state)}
   end
 
-  defp lock_and_schedule_jobs(state) do
+  defp lock_and_stage(state) do
     Query.with_xact_lock(state.conf, state.lock_key, fn ->
-      {sched_count, _queues} = Query.stage_scheduled_jobs(state.conf)
+      {sched_count, nil} = stage_scheduled(state.conf)
 
-      :ok = Query.notify_available_jobs(state.conf)
+      notify_queues(state.conf)
 
       sched_count
     end)
+  end
+
+  defp stage_scheduled(conf) do
+    query =
+      Job
+      |> where([j], j.state in ["scheduled", "retryable"])
+      |> where([j], not is_nil(j.queue))
+      |> where([j], j.scheduled_at <= ^DateTime.utc_now())
+
+    Repo.update_all(conf, query, set: [state: "available"])
+  end
+
+  defp notify_queues(conf) do
+    channel = "#{conf.prefix}.oban_insert"
+
+    query =
+      Job
+      |> where([j], j.state == "available")
+      |> where([j], not is_nil(j.queue))
+      |> select(
+        [j],
+        fragment("pg_notify(?, json_build_object('queue', ?)::text)", ^channel, j.queue)
+      )
+
+    Repo.all(conf, query)
+
+    :ok
   end
 
   defp schedule_staging(state) do

@@ -94,38 +94,6 @@ defmodule Oban.Query do
     end)
   end
 
-  @spec stage_scheduled_jobs(Config.t(), opts :: keyword()) :: {non_neg_integer(), [binary()]}
-  def stage_scheduled_jobs(%Config{} = conf, opts \\ []) do
-    max_scheduled_at = Keyword.get(opts, :max_scheduled_at, utc_now())
-
-    query =
-      Job
-      |> where([j], j.state in ["scheduled", "retryable"])
-      |> where([j], not is_nil(j.queue))
-      |> where([j], j.scheduled_at <= ^max_scheduled_at)
-      |> select([j], j.queue)
-
-    Repo.update_all(conf, query, set: [state: "available"])
-  end
-
-  @spec notify_available_jobs(Config.t()) :: :ok
-  def notify_available_jobs(%Config{} = conf) do
-    channel = "#{conf.prefix}.oban_insert"
-
-    query =
-      Job
-      |> where([j], j.state == "available")
-      |> where([j], not is_nil(j.queue))
-      |> select(
-        [j],
-        fragment("pg_notify(?, json_build_object('queue', ?)::text)", ^channel, j.queue)
-      )
-
-    Repo.all(conf, query)
-
-    :ok
-  end
-
   @spec complete_job(Config.t(), Job.t()) :: :ok
   def complete_job(%Config{} = conf, %Job{id: id}) do
     Repo.update_all(

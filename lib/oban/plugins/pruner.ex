@@ -33,7 +33,7 @@ defmodule Oban.Plugins.Pruner do
 
   use GenServer
 
-  import Ecto.Query
+  import Ecto.Query, only: [join: 5, limit: 2, select: 2, where: 3]
 
   alias Oban.{Config, Job, Query, Repo}
 
