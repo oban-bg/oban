@@ -58,11 +58,6 @@ defmodule Oban do
 
   @type changesets_or_wrapper :: Job.changeset_list() | wrapper()
 
-  @version Mix.Project.config()[:version]
-
-  @doc false
-  def version, do: @version
-
   @doc """
   Starts an `Oban` supervision tree linked to the current process.
 
