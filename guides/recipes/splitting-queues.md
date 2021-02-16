@@ -77,7 +77,7 @@ queues specified in our configuration (or `false`, for testing). The fourth
 clause is much more involved, and that is where the environment parsing happens.
 It expects the `OBAN_QUEUES` value to be a string formatted as `queue,limit`
 pairs and separated by spaces. For example, to run only the `default` and
-`media` queues with a limit of 10 and 5 respectively, you would pass the string
+`media` queues with a limit of 5 and 10 respectively, you would pass the string
 `default,5 media,10`.
 
 Note that the parsing clause has a couple of safety mechanisms to ensure that
