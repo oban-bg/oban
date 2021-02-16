@@ -59,7 +59,7 @@ defmodule MyApp.Application do
 
   defp queues("*", defaults), do: defaults
   defp queues(nil, defaults), do: defaults
-  defp queues(false, _), do: false
+  defp queues(_, false), do: false
 
   defp queues(values, _defaults) when is_binary(values) do
     values
