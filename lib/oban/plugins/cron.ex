@@ -28,7 +28,7 @@ defmodule Oban.Plugins.Cron do
     and configured.
 
   [tzdata]: https://hexdocs.pm/tzdata
-  [perjob]: oban.html#module-periodic-jobs
+  [perjob]: Oban.html#module-periodic-jobs
 
   ## Instrumenting with Telemetry
 
