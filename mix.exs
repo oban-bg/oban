@@ -125,6 +125,7 @@ defmodule Oban.MixProject do
       Plugins: [
         Oban.Plugins.Cron,
         Oban.Plugins.Pruner,
+        Oban.Plugins.Repeater,
         Oban.Plugins.Stager
       ],
       Extending: [

@@ -9,18 +9,7 @@ defmodule Oban.Plugins.PrunerTest do
   @moduletag :integration
 
   test "historic jobs are pruned when they are older than the configured age" do
-    events = [
-      [:oban, :plugin, :start],
-      [:oban, :plugin, :stop],
-      [:oban, :plugin, :exception]
-    ]
-
-    :telemetry.attach_many(
-      "plugin-pruner-handler",
-      events,
-      &PluginTelemetryHandler.handle/4,
-      self()
-    )
+    PluginTelemetryHandler.attach_plugin_events("plugin-pruner-handler")
 
     %Job{id: _id_} = insert!(%{}, state: "completed", attempted_at: seconds_ago(62))
     %Job{id: _id_} = insert!(%{}, state: "completed", attempted_at: seconds_ago(61))
@@ -34,7 +23,6 @@ defmodule Oban.Plugins.PrunerTest do
     with_backoff(fn -> assert retained_ids() == [id_1, id_2] end)
 
     assert_receive {:event, :start, %{system_time: _}, %{conf: _, plugin: Pruner}}
-
     assert_receive {:event, :stop, %{duration: _}, %{conf: _, plugin: Pruner, pruned_count: 4}}
   after
     :telemetry.detach("plugin-pruner-handler")

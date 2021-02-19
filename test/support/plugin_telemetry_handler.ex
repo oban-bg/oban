@@ -4,6 +4,16 @@ defmodule Oban.PluginTelemetryHandler do
   and send them back to the test processes that registered the handler.
   """
 
+  def attach_plugin_events(name) do
+    events = [
+      [:oban, :plugin, :start],
+      [:oban, :plugin, :stop],
+      [:oban, :plugin, :exception]
+    ]
+
+    :telemetry.attach_many(name, events, &handle/4, self())
+  end
+
   def handle([:oban, :plugin, :start], measurements, meta, pid) do
     send(pid, {:event, :start, measurements, meta})
   end
