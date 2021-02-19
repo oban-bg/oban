@@ -7,18 +7,7 @@ defmodule Oban.Plugins.StagerTest do
   @moduletag :integration
 
   test "descheduling jobs to make them available for execution" do
-    events = [
-      [:oban, :plugin, :start],
-      [:oban, :plugin, :stop],
-      [:oban, :plugin, :exception]
-    ]
-
-    :telemetry.attach_many(
-      "plugin-stager-handler",
-      events,
-      &PluginTelemetryHandler.handle/4,
-      self()
-    )
+    PluginTelemetryHandler.attach_plugin_events("plugin-stager-handler")
 
     then = DateTime.add(DateTime.utc_now(), -30)
 

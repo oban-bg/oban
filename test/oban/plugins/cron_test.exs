@@ -56,18 +56,7 @@ defmodule Oban.Plugins.CronTest do
   end
 
   test "cron jobs are enqueued on startup and telemetry events are emitted" do
-    events = [
-      [:oban, :plugin, :start],
-      [:oban, :plugin, :stop],
-      [:oban, :plugin, :exception]
-    ]
-
-    :telemetry.attach_many(
-      "plugin-cron-handler",
-      events,
-      &PluginTelemetryHandler.handle/4,
-      self()
-    )
+    PluginTelemetryHandler.attach_plugin_events("plugin-cron-handler")
 
     run_with_opts(
       crontab: [
