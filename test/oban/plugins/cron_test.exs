@@ -55,6 +55,17 @@ defmodule Oban.Plugins.CronTest do
     end
   end
 
+  describe "interval_to_next_minute/1" do
+    property "calculated time is always within a short future range" do
+      check all minute <- integer(0..59),
+                second <- integer(0..59) do
+        time = %{Time.utc_now() | minute: minute, second: second}
+
+        assert Cron.interval_to_next_minute(time) in 0..60_000
+      end
+    end
+  end
+
   test "cron jobs are enqueued on startup and telemetry events are emitted" do
     PluginTelemetryHandler.attach_plugin_events("plugin-cron-handler")
 

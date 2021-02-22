@@ -67,7 +67,6 @@ defmodule Oban.Plugins.Cron do
       :timer,
       crontab: [],
       lock_key: 1_149_979_440_242_868_001,
-      interval: :timer.seconds(60),
       timezone: "Etc/UTC"
     ]
   end
@@ -83,6 +82,16 @@ defmodule Oban.Plugins.Cron do
   @spec validate!(Keyword.t()) :: :ok
   def validate!(opts) when is_list(opts) do
     Enum.each(opts, &validate_opt!/1)
+  end
+
+  @doc false
+  @spec interval_to_next_minute(Time.t()) :: pos_integer()
+  def interval_to_next_minute(time \\ Time.utc_now()) do
+    time
+    |> Time.add(60)
+    |> Map.put(:second, 0)
+    |> Time.diff(time)
+    |> :timer.seconds()
   end
 
   @impl GenServer
@@ -134,7 +143,7 @@ defmodule Oban.Plugins.Cron do
   # Scheduling Helpers
 
   defp schedule_evaluate(state) do
-    timer = Process.send_after(self(), :evaluate, state.interval)
+    timer = Process.send_after(self(), :evaluate, interval_to_next_minute())
 
     %{state | timer: timer}
   end
