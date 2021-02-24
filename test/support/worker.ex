@@ -43,7 +43,10 @@ defmodule Oban.Integration.Worker do
 
         raise RuntimeError, "FAILED"
 
-        :ok
+      "KILL" ->
+        send(pid, {:kill, ref})
+
+        Process.exit(self(), :kill)
 
       "SNOOZE" ->
         send(pid, {:snooze, ref})

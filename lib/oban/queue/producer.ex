@@ -78,16 +78,22 @@ defmodule Oban.Queue.Producer do
 
   # This message is only received when the job's task doesn't exit cleanly. This should be rare,
   # but it can happen when nested processes crash.
-  def handle_info({:DOWN, ref, :process, _pid, {reason, stack}}, %State{} = state) do
+  def handle_info({:DOWN, ref, :process, _pid, reason}, %State{} = state) do
     %State{foreman: foreman, running: running} = state
 
     {{exec, _pid}, running} = Map.pop(running, ref)
+
+    {error, stack} =
+      case reason do
+        {error, stack} -> {error, stack}
+        _ -> {reason, []}
+      end
 
     # Without this we may crash the producer if there are any db errors. Alternatively, we would
     # block the producer while awaiting a retry.
     Task.Supervisor.async_nolink(foreman, fn ->
       Breaker.with_retry(fn ->
-        %{exec | kind: :error, error: reason, stacktrace: stack, state: :failure}
+        %{exec | kind: :error, error: error, stacktrace: stack, state: :failure}
         |> Executor.record_finished()
         |> Executor.report_finished()
       end)

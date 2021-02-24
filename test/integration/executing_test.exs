@@ -71,7 +71,7 @@ defmodule Oban.Integration.ExecutingTest do
 
   defp job do
     gen all queue <- member_of(~w(alpha beta gamma delta)),
-            action <- member_of(~w(OK DISCARD ERROR EXIT FAIL SNOOZE TASK_ERROR)),
+            action <- member_of(~w(OK DISCARD ERROR EXIT FAIL KILL SNOOZE TASK_ERROR)),
             ref <- integer(),
             max_attempts <- integer(1..20),
             priority <- integer(0..3),
