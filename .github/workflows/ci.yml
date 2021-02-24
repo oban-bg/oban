@@ -13,16 +13,23 @@ on:
 jobs:
   ci:
     strategy:
+      fail-fast: false
       matrix:
-        elixir: ['1.10', '1.11']
-        otp: ['23.1']
-        postgres: ['12.5-alpine', '13.1-alpine']
+        include:
+          - pair:
+              elixir: '1.9'
+              otp: '21.3'
+              postgres: '9.6-alpine'
+          - pair:
+              elixir: '1.11'
+              otp: '23.2'
+              postgres: '13.2-alpine'
 
     runs-on: ubuntu-latest
 
     services:
       postgres:
-        image: postgres:${{ matrix.postgres }}
+        image: postgres:${{matrix.pair.postgres}}
         env:
           POSTGRES_DB: oban_test
           POSTGRES_PASSWORD: postgres
@@ -38,18 +45,18 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - uses: actions/setup-elixir@v1
+      - uses: erlef/setup-elixir@v1
         with:
-          elixir-version: ${{ matrix.elixir }}
-          otp-version: ${{ matrix.otp }}
+          otp-version: ${{matrix.pair.otp}}
+          elixir-version: ${{matrix.pair.elixir}}
 
       - uses: actions/cache@v1
         with:
-          key: ${{ runner.os }}-${{ matrix.otp }}-${{ matrix.elixir }}-mix-${{ hashFiles(format('{0}{1}', github.workspace, '/mix.lock')) }}
+          key: ${{runner.os}}-${{matrix.pair.otp}}-${{matrix.pair.elixir}}-mix-${{hashFiles(format('{0}{1}', github.workspace, '/mix.lock'))}}
           path: _build
 
       - name: Run mix deps.get
-        run: mix deps.get
+        run: mix deps.get --only test
 
       - name: Run mix compile
         env:
@@ -58,12 +65,12 @@ jobs:
 
       - name: Run mix ecto.migrate
         env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:${{ job.services.postgres.ports[5432] }}/oban_test
+          DATABASE_URL: postgresql://postgres:postgres@localhost:${{job.services.postgres.ports[5432]}}/oban_test
           MIX_ENV: test
         run: mix ecto.migrate -r Oban.Test.Repo
 
       - name: Run mix ci
         env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:${{ job.services.postgres.ports[5432] }}/oban_test
+          DATABASE_URL: postgresql://postgres:postgres@localhost:${{job.services.postgres.ports[5432]}}/oban_test
           MIX_ENV: test
         run: mix ci
