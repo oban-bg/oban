@@ -118,7 +118,7 @@ defmodule Oban.Queue.Producer do
 
         %{"action" => "pkill", "job_id" => jid} ->
           for {ref, {exec, pid}} <- state.running, exec.job.id == jid do
-            pkill(ref, exec.job, pid, state)
+            pkill(ref, pid, state)
           end
 
           state
@@ -172,19 +172,15 @@ defmodule Oban.Queue.Producer do
 
   # Killing
 
-  defp pkill(ref, job, pid, state) do
-    %State{conf: conf, foreman: foreman, running: running} = state
-
-    case DynamicSupervisor.terminate_child(foreman, pid) do
+  defp pkill(ref, pid, %State{} = state) do
+    case DynamicSupervisor.terminate_child(state.foreman, pid) do
       :ok ->
-        Query.cancel_job(conf, job)
-
         state
 
       {:error, :not_found} ->
         Process.demonitor(ref, [:flush])
 
-        %{state | running: Map.delete(running, ref)}
+        %{state | running: Map.delete(state.running, ref)}
     end
   end
 
