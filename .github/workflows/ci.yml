@@ -12,6 +12,8 @@ on:
 
 jobs:
   ci:
+    env:
+      MIX_ENV: test
     strategy:
       fail-fast: false
       matrix:
@@ -24,6 +26,7 @@ jobs:
               elixir: '1.11'
               otp: '23.2'
               postgres: '13.2-alpine'
+            lint: lint
 
     runs-on: ubuntu-latest
 
@@ -58,19 +61,35 @@ jobs:
       - name: Run mix deps.get
         run: mix deps.get --only test
 
+      - name: Run mix format
+        run: mix format --check-formatted
+        if: ${{ matrix.lint }}
+
+      - name: Run mix deps.unlock
+        run: mix deps.unlock --check-unused
+        if: ${{ matrix.lint }}
+
+      - name: Run mix deps.compile
+        run: mix deps.compile
+
       - name: Run mix compile
-        env:
-          MIX_ENV: test
         run: mix compile --warnings-as-errors
+        if: ${{ matrix.lint }}
+
+      - name: Run credo
+        run: mix credo --strict
+        if: ${{ matrix.lint }}
 
       - name: Run mix ecto.migrate
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:${{job.services.postgres.ports[5432]}}/oban_test
-          MIX_ENV: test
         run: mix ecto.migrate -r Oban.Test.Repo
 
-      - name: Run mix ci
+      - name: Run mix test
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:${{job.services.postgres.ports[5432]}}/oban_test
-          MIX_ENV: test
-        run: mix ci
+        run: mix test
+
+      - name: Run dialyzer
+        run: mix dialyzer
+        if: ${{ matrix.lint }}
