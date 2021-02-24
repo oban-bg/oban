@@ -7,14 +7,14 @@ defmodule Oban.MixProject do
     [
       app: :oban,
       version: @version,
-      elixir: "~> 1.8",
+      elixir: "~> 1.9",
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
       deps: deps(),
       aliases: aliases(),
       preferred_cli_env: [
         bench: :test,
-        ci: :test,
+        "test.ci": :test,
         "test.setup": :test
       ],
 
@@ -169,7 +169,7 @@ defmodule Oban.MixProject do
     [
       bench: "run bench/bench_helper.exs",
       "test.setup": ["ecto.create", "ecto.migrate"],
-      ci: [
+      "test.ci": [
         "format --check-formatted",
         "deps.unlock --check-unused",
         "credo --strict",

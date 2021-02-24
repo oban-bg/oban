@@ -1,4 +1,7 @@
-Code.put_compiler_option(:warnings_as_errors, true)
+if function_exported?(Code, :put_compiler_option, 2) do
+  Code.put_compiler_option(:warnings_as_errors, true)
+end
+
 Logger.configure(level: :warn)
 
 ExUnit.start()

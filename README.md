@@ -130,17 +130,19 @@ orphaned due to crashes.
 [rdbms]: https://en.wikipedia.org/wiki/Relational_database#RDBMS
 [tele]: https://github.com/beam-telemetry/telemetry
 
-## Requirements
-
-Oban has been developed and actively tested with Elixir 1.8+, Erlang/OTP 21.1+
-and PostgreSQL 11.0+. Running Oban currently requires Elixir 1.8+, Erlang 21+,
-and PostgreSQL 9.6+.
-
 ## Oban Web+Pro
 
-A web-based user interface for managing Oban, along with an official set of
-plugins and workers are available as private packages. Learn more about Oban
-Web+Pro at [getoban.pro](https://getoban.pro).
+A web dashboard for managing Oban, along with an official set of plugins and
+workers are available as private packages.
+
+* [🧭 Web Overview](https://hexdocs.pm/oban/web_overview.html#content)
+* [🌟 Pro Overview](https://hexdocs.pm/oban/pro_overview.html#content)
+
+Learn more about licensing Oban Web+Pro at [getoban.pro](https://getoban.pro).
+
+## Requirements
+
+Running Oban requires Elixir 1.9+, Erlang 21+, and PostgreSQL 9.6+.
 
 ## Installation
 
