@@ -88,8 +88,8 @@ defmodule Oban do
     exports: 5]` would start the queues `default` and `exports` with a combined concurrency level
     of 15. The concurrency setting specifies how many jobs _each queue_ will run concurrently.
 
-    Queues accept additional override options to customize their behavior, e.g. by setting the
-    `poll_interval` and the `dispatch_cooldown` for a specific queue.
+    Queues accept additional override options to customize their behavior, e.g. by setting
+    `paused` or `dispatch_cooldown` for a specific queue.
 
     For testing purposes `:queues` may be set to `false` or `nil`, which effectively disables all
     job dispatching.

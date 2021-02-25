@@ -2,12 +2,104 @@
 
 All notable changes to `Oban` are documented in this file.
 
+## [2.5.0] — 2021-02-26
+
+### Top of the Minute Cron
+
+Rather than scheduling cron evaluation 60 seconds after the server starts,
+evaluation is now scheduled at the top of the next minute. This yields several
+improvements:
+
+- More predictable timing for cron jobs now that they are inserted at the top of
+  the minute. Note that jobs may execute later depending on how busy queues are.
+- Minimize contention between servers inserting jobs, thanks to the transaction
+  lock acquired by each plugin.
+- Prevent duplicate inserts for jobs that omit the `completed` state (when
+  server start time is staggered the transaction lock has no effect)
+
+### Repeater Plugin for Transaction Pooled Databases
+
+Environments that can't make use of PG notifications, i.e. because they use
+PgBouncer with transaction pooling, won't process available jobs reliably. The
+new `Repeater` plugin provides a workaround that simulates polling functionality
+for producers.
+
+Simply include the `Repeater` in your plugin list:
+
+```elixir
+config :my_app, Oban,
+  plugins: [
+    Oban.Plugins.Pruner,
+    Oban.Plugins.Stager,
+    Oban.Plugins.Repeater
+  ],
+  ...
+```
+
+### Include Perform Result in Job Telemetry Metadata
+
+The metadata for `[:oban, :job, :stop]` telemetry events now include the job's
+`perform/1` return value. That makes it possible to extract job output from
+other processes:
+
+```elixir
+def handle_event([:oban, :job, :stop], _timing, meta, _opts) do
+  IO.inspect(meta.result, label: "return from #{meta.job.worker}")
+
+  :ok
+end
+```
+
+### Added
+
+- [Oban] Support a changeset function in addition to a changeset in
+  `insert_all/4`. Inserting jobs within a multi is even more powerful.
+
+- [Oban.Queue.Executor] Stash a timed job's pid to enable inner process
+  messaging, notably via telemetry events.
+
+### Changed
+
+- [Oban] Upgrade minimum Elixir version from 1.8 to 1.9.
+
+- [Oban.Plugins.Cron] Individually validate crontab workers and options,
+  providing more descriptive errors at the collection and entry level.
+
+- [Oban] Simplify the job cancelling flow for consistency. Due to race
+  conditions it was always possible for a job to complete before it was
+  cancelled, now that flow is much simpler.
+
+- [Oban.Queue.Producer] Replace dispatch cooldown with a simpler debounce
+  mechanism.
+
+- [Oban.Plugins.Stager] Limit the number of notify events to one per queue,
+  rather than one per available job.
+
+### Fixed
+
+- [Oban.Queue.Producer] Handle unclean exits without an error and stack, which
+  prevents "zombie" jobs. This would occur after multiple hot upgrades when the
+  worker module changed, as the VM would forcibly terminate any processes
+  running the old modules.
+
+- [Oban] Specify that the `changeset_wrapper` type allows keys other than
+  `:changesets`, fixing a dialyzer type mismatch.
+
+### Removed
+
+- [Oban] Remove the undocumented `version/0` function in favor of using the
+  standard `Application.spec/2`
+
 ## [2.4.3] — 2021-02-07
+
+### Fixed
 
 - [Oban.Telemetry] Use `conf` rather than `config` in meta for `:job` and
   `:circuit` telemtry events.
 
 ## [2.4.2] — 2021-01-28
+
+### Fixed
 
 - [Oban.Plugins.Stager] Notify queues of all available jobs, not only jobs that
   were most recently staged. In some circumstances, such as reboot or retries,
@@ -103,7 +195,7 @@ defmodule MyApp.Repo.Migrations.UpdateObanJobsToV10 do
   end
 
   def down do
-    Oban.Migrations.down(version: 9)
+    Oban.Migrations.down(version: 10)
   end
 end
 ```
@@ -208,7 +300,7 @@ defmodule MyApp.Repo.Migrations.UpdateObanJobsToV9 do
   end
 
   def down do
-    Oban.Migrations.down(version: 8)
+    Oban.Migrations.down(version: 9)
   end
 end
 ```
@@ -663,7 +755,8 @@ No changes from [2.0.0-rc.3][].
 
 For changes prior to 2.0 see the [1.2 branch][1.2]
 
-[Unreleased]: https://github.com/sorentwo/oban/compare/v2.4.3...HEAD
+[Unreleased]: https://github.com/sorentwo/oban/compare/v2.5.0...HEAD
+[2.5.0]: https://github.com/sorentwo/oban/compare/v2.4.3...v2.5.0
 [2.4.3]: https://github.com/sorentwo/oban/compare/v2.4.2...v2.4.3
 [2.4.2]: https://github.com/sorentwo/oban/compare/v2.4.1...v2.4.2
 [2.4.1]: https://github.com/sorentwo/oban/compare/v2.4.0...v2.4.1

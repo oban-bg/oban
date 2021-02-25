@@ -152,7 +152,7 @@ dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:oban, "~> 2.4.3"}
+    {:oban, "~> 2.5.0"}
   ]
 end
 ```
@@ -281,7 +281,6 @@ You may also use an expanded form to configure queues with individual overrides:
 ```elixir
 queues: [
   default: 10,
-  mailers: [limit: 20, poll_interval: :timer.seconds(30)],
   events: [limit: 50, paused: true]
 ]
 ```
