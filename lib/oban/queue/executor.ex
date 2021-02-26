@@ -213,6 +213,9 @@ defmodule Oban.Queue.Executor do
   defp perform_timed(exec, timeout) do
     task = Task.async(fn -> perform_inline(exec) end)
 
+    # Stash the timed task's pid to facilitate sending it messages via telemetry events.
+    Process.put(:"$nested", [task.pid])
+
     case Task.yield(task, timeout) || Task.shutdown(task) do
       {:ok, reply} ->
         reply

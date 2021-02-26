@@ -64,7 +64,7 @@ defmodule Oban.Queue.Producer do
   end
 
   @impl GenServer
-  def handle_info({ref, _val}, %State{running: running} = state) do
+  def handle_info({ref, _val}, %State{running: running} = state) when is_reference(ref) do
     Process.demonitor(ref, [:flush])
 
     schedule_dispatch(%{state | running: Map.delete(running, ref)})
@@ -102,10 +102,6 @@ defmodule Oban.Queue.Producer do
     schedule_dispatch(%{state | running: running})
   end
 
-  def handle_info(:dispatch, %State{} = state) do
-    {:noreply, dispatch(%{state | timer: nil})}
-  end
-
   def handle_info({:notification, :insert, %{"queue" => queue}}, %State{queue: queue} = state) do
     schedule_dispatch(state)
   end
@@ -134,6 +130,10 @@ defmodule Oban.Queue.Producer do
       end
 
     schedule_dispatch(state)
+  end
+
+  def handle_info(:dispatch, %State{} = state) do
+    {:noreply, dispatch(%{state | timer: nil})}
   end
 
   def handle_info(:reset_circuit, state) do
