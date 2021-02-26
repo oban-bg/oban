@@ -557,12 +557,6 @@ they _do not_ rely on unique constraints in the database. This makes uniqueness
 entirely configurable by application code, without the need for database
 migrations.
 
-#### Performance Note
-
-If your application makes heavy use of unique jobs you may want to add an index
-on the `args` column of the `oban_jobs` table. The other columns considered for
-uniqueness are already covered by indexes.
-
 ### Periodic Jobs
 
 Oban's `Cron` plugin registers workers a cron-like schedule and enqueues jobs
