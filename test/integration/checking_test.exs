@@ -14,7 +14,7 @@ defmodule Oban.Integration.CheckingTest do
 
     alpha_state = Oban.check_queue(name, queue: :alpha)
 
-    assert %{limit: 1, node: _, nonce: _, paused: false} = alpha_state
+    assert %{limit: 1, node: _, paused: false} = alpha_state
     assert %{queue: "alpha", running: [_], started_at: %DateTime{}} = alpha_state
 
     assert %{limit: 2, queue: "gamma", running: [_]} = Oban.check_queue(name, queue: :gamma)

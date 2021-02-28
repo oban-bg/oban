@@ -3,11 +3,8 @@ defmodule Oban.Queue.Drainer do
 
   import Ecto.Query, only: [where: 3]
 
-  alias Oban.{Config, Job, Query, Repo}
-  alias Oban.Queue.Executor
-
-  @unlimited 100_000_000
-  @fake_nonce "draining"
+  alias Oban.{Config, Job, Repo}
+  alias Oban.Queue.{Engine, Executor}
 
   def drain(%Config{} = conf, [_ | _] = opts) do
     queue =
@@ -40,7 +37,8 @@ defmodule Oban.Queue.Drainer do
   end
 
   defp fetch_available(conf, queue) do
-    {:ok, jobs} = Query.fetch_available_jobs(conf, queue, @fake_nonce, @unlimited)
+    {:ok, meta} = Engine.init(conf, queue: queue, limit: 100_000_000)
+    {:ok, jobs} = Engine.fetch_jobs(conf, meta)
 
     jobs
   end

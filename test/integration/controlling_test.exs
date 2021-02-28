@@ -191,9 +191,7 @@ defmodule Oban.Integration.ControllingTest do
 
     assert %Job{state: "cancelled", cancelled_at: %_{}} = Repo.reload(job)
 
-    %{running: running} = :sys.get_state(Oban.Registry.whereis(name, {:producer, "alpha"}))
-
-    assert Enum.empty?(running)
+    assert %{running: []} = Oban.check_queue(name, queue: :alpha)
   end
 
   test "cancelling jobs that may or may not be executing" do

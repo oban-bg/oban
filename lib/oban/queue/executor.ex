@@ -7,11 +7,12 @@ defmodule Oban.Queue.Executor do
     CrashError,
     Job,
     PerformError,
-    Query,
     Telemetry,
     TimeoutError,
     Worker
   }
+
+  alias Oban.Queue.Engine
 
   require Logger
 
@@ -129,24 +130,24 @@ defmodule Oban.Queue.Executor do
   def report_finished(%__MODULE__{} = exec) do
     case exec.state do
       :success ->
-        Query.complete_job(exec.conf, exec.job)
+        Engine.complete_job(exec.conf, exec.job)
 
         execute_stop(exec)
 
       :failure ->
         job = job_with_unsaved_error(exec)
 
-        Query.retry_job(exec.conf, job, backoff(exec.worker, job))
+        Engine.error_job(exec.conf, job, backoff(exec.worker, job))
 
         execute_exception(exec)
 
       :snoozed ->
-        Query.snooze_job(exec.conf, exec.job, exec.snooze)
+        Engine.snooze_job(exec.conf, exec.job, exec.snooze)
 
         execute_stop(exec)
 
       :discard ->
-        Query.discard_job(exec.conf, job_with_unsaved_error(exec))
+        Engine.discard_job(exec.conf, job_with_unsaved_error(exec))
 
         execute_stop(exec)
     end
