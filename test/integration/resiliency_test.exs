@@ -15,23 +15,6 @@ defmodule Oban.Integration.ResiliencyTest do
     on_exit(fn -> :telemetry.detach("circuit-handler") end)
   end
 
-  test "logging producer connection errors" do
-    name = start_supervised_oban!(queues: [alpha: 1])
-
-    mangle_jobs_table!()
-
-    name
-    |> Oban.Registry.whereis({:producer, "alpha"})
-    |> send(:dispatch)
-
-    assert_receive {:tripped, %{message: message, name: name}}
-
-    assert message =~ ~s|ERROR 42P01 (undefined_table)|
-    assert name == Oban.Queue.Alpha.Producer
-  after
-    reform_jobs_table!()
-  end
-
   test "reporting notification connection errors" do
     name = start_supervised_oban!(queues: [alpha: 1])
 
