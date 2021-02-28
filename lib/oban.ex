@@ -25,13 +25,14 @@ defmodule Oban do
           | {:local_only, boolean()}
 
   @type queue_state :: %{
-          limit: pos_integer(),
-          node: binary(),
-          nonce: binary(),
-          paused: boolean(),
-          queue: queue_name(),
-          running: [pos_integer()],
-          started_at: DateTime.t()
+          :limit => pos_integer(),
+          :node => binary(),
+          :paused => boolean(),
+          :queue => queue_name(),
+          :running => [pos_integer()],
+          :started_at => DateTime.t(),
+          :updated_at => DateTime.t(),
+          optional(atom()) => any()
         }
 
   @type option ::
@@ -624,11 +625,11 @@ defmodule Oban do
       %{
         limit: 10,
         node: "me@local",
-        nonce: "a1b2c3d4",
         paused: false,
         queue: "default",
         running: [100, 102],
-        started_at: ~D[2020-10-07 15:31:00]
+        started_at: ~D[2020-10-07 15:31:00],
+        updated_at: ~D[2020-10-07 15:31:00]
       }
   """
   @doc since: "2.2.0"

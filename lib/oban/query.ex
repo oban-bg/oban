@@ -9,38 +9,6 @@ defmodule Oban.Query do
 
   @type lock_key :: pos_integer()
 
-  @spec fetch_available_jobs(Config.t(), binary(), binary(), pos_integer()) :: {:ok, [Job.t()]}
-  def fetch_available_jobs(%Config{node: node} = conf, queue, nonce, demand) do
-    subset =
-      Job
-      |> select([:id])
-      |> where([j], j.state == "available")
-      |> where([j], j.queue == ^queue)
-      |> order_by([j], asc: j.priority, asc: j.scheduled_at, asc: j.id)
-      |> limit(^demand)
-      |> lock("FOR UPDATE SKIP LOCKED")
-
-    updates = [
-      set: [state: "executing", attempted_at: utc_now(), attempted_by: [node, queue, nonce]],
-      inc: [attempt: 1]
-    ]
-
-    Repo.transaction(
-      conf,
-      fn ->
-        query =
-          Job
-          |> where([j], j.id in subquery(subset))
-          |> select([j, _], j)
-
-        case Repo.update_all(conf, query, updates) do
-          {0, nil} -> []
-          {_count, jobs} -> jobs
-        end
-      end
-    )
-  end
-
   @spec fetch_or_insert_job(Config.t(), Job.changeset()) :: {:ok, Job.t()} | {:error, term()}
   def fetch_or_insert_job(conf, changeset) do
     fun = fn -> insert_unique(conf, changeset) end
@@ -94,31 +62,6 @@ defmodule Oban.Query do
     end)
   end
 
-  @spec complete_job(Config.t(), Job.t()) :: :ok
-  def complete_job(%Config{} = conf, %Job{id: id}) do
-    Repo.update_all(
-      conf,
-      where(Job, id: ^id),
-      set: [state: "completed", completed_at: utc_now()]
-    )
-
-    :ok
-  end
-
-  @spec discard_job(Config.t(), Job.t()) :: :ok
-  def discard_job(%Config{} = conf, %Job{} = job) do
-    updates = [
-      set: [state: "discarded", discarded_at: utc_now()],
-      push: [
-        errors: %{attempt: job.attempt, at: utc_now(), error: format_blamed(job.unsaved_error)}
-      ]
-    ]
-
-    Repo.update_all(conf, where(Job, id: ^job.id), updates)
-
-    :ok
-  end
-
   @spec cancel_job(Config.t(), pos_integer() | Job.t()) :: :ok
   def cancel_job(%Config{} = conf, %Job{id: id}) do
     cancel_job(conf, id)
@@ -133,20 +76,6 @@ defmodule Oban.Query do
     updates = [set: [state: "cancelled", cancelled_at: utc_now()]]
 
     Repo.update_all(conf, query, updates)
-
-    :ok
-  end
-
-  @spec snooze_job(Config.t(), Job.t(), pos_integer()) :: :ok
-  def snooze_job(%Config{} = conf, %Job{id: id}, seconds) do
-    scheduled_at = DateTime.add(utc_now(), seconds)
-
-    updates = [
-      set: [state: "scheduled", scheduled_at: scheduled_at],
-      inc: [max_attempts: 1]
-    ]
-
-    Repo.update_all(conf, where(Job, id: ^id), updates)
 
     :ok
   end
@@ -173,27 +102,6 @@ defmodule Oban.Query do
     :ok
   end
 
-  @spec retry_job(Config.t(), Job.t(), pos_integer()) :: :ok
-  def retry_job(%Config{} = conf, %Job{} = job, backoff) do
-    %Job{attempt: attempt, id: id, max_attempts: max_attempts} = job
-
-    set =
-      if attempt >= max_attempts do
-        [state: "discarded", discarded_at: utc_now()]
-      else
-        [state: "retryable", scheduled_at: next_attempt_at(backoff)]
-      end
-
-    updates = [
-      set: set,
-      push: [errors: %{attempt: attempt, at: utc_now(), error: format_blamed(job.unsaved_error)}]
-    ]
-
-    Repo.update_all(conf, where(Job, id: ^id), updates)
-
-    :ok
-  end
-
   @spec with_xact_lock(Config.t(), lock_key(), fun()) :: {:ok, any()} | {:error, any()}
   def with_xact_lock(%Config{} = conf, lock_key, fun) when is_function(fun, 0) do
     Repo.transaction(conf, fn ->
@@ -205,14 +113,6 @@ defmodule Oban.Query do
   end
 
   # Helpers
-
-  defp next_attempt_at(backoff), do: DateTime.add(utc_now(), backoff, :second)
-
-  defp format_blamed(%{kind: kind, reason: error, stacktrace: stacktrace}) do
-    {blamed, stacktrace} = Exception.blame(kind, error, stacktrace)
-
-    Exception.format(kind, blamed, stacktrace)
-  end
 
   defp insert_unique(%Config{} = conf, changeset) do
     query_opts = [on_conflict: :nothing]

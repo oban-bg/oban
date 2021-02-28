@@ -9,10 +9,10 @@ defmodule Oban.Repo do
 
   @type config :: %{
           :repo => module,
-          optional(:get_dynamic_repo) => (() -> pid | atom),
+          optional(:get_dynamic_repo) => (() -> pid() | atom()),
           optional(:log) => false | Logger.level(),
           optional(:prefix) => binary(),
-          optional(any) => any
+          optional(any) => any()
         }
 
   @doc "Wraps `c:Ecto.Repo.transaction/2`."

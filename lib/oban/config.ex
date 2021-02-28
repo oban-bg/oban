@@ -9,6 +9,7 @@ defmodule Oban.Config do
   @type t :: %__MODULE__{
           circuit_backoff: timeout(),
           dispatch_cooldown: pos_integer(),
+          engine: module(),
           name: Oban.name(),
           node: binary(),
           plugins: [module() | {module() | Keyword.t()}],
@@ -25,6 +26,7 @@ defmodule Oban.Config do
   @enforce_keys [:node, :repo]
   defstruct circuit_backoff: :timer.seconds(30),
             dispatch_cooldown: 5,
+            engine: Oban.Queue.BasicEngine,
             name: Oban,
             node: nil,
             plugins: [],
