@@ -4,7 +4,7 @@ defmodule Oban.Queue.Drainer do
   import Ecto.Query, only: [where: 3]
 
   alias Oban.{Config, Job, Repo}
-  alias Oban.Queue.{Engine, Executor}
+  alias Oban.Queue.{BasicEngine, Executor}
 
   def drain(%Config{} = conf, [_ | _] = opts) do
     queue =
@@ -37,8 +37,8 @@ defmodule Oban.Queue.Drainer do
   end
 
   defp fetch_available(conf, queue) do
-    {:ok, meta} = Engine.init(conf, queue: queue, limit: 100_000_000)
-    {:ok, jobs} = Engine.fetch_jobs(conf, meta)
+    {:ok, meta} = BasicEngine.init(conf, queue: queue, limit: 100_000_000)
+    {:ok, jobs} = BasicEngine.fetch_jobs(conf, meta, %{})
 
     jobs
   end

@@ -15,7 +15,8 @@ defmodule Oban.Queue.Producer do
       :meta,
       :name,
       :dispatch_timer,
-      dispatch_cooldown: 5
+      dispatch_cooldown: 5,
+      running: %{}
     ]
   end
 
@@ -70,7 +71,7 @@ defmodule Oban.Queue.Producer do
   # This message is only received when the job's task doesn't exit cleanly. This should be rare,
   # but it can happen when nested processes crash.
   def handle_info({:DOWN, ref, :process, _pid, reason}, %State{} = state) do
-    {_pid, exec} = Map.get(state.meta.running, ref)
+    {_pid, exec} = Map.get(state.running, ref)
 
     {error, stack} =
       case reason do
@@ -116,7 +117,7 @@ defmodule Oban.Queue.Producer do
           Engine.put_meta(state.conf, state.meta, :limit, limit)
 
         %{"action" => "pkill", "job_id" => jid} ->
-          for {ref, {pid, exec}} <- state.meta.running, exec.job.id == jid do
+          for {ref, {pid, exec}} <- state.running, exec.job.id == jid do
             pkill(ref, pid, state)
           end
 
@@ -139,8 +140,8 @@ defmodule Oban.Queue.Producer do
 
   @impl GenServer
   def handle_call(:check, _from, %State{} = state) do
-    jids = for {_, {_, exec}} <- state.meta.running, do: exec.job.id
-    meta = Map.replace!(state.meta, :running, jids)
+    jids = for {_, {_, exec}} <- state.running, do: exec.job.id
+    meta = Map.put(state.meta, :running, jids)
 
     {:reply, meta, state}
   end
@@ -185,13 +186,11 @@ defmodule Oban.Queue.Producer do
         {dispatched, Map.put(tele_meta, :dispatched_count, map_size(dispatched))}
       end)
 
-    meta = Engine.update_meta(state.conf, state.meta, :running, &Map.merge(&1, dispatched))
-
-    %{state | meta: meta}
+    %{state | running: Map.merge(state.running, dispatched)}
   end
 
   defp start_jobs(%State{} = state) do
-    {:ok, jobs} = Engine.fetch_jobs(state.conf, state.meta)
+    {:ok, jobs} = Engine.fetch_jobs(state.conf, state.meta, state.running)
 
     for job <- jobs, into: %{} do
       exec = Executor.new(state.conf, job)
@@ -204,8 +203,6 @@ defmodule Oban.Queue.Producer do
   defp release_ref(%State{} = state, ref) do
     Process.demonitor(ref, [:flush])
 
-    meta = Engine.update_meta(state.conf, state.meta, :running, &Map.delete(&1, ref))
-
-    %{state | meta: meta}
+    %{state | running: Map.delete(state.running, ref)}
   end
 end

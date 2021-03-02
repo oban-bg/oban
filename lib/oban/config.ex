@@ -140,6 +140,13 @@ defmodule Oban.Config do
     end
   end
 
+  defp validate_opt!({:engine, engine}) do
+    unless Code.ensure_loaded?(engine) and function_exported?(engine, :init, 2) do
+      raise ArgumentError,
+            "expected :engine to be an Oban.Queue.Engine, got: #{inspect(engine)}"
+    end
+  end
+
   defp validate_opt!({:name, _}), do: :ok
 
   defp validate_opt!({:node, node}) do
