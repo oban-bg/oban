@@ -14,6 +14,13 @@ defmodule Oban.ConfigTest do
       assert_valid(circuit_backoff: 10)
     end
 
+    test ":engine is validated as an engine module" do
+      refute_valid(engine: nil)
+      refute_valid(engine: Repo)
+
+      assert_valid(engine: Oban.Queue.BasicEngine)
+    end
+
     test ":node is validated as a binary" do
       refute_valid(node: nil)
       refute_valid(node: '')
