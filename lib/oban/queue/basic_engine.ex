@@ -27,6 +27,13 @@ defmodule Oban.Queue.BasicEngine do
   end
 
   @impl true
+  def check_meta(_conf, %{} = meta, %{} = running) do
+    jids = for {_, {_, exec}} <- running, do: exec.job.id
+
+    Map.put(meta, :running, jids)
+  end
+
+  @impl true
   def refresh(_conf, %{} = meta) do
     %{meta | updated_at: utc_now()}
   end

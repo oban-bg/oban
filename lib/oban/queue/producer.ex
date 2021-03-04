@@ -15,7 +15,9 @@ defmodule Oban.Queue.Producer do
       :meta,
       :name,
       :dispatch_timer,
+      :refresh_timer,
       dispatch_cooldown: 5,
+      refresh_interval: :timer.seconds(30),
       running: %{}
     ]
   end
@@ -47,25 +49,39 @@ defmodule Oban.Queue.Producer do
   end
 
   @impl GenServer
+  def terminate(_reason, %State{} = state) do
+    if is_reference(state.refresh_timer), do: Process.cancel_timer(state.refresh_timer)
+    if is_reference(state.dispatch_timer), do: Process.cancel_timer(state.dispatch_timer)
+
+    :ok
+  end
+
+  @impl GenServer
   def handle_continue({:start, meta_opts}, %State{} = state) do
     :ok = Notifier.listen(state.conf.name, [:insert, :signal])
 
     {:ok, meta} = Engine.init(state.conf, meta_opts)
 
-    {:noreply, %{state | meta: meta}}
+    {:noreply, schedule_refresh(%{state | meta: meta})}
   end
 
   @impl GenServer
   def handle_info({ref, _val}, %State{} = state) when is_reference(ref) do
-    state
-    |> release_ref(ref)
-    |> schedule_dispatch()
+    state =
+      state
+      |> release_ref(ref)
+      |> schedule_dispatch()
+
+    {:noreply, state}
   end
 
   def handle_info({:DOWN, ref, :process, _pid, :shutdown}, %State{} = state) do
-    state
-    |> release_ref(ref)
-    |> schedule_dispatch()
+    state =
+      state
+      |> release_ref(ref)
+      |> schedule_dispatch()
+
+    {:noreply, state}
   end
 
   # This message is only received when the job's task doesn't exit cleanly. This should be rare,
@@ -89,17 +105,18 @@ defmodule Oban.Queue.Producer do
       end)
     end)
 
-    state
-    |> release_ref(ref)
-    |> schedule_dispatch()
+    state =
+      state
+      |> release_ref(ref)
+      |> schedule_dispatch()
+
+    {:noreply, state}
   end
 
   def handle_info({:notification, :insert, %{"queue" => queue}}, %State{} = state) do
-    if state.meta.queue == queue do
-      schedule_dispatch(state)
-    else
-      {:noreply, state}
-    end
+    state = if state.meta.queue == queue, do: schedule_dispatch(state), else: state
+
+    {:noreply, state}
   end
 
   def handle_info({:notification, :signal, payload}, %State{} = state) do
@@ -127,11 +144,17 @@ defmodule Oban.Queue.Producer do
           state.meta
       end
 
-    schedule_dispatch(%{state | meta: meta})
+    {:noreply, schedule_dispatch(%{state | meta: meta})}
   end
 
   def handle_info(:dispatch, %State{} = state) do
     {:noreply, dispatch(%{state | dispatch_timer: nil})}
+  end
+
+  def handle_info(:refresh, %State{} = state) do
+    meta = Engine.refresh(state.conf, state.meta)
+
+    {:noreply, schedule_refresh(%{state | meta: meta})}
   end
 
   def handle_info(_message, state) do
@@ -140,8 +163,7 @@ defmodule Oban.Queue.Producer do
 
   @impl GenServer
   def handle_call(:check, _from, %State{} = state) do
-    jids = for {_, {_, exec}} <- state.running, do: exec.job.id
-    meta = Map.put(state.meta, :running, jids)
+    meta = Engine.check_meta(state.conf, state.meta, state.running)
 
     {:reply, meta, state}
   end
@@ -168,12 +190,18 @@ defmodule Oban.Queue.Producer do
 
   defp schedule_dispatch(%State{} = state) do
     if is_reference(state.dispatch_timer) do
-      {:noreply, state}
+      state
     else
       timer = Process.send_after(self(), :dispatch, state.dispatch_cooldown)
 
-      {:noreply, %{state | dispatch_timer: timer}}
+      %{state | dispatch_timer: timer}
     end
+  end
+
+  defp schedule_refresh(%State{} = state) do
+    timer = Process.send_after(self(), :refresh, state.refresh_interval)
+
+    %{state | refresh_timer: timer}
   end
 
   defp dispatch(%State{} = state) do

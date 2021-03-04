@@ -28,6 +28,11 @@ defmodule Oban.Queue.Engine do
   @callback put_meta(conf(), meta(), atom(), term()) :: meta()
 
   @doc """
+  Format engine meta in a digestible format for queue inspection.
+  """
+  @callback check_meta(conf(), meta(), running()) :: map()
+
+  @doc """
   Fetch available jobs for the given queue, up to configured limits.
   """
   @callback fetch_jobs(conf(), meta(), running()) :: {:ok, [Job.t()]} | {:error, term()}
@@ -66,6 +71,11 @@ defmodule Oban.Queue.Engine do
   @doc false
   def put_meta(%Config{} = conf, %{} = meta, key, value) when is_atom(key) do
     conf.engine.put_meta(conf, meta, key, value)
+  end
+
+  @doc false
+  def check_meta(%Config{} = conf, %{} = meta, %{} = running) do
+    conf.engine.check_meta(conf, meta, running)
   end
 
   @doc false
