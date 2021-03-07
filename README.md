@@ -626,7 +626,7 @@ Some specific examples that demonstrate the full range of expressions:
 
 * `0 * * * *` — The first minute of every hour
 * `*/15 9-17 * * *` — Every fifteen minutes during standard business hours
-* `0 0 * DEC *` — Once a day at midnight during december
+* `0 0 * DEC *` — Once a day at midnight during December
 * `0 7-9,4-6 13 * FRI` — Once an hour during both rush hours on Friday the 13th
 
 For more in depth information see the man documentation for `cron` and `crontab`
@@ -745,8 +745,8 @@ As noted in [Usage](#Usage), there are some guidelines for running tests:
   pruning queries will raise `DBConnection.OwnershipError` when the application
   boots.
 
-* Be sure to use the Ecto Sandbox for testing. Oban makes use of database pubsub
-  events to dispatch jobs, but pubsub events never fire within a transaction.
+* Be sure to use the Ecto Sandbox for testing. Oban makes use of database Pub/Sub
+  events to dispatch jobs, but Pub/Sub events never fire within a transaction.
   Since sandbox tests run within a transaction no events will fire and jobs
   won't be dispatched.
 
@@ -801,7 +801,7 @@ Execution errors are stored as a formatted exception along with metadata about
 when the failure occurred and which attempt caused it. Each error is stored with
 the following keys:
 
-* `at` The utc timestamp when the error occurred at
+* `at` The UTC timestamp when the error occurred at
 * `attempt` The attempt number when the error occurred
 * `error` A formatted error message and stacktrace
 

@@ -20,7 +20,7 @@ config :my_app, Oban,
   ...
 ```
 
-_Note: The Repeater plugin keeps jobs processing, it will not faciliate other
+_Note: The Repeater plugin keeps jobs processing, it will not facilitate other
 notification based functionality, e.g. scaling queues._
 
 [repe]: Oban.Plugins.Repeater.html
@@ -49,7 +49,7 @@ Available Erlang versions are available [here][versions].
 ### Database Connections
 
 Make sure that you have enough available database connections when running on
-Heroku. Oban uses a database connection in order to listen for pubsub
+Heroku. Oban uses a database connection in order to listen for Pub/Sub
 notifications. This is in addition to your Ecto Repo `pool_size` setting.
 
 Heroku's [Hobby tier Postgres plans][plans] have a maximum of 20 connections, so

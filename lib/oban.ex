@@ -154,7 +154,7 @@ defmodule Oban do
   end
 
   @doc """
-  Returns the pid of the root oban process for the given name.
+  Returns the pid of the root Oban process for the given name.
 
   ## Example
 

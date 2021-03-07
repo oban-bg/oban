@@ -1,6 +1,6 @@
 defmodule Oban.Migrations do
   @moduledoc """
-  Migrations create and modify the database tables Oban needs to funtion.
+  Migrations create and modify the database tables Oban needs to function.
 
   ## Usage
 
