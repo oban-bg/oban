@@ -99,7 +99,7 @@ Now the first retry is scheduled `60s` later, the second `120s` later, and so on
 ### Building Blocks
 
 Elixir's powerful primitives of behaviours, protocols and event handling make
-flexible error reporting seamless and extendible. While our `Reportable`
+flexible error reporting seamless and extensible. While our `Reportable`
 protocol only considered the number of attempts, this same mechanism is suitable
 for filtering by any other `meta` value.
 

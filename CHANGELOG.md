@@ -95,7 +95,7 @@ end
 ### Fixed
 
 - [Oban.Telemetry] Use `conf` rather than `config` in meta for `:job` and
-  `:circuit` telemtry events.
+  `:circuit` telemetry events.
 
 ## [2.4.2] — 2021-01-28
 
@@ -392,7 +392,7 @@ currently using, and it will roll back a single version.
 - [Oban.Job] Don't include `discarded` state by default when accounting for
   uniqueness.
 
-- [Oban.Cron] Fully support weekeday ranges in crontab expressions. Previously,
+- [Oban.Cron] Fully support weekday ranges in crontab expressions. Previously,
   given a weekday range like `MON-WED` the parser would only retain the `MON`.
 
 ## [2.1.0] — 2020-08-21

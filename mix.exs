@@ -1,6 +1,7 @@
 defmodule Oban.MixProject do
   use Mix.Project
 
+  @source_url "https://github.com/sorentwo/oban"
   @version "2.5.0"
 
   def project do
@@ -37,7 +38,7 @@ defmodule Oban.MixProject do
         main: "Oban",
         logo: "assets/oban-logo.png",
         source_ref: "v#{@version}",
-        source_url: "https://github.com/sorentwo/oban",
+        source_url: @source_url,
         extra_section: "GUIDES",
         formatters: ["html"],
         extras: extras() ++ pro_extras() ++ web_extras(),
@@ -143,8 +144,8 @@ defmodule Oban.MixProject do
       licenses: ["Apache-2.0"],
       links: %{
         Website: "https://getoban.pro",
-        Changelog: "https://github.com/sorentwo/oban/blob/master/CHANGELOG.md",
-        GitHub: "https://github.com/sorentwo/oban",
+        Changelog: "#{@source_url}/blob/master/CHANGELOG.md",
+        GitHub: @source_url,
         Sponsor: "https://getoban.pro"
       }
     ]
