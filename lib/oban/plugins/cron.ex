@@ -91,7 +91,7 @@ defmodule Oban.Plugins.Cron do
     |> Time.add(60)
     |> Map.put(:second, 0)
     |> Time.diff(time)
-    |> max(0)
+    |> Integer.mod(86400)
     |> :timer.seconds()
   end
 
