@@ -905,10 +905,10 @@ integrating with [Sentry][sentry] to report job failures:
 
 ```elixir
 defmodule ErrorReporter do
-  def handle_event([:oban, :job, :exception], measure, meta, _) do
+  def handle_event([:oban, :job, :exception], measure, %{job: job}, _) do
     extra =
-      meta
-      |> Map.take([:id, :args, :queue, :worker])
+      job
+      |> Map.take([:id, :args, :meta, :queue, :worker])
       |> Map.merge(measure)
 
     Sentry.capture_exception(meta.error, stacktrace: meta.stacktrace, extra: extra)
