@@ -45,7 +45,11 @@ defmodule Oban.Queue.Producer do
 
     {base_opts, meta_opts} = Keyword.split(opts, [:conf, :foreman, :name, :dispatch_cooldown])
 
-    {:ok, struct!(State, base_opts), {:continue, {:start, meta_opts}}}
+    state = struct!(State, base_opts)
+
+    :ok = Notifier.listen(state.conf.name, [:insert, :signal])
+
+    {:ok, state, {:continue, {:start, meta_opts}}}
   end
 
   @impl GenServer
@@ -58,8 +62,6 @@ defmodule Oban.Queue.Producer do
 
   @impl GenServer
   def handle_continue({:start, meta_opts}, %State{} = state) do
-    :ok = Notifier.listen(state.conf.name, [:insert, :signal])
-
     {:ok, meta} = Engine.init(state.conf, meta_opts)
 
     {:noreply, schedule_refresh(%{state | meta: meta})}
@@ -207,25 +209,28 @@ defmodule Oban.Queue.Producer do
   defp dispatch(%State{} = state) do
     tele_meta = %{conf: state.conf, queue: state.meta.queue}
 
-    dispatched =
+    {meta, dispatched} =
       :telemetry.span([:oban, :producer], tele_meta, fn ->
-        dispatched = start_jobs(state)
+        {meta, dispatched} = start_jobs(state)
 
-        {dispatched, Map.put(tele_meta, :dispatched_count, map_size(dispatched))}
+        {{meta, dispatched}, Map.put(tele_meta, :dispatched_count, map_size(dispatched))}
       end)
 
-    %{state | running: Map.merge(state.running, dispatched)}
+    %{state | meta: meta, running: Map.merge(state.running, dispatched)}
   end
 
   defp start_jobs(%State{} = state) do
-    {:ok, jobs} = Engine.fetch_jobs(state.conf, state.meta, state.running)
+    {:ok, {meta, jobs}} = Engine.fetch_jobs(state.conf, state.meta, state.running)
 
-    for job <- jobs, into: %{} do
-      exec = Executor.new(state.conf, job)
-      task = Task.Supervisor.async_nolink(state.foreman, Executor, :call, [exec])
+    dispatched =
+      for job <- jobs, into: %{} do
+        exec = Executor.new(state.conf, job)
+        task = Task.Supervisor.async_nolink(state.foreman, Executor, :call, [exec])
 
-      {task.ref, {task.pid, exec}}
-    end
+        {task.ref, {task.pid, exec}}
+      end
+
+    {meta, dispatched}
   end
 
   defp release_ref(%State{} = state, ref) do
