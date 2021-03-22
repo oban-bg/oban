@@ -35,7 +35,7 @@ defmodule Oban.Queue.Engine do
   @doc """
   Fetch available jobs for the given queue, up to configured limits.
   """
-  @callback fetch_jobs(conf(), meta(), running()) :: {:ok, [Job.t()]} | {:error, term()}
+  @callback fetch_jobs(conf(), meta(), running()) :: {:ok, {meta(), [Job.t()]}} | {:error, term()}
 
   @doc """
   Record that a job completed successfully.

@@ -38,7 +38,7 @@ defmodule Oban.Queue.Drainer do
 
   defp fetch_available(conf, queue) do
     {:ok, meta} = BasicEngine.init(conf, queue: queue, limit: 100_000_000)
-    {:ok, jobs} = BasicEngine.fetch_jobs(conf, meta, %{})
+    {:ok, {_meta, jobs}} = BasicEngine.fetch_jobs(conf, meta, %{})
 
     jobs
   end

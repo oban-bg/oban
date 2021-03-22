@@ -39,10 +39,12 @@ defmodule Oban.Queue.BasicEngine do
   end
 
   @impl true
-  def fetch_jobs(_conf, %{paused: true}, _running), do: {:ok, []}
+  def fetch_jobs(_conf, %{paused: true} = meta, _running) do
+    {:ok, {meta, []}}
+  end
 
-  def fetch_jobs(_conf, %{limit: limit}, running) when map_size(running) >= limit do
-    {:ok, []}
+  def fetch_jobs(_conf, %{limit: limit} = meta, running) when map_size(running) >= limit do
+    {:ok, {meta, []}}
   end
 
   def fetch_jobs(%Config{} = conf, %{} = meta, running) do
@@ -71,8 +73,8 @@ defmodule Oban.Queue.BasicEngine do
           |> select([j, _], j)
 
         case Repo.update_all(conf, query, updates) do
-          {0, nil} -> []
-          {_count, jobs} -> jobs
+          {0, nil} -> {meta, []}
+          {_count, jobs} -> {meta, jobs}
         end
       end
     )
