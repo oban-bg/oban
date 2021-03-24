@@ -250,7 +250,7 @@ defmodule MyApp.Application do
 
   # Conditionally disable queues or plugins here.
   defp oban_config do
-    Application.get_env(:my_app, Oban)
+    Application.fetch_env!(:my_app, Oban)
   end
 end
 ```
