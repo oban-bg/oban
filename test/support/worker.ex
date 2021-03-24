@@ -64,6 +64,20 @@ defmodule Oban.Integration.Worker do
     end
   end
 
+  def perform(%_{args: %{"ref" => ref, "recur" => recur, "bin_pid" => bin_pid}} = job) do
+    bin_pid
+    |> bin_to_pid()
+    |> send({:ok, ref, recur})
+
+    if ref < recur do
+      new_job = new(%{"ref" => ref + 1, "recur" => recur, "bin_pid" => bin_pid})
+
+      Oban.insert!(job.conf.name, new_job)
+    end
+
+    :ok
+  end
+
   def perform(%_{args: %{"ref" => ref, "sleep" => sleep, "bin_pid" => bin_pid}}) do
     pid = bin_to_pid(bin_pid)
 
