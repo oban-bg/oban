@@ -61,7 +61,7 @@ defmodule Oban.Queue.Executor do
   def new(%Config{} = conf, %Job{} = job) do
     struct!(__MODULE__,
       conf: conf,
-      job: job,
+      job: %{job | conf: conf},
       meta: event_metadata(conf, job),
       start_mono: System.monotonic_time(),
       start_time: System.system_time()
@@ -213,9 +213,6 @@ defmodule Oban.Queue.Executor do
 
   defp perform_timed(exec, timeout) do
     task = Task.async(fn -> perform_inline(exec) end)
-
-    # Stash the timed task's pid to facilitate sending it messages via telemetry events.
-    Process.put(:"$nested", [task.pid])
 
     case Task.yield(task, timeout) || Task.shutdown(task) do
       {:ok, reply} ->

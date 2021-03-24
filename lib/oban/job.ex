@@ -82,21 +82,24 @@ defmodule Oban.Job do
     field :queue, :string, default: "default"
     field :worker, :string
     field :args, :map
-    field :errors, {:array, :map}, default: []
+    field :meta, :map, default: %{}
     field :tags, {:array, :string}, default: []
+    field :errors, {:array, :map}, default: []
     field :attempt, :integer, default: 0
     field :attempted_by, {:array, :string}
     field :max_attempts, :integer, default: 20
-    field :meta, :map, default: %{}
     field :priority, :integer, default: 0
+
     field :attempted_at, :utc_datetime_usec
+    field :cancelled_at, :utc_datetime_usec
     field :completed_at, :utc_datetime_usec
     field :discarded_at, :utc_datetime_usec
-    field :cancelled_at, :utc_datetime_usec
     field :inserted_at, :utc_datetime_usec
     field :scheduled_at, :utc_datetime_usec
-    field :unique, :map, virtual: true
+
+    field :conf, :map, virtual: true
     field :replace_args, :boolean, virtual: true
+    field :unique, :map, virtual: true
     field :unsaved_error, :map, virtual: true
   end
 

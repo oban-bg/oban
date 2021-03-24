@@ -77,15 +77,6 @@ defmodule Oban.Queue.ExecutorTest do
       assert_in_delta duration_ms, 10, 20
       assert_in_delta queue_time_ms, 30, 20
     end
-
-    test "tracking the pid of nested timed tasks" do
-      assert %{state: :success, result: :ok} = call_with_mode("timed")
-
-      assert [task_pid] = Process.get(:"$nested")
-
-      assert is_pid(task_pid)
-      assert task_pid != self()
-    end
   end
 
   defp call_with_mode(mode) do
