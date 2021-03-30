@@ -13,6 +13,7 @@ defmodule Oban.Queue.BasicEngine do
     meta =
       opts
       |> Keyword.put_new(:paused, false)
+      |> Keyword.put(:name, conf.name)
       |> Keyword.put(:node, conf.node)
       |> Keyword.put(:started_at, utc_now())
       |> Keyword.put(:updated_at, utc_now())

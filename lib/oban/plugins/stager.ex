@@ -23,7 +23,7 @@ defmodule Oban.Plugins.Stager do
 
   alias Oban.{Config, Job, Query, Repo}
 
-  @type option :: {:conf, Config.t()} | {:name, GenServer.name()}
+  @type option :: {:conf, Config.t()} | {:name, GenServer.name()} | {:interval, pos_integer()}
 
   defmodule State do
     @moduledoc false
@@ -37,6 +37,7 @@ defmodule Oban.Plugins.Stager do
     ]
   end
 
+  @doc false
   @spec start_link([option()]) :: GenServer.on_start()
   def start_link(opts) do
     GenServer.start_link(__MODULE__, opts, name: opts[:name])

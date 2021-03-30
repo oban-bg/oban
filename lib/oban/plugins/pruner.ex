@@ -28,7 +28,7 @@ defmodule Oban.Plugins.Pruner do
 
   The `Oban.Plugins.Pruner` plugin adds the following metadata to the `[:oban, :plugin, :stop]` event:
 
-  * :pruned_count - the number of jobs that were pruned from the database
+  * `:pruned_count` - the number of jobs that were pruned from the database
   """
 
   use GenServer

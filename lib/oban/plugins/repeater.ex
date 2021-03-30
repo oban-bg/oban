@@ -15,12 +15,18 @@ defmodule Oban.Plugins.Repeater do
 
   use GenServer
 
+  alias Oban.Config
+
+  @type option :: {:conf, Config.t()} | {:name, GenServer.name()} | {:interval, pos_integer()}
+
   defmodule State do
     @moduledoc false
 
-    defstruct [:conf, :name, :timer, interval: 1_000]
+    defstruct [:conf, :name, :timer, interval: :timer.seconds(1)]
   end
 
+  @doc false
+  @spec start_link([option()]) :: GenServer.on_start()
   def start_link(opts) do
     GenServer.start_link(__MODULE__, opts, name: opts[:name])
   end
