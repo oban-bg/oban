@@ -181,32 +181,9 @@ defmodule Oban do
 
     children = children ++ Enum.map(plugins, &plugin_child_spec(&1, conf))
     children = children ++ Enum.map(queues, &QueueSupervisor.child_spec(&1, conf))
-
-    execute_init(conf)
+    children = children ++ [event_child_spec(conf)]
 
     Supervisor.init(children, strategy: :one_for_one)
-  end
-
-  defp plugin_child_spec({module, opts}, conf) do
-    name = Registry.via(conf.name, {:plugin, module})
-
-    opts =
-      opts
-      |> Keyword.put_new(:conf, conf)
-      |> Keyword.put_new(:name, name)
-
-    Supervisor.child_spec({module, opts}, id: {:plugin, module})
-  end
-
-  defp plugin_child_spec(module, conf) do
-    plugin_child_spec({module, []}, conf)
-  end
-
-  defp execute_init(conf) do
-    measurements = %{system_time: System.system_time()}
-    metadata = %{pid: self(), conf: conf}
-
-    Telemetry.execute([:oban, :supervisor, :init], measurements, metadata)
   end
 
   @doc """
@@ -693,6 +670,34 @@ defmodule Oban do
     Notifier.notify(conf, :signal, %{action: :pkill, job_id: job_id})
   end
 
+  ## Child Spec Helpers
+
+  defp plugin_child_spec({module, opts}, conf) do
+    name = Registry.via(conf.name, {:plugin, module})
+
+    opts =
+      opts
+      |> Keyword.put_new(:conf, conf)
+      |> Keyword.put_new(:name, name)
+
+    Supervisor.child_spec({module, opts}, id: {:plugin, module})
+  end
+
+  defp plugin_child_spec(module, conf) do
+    plugin_child_spec({module, []}, conf)
+  end
+
+  defp event_child_spec(conf) do
+    time = %{system_time: System.system_time()}
+    meta = %{pid: self(), conf: conf}
+
+    init_task = fn -> Telemetry.execute([:oban, :supervisor, :init], time, meta) end
+
+    Supervisor.child_spec({Task, init_task}, restart: :temporary)
+  end
+
+  ## Signal Helper
+
   defp scope_signal(conf, opts) do
     if Keyword.get(opts, :local_only) do
       Config.to_ident(conf)
@@ -700,6 +705,8 @@ defmodule Oban do
       :any
     end
   end
+
+  ## Validation Helpers
 
   defp validate_queue_opt!({:queue, queue}) do
     unless (is_atom(queue) and not is_nil(queue)) or (is_binary(queue) and byte_size(queue) > 0) do
