@@ -134,16 +134,36 @@ defmodule Oban.Notifier do
   @spec listen(GenServer.server(), channels :: list(channel())) :: :ok
   def listen(server \\ Oban, channels)
 
-  def listen(pid, channels) when is_pid(pid) and is_list(channels) do
+  def listen(pid, [_ | _] = channels) when is_pid(pid) do
     :ok = validate_channels!(channels)
 
     GenServer.call(pid, {:listen, channels})
   end
 
-  def listen(oban_name, channels) when is_list(channels) do
+  def listen(oban_name, [_ | _] = channels) do
     oban_name
     |> Registry.whereis(__MODULE__)
     |> listen(channels)
+  end
+
+  @doc """
+  Unregister the current process from receiving relayed messages on provided channels.
+
+  ## Example
+
+  Stop listening for messages on the `:gossip` channel:
+
+      Oban.Notifier.unlisten([:gossip])
+
+  Stop listening for messages when using a custom Oban name:
+
+      Oban.Notifier.unlisten(MyApp.Oban, [:gossip, :signal])
+  """
+  @spec unlisten(GenServer.server(), channels :: list(channel())) :: :ok
+  def unlisten(oban_name \\ Oban, [_ | _] = channels) do
+    oban_name
+    |> Registry.whereis(__MODULE__)
+    |> GenServer.call({:unlisten, channels})
   end
 
   @doc """
@@ -159,12 +179,19 @@ defmodule Oban.Notifier do
 
       Oban.Notifier.notify(Oban.config(), :gossip, %{message: "hi!"})
   """
-  @spec notify(Config.t(), channel :: channel(), payload :: map()) :: :ok
+  @spec notify(Config.t(), channel :: channel(), payload :: map() | [map()]) :: :ok
   def notify(%Config{} = conf, channel, %{} = payload) when is_channel(channel) do
-    channel = "#{conf.prefix}.#{@mappings[channel]}"
-    payload = Jason.encode!(payload)
+    notify(conf, channel, [payload])
+  end
 
-    {:ok, _} = Repo.query(conf, "SELECT pg_notify($1, $2)", [channel, payload])
+  def notify(%Config{} = conf, channel, [_ | _] = payload) when is_channel(channel) do
+    channel = "#{conf.prefix}.#{@mappings[channel]}"
+
+    Repo.query(
+      conf,
+      "SELECT pg_notify($1, payload) FROM json_array_elements_text($2::json) AS payload",
+      [channel, Enum.map(payload, &Jason.encode!/1)]
+    )
 
     :ok
   end
@@ -230,13 +257,28 @@ defmodule Oban.Notifier do
     else
       Process.monitor(pid)
 
-      full_channels =
-        @mappings
-        |> Map.take(channels)
-        |> Map.values()
+      full_channels = to_full_channels(channels)
 
       {:reply, :ok, %{state | listeners: Map.put(listeners, pid, full_channels)}}
     end
+  end
+
+  def handle_call({:unlisten, channels}, {pid, _}, %State{listeners: listeners} = state) do
+    orig_channels = Map.get(listeners, pid, [])
+
+    listeners =
+      case orig_channels -- to_full_channels(channels) do
+        [] -> Map.delete(listeners, pid)
+        new_channels -> Map.put(listeners, pid, new_channels)
+      end
+
+    {:reply, :ok, %{state | listeners: listeners}}
+  end
+
+  defp to_full_channels(channels) do
+    @mappings
+    |> Map.take(channels)
+    |> Map.values()
   end
 
   # Helpers
