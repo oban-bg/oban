@@ -1,6 +1,5 @@
 defmodule BenchHelper do
   def reset_db do
-    Oban.Test.Repo.query!("TRUNCATE oban_beats", [], log: false)
     Oban.Test.Repo.query!("TRUNCATE oban_jobs", [], log: false)
   end
 

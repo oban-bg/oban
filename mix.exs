@@ -16,6 +16,7 @@ defmodule Oban.MixProject do
       preferred_cli_env: [
         bench: :test,
         "test.ci": :test,
+        "test.reset": :test,
         "test.setup": :test
       ],
 
@@ -86,6 +87,7 @@ defmodule Oban.MixProject do
         "../oban_pro/guides/plugins/lifeline.md": [title: "Lifeline Plugin"],
         "../oban_pro/guides/plugins/dynamic_cron.md": [title: "Dynamic Cron Plugin"],
         "../oban_pro/guides/plugins/dynamic_pruner.md": [title: "Dynamic Pruner Plugin"],
+        "../oban_pro/guides/plugins/relay.md": [title: "Relay Plugin"],
         "../oban_pro/guides/plugins/reprioritizer.md": [title: "Reprioritizer Plugin"],
         "../oban_pro/guides/workers/batch.md": [title: "Batch Worker"],
         "../oban_pro/guides/workers/workflow.md": [title: "Workflow Worker"],
@@ -170,6 +172,7 @@ defmodule Oban.MixProject do
   defp aliases do
     [
       bench: "run bench/bench_helper.exs",
+      "test.reset": ["ecto.drop", "test.setup"],
       "test.setup": ["ecto.create", "ecto.migrate"],
       "test.ci": [
         "format --check-formatted",

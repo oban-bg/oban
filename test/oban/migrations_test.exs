@@ -48,21 +48,18 @@ defmodule Oban.MigrationsTest do
     end
 
     assert table_exists?("oban_jobs")
-    assert table_exists?("oban_beats")
     assert migrated_version() == current_version()
 
     Application.put_env(:oban, :down_version, 2)
     assert :ok = Ecto.Migrator.down(Repo, @base_version + 2, StepMigration)
 
     assert table_exists?("oban_jobs")
-    refute table_exists?("oban_beats")
     assert migrated_version() == 1
 
     Application.put_env(:oban, :down_version, 1)
     assert :ok = Ecto.Migrator.down(Repo, @base_version + 1, StepMigration)
 
     refute table_exists?("oban_jobs")
-    refute table_exists?("oban_beats")
   after
     clear_migrated()
   end
@@ -71,7 +68,6 @@ defmodule Oban.MigrationsTest do
     assert :ok = Ecto.Migrator.up(Repo, @base_version, DefaultMigration)
 
     assert table_exists?("oban_jobs")
-    assert table_exists?("oban_beats")
     assert migrated_version() == current_version()
 
     # Migrating once more to replicate multiple migrations that don't specify a version.
@@ -80,7 +76,6 @@ defmodule Oban.MigrationsTest do
     assert :ok = Ecto.Migrator.down(Repo, @base_version + 1, DefaultMigration)
 
     refute table_exists?("oban_jobs")
-    refute table_exists?("oban_beats")
 
     # Migrating once more to replicate multiple migrations that don't specify a version.
     assert :ok = Ecto.Migrator.down(Repo, @base_version, DefaultMigration)

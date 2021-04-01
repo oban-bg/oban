@@ -3,11 +3,11 @@ defmodule Oban.Migrations.V06 do
 
   use Ecto.Migration
 
-  def up(prefix) do
-    execute "ALTER TABLE #{prefix}.oban_beats ALTER COLUMN running TYPE bigint[]"
+  def up(_prefix) do
+    # This used to modify oban_beats, which aren't included anymore
   end
 
-  def down(prefix) do
-    execute "ALTER TABLE #{prefix}.oban_beats ALTER COLUMN running TYPE integer[]"
+  def down(_prefix) do
+    # This used to modify oban_beats, which aren't included anymore
   end
 end
