@@ -6,7 +6,7 @@ dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:oban, "~> 2.6.0"}
+    {:oban, "~> 2.6.1"}
   ]
 end
 ```

@@ -2,6 +2,13 @@
 
 All notable changes to `Oban` are documented here.
 
+## [2.6.1] — 2021-04-02
+
+### Fixes
+
+- [Oban.Drainer] Always use the `BasicEngine` for draining, regardless of the
+  currently configured engine.
+
 ## [2.6.0] — 2021-04-02
 
 _🌟 Web and Pro users should check the [v2.6 upgrade guide][v26ug] for a
