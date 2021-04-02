@@ -9,6 +9,8 @@ defmodule Oban.Queue.Drainer do
   @infinite 100_000_000
 
   def drain(%Config{} = conf, [_ | _] = opts) do
+    conf = %{conf | engine: BasicEngine}
+
     args =
       opts
       |> Keyword.put_new(:with_recursion, false)
@@ -30,8 +32,8 @@ defmodule Oban.Queue.Drainer do
   end
 
   defp fetch_available(conf, queue) do
-    {:ok, meta} = BasicEngine.init(conf, queue: queue, limit: @infinite)
-    {:ok, {_meta, jobs}} = BasicEngine.fetch_jobs(conf, meta, %{})
+    {:ok, meta} = conf.engine.init(conf, queue: queue, limit: @infinite)
+    {:ok, {_meta, jobs}} = conf.engine.fetch_jobs(conf, meta, %{})
 
     jobs
   end
