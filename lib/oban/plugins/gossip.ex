@@ -97,7 +97,6 @@ defmodule Oban.Plugins.Gossip do
     _exit -> nil
   end
 
-  defp sanitize_name(%{name: name} = check) do
-    %{check | name: inspect(name)}
-  end
+  defp sanitize_name(%{name: name} = check) when is_binary(name), do: check
+  defp sanitize_name(%{name: name} = check), do: %{check | name: inspect(name)}
 end
