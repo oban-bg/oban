@@ -2,7 +2,7 @@ defmodule Oban.MixProject do
   use Mix.Project
 
   @source_url "https://github.com/sorentwo/oban"
-  @version "2.5.0"
+  @version "2.6.0"
 
   def project do
     [
@@ -69,6 +69,7 @@ defmodule Oban.MixProject do
       "guides/release_configuration.md",
       "guides/writing_plugins.md",
       "guides/upgrading/v2.0.md",
+      "guides/upgrading/v2.6.md",
 
       # Recipes
       "guides/recipes/recursive-jobs.md",
@@ -84,12 +85,14 @@ defmodule Oban.MixProject do
       [
         "../oban_pro/guides/pro/overview.md": [filename: "pro_overview"],
         "../oban_pro/guides/pro/installation.md": [filename: "pro_installation"],
-        "../oban_pro/guides/plugins/lifeline.md": [title: "Lifeline Plugin"],
+        "../oban_pro/guides/queue/smart_engine.md": [title: "Smart Engine"],
         "../oban_pro/guides/plugins/dynamic_cron.md": [title: "Dynamic Cron Plugin"],
         "../oban_pro/guides/plugins/dynamic_pruner.md": [title: "Dynamic Pruner Plugin"],
+        "../oban_pro/guides/plugins/lifeline.md": [title: "Lifeline Plugin"],
         "../oban_pro/guides/plugins/relay.md": [title: "Relay Plugin"],
         "../oban_pro/guides/plugins/reprioritizer.md": [title: "Reprioritizer Plugin"],
         "../oban_pro/guides/workers/batch.md": [title: "Batch Worker"],
+        "../oban_pro/guides/workers/chunk.md": [title: "Chunk Worker"],
         "../oban_pro/guides/workers/workflow.md": [title: "Workflow Worker"],
         "../oban_pro/CHANGELOG.md": [filename: "pro-changelog", title: "Changelog"]
       ]

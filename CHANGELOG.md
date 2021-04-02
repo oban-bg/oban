@@ -1,6 +1,76 @@
 # Changelog
 
-All notable changes to `Oban` are documented in this file.
+All notable changes to `Oban` are documented here.
+
+## [2.6.0] — 2021-04-02
+
+_🌟 Web and Pro users should check the [v2.6 upgrade guide][v26ug] for a
+complete walkthrough._
+
+### Pluggable Queue Engines
+
+Queue producers now use an "engine" callback module to manage demand and work
+with the database. The engine provides a clean way to expand and enhance the
+functionality of queue producers without modifying the solid foundation of queue
+supervision trees. Engines make enhanced functionality such as global
+concurrency, local rate limiting and global rate limiting possible!
+
+The `BasicEngine` is the default, and it retains the _exact_ functionality of
+previous Oban versions. To specify the engine explicitly, or swap in an
+alternate engine, set it in your configuration:
+
+```elixir
+config :my_app, Oban,
+  engine: Oban.Queue.BasicEngine,
+  ...
+```
+
+See the [v2.6 upgrade guide][v26ug] for instructions on swapping in an alternate
+engine.
+
+### Recursive Queue Draining
+
+The ever-handy `Oban.drain_queue/1,2` function gained a new `with_recursion`
+option, which makes it possible to test jobs that _insert more jobs_ when they
+execute. When `with_recursion` is enabled the queue will keep executing until no
+jobs are available. It even composes with `with_scheduled`!
+
+In practice, this is especially useful for testing dependent workflows.
+
+### Gossip Plugin for Queue Monitoring
+
+The new gossip plugin uses PubSub to efficiently exchange queue state
+information between all interested nodes. This allows Oban instances to
+broadcast state information regardless of which engine they are using, and
+without storing anything in the database.
+
+See the [v2.6 upgrade guide][v26ug] for details on switching to the gossip
+plugin.
+
+[v26ug]: v2-6.html
+
+### Added
+
+- [Oban.Job] Inject the current conf into the jobs struct as virtual field,
+  making the complete conf available within `perform/1`.
+
+- [Oban.Notifier] Add `unlisten/2`, used to stop a process from receiving
+  notifications for one or more channels.
+
+### Changed
+
+- [Oban.Telemetry] Stop emitting circuit events for queue producers. As
+  producers no longer poll, the circuit breaker masked real errors more than it
+  guarded against sporatic issues.
+
+- [Oban.Telemetry] Delay `[:oban, :supervisor, :init]` event until the complete
+  supervision tree finishes initialization.
+
+- [Oban.Migration] Stop creating an `oban_beats` table entirely.
+
+### Fixed
+
+- [Oban.Plugins.Cron] Prevent schedule overflow right before midnight
 
 ## [2.5.0] — 2021-02-26
 
@@ -755,7 +825,8 @@ No changes from [2.0.0-rc.3][].
 
 For changes prior to 2.0 see the [1.2 branch][1.2]
 
-[Unreleased]: https://github.com/sorentwo/oban/compare/v2.5.0...HEAD
+[Unreleased]: https://github.com/sorentwo/oban/compare/v2.6.0...HEAD
+[2.6.0]: https://github.com/sorentwo/oban/compare/v2.5.0...v2.6.0
 [2.5.0]: https://github.com/sorentwo/oban/compare/v2.4.3...v2.5.0
 [2.4.3]: https://github.com/sorentwo/oban/compare/v2.4.2...v2.4.3
 [2.4.2]: https://github.com/sorentwo/oban/compare/v2.4.1...v2.4.2
