@@ -139,7 +139,7 @@ defmodule Oban.Queue.Executor do
 
         Engine.error_job(exec.conf, job, backoff(exec.worker, job))
 
-        execute_exception(exec)
+        execute_exception(%{exec | job: job})
 
       :snoozed ->
         Engine.snooze_job(exec.conf, exec.job, exec.snooze)
@@ -147,9 +147,11 @@ defmodule Oban.Queue.Executor do
         execute_stop(exec)
 
       :discard ->
-        Engine.discard_job(exec.conf, job_with_unsaved_error(exec))
+        job = job_with_unsaved_error(exec)
 
-        execute_stop(exec)
+        Engine.discard_job(exec.conf, job)
+
+        execute_stop(%{exec | job: job})
     end
 
     exec
@@ -232,9 +234,11 @@ defmodule Oban.Queue.Executor do
     measurements = %{duration: exec.duration, queue_time: exec.queue_time}
 
     meta =
-      exec.meta
-      |> Map.put(:state, exec.state)
-      |> Map.put(:result, exec.result)
+      Map.merge(exec.meta, %{
+        job: exec.job,
+        state: exec.state,
+        result: exec.result
+      })
 
     Telemetry.execute([:oban, :job, :stop], measurements, meta)
   end
@@ -244,6 +248,7 @@ defmodule Oban.Queue.Executor do
 
     meta =
       Map.merge(exec.meta, %{
+        job: exec.job,
         kind: exec.kind,
         error: exec.error,
         stacktrace: exec.stacktrace,
@@ -257,14 +262,12 @@ defmodule Oban.Queue.Executor do
     job
     |> Map.take([:id, :args, :queue, :worker, :attempt, :max_attempts, :tags])
     |> Map.put(:conf, conf)
-    |> Map.put(:job, job)
     |> Map.put(:prefix, conf.prefix)
   end
 
   defp job_with_unsaved_error(%__MODULE__{} = exec) do
-    %{
-      exec.job
-      | unsaved_error: %{kind: exec.kind, reason: exec.error, stacktrace: exec.stacktrace}
-    }
+    unsaved_error = %{kind: exec.kind, reason: exec.error, stacktrace: exec.stacktrace}
+
+    %{exec.job | unsaved_error: unsaved_error}
   end
 end

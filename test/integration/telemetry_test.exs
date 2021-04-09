@@ -61,6 +61,9 @@ defmodule Oban.Integration.TelemetryTest do
     assert %{conf: %Config{name: ^name}, job: %Job{id: ^stop_id}, result: :ok} = stop_meta
     assert %{conf: %Config{name: ^name}, job: %Job{id: ^error_id}} = error_meta
 
+    assert %{job: %Job{unsaved_error: unsaved}} = error_meta
+    assert %{kind: :error, reason: %PerformError{}, stacktrace: []} = unsaved
+
     # Deprecated Meta
 
     assert %{
