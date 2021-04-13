@@ -285,10 +285,8 @@ queues: [
 ]
 ```
 
-Here we've declared the `mailers` with the same limit as above, but it will only
-poll to deschedule jobs every 30 seconds. The `events` queue will start in a
-paused state, which means it won't process anything until `Oban.resume_queue/2`
-is called to start it.
+The `events` queue will now start in a paused state, which means it won't
+process anything until `Oban.resume_queue/2` is called to start it.
 
 There isn't a limit to the number of queues or how many jobs may execute
 concurrently in each queue. Some additional guidelines:
