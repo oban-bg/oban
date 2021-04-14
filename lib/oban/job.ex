@@ -44,6 +44,7 @@ defmodule Oban.Job do
           | {:queue, atom() | binary()}
           | {:schedule_in, pos_integer()}
           | {:replace_args, boolean()}
+          | {:replace_scheduled_at, boolean()}
           | {:scheduled_at, DateTime.t()}
           | {:tags, tags()}
           | {:unique, [unique_option()]}
@@ -99,6 +100,7 @@ defmodule Oban.Job do
 
     field :conf, :map, virtual: true
     field :replace_args, :boolean, virtual: true
+    field :replace_scheduled_at, :boolean, virtual: true
     field :unique, :map, virtual: true
     field :unsaved_error, :map, virtual: true
   end
@@ -119,6 +121,7 @@ defmodule Oban.Job do
     queue
     scheduled_at
     replace_args
+    replace_scheduled_at
     state
     tags
     worker
@@ -140,6 +143,7 @@ defmodule Oban.Job do
       of whether jobs are currently being processed for the queue.
     * `:schedule_in` - the number of seconds until the job should be executed
     * `:replace_args` - if the arguments should be replaced on a unique conflict
+    * `:replace_scheduled_at` - if the scheduled time to execute the job should be replaced on a unique conflict
     * `:scheduled_at` - a time in the future after which the job should be executed
     * `:tags` — a list of tags to group and organize related jobs, i.e. to identify scheduled jobs
     * `:unique` — a keyword list of options specifying how uniqueness will be calculated. The
