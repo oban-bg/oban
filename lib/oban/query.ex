@@ -131,23 +131,16 @@ defmodule Oban.Query do
   end
 
   defp return_or_replace(conf, query_opts, job, changeset) do
-    replace_keys =
-      %{replace_args: :args, replace_scheduled_at: :scheduled_at}
-      |> Enum.map(fn {key, replace_key} ->
-        if Changeset.get_change(changeset, key) do
-          replace_key
-        end
-      end)
-      |> Enum.reject(&is_nil/1)
+    case Changeset.get_change(changeset, :replace, []) do
+      [] ->
+        {:ok, job}
 
-    if Enum.empty?(replace_keys) do
-      {:ok, job}
-    else
-      Repo.update(
-        conf,
-        Ecto.Changeset.change(job, Map.take(changeset.changes, replace_keys)),
-        query_opts
-      )
+      replace_keys ->
+        Repo.update(
+          conf,
+          Ecto.Changeset.change(job, Map.take(changeset.changes, replace_keys)),
+          query_opts
+        )
     end
   end
 

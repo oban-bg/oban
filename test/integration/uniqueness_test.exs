@@ -109,20 +109,37 @@ defmodule Oban.Integration.UniquenessTest do
              )
   end
 
-  test "replace allows replacing the schedule for the same job id", context do
+  test "replace allows replacing job data for the same job id", context do
     now = DateTime.utc_now()
     in_one_minute = DateTime.add(now, 60, :second)
     in_two_minutes = DateTime.add(now, 120, :second)
 
-    assert %Job{id: id_1} = unique_insert!(context.name, %{id: 1}, scheduled_at: in_one_minute)
+    assert %Job{id: id_1} =
+             unique_insert!(
+               context.name,
+               %{id: 1},
+               scheduled_at: in_one_minute,
+               tags: ["a"],
+               priority: 3,
+               max_attempts: 1
+             )
 
-    assert %Job{id: ^id_1, scheduled_at: ^in_two_minutes} =
+    assert %Job{
+             id: ^id_1,
+             scheduled_at: ^in_two_minutes,
+             tags: ["b"],
+             priority: 2,
+             max_attempts: 1
+           } =
              unique_insert!(
                context.name,
                %{id: 1},
                unique: [keys: [:id]],
                scheduled_at: in_two_minutes,
-               replace_scheduled_at: true
+               tags: ["b"],
+               priority: 2,
+               max_attempts: 3,
+               replace: [:scheduled_at, :tags, :priority]
              )
   end
 
