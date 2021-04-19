@@ -36,6 +36,17 @@ defmodule Oban.Job do
           | {:period, unique_period()}
           | {:states, [unique_state()]}
 
+  @type replace_option :: [
+          :args
+          | :max_attempts
+          | :meta
+          | :priority
+          | :queue
+          | :scheduled_at
+          | :tags
+          | :worker
+        ]
+
   @type option ::
           {:args, args()}
           | {:max_attempts, pos_integer()}
@@ -44,6 +55,7 @@ defmodule Oban.Job do
           | {:queue, atom() | binary()}
           | {:schedule_in, pos_integer()}
           | {:replace_args, boolean()}
+          | {:replace, [replace_option()]}
           | {:scheduled_at, DateTime.t()}
           | {:tags, tags()}
           | {:unique, [unique_option()]}
@@ -98,7 +110,7 @@ defmodule Oban.Job do
     field :scheduled_at, :utc_datetime_usec
 
     field :conf, :map, virtual: true
-    field :replace_args, :boolean, virtual: true
+    field :replace, {:array, :any}, virtual: true
     field :unique, :map, virtual: true
     field :unsaved_error, :map, virtual: true
   end
@@ -118,13 +130,15 @@ defmodule Oban.Job do
     priority
     queue
     scheduled_at
-    replace_args
+    replace
     state
     tags
     worker
   )a
 
   @required_params ~w(worker args)a
+
+  @replace_options ~w(args max_attempts meta priority queue scheduled_at tags worker)a
 
   @doc """
   Construct a new job changeset ready for insertion into the database.
@@ -140,6 +154,7 @@ defmodule Oban.Job do
       of whether jobs are currently being processed for the queue.
     * `:schedule_in` - the number of seconds until the job should be executed
     * `:replace_args` - if the arguments should be replaced on a unique conflict
+    * `:replace` - a list of keys to replace on a unique conflict
     * `:scheduled_at` - a time in the future after which the job should be executed
     * `:tags` — a list of tags to group and organize related jobs, i.e. to identify scheduled jobs
     * `:unique` — a keyword list of options specifying how uniqueness will be calculated. The
@@ -200,6 +215,8 @@ defmodule Oban.Job do
     |> validate_required(@required_params)
     |> put_scheduling(params[:schedule_in])
     |> put_uniqueness(params[:unique])
+    |> put_replace(params[:replace_args])
+    |> validate_subset(:replace, @replace_options)
     |> put_state()
     |> validate_length(:queue, min: 1, max: 128)
     |> validate_length(:worker, min: 1, max: 128)
@@ -318,6 +335,23 @@ defmodule Oban.Job do
 
       _ ->
         add_error(changeset, :unique, "invalid unique options")
+    end
+  end
+
+  defp put_replace(changeset, value) do
+    case value do
+      true ->
+        replace = get_change(changeset, :replace, [])
+        put_change(changeset, :replace, [:args | replace])
+
+      false ->
+        update_change(changeset, :replace, &(&1 -- [:args]))
+
+      nil ->
+        changeset
+
+      _ ->
+        add_error(changeset, :replace_args, "invalid value")
     end
   end
 

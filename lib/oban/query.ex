@@ -131,14 +131,16 @@ defmodule Oban.Query do
   end
 
   defp return_or_replace(conf, query_opts, job, changeset) do
-    if Changeset.get_change(changeset, :replace_args) do
-      Repo.update(
-        conf,
-        Ecto.Changeset.change(job, %{args: changeset.changes.args}),
-        query_opts
-      )
-    else
-      {:ok, job}
+    case Changeset.get_change(changeset, :replace, []) do
+      [] ->
+        {:ok, job}
+
+      replace_keys ->
+        Repo.update(
+          conf,
+          Ecto.Changeset.change(job, Map.take(changeset.changes, replace_keys)),
+          query_opts
+        )
     end
   end
 
