@@ -60,9 +60,9 @@ passing in the worker module and the attempt number:
 defmodule MyApp.ErrorReporter do
   alias MyApp.Reportable
 
-  def handle_event(_, _, %{attempt: attempt, worker: worker} = meta, _) do
-    if Reportable.reportable?(worker, attempt) do
-      context = Map.take(meta, [:id, :args, :queue, :worker])
+  def handle_event(_, _, meta, _) do
+    if Reportable.reportable?(meta.job.worker, meta.job.attempt) do
+      context = Map.take(meta.job, [:id, :args, :queue, :worker])
 
       Honeybadger.notify(meta.error, context, meta.stacktrace)
     end
@@ -102,9 +102,6 @@ Elixir's powerful primitives of behaviours, protocols and event handling make
 flexible error reporting seamless and extensible. While our `Reportable`
 protocol only considered the number of attempts, this same mechanism is suitable
 for filtering by any other `meta` value.
-
-Explore the [event metadata][meta] that Oban provides for job failures to see
-how you can configure reporting by by worker, queue, or even specific arguments.
 
 [tele]: https://github.com/beam-telemetry/telemetry
 [hb]: https://www.honeybadger.io/
