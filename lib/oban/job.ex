@@ -340,17 +340,12 @@ defmodule Oban.Job do
 
   defp put_replace(changeset, value) do
     case value do
-      replace_args when is_boolean(replace_args) ->
+      true ->
         replace = get_change(changeset, :replace, [])
+        put_change(changeset, :replace, [:args | replace])
 
-        updated =
-          if replace_args do
-            [:args | replace]
-          else
-            Enum.reject(replace, &(&1 == :args))
-          end
-
-        put_change(changeset, :replace, updated)
+      false ->
+        update_change(changeset, :replace, &(&1 -- [:args]))
 
       nil ->
         changeset
