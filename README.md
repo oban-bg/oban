@@ -1044,7 +1044,7 @@ the database and run all migrations:
 mix test.setup
 ```
 
-To ensure a commit passes CI you should run `mix ci` locally, which executes the
+To ensure a commit passes CI you should run `mix test.ci` locally, which executes the
 following commands:
 
 * Check formatting (`mix format --check-formatted`)
