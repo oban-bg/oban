@@ -58,6 +58,13 @@ defmodule Oban.Queue.Engine do
   """
   @callback snooze_job(conf(), Job.t(), seconds()) :: :ok
 
+  @doc """
+  Mark an `executing`, `available`, `scheduled` or `retryable` job and mark it as `cancelled` to
+  prevent it from running again. If the job is currently `executing` it will be killed and
+  otherwise it is ignored.
+  """
+  @callback cancel_job(conf(), Job.t()) :: :ok
+
   @doc false
   def init(%Config{} = conf, [_ | _] = opts) do
     conf.engine.init(conf, opts)
@@ -101,5 +108,10 @@ defmodule Oban.Queue.Engine do
   @doc false
   def snooze_job(%Config{} = conf, %Job{} = job, seconds) when is_integer(seconds) do
     conf.engine.snooze_job(conf, job, seconds)
+  end
+
+  @doc false
+  def cancel_job(%Config{} = conf, %Job{} = job) do
+    conf.engine.cancel_job(conf, job)
   end
 end

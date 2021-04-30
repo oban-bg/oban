@@ -12,7 +12,7 @@ defmodule Oban do
 
   alias Ecto.{Changeset, Multi}
   alias Oban.{Config, Job, Midwife, Notifier, Query, Registry, Telemetry}
-  alias Oban.Queue.{Drainer, Producer}
+  alias Oban.Queue.{Drainer, Engine, Producer}
   alias Oban.Queue.Supervisor, as: QueueSupervisor
 
   @type name :: term
@@ -648,10 +648,11 @@ defmodule Oban do
   end
 
   @doc """
-  Cancel an `available`, `scheduled` or `retryable` job and mark it as `discarded` to prevent it
-  from running. If the job is currently `executing` it will be killed and otherwise it is ignored.
+  Cancel an `executing`, `available`, `scheduled` or `retryable` job and mark it as `cancelled` to
+  prevent it from running. If the job is currently `executing` it will be killed and otherwise it
+  is ignored.
 
-  If an executing job happens to fail before it can be cancelled the state is set to `discarded`.
+  If an executing job happens to fail before it can be cancelled the state is set to `cancelled`.
   However, if it manages to complete successfully then the state will still be `completed`.
 
   ## Example
@@ -666,7 +667,7 @@ defmodule Oban do
   def cancel_job(name \\ __MODULE__, job_id) when is_integer(job_id) do
     conf = config(name)
 
-    Query.cancel_job(conf, job_id)
+    Engine.cancel_job(conf, %Job{id: job_id})
     Notifier.notify(conf, :signal, %{action: :pkill, job_id: job_id})
   end
 

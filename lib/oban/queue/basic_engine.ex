@@ -139,6 +139,20 @@ defmodule Oban.Queue.BasicEngine do
     :ok
   end
 
+  @impl true
+  def cancel_job(%Config{} = conf, %Job{id: id}) do
+    query =
+      Job
+      |> where([j], j.id == ^id)
+      |> where([j], j.state not in ["completed", "discarded", "cancelled"])
+
+    updates = [set: [state: "cancelled", cancelled_at: utc_now()]]
+
+    Repo.update_all(conf, query, updates)
+
+    :ok
+  end
+
   # Helpers
 
   defp seconds_from_now(seconds), do: DateTime.add(utc_now(), seconds, :second)
