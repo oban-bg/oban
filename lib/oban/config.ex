@@ -10,6 +10,7 @@ defmodule Oban.Config do
           circuit_backoff: timeout(),
           dispatch_cooldown: pos_integer(),
           engine: module(),
+          notifier: module(),
           name: Oban.name(),
           node: binary(),
           plugins: [module() | {module() | Keyword.t()}],
@@ -27,6 +28,7 @@ defmodule Oban.Config do
   defstruct circuit_backoff: :timer.seconds(30),
             dispatch_cooldown: 5,
             engine: Oban.Queue.BasicEngine,
+            notifier: Oban.PostgresNotifier,
             name: Oban,
             node: nil,
             plugins: [],
@@ -144,6 +146,13 @@ defmodule Oban.Config do
     unless Code.ensure_loaded?(engine) and function_exported?(engine, :init, 2) do
       raise ArgumentError,
             "expected :engine to be an Oban.Queue.Engine, got: #{inspect(engine)}"
+    end
+  end
+
+  defp validate_opt!({:notifier, notifier}) do
+    unless Code.ensure_loaded?(notifier) and function_exported?(notifier, :init, 2) do
+      raise ArgumentError,
+            "expected :notifier to be an Oban.Queue.Notifier, got: #{inspect(notifier)}"
     end
   end
 
