@@ -47,7 +47,7 @@ defmodule Oban.Queue.Producer do
 
     state = struct!(State, base_opts)
 
-    :ok = Notifier.listen(state.conf, state.conf.name, [:insert, :signal])
+    :ok = Notifier.listen(state.conf.name, [:insert, :signal])
 
     {:ok, state, {:continue, {:start, meta_opts}}}
   end

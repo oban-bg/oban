@@ -15,7 +15,7 @@ defmodule Oban.Plugins.GossipTest do
         queues: [alpha: 2, omega: 3]
       )
 
-    :ok = Notifier.listen(%Oban.Config{node: node(), repo: nil}, name, [:gossip])
+    :ok = Notifier.listen(name, [:gossip])
 
     assert_receive {:notification, :gossip, %{"queue" => "alpha", "limit" => 2}}
     assert_receive {:notification, :gossip, %{"queue" => "omega", "limit" => 3}}

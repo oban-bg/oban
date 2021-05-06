@@ -9,16 +9,8 @@ defmodule Oban.PostgresNotifier do
 
   import Oban.Breaker, only: [open_circuit: 1, trip_circuit: 3]
 
-  alias Oban.{Config, Registry, Repo}
+  alias Oban.{Config, Notifier, Repo}
   alias Postgrex.Notifications
-
-  @mappings %{
-    gossip: "oban_gossip",
-    insert: "oban_insert",
-    signal: "oban_signal"
-  }
-
-  @channels Map.keys(@mappings)
 
   defmodule State do
     @moduledoc false
@@ -34,8 +26,6 @@ defmodule Oban.PostgresNotifier do
     ]
   end
 
-  defguardp is_channel(channel) when channel in @channels
-
   @impl Oban.Notifier
   def start_link(opts) do
     name = Keyword.get(opts, :name, __MODULE__)
@@ -44,42 +34,28 @@ defmodule Oban.PostgresNotifier do
   end
 
   @impl Oban.Notifier
-  def listen(server \\ Oban, channels)
-
-  def listen(pid, [_ | _] = channels) when is_pid(pid) do
-    :ok = validate_channels!(channels)
-
-    GenServer.call(pid, {:listen, channels})
-  end
-
-  def listen(oban_name, [_ | _] = channels) do
-    oban_name
-    |> Registry.whereis(Oban.Notifier)
-    |> listen(channels)
+  def listen(server, channels) do
+    GenServer.call(server, {:listen, channels})
   end
 
   @impl Oban.Notifier
-  def unlisten(oban_name \\ Oban, [_ | _] = channels) do
-    oban_name
-    |> Registry.whereis(Oban.Notifier)
-    |> GenServer.call({:unlisten, channels})
+  def unlisten(server, channels) do
+    GenServer.call(server, {:unlisten, channels})
   end
 
   @impl Oban.Notifier
-  def notify(%Config{} = conf, channel, %{} = payload) when is_channel(channel) do
-    notify(conf, channel, [payload])
-  end
+  def notify(server, channel, payload) do
+    with %State{conf: conf} <- GenServer.call(server, :get_state) do
+      channel = "#{conf.prefix}.#{Notifier.mapping(channel)}"
 
-  def notify(%Config{} = conf, channel, [_ | _] = payload) when is_channel(channel) do
-    channel = "#{conf.prefix}.#{@mappings[channel]}"
+      Repo.query(
+        conf,
+        "SELECT pg_notify($1, payload) FROM json_array_elements_text($2::json) AS payload",
+        [channel, Enum.map(List.wrap(payload), &Jason.encode!/1)]
+      )
 
-    Repo.query(
-      conf,
-      "SELECT pg_notify($1, payload) FROM json_array_elements_text($2::json) AS payload",
-      [channel, Enum.map(payload, &Jason.encode!/1)]
-    )
-
-    :ok
+      :ok
+    end
   end
 
   @impl GenServer
@@ -161,21 +137,19 @@ defmodule Oban.PostgresNotifier do
     {:reply, :ok, %{state | listeners: listeners}}
   end
 
+  def handle_call(:get_state, _, state), do: {:reply, state, state}
+
   defp to_full_channels(channels) do
-    @mappings
+    Notifier.mappings()
     |> Map.take(channels)
     |> Map.values()
   end
 
   # Helpers
 
-  for {atom, name} <- @mappings do
+  for {atom, name} <- Notifier.mappings() do
     defp reverse_channel(unquote(name)), do: unquote(atom)
   end
-
-  defp validate_channels!([]), do: :ok
-  defp validate_channels!([head | tail]) when is_channel(head), do: validate_channels!(tail)
-  defp validate_channels!([head | _]), do: raise(ArgumentError, "unexpected channel: #{head}")
 
   defp any_listeners?(listeners, full_channel) do
     Enum.any?(listeners, fn {_pid, channels} -> full_channel in channels end)
@@ -188,7 +162,8 @@ defmodule Oban.PostgresNotifier do
   defp connect_and_listen(%State{conf: conf, conn: nil} = state) do
     case Notifications.start_link(Repo.config(conf)) do
       {:ok, conn} ->
-        for {_, full} <- @mappings, do: Notifications.listen(conn, "#{conf.prefix}.#{full}")
+        for {_, full} <- Notifier.mappings(),
+            do: Notifications.listen(conn, "#{conf.prefix}.#{full}")
 
         %{state | conn: conn}
 
