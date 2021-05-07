@@ -9,6 +9,9 @@ defmodule Oban.Plugins.Stager do
   * `:interval` - the number of milliseconds between database updates. This is directly tied to
     the resolution of _scheduled_ jobs. For example, with an `interval` of `5_000ms`, scheduled
     jobs are checked every 5 seconds. The default is `1_000ms`.
+  * `:limit` — the number of jobs that will be staged each time the plugin runs. Defaults to
+    `5,000`, which you can increase if staging can't keep up with your insertion rate or decrease
+    if you're experiencing staging timeouts.
 
   ## Instrumenting with Telemetry
 
@@ -19,7 +22,16 @@ defmodule Oban.Plugins.Stager do
 
   use GenServer
 
-  import Ecto.Query, only: [distinct: 2, from: 2, select: 2, subquery: 1, where: 3]
+  import Ecto.Query,
+    only: [
+      distinct: 2,
+      from: 2,
+      join: 5,
+      limit: 2,
+      select: 2,
+      subquery: 1,
+      where: 3
+    ]
 
   alias Oban.{Config, Job, Query, Repo}
 
@@ -32,6 +44,7 @@ defmodule Oban.Plugins.Stager do
       :conf,
       :name,
       :timer,
+      limit: 5_000,
       interval: :timer.seconds(1),
       lock_key: 1_149_979_440_242_868_003
     ]
@@ -84,28 +97,33 @@ defmodule Oban.Plugins.Stager do
 
   defp lock_and_stage(state) do
     Query.with_xact_lock(state.conf, state.lock_key, fn ->
-      {sched_count, nil} = stage_scheduled(state.conf)
+      {sched_count, nil} = stage_scheduled(state)
 
-      notify_queues(state.conf)
+      notify_queues(state)
 
       sched_count
     end)
   end
 
-  defp stage_scheduled(conf) do
-    query =
+  defp stage_scheduled(state) do
+    subquery =
       Job
       |> where([j], j.state in ["scheduled", "retryable"])
       |> where([j], not is_nil(j.queue))
       |> where([j], j.scheduled_at <= ^DateTime.utc_now())
+      |> limit(^state.limit)
 
-    Repo.update_all(conf, query, set: [state: "available"])
+    Repo.update_all(
+      state.conf,
+      join(Job, :inner, [j], x in subquery(subquery), on: j.id == x.id),
+      set: [state: "available"]
+    )
   end
 
   @pg_notify "pg_notify(?, json_build_object('queue', ?)::text)"
 
-  defp notify_queues(conf) do
-    channel = "#{conf.prefix}.oban_insert"
+  defp notify_queues(state) do
+    channel = "#{state.conf.prefix}.oban_insert"
 
     subquery =
       Job
@@ -116,7 +134,7 @@ defmodule Oban.Plugins.Stager do
 
     query = from job in subquery(subquery), select: fragment(@pg_notify, ^channel, job.queue)
 
-    Repo.all(conf, query)
+    Repo.all(state.conf, query)
 
     :ok
   end

@@ -29,6 +29,20 @@ defmodule Oban.Plugins.StagerTest do
     :telemetry.detach("plugin-stager-handler")
   end
 
+  test "limiting the number of jobs staged at one time" do
+    job_1 = insert!([ref: 1, action: "OK"], schedule_in: -60)
+    job_2 = insert!([ref: 2, action: "OK"], schedule_in: -60)
+    job_3 = insert!([ref: 3, action: "OK"], schedule_in: -60)
+
+    start_supervised_oban!(plugins: [{Stager, interval: 10, limit: 1}])
+
+    with_backoff(fn ->
+      assert %{state: "available"} = Repo.reload(job_1)
+      assert %{state: "scheduled"} = Repo.reload(job_2)
+      assert %{state: "scheduled"} = Repo.reload(job_3)
+    end)
+  end
+
   test "translating poll_interval config into plugin usage" do
     assert []
            |> start_supervised_oban!()
