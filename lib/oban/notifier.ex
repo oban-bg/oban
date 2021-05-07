@@ -56,9 +56,22 @@ defmodule Oban.Notifier do
     |> conf.notifier.unlisten(channels)
   end
 
-  @doc false
-  @spec notify(Config.t(), channel :: channel(), payload :: map() | [map()]) :: :ok
+  @doc """
+  Sends a notification to a channel
+
+  Using notify/3 with a config is soft deprecated. Use a server as the first
+  argument instead
+  """
+  @spec notify(Config.t() | server(), channel :: channel(), payload :: map() | [map()]) :: :ok
   def notify(%Config{} = conf, channel, payload) when is_channel(channel) do
+    conf.name
+    |> Registry.whereis(Oban.Notifier)
+    |> conf.notifier.notify(channel, payload)
+  end
+
+  def notify(server, channel, payload) when is_channel(channel) do
+    conf = Oban.config(server)
+
     conf.name
     |> Registry.whereis(Oban.Notifier)
     |> conf.notifier.notify(channel, payload)
