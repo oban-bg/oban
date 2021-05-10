@@ -200,7 +200,7 @@ defmodule Oban.Job do
       |> Oban.insert()
   """
   @doc since: "0.1.0"
-  @spec new(args(), [option]) :: Ecto.Changeset.t()
+  @spec new(args(), [option()]) :: changeset()
   def new(args, opts \\ []) when is_map(args) and is_list(opts) do
     params =
       opts
