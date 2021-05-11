@@ -62,9 +62,16 @@ defmodule Oban.Notifier do
   @type option :: {:name, module()} | {:conf, Config.t()}
   @type channel :: :gossip | :insert | :signal
 
+  @doc "Starts a notifier"
   @callback start_link([option]) :: GenServer.on_start()
+
+  @doc "Register current process to receive messages from some channels"
   @callback listen(server(), channels :: list(channel())) :: :ok
+
+  @doc "Unregister current process from channels"
   @callback unlisten(server(), channels :: list(channel())) :: :ok
+
+  @doc "Broadcast a notification in a channel"
   @callback notify(server(), channel :: channel(), payload :: map() | [map()]) :: :ok
 
   @mappings %{

@@ -1,6 +1,15 @@
 defmodule Oban.PostgresNotifier do
   @doc """
   Postgres Listen/Notify based Notifier
+
+  ## Caveats
+
+  The notifications system is built on PostgreSQL's `LISTEN/NOTIFY` functionality. Notifications
+  are only delivered **after a transaction completes** and are de-duplicated before publishing.
+  Most applications run Ecto in sandbox mode while testing. Sandbox mode wraps each test in a
+  separate transaction which is rolled back after the test completes. That means the transaction
+  is never committed, which prevents delivering any notifications.
+  To test using notifications you must run Ecto without sandbox mode enabled.
   """
 
   @behaviour Oban.Notifier
