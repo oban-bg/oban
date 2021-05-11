@@ -4,8 +4,9 @@ defmodule Oban.Notifier do
   channels.
 
   Every Oban supervision tree contains a notifier process, registered as `Oban.Notifier`, which
-  itself maintains a single connection with an app's database. All incoming notifications are
-  relayed through that connection to other processes.
+  can be any implementation of the `Oban.Notifier` behaviour. The default one is 
+  `Oban.PostgresNotifier`, which relies on Postgres `LISTEN/NOTIFY`. All incoming notifications
+  are relayed through the notifier to other processes.
 
   ## Channels
 
@@ -20,17 +21,6 @@ defmodule Oban.Notifier do
   The `insert` and `signal` channels are primarily for internal use. Use the `gossip` channel to
   send notifications between jobs or processes in your application.
 
-  ## Caveats
-
-  The notifications system is built on PostgreSQL's `LISTEN/NOTIFY` functionality. Notifications
-  are only delivered **after a transaction completes** and are de-duplicated before publishing.
-
-  Most applications run Ecto in sandbox mode while testing. Sandbox mode wraps each test in a
-  separate transaction which is rolled back after the test completes. That means the transaction
-  is never committed, which prevents delivering any notifications.
-
-  To test using notifications you must run Ecto without sandbox mode enabled.
-
   ## Examples
 
   Broadcasting after a job is completed:
@@ -42,7 +32,7 @@ defmodule Oban.Notifier do
         def perform(job) do
           :ok = MyApp.do_work(job.args)
 
-          Oban.Notifier.notify(Oban.config(), :gossip, %{complete: job.id})
+          Oban.Notifier.notify(Oban, :gossip, %{complete: job.id})
 
           :ok
         end
@@ -66,15 +56,23 @@ defmodule Oban.Notifier do
       end
   """
 
-  use GenServer
+  alias Oban.{Config, Registry}
 
-  import Oban.Breaker, only: [open_circuit: 1, trip_circuit: 3]
-
-  alias Oban.{Config, Registry, Repo}
-  alias Postgrex.Notifications
-
+  @type server :: GenServer.server()
   @type option :: {:name, module()} | {:conf, Config.t()}
   @type channel :: :gossip | :insert | :signal
+
+  @doc "Starts a notifier"
+  @callback start_link([option]) :: GenServer.on_start()
+
+  @doc "Register current process to receive messages from some channels"
+  @callback listen(server(), channels :: list(channel())) :: :ok
+
+  @doc "Unregister current process from channels"
+  @callback unlisten(server(), channels :: list(channel())) :: :ok
+
+  @doc "Broadcast a notification in a channel"
+  @callback notify(server(), channel :: channel(), payload :: map() | [map()]) :: :ok
 
   @mappings %{
     gossip: "oban_gossip",
@@ -84,28 +82,16 @@ defmodule Oban.Notifier do
 
   @channels Map.keys(@mappings)
 
-  defmodule State do
-    @moduledoc false
-
-    @enforce_keys [:conf]
-    defstruct [
-      :conf,
-      :conn,
-      :name,
-      circuit: :enabled,
-      reset_timer: nil,
-      listeners: %{}
-    ]
-  end
-
   defguardp is_channel(channel) when channel in @channels
 
   @doc false
-  @spec start_link([option]) :: GenServer.on_start()
-  def start_link(opts) do
-    name = Keyword.get(opts, :name, __MODULE__)
+  def child_spec(opts) do
+    conf = Keyword.fetch!(opts, :conf)
 
-    GenServer.start_link(__MODULE__, Map.new(opts), name: name)
+    %{
+      id: __MODULE__,
+      start: {conf.notifier, :start_link, [opts]}
+    }
   end
 
   @doc """
@@ -129,21 +115,17 @@ defmodule Oban.Notifier do
 
   Listen for messages when using a custom Oban name:
 
-      Oban.Notifier.listen(MyApp.Oban, [:gossip, :insert, :signal])
+      Oban.Notifier.listen(MyApp.MyOban, [:gossip, :insert, :signal])
   """
-  @spec listen(GenServer.server(), channels :: list(channel())) :: :ok
-  def listen(server \\ Oban, channels)
-
-  def listen(pid, [_ | _] = channels) when is_pid(pid) do
+  @spec listen(server(), [channel]) :: :ok
+  def listen(server \\ Oban, channels) do
     :ok = validate_channels!(channels)
 
-    GenServer.call(pid, {:listen, channels})
-  end
+    conf = Oban.config(server)
 
-  def listen(oban_name, [_ | _] = channels) do
-    oban_name
-    |> Registry.whereis(__MODULE__)
-    |> listen(channels)
+    server
+    |> Registry.whereis(Oban.Notifier)
+    |> conf.notifier.listen(channels)
   end
 
   @doc """
@@ -157,13 +139,15 @@ defmodule Oban.Notifier do
 
   Stop listening for messages when using a custom Oban name:
 
-      Oban.Notifier.unlisten(MyApp.Oban, [:gossip, :signal])
+      Oban.Notifier.unlisten(MyApp.MyOban, [:gossip])
   """
-  @spec unlisten(GenServer.server(), channels :: list(channel())) :: :ok
-  def unlisten(oban_name \\ Oban, [_ | _] = channels) do
-    oban_name
-    |> Registry.whereis(__MODULE__)
-    |> GenServer.call({:unlisten, channels})
+  @spec unlisten(server(), [channel]) :: :ok
+  def unlisten(server \\ Oban, channels) do
+    conf = Oban.config(server)
+
+    server
+    |> Registry.whereis(Oban.Notifier)
+    |> conf.notifier.unlisten(channels)
   end
 
   @doc """
@@ -173,143 +157,40 @@ defmodule Oban.Notifier do
   with the `public` and `private` prefixes, a notification published in the `public` prefix won't
   be picked up by processes listening with the `private` prefix.
 
+  Using notify/3 with a config is soft deprecated. Use a server as the first argument instead
+
   ## Example
 
   Broadcast a gossip message:
 
-      Oban.Notifier.notify(Oban.config(), :gossip, %{message: "hi!"})
+      Oban.Notifier.notify(:gossip, %{message: "hi!"})
   """
-  @spec notify(Config.t(), channel :: channel(), payload :: map() | [map()]) :: :ok
-  def notify(%Config{} = conf, channel, %{} = payload) when is_channel(channel) do
-    notify(conf, channel, [payload])
+  @spec notify(Config.t() | server(), channel :: channel(), payload :: map() | [map()]) :: :ok
+  def notify(conf_or_server \\ Oban, channel, payload)
+
+  def notify(%Config{} = conf, channel, payload) when is_channel(channel) do
+    conf.name
+    |> Registry.whereis(Oban.Notifier)
+    |> conf.notifier.notify(channel, payload)
   end
 
-  def notify(%Config{} = conf, channel, [_ | _] = payload) when is_channel(channel) do
-    channel = "#{conf.prefix}.#{@mappings[channel]}"
+  def notify(server, channel, payload) when is_channel(channel) do
+    conf = Oban.config(server)
 
-    Repo.query(
-      conf,
-      "SELECT pg_notify($1, payload) FROM json_array_elements_text($2::json) AS payload",
-      [channel, Enum.map(payload, &Jason.encode!/1)]
-    )
-
-    :ok
+    conf.name
+    |> Registry.whereis(Oban.Notifier)
+    |> conf.notifier.notify(channel, payload)
   end
 
-  @impl GenServer
-  def init(opts) do
-    Process.flag(:trap_exit, true)
+  @doc false
+  @spec mappings() :: %{channel => String.t()}
+  def mappings, do: @mappings
 
-    {:ok, struct!(State, opts), {:continue, :start}}
-  end
-
-  @impl GenServer
-  def handle_continue(:start, state) do
-    {:noreply, connect_and_listen(state)}
-  end
-
-  @impl GenServer
-  def handle_info({:DOWN, _ref, :process, pid, _reason}, %State{listeners: listeners} = state) do
-    {:noreply, %{state | listeners: Map.delete(listeners, pid)}}
-  end
-
-  def handle_info({:notification, _, _, prefixed_channel, payload}, state) do
-    full_channel =
-      prefixed_channel
-      |> String.split(".")
-      |> List.last()
-
-    channel = reverse_channel(full_channel)
-    decoded = if any_listeners?(state.listeners, full_channel), do: Jason.decode!(payload)
-
-    if in_scope?(decoded, state.conf) do
-      for {pid, channels} <- state.listeners, full_channel in channels do
-        send(pid, {:notification, channel, decoded})
-      end
-    end
-
-    {:noreply, state}
-  end
-
-  def handle_info({:EXIT, _pid, error}, %State{} = state) do
-    state = trip_circuit(error, [], state)
-
-    {:noreply, %{state | conn: nil}}
-  end
-
-  def handle_info(:reset_circuit, %State{circuit: :disabled} = state) do
-    state =
-      state
-      |> open_circuit()
-      |> connect_and_listen()
-
-    {:noreply, state}
-  end
-
-  def handle_info(_message, state) do
-    {:noreply, state}
-  end
-
-  @impl GenServer
-  def handle_call({:listen, channels}, {pid, _}, %State{listeners: listeners} = state) do
-    if Map.has_key?(listeners, pid) do
-      {:reply, :ok, state}
-    else
-      Process.monitor(pid)
-
-      full_channels = to_full_channels(channels)
-
-      {:reply, :ok, %{state | listeners: Map.put(listeners, pid, full_channels)}}
-    end
-  end
-
-  def handle_call({:unlisten, channels}, {pid, _}, %State{listeners: listeners} = state) do
-    orig_channels = Map.get(listeners, pid, [])
-
-    listeners =
-      case orig_channels -- to_full_channels(channels) do
-        [] -> Map.delete(listeners, pid)
-        new_channels -> Map.put(listeners, pid, new_channels)
-      end
-
-    {:reply, :ok, %{state | listeners: listeners}}
-  end
-
-  defp to_full_channels(channels) do
-    @mappings
-    |> Map.take(channels)
-    |> Map.values()
-  end
-
-  # Helpers
-
-  for {atom, name} <- @mappings do
-    defp reverse_channel(unquote(name)), do: unquote(atom)
-  end
+  @doc false
+  @spec mapping(channel()) :: String.t()
+  def mapping(channel) when is_channel(channel), do: @mappings[channel]
 
   defp validate_channels!([]), do: :ok
   defp validate_channels!([head | tail]) when is_channel(head), do: validate_channels!(tail)
   defp validate_channels!([head | _]), do: raise(ArgumentError, "unexpected channel: #{head}")
-
-  defp any_listeners?(listeners, full_channel) do
-    Enum.any?(listeners, fn {_pid, channels} -> full_channel in channels end)
-  end
-
-  defp in_scope?(%{"ident" => "any"}, _conf), do: true
-  defp in_scope?(%{"ident" => ident}, conf), do: Config.match_ident?(conf, ident)
-  defp in_scope?(_decoded, _conf), do: true
-
-  defp connect_and_listen(%State{conf: conf, conn: nil} = state) do
-    case Notifications.start_link(Repo.config(conf)) do
-      {:ok, conn} ->
-        for {_, full} <- @mappings, do: Notifications.listen(conn, "#{conf.prefix}.#{full}")
-
-        %{state | conn: conn}
-
-      {:error, error} ->
-        trip_circuit(error, [], state)
-    end
-  end
-
-  defp connect_and_listen(state), do: state
 end
