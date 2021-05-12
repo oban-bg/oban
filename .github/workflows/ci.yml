@@ -48,15 +48,19 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - uses: erlef/setup-elixir@v1
+      - uses: erlef/setup-beam@v1
         with:
           otp-version: ${{matrix.pair.otp}}
           elixir-version: ${{matrix.pair.elixir}}
 
-      - uses: actions/cache@v1
+      - uses: actions/cache@v2
         with:
-          key: ${{runner.os}}-${{matrix.pair.otp}}-${{matrix.pair.elixir}}-mix-${{hashFiles(format('{0}{1}', github.workspace, '/mix.lock'))}}
-          path: _build
+          path: |
+            deps
+            _build
+          key: ${{ runner.os }}-mix-${{matrix.pair.elixir}}-${{matrix.pair.otp}}-${{ hashFiles('**/mix.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-mix-
 
       - name: Run mix deps.get
         run: mix deps.get --only test
