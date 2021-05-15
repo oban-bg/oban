@@ -3,7 +3,7 @@ defmodule Oban.Config do
   The Config struct validates and encapsulates Oban instance state.
 
   Options passed to `Oban.start_link/1` are validated and stored in a config struct. Internal
-  modules and plugins are always passed the config with a `:conf` key.
+  modules and plugins are always passed in the config with a `:conf` key.
   """
 
   @type t :: %__MODULE__{
