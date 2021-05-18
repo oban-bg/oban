@@ -112,6 +112,7 @@ defmodule Oban.Job do
     field :conf, :map, virtual: true
     field :replace, {:array, :any}, virtual: true
     field :unique, :map, virtual: true
+    field :conflict?, :boolean, virtual: true, default: false
     field :unsaved_error, :map, virtual: true
   end
 

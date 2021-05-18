@@ -101,14 +101,18 @@ defmodule Oban.Query do
 
     with {:ok, query, lock_key} <- unique_query(changeset),
          :ok <- acquire_lock(conf, lock_key, query_opts),
-         {:ok, job} <- unprepared_one(conf, query, query_opts) do
-      return_or_replace(conf, query_opts, job, changeset)
+         {:ok, job} <- unprepared_one(conf, query, query_opts),
+         {:ok, job} <- return_or_replace(conf, query_opts, job, changeset) do
+      {:ok, %Job{job | conflict?: true}}
     else
       {:error, :locked} ->
         {:ok, Changeset.apply_changes(changeset)}
 
       nil ->
         Repo.insert(conf, changeset, query_opts)
+
+      error ->
+        error
     end
   end
 

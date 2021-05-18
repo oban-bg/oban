@@ -97,6 +97,11 @@ defmodule Oban.Integration.UniquenessTest do
     assert count_jobs() == 5
   end
 
+  test "conflict? is true when job already exists", %{name: name} do
+    assert %Job{id: id, conflict?: false} = unique_insert!(name, %{id: 1})
+    assert %Job{id: ^id, conflict?: true} = unique_insert!(name, %{id: 1})
+  end
+
   test "replace allows replacing the args for the same job id", context do
     assert %Job{id: id_1} = unique_insert!(context.name, %{id: 1, url: "https://a.co"})
 
