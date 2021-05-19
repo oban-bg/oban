@@ -80,6 +80,9 @@ defmodule Oban.Job do
           completed_at: DateTime.t(),
           discarded_at: DateTime.t(),
           cancelled_at: DateTime.t(),
+          conf: Config.t(),
+          conflict?: boolean(),
+          replace: [replace_option()],
           unique: %{fields: [unique_field()], period: unique_period(), states: [unique_state()]},
           unsaved_error: %{kind: atom(), reason: term(), stacktrace: Exception.stacktrace()}
         }
@@ -110,9 +113,9 @@ defmodule Oban.Job do
     field :scheduled_at, :utc_datetime_usec
 
     field :conf, :map, virtual: true
+    field :conflict?, :boolean, virtual: true, default: false
     field :replace, {:array, :any}, virtual: true
     field :unique, :map, virtual: true
-    field :conflict?, :boolean, virtual: true, default: false
     field :unsaved_error, :map, virtual: true
   end
 

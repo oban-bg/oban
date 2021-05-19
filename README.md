@@ -547,6 +547,48 @@ including `:discarded`:
 use Oban.Worker, unique: [period: 300, states: Oban.Job.states()]
 ```
 
+#### Detecting Unique Conflicts
+
+When unique settings match an existing job, the return value of `Oban.insert/2`
+is still `{:ok, job}`. However, you can detect a unique conflict by checking the
+jobs' `:conflict?` field. If there was an existing job, the field is `true`;
+otherwise it is `false`.
+
+You can use the `:conflict?` field to customize responses after insert:
+
+```elixir
+with {:ok, %Job{conflict?: true}} <- Oban.insert(changeset) do
+  {:error, :job_already_exists}
+end
+```
+
+#### Replacing Values
+
+In addition to detecting unique conflicts, passing options to `replace` can
+update any job field when there is a conflict. Any of the following fields can
+be replaced:  `args`, `max_attempts`, `meta`, `priority`, `queue`,
+`scheduled_at`, `tags`, `worker`.
+
+For example, to change the `priority` and increase `max_attempts` when there is
+a conflict:
+
+```elixir
+BusinessWorker.new(
+  args,
+  max_attempts: 5,
+  priority: 0,
+  replace: [:max_attempts, :priority]
+)
+```
+
+Another example is bumping the scheduled time on conflict. Either `scheduled_at`
+or `schedule_in` values will work, but the replace option is always
+`scheduled_at`.
+
+```elixir
+UrgentWorker.new(args, schedule_in: 1, replace: [:scheduled_at])
+```
+
 #### Strong Guarantees
 
 Unique jobs are guaranteed through transactional locks and database queries:
