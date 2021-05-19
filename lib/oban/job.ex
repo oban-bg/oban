@@ -80,7 +80,7 @@ defmodule Oban.Job do
           completed_at: DateTime.t(),
           discarded_at: DateTime.t(),
           cancelled_at: DateTime.t(),
-          conf: Config.t(),
+          conf: Oban.Config.t(),
           conflict?: boolean(),
           replace: [replace_option()],
           unique: %{fields: [unique_field()], period: unique_period(), states: [unique_state()]},
