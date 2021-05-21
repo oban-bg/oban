@@ -72,26 +72,15 @@ defmodule Oban.Notifier do
   @callback unlisten(server(), channels :: list(channel())) :: :ok
 
   @doc "Broadcast a notification in a channel"
-  @callback notify(server(), channel :: channel(), payload :: map() | [map()]) :: :ok
+  @callback notify(server(), channel :: channel(), payload :: [map()]) :: :ok
 
-  @mappings %{
-    gossip: "oban_gossip",
-    insert: "oban_insert",
-    signal: "oban_signal"
-  }
-
-  @channels Map.keys(@mappings)
-
-  defguardp is_channel(channel) when channel in @channels
+  defguardp is_channel(channel) when channel in [:gossip, :insert, :signal]
 
   @doc false
   def child_spec(opts) do
     conf = Keyword.fetch!(opts, :conf)
 
-    %{
-      id: __MODULE__,
-      start: {conf.notifier, :start_link, [opts]}
-    }
+    %{id: __MODULE__, start: {conf.notifier, :start_link, [opts]}}
   end
 
   @doc """
@@ -118,7 +107,7 @@ defmodule Oban.Notifier do
       Oban.Notifier.listen(MyApp.MyOban, [:gossip, :insert, :signal])
   """
   @spec listen(server(), [channel]) :: :ok
-  def listen(server \\ Oban, channels) do
+  def listen(server \\ Oban, channels) when is_list(channels) do
     :ok = validate_channels!(channels)
 
     conf = Oban.config(server)
@@ -142,7 +131,7 @@ defmodule Oban.Notifier do
       Oban.Notifier.unlisten(MyApp.MyOban, [:gossip])
   """
   @spec unlisten(server(), [channel]) :: :ok
-  def unlisten(server \\ Oban, channels) do
+  def unlisten(server \\ Oban, channels) when is_list(channels) do
     conf = Oban.config(server)
 
     server
@@ -171,7 +160,7 @@ defmodule Oban.Notifier do
   def notify(%Config{} = conf, channel, payload) when is_channel(channel) do
     conf.name
     |> Registry.whereis(Oban.Notifier)
-    |> conf.notifier.notify(channel, payload)
+    |> conf.notifier.notify(channel, normalize_payload(payload))
   end
 
   def notify(server, channel, payload) when is_channel(channel) do
@@ -179,16 +168,14 @@ defmodule Oban.Notifier do
 
     conf.name
     |> Registry.whereis(Oban.Notifier)
-    |> conf.notifier.notify(channel, payload)
+    |> conf.notifier.notify(channel, normalize_payload(payload))
   end
 
-  @doc false
-  @spec mappings() :: %{channel => String.t()}
-  def mappings, do: @mappings
-
-  @doc false
-  @spec mapping(channel()) :: String.t()
-  def mapping(channel) when is_channel(channel), do: @mappings[channel]
+  defp normalize_payload(payload) do
+    payload
+    |> List.wrap()
+    |> Enum.map(&Jason.encode!/1)
+  end
 
   defp validate_channels!([]), do: :ok
   defp validate_channels!([head | tail]) when is_channel(head), do: validate_channels!(tail)

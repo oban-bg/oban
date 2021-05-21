@@ -18,8 +18,14 @@ defmodule Oban.PostgresNotifier do
 
   import Oban.Breaker, only: [open_circuit: 1, trip_circuit: 3]
 
-  alias Oban.{Config, Notifier, Repo}
+  alias Oban.{Config, Repo}
   alias Postgrex.Notifications
+
+  @mappings %{
+    gossip: "oban_gossip",
+    insert: "oban_insert",
+    signal: "oban_signal"
+  }
 
   defmodule State do
     @moduledoc false
@@ -55,12 +61,12 @@ defmodule Oban.PostgresNotifier do
   @impl Oban.Notifier
   def notify(server, channel, payload) do
     with %State{conf: conf} <- GenServer.call(server, :get_state) do
-      channel = "#{conf.prefix}.#{Notifier.mapping(channel)}"
+      channel = "#{conf.prefix}.#{@mappings[channel]}"
 
       Repo.query(
         conf,
         "SELECT pg_notify($1, payload) FROM json_array_elements_text($2::json) AS payload",
-        [channel, Enum.map(List.wrap(payload), &Jason.encode!/1)]
+        [channel, payload]
       )
 
       :ok
@@ -148,16 +154,16 @@ defmodule Oban.PostgresNotifier do
 
   def handle_call(:get_state, _, state), do: {:reply, state, state}
 
-  defp to_full_channels(channels) do
-    Notifier.mappings()
-    |> Map.take(channels)
-    |> Map.values()
-  end
-
   # Helpers
 
-  for {atom, name} <- Notifier.mappings() do
+  for {atom, name} <- @mappings do
     defp reverse_channel(unquote(name)), do: unquote(atom)
+  end
+
+  defp to_full_channels(channels) do
+    @mappings
+    |> Map.take(channels)
+    |> Map.values()
   end
 
   defp any_listeners?(listeners, full_channel) do
@@ -171,7 +177,7 @@ defmodule Oban.PostgresNotifier do
   defp connect_and_listen(%State{conf: conf, conn: nil} = state) do
     case Notifications.start_link(Repo.config(conf)) do
       {:ok, conn} ->
-        for {_, full} <- Notifier.mappings(),
+        for {_, full} <- @mappings,
             do: Notifications.listen(conn, "#{conf.prefix}.#{full}")
 
         %{state | conn: conn}
