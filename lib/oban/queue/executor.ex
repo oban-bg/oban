@@ -219,24 +219,7 @@ defmodule Oban.Queue.Executor do
         %{exec | result: result, state: :snoozed, snooze: seconds}
 
       returned ->
-        Logger.warn(fn ->
-          """
-          Expected #{worker}.perform/1 to return:
-
-          - `:ok`
-          - `:discard`
-          - `{:ok, value}`
-          - `{:error, reason}`,
-          - `{:discard, reason}`
-          - `{:snooze, seconds}`
-
-          Instead received:
-
-          #{inspect(returned, pretty: true)}
-
-          The job will be considered a success.
-          """
-        end)
+        maybe_log_warning(exec, returned)
 
         %{exec | state: :success}
     end
@@ -298,5 +281,29 @@ defmodule Oban.Queue.Executor do
     unsaved_error = %{kind: exec.kind, reason: exec.error, stacktrace: exec.stacktrace}
 
     %{exec.job | unsaved_error: unsaved_error}
+  end
+
+  defp maybe_log_warning(exec, returned)
+  defp maybe_log_warning(%__MODULE__{safe: false}, _returned), do: :noop
+
+  defp maybe_log_warning(%__MODULE__{worker: worker}, returned) do
+    Logger.warn(fn ->
+      """
+      Expected #{worker}.perform/1 to return:
+
+      - `:ok`
+      - `:discard`
+      - `{:ok, value}`
+      - `{:error, reason}`,
+      - `{:discard, reason}`
+      - `{:snooze, seconds}`
+
+      Instead received:
+
+      #{inspect(returned, pretty: true)}
+
+      The job will be considered a success.
+      """
+    end)
   end
 end
