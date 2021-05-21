@@ -5,6 +5,8 @@ defmodule Oban.TestingTest do
 
   import ExUnit.CaptureLog
 
+  alias Oban.TelemetryHandler
+
   @moduletag :integration
 
   defmodule InvalidWorker do
@@ -81,6 +83,18 @@ defmodule Oban.TestingTest do
       assert :ok = perform_job(Worker, %{ref: 1, action: "OK"})
       assert :discard = perform_job(Worker, %{ref: 1, action: "DISCARD"})
       assert {:error, _} = perform_job(Worker, %{ref: 1, action: "ERROR"})
+    end
+
+    test "validating that emits telemetry events" do
+      TelemetryHandler.attach_events("perform-job-handler")
+      assert :ok = perform_job(Worker, %{ref: 1, action: "OK"})
+
+      assert_receive {:event, :start, _measurements, %{args: args} = _meta}
+      assert %{"action" => "OK", "ref" => 1} = args
+      assert_receive {:event, :stop, _measurements, %{args: args} = _meta}
+      assert %{"action" => "OK", "ref" => 1} = args
+    after
+      :telemetry.detach("perform-job-handler")
     end
   end
 
