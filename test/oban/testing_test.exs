@@ -100,7 +100,7 @@ defmodule Oban.TestingTest do
       assert {:error, _} = perform_job(Worker, %{ref: 1, action: "ERROR"})
     end
 
-    test "validating that emits telemetry events" do
+    test "emitting appropriate telemetry events" do
       TelemetryHandler.attach_events("perform-job-handler")
       assert :ok = perform_job(Worker, %{ref: 1, action: "OK"})
 

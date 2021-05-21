@@ -117,12 +117,7 @@ defmodule Oban.Testing do
 
   alias Ecto.Changeset
 
-  alias Oban.{
-    Job,
-    Queue.Executor,
-    Repo,
-    Worker
-  }
+  alias Oban.{Job, Queue.Executor, Repo, Worker}
 
   @wait_interval 10
 
@@ -537,6 +532,6 @@ defmodule Oban.Testing do
 
     changeset
     |> Changeset.apply_action!(:insert)
-    |> Map.merge(%{attempted_at: now, scheduled_at: DateTime.add(now, -3)})
+    |> Map.merge(%{attempted_at: now, scheduled_at: now})
   end
 end

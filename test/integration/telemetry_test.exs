@@ -3,12 +3,7 @@ defmodule Oban.Integration.TelemetryTest do
 
   import ExUnit.CaptureLog
 
-  alias Oban.{
-    Config,
-    PerformError,
-    Telemetry,
-    TelemetryHandler
-  }
+  alias Oban.{Config, PerformError, Telemetry, TelemetryHandler}
 
   @moduletag :integration
 
