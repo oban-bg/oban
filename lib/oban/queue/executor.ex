@@ -128,30 +128,46 @@ defmodule Oban.Queue.Executor do
 
   @spec report_finished(t()) :: t()
   def report_finished(%__MODULE__{} = exec) do
+    exec
+    |> ack_event()
+    |> emit_event()
+  end
+
+  @spec ack_event(t()) :: t()
+  def ack_event(%__MODULE__{} = exec) do
     case exec.state do
       :success ->
         Engine.complete_job(exec.conf, exec.job)
-
-        execute_stop(exec)
+        exec
 
       :failure ->
         job = job_with_unsaved_error(exec)
 
         Engine.error_job(exec.conf, job, backoff(exec.worker, job))
 
-        execute_exception(%{exec | job: job})
+        %{exec | job: job}
 
       :snoozed ->
         Engine.snooze_job(exec.conf, exec.job, exec.snooze)
-
-        execute_stop(exec)
+        exec
 
       :discard ->
         job = job_with_unsaved_error(exec)
 
         Engine.discard_job(exec.conf, job)
 
-        execute_stop(%{exec | job: job})
+        %{exec | job: job}
+    end
+  end
+
+  @spec emit_event(t()) :: t()
+  def emit_event(%__MODULE__{} = exec) do
+    case exec.state do
+      :failure ->
+        execute_exception(exec)
+
+      state when state in [:success, :snoozed, :discard] ->
+        execute_stop(exec)
     end
 
     exec
@@ -177,17 +193,32 @@ defmodule Oban.Queue.Executor do
       {:ok, _value} = result ->
         %{exec | state: :success, result: result}
 
-      :discard ->
-        %{exec | state: :discard, error: PerformError.exception({worker, :discard})}
+      :discard = result ->
+        %{
+          exec
+          | result: result,
+            state: :discard,
+            error: PerformError.exception({worker, :discard})
+        }
 
-      {:discard, reason} ->
-        %{exec | state: :discard, error: PerformError.exception({worker, {:discard, reason}})}
+      {:discard, reason} = result ->
+        %{
+          exec
+          | result: result,
+            state: :discard,
+            error: PerformError.exception({worker, {:discard, reason}})
+        }
 
-      {:error, reason} ->
-        %{exec | state: :failure, error: PerformError.exception({worker, {:error, reason}})}
+      {:error, reason} = result ->
+        %{
+          exec
+          | result: result,
+            state: :failure,
+            error: PerformError.exception({worker, {:error, reason}})
+        }
 
-      {:snooze, seconds} ->
-        %{exec | state: :snoozed, snooze: seconds}
+      {:snooze, seconds} = result ->
+        %{exec | result: result, state: :snoozed, snooze: seconds}
 
       returned ->
         Logger.warn(fn ->

@@ -3,6 +3,8 @@ defmodule Oban.TestingTest do
 
   use Oban.Testing, repo: Oban.Test.Repo
 
+  import ExUnit.CaptureLog
+
   @moduletag :integration
 
   defmodule InvalidWorker do
@@ -66,12 +68,13 @@ defmodule Oban.TestingTest do
 
     test "validating the return value of the worker's perform/1 function" do
       message = "result to be one of"
+      actions = ["bad_atom", "bad_string", "bad_error", "bad_tuple", "bad_snooze"]
 
-      assert_perform_error(MisbehavedWorker, %{"action" => "bad_atom"}, message)
-      assert_perform_error(MisbehavedWorker, %{"action" => "bad_string"}, message)
-      assert_perform_error(MisbehavedWorker, %{"action" => "bad_error"}, message)
-      assert_perform_error(MisbehavedWorker, %{"action" => "bad_tuple"}, message)
-      assert_perform_error(MisbehavedWorker, %{"action" => "bad_snooze"}, message)
+      for action <- actions do
+        capture_log(fn ->
+          assert_perform_error(MisbehavedWorker, %{"action" => action}, message)
+        end) =~ message
+      end
     end
 
     test "returning the value of worker's perform/1 function" do

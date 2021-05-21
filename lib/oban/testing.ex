@@ -116,7 +116,13 @@ defmodule Oban.Testing do
   import Ecto.Query, only: [limit: 2, order_by: 2, select: 2, where: 2, where: 3]
 
   alias Ecto.Changeset
-  alias Oban.{Job, Repo, Worker}
+
+  alias Oban.{
+    Job,
+    Queue.Executor,
+    Repo,
+    Worker
+  }
 
   @wait_interval 10
 
@@ -128,7 +134,9 @@ defmodule Oban.Testing do
     quote do
       alias Oban.Testing
 
-      import Oban.Testing, only: [perform_job: 2, perform_job: 3]
+      def perform_job(worker, args, opts \\ []) do
+        Testing.perform_job(worker, args, Keyword.put(opts, :repo, unquote(repo)))
+      end
 
       def all_enqueued(opts) do
         opts = Keyword.put_new(opts, :prefix, unquote(prefix))
@@ -200,6 +208,7 @@ defmodule Oban.Testing do
   @spec perform_job(worker :: Worker.t(), args :: Job.args(), opts :: [Job.option()]) ::
           Worker.result()
   def perform_job(worker, args, opts \\ []) when is_atom(worker) and is_map(args) do
+    {repo, opts} = Keyword.pop(opts, :repo)
     assert_valid_worker(worker)
 
     changeset =
@@ -210,9 +219,16 @@ defmodule Oban.Testing do
     assert_valid_changeset(changeset)
 
     result =
-      changeset
-      |> Changeset.apply_action!(:insert)
-      |> worker.perform()
+      [repo: repo]
+      |> Oban.Config.new()
+      |> Executor.new(create_job(changeset))
+      |> Executor.put(:safe, false)
+      |> Executor.record_started()
+      |> Executor.resolve_worker()
+      |> Executor.perform()
+      |> Executor.record_finished()
+      |> Executor.emit_event()
+      |> Map.fetch!(:result)
 
     assert_valid_result(result)
 
@@ -514,5 +530,13 @@ defmodule Oban.Testing do
     query
     |> where(^[{key, value}])
     |> apply_where_clauses(rest)
+  end
+
+  defp create_job(changeset) do
+    now = DateTime.utc_now()
+
+    changeset
+    |> Changeset.apply_action!(:insert)
+    |> Map.merge(%{attempted_at: now, scheduled_at: DateTime.add(now, -3)})
   end
 end
