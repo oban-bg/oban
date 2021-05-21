@@ -162,12 +162,34 @@ defmodule Oban.Queue.Executor do
 
   @spec emit_event(t()) :: t()
   def emit_event(%__MODULE__{state: :failure} = exec) do
-    execute_exception(exec)
+    measurements = %{duration: exec.duration, queue_time: exec.queue_time}
+
+    meta =
+      Map.merge(exec.meta, %{
+        job: exec.job,
+        kind: exec.kind,
+        error: exec.error,
+        stacktrace: exec.stacktrace,
+        state: exec.state
+      })
+
+    Telemetry.execute([:oban, :job, :exception], measurements, meta)
+
     exec
   end
 
   def emit_event(%__MODULE__{state: state} = exec) when state in [:success, :snoozed, :discard] do
-    execute_stop(exec)
+    measurements = %{duration: exec.duration, queue_time: exec.queue_time}
+
+    meta =
+      Map.merge(exec.meta, %{
+        job: exec.job,
+        state: exec.state,
+        result: exec.result
+      })
+
+    Telemetry.execute([:oban, :job, :stop], measurements, meta)
+
     exec
   end
 
@@ -241,34 +263,6 @@ defmodule Oban.Queue.Executor do
 
   defp backoff(nil, job), do: Worker.backoff(job)
   defp backoff(worker, job), do: worker.backoff(job)
-
-  defp execute_stop(exec) do
-    measurements = %{duration: exec.duration, queue_time: exec.queue_time}
-
-    meta =
-      Map.merge(exec.meta, %{
-        job: exec.job,
-        state: exec.state,
-        result: exec.result
-      })
-
-    Telemetry.execute([:oban, :job, :stop], measurements, meta)
-  end
-
-  defp execute_exception(exec) do
-    measurements = %{duration: exec.duration, queue_time: exec.queue_time}
-
-    meta =
-      Map.merge(exec.meta, %{
-        job: exec.job,
-        kind: exec.kind,
-        error: exec.error,
-        stacktrace: exec.stacktrace,
-        state: exec.state
-      })
-
-    Telemetry.execute([:oban, :job, :exception], measurements, meta)
-  end
 
   defp event_metadata(conf, job) do
     job
