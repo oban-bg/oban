@@ -202,7 +202,7 @@ defmodule Oban.Testing do
   @doc since: "2.0.0"
   @spec perform_job(worker :: Worker.t(), args :: Job.args(), opts :: [Job.option()]) ::
           Worker.result()
-  def perform_job(worker, args, opts \\ []) when is_atom(worker) and is_map(args) do
+  def perform_job(worker, args, opts) when is_atom(worker) and is_map(args) do
     {repo, opts} = Keyword.pop(opts, :repo)
     assert_valid_worker(worker)
 
