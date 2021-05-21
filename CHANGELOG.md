@@ -2,6 +2,12 @@
 
 All notable changes to `Oban` are documented here.
 
+_🌟 Looking for changes to Web or Pro? Check the [Oban.Pro Changelog][opc] or
+the [Oban.Web Changelog][owc]._
+
+[opc]: pro-changelog.html
+[owc]: web-changelog.html
+
 ## [2.6.1] — 2021-04-02
 
 ### Fixes
