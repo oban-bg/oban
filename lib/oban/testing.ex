@@ -38,6 +38,9 @@ defmodule Oban.Testing do
 
   # Make assertions on a list of all jobs matching some options
   assert [%{args: %{"id" => 1}}] = all_enqueued(worker: MyWorker)
+
+  # Assert that no jobs are enqueued in any queues
+  assert [] = all_enqueued()
   ```
 
   Note that the final example, using `all_enqueued/1`, returns a raw list of matching jobs and
@@ -130,7 +133,7 @@ defmodule Oban.Testing do
 
       import Oban.Testing, only: [perform_job: 2, perform_job: 3]
 
-      def all_enqueued(opts) do
+      def all_enqueued(opts \\ []) do
         opts = Keyword.put_new(opts, :prefix, unquote(prefix))
 
         Testing.all_enqueued(unquote(repo), opts)
@@ -234,16 +237,17 @@ defmodule Oban.Testing do
   Assert that exactly one job was inserted for a queue:
 
       assert [%Oban.Job{}] = all_enqueued(queue: :alpha)
+
+  Assert that there aren't any jobs enqueued for any queues or workers:
+
+      assert [] = all_enqueued()
   """
   @doc since: "0.6.0"
   @spec all_enqueued(repo :: module(), opts :: Keyword.t()) :: [Job.t()]
-  def all_enqueued(repo, [_ | _] = opts) do
-    {prefix, opts} = extract_prefix(opts)
+  def all_enqueued(repo, opts) when is_list(opts) do
+    {repo_opts, opts} = extract_repo_opts(repo, opts)
 
-    Repo.all(
-      %{prefix: prefix, repo: repo},
-      opts |> base_query() |> order_by(desc: :id)
-    )
+    Repo.all(repo_opts, base_query(opts))
   end
 
   @doc """
@@ -424,10 +428,10 @@ defmodule Oban.Testing do
   # Enqueued Helpers
 
   defp get_job(repo, opts) do
-    {prefix, opts} = extract_prefix(opts)
+    {repo_opts, opts} = extract_repo_opts(repo, opts)
 
     Repo.one(
-      %{prefix: prefix, repo: repo},
+      repo_opts,
       opts |> base_query() |> limit(1) |> select([:id])
     )
   end
@@ -447,31 +451,28 @@ defmodule Oban.Testing do
   defp wait_for_job(_repo, _opts, _timeout), do: nil
 
   defp available_jobs(repo, opts) do
-    {prefix, opts} = extract_prefix(opts)
+    {repo_opts, opts} = extract_repo_opts(repo, opts)
+
     fields = Keyword.keys(opts)
 
-    %{prefix: prefix, repo: repo}
+    repo_opts
     |> Repo.all([] |> base_query() |> select(^fields))
     |> Enum.map(&Map.take(&1, fields))
   end
 
   defp base_query(opts) do
-    {fields, field_opts} = Enum.map_reduce(opts, [], &extract_field_opts/2)
-
-    fields_with_opts =
-      fields
-      |> normalize_fields()
-      |> Enum.map(fn {key, value} ->
-        {key, value, Keyword.get(field_opts, key, [])}
-      end)
+    fields_with_opts = normalize_fields(opts)
 
     Job
     |> where([j], j.state in ["available", "scheduled"])
     |> apply_where_clauses(fields_with_opts)
+    |> order_by(desc: :id)
   end
 
-  defp extract_prefix(opts) do
-    Keyword.pop(opts, :prefix, "public")
+  defp extract_repo_opts(repo, opts) do
+    {prefix, opts} = Keyword.pop(opts, :prefix, "public")
+
+    {%{repo: repo, prefix: prefix}, opts}
   end
 
   defp extract_field_opts({key, {value, field_opts}}, field_opts_acc) do
@@ -482,7 +483,9 @@ defmodule Oban.Testing do
     {{key, value}, field_opts_acc}
   end
 
-  defp normalize_fields(fields) do
+  defp normalize_fields(opts) do
+    {fields, field_opts} = Enum.map_reduce(opts, [], &extract_field_opts/2)
+
     args = Keyword.get(fields, :args, %{})
     keys = Keyword.keys(fields)
 
@@ -491,7 +494,7 @@ defmodule Oban.Testing do
     |> Changeset.apply_changes()
     |> Map.from_struct()
     |> Map.take(keys)
-    |> Keyword.new()
+    |> Enum.map(fn {key, value} -> {key, value, Keyword.get(field_opts, key, [])} end)
   end
 
   @timestamp_fields ~W(attempted_at completed_at inserted_at scheduled_at)a
