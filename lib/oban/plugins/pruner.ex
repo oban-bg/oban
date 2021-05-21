@@ -107,7 +107,7 @@ defmodule Oban.Plugins.Pruner do
 
   defp lock_and_delete_jobs(state) do
     Query.with_xact_lock(state.conf, state.lock_key, fn ->
-      delete_jobs(state.conf, state.max_age, state.limit, state.prunable_states)
+      delete_jobs(state)
     end)
   end
 
@@ -117,24 +117,24 @@ defmodule Oban.Plugins.Pruner do
 
   # Query
 
-  defp delete_jobs(conf, seconds, limit, prunable_states) do
-    outdated_at = DateTime.add(DateTime.utc_now(), -seconds)
+  defp delete_jobs(state) do
+    outdated_at = DateTime.add(DateTime.utc_now(), -state.max_age)
 
     subquery =
       Job
-      |> where([j], j.state in ^prunable_states_from_conf(conf, prunable_states))
+      |> where([j], j.state in ^prunable_states_from_conf(state))
       |> where([j], j.attempted_at < ^outdated_at)
       |> select([:id])
-      |> limit(^limit)
+      |> limit(^state.limit)
 
     Repo.delete_all(
-      conf,
+      state.conf,
       join(Job, :inner, [j], x in subquery(subquery), on: j.id == x.id)
     )
   end
 
-  defp prunable_states_from_conf(%Oban.Config{plugins: plugins}, prunable_states) do
-    plugins
+  defp prunable_states_from_conf(state) do
+    state.conf.plugins
     |> Enum.find_value(fn
       {Oban.Plugins.Pruner, options} ->
         Keyword.get(options, :prunable_states)
@@ -144,7 +144,7 @@ defmodule Oban.Plugins.Pruner do
     end)
     |> case do
       nil ->
-        prunable_states
+        state.prunable_states
 
       states ->
         states
