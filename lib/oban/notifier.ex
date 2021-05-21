@@ -4,7 +4,7 @@ defmodule Oban.Notifier do
   channels.
 
   Every Oban supervision tree contains a notifier process, registered as `Oban.Notifier`, which
-  can be any implementation of the `Oban.Notifier` behaviour. The default one is 
+  can be any implementation of the `Oban.Notifier` behaviour. The default one is
   `Oban.PostgresNotifier`, which relies on Postgres `LISTEN/NOTIFY`. All incoming notifications
   are relayed through the notifier to other processes.
 

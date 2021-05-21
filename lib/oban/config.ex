@@ -150,9 +150,9 @@ defmodule Oban.Config do
   end
 
   defp validate_opt!({:notifier, notifier}) do
-    unless Code.ensure_loaded?(notifier) and function_exported?(notifier, :init, 2) do
+    unless Code.ensure_loaded?(notifier) and function_exported?(notifier, :listen, 2) do
       raise ArgumentError,
-            "expected :notifier to be an Oban.Queue.Notifier, got: #{inspect(notifier)}"
+            "expected :notifier to be an Oban.Notifier, got: #{inspect(notifier)}"
     end
   end
 

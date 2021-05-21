@@ -21,6 +21,13 @@ defmodule Oban.ConfigTest do
       assert_valid(engine: Oban.Queue.BasicEngine)
     end
 
+    test ":notifier is validated as a notifier module" do
+      refute_valid(notifier: nil)
+      refute_valid(notifier: Repo)
+
+      assert_valid(notifier: Oban.PostgresNotifier)
+    end
+
     test ":node is validated as a binary" do
       refute_valid(node: nil)
       refute_valid(node: '')
