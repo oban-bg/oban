@@ -3,31 +3,17 @@ defmodule Oban.Integration.TelemetryTest do
 
   import ExUnit.CaptureLog
 
-  alias Oban.{Config, PerformError, Telemetry}
+  alias Oban.{
+    Config,
+    PerformError,
+    Telemetry,
+    TelemetryHandler
+  }
 
   @moduletag :integration
 
-  defmodule Handler do
-    def handle([:oban, :job, :start], %{system_time: start_time}, meta, pid) do
-      send(pid, {:event, :start, start_time, meta})
-    end
-
-    def handle([:oban, :job, :stop], event_measurements, meta, pid) do
-      send(pid, {:event, :stop, event_measurements, meta})
-    end
-
-    def handle([:oban, :job, event], %{duration: duration}, meta, pid) do
-      send(pid, {:event, event, duration, meta})
-    end
-
-    def handle([:oban, :supervisor, :init] = event, measurements, meta, pid) do
-      send(pid, {:event, event, measurements, meta})
-    end
-  end
-
   test "telemetry event is emitted for supervisor initialization" do
-    event = [:oban, :supervisor, :init]
-    :telemetry.attach("init-handler", event, &Handler.handle/4, self())
+    TelemetryHandler.attach_events("init-handler")
 
     name = start_supervised_oban!(queues: [alpha: 2])
     pid = Oban.Registry.whereis(name)
@@ -40,9 +26,7 @@ defmodule Oban.Integration.TelemetryTest do
   end
 
   test "telemetry events are emitted for executed jobs" do
-    events = [[:oban, :job, :start], [:oban, :job, :stop], [:oban, :job, :exception]]
-
-    :telemetry.attach_many("job-handler", events, &Handler.handle/4, self())
+    TelemetryHandler.attach_events("job-handler")
 
     name = start_supervised_oban!(queues: [alpha: 2])
 
