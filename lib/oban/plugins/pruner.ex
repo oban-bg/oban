@@ -53,7 +53,8 @@ defmodule Oban.Plugins.Pruner do
       max_age: 60,
       interval: :timer.seconds(30),
       limit: 10_000,
-      lock_key: 1_149_979_440_242_868_002
+      lock_key: 1_149_979_440_242_868_002,
+      prunable_states: ["completed", "cancelled", "discarded"]
     ]
   end
 
@@ -106,7 +107,7 @@ defmodule Oban.Plugins.Pruner do
 
   defp lock_and_delete_jobs(state) do
     Query.with_xact_lock(state.conf, state.lock_key, fn ->
-      delete_jobs(state.conf, state.max_age, state.limit)
+      delete_jobs(state.conf, state.max_age, state.limit, state.prunable_states)
     end)
   end
 
@@ -116,12 +117,12 @@ defmodule Oban.Plugins.Pruner do
 
   # Query
 
-  defp delete_jobs(conf, seconds, limit) do
+  defp delete_jobs(conf, seconds, limit, prunable_states) do
     outdated_at = DateTime.add(DateTime.utc_now(), -seconds)
 
     subquery =
       Job
-      |> where([j], j.state in ["completed", "cancelled", "discarded"])
+      |> where([j], j.state in ^prunable_states_from_conf(conf, prunable_states))
       |> where([j], j.attempted_at < ^outdated_at)
       |> select([:id])
       |> limit(^limit)
@@ -130,5 +131,23 @@ defmodule Oban.Plugins.Pruner do
       conf,
       join(Job, :inner, [j], x in subquery(subquery), on: j.id == x.id)
     )
+  end
+
+  defp prunable_states_from_conf(%Oban.Config{plugins: plugins}, prunable_states) do
+    plugins
+    |> Enum.find_value(fn
+      {Oban.Plugins.Pruner, options} ->
+        Keyword.get(options, :prunable_states)
+
+      _ ->
+        nil
+    end)
+    |> case do
+      nil ->
+        prunable_states
+
+      states ->
+        states
+    end
   end
 end

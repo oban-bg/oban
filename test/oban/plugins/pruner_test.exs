@@ -28,6 +28,21 @@ defmodule Oban.Plugins.PrunerTest do
     :telemetry.detach("plugin-pruner-handler")
   end
 
+  test "prune only jobs with configured states" do
+    %Job{id: _id_} = insert!(%{}, state: "completed", attempted_at: seconds_ago(62))
+    %Job{id: _id_} = insert!(%{}, state: "completed", attempted_at: seconds_ago(61))
+    %Job{id: _id_} = insert!(%{}, state: "cancelled", attempted_at: seconds_ago(61))
+    %Job{id: _id_} = insert!(%{}, state: "completed", attempted_at: seconds_ago(63))
+    %Job{id: _id_} = insert!(%{}, state: "completed", attempted_at: seconds_ago(64))
+    %Job{id: id} = insert!(%{}, state: "discarded", attempted_at: seconds_ago(61))
+
+    start_supervised_oban!(
+      plugins: [{Pruner, interval: 1, max_age: 60, prunable_states: ~w(completed cancelled)}]
+    )
+
+    with_backoff(fn -> assert retained_ids() == [id] end)
+  end
+
   defp retained_ids do
     Job
     |> select([j], j.id)
