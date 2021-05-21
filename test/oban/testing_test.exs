@@ -70,12 +70,27 @@ defmodule Oban.TestingTest do
 
     test "validating the return value of the worker's perform/1 function" do
       message = "result to be one of"
-      actions = ["bad_atom", "bad_string", "bad_error", "bad_tuple", "bad_snooze"]
 
-      for action <- actions do
-        capture_log(fn ->
-          assert_perform_error(MisbehavedWorker, %{"action" => action}, message)
-        end) =~ message
+      actions = %{
+        "bad_atom" => :bad,
+        "bad_string" => "bad",
+        "bad_error" => :error,
+        "bad_tuple" => {:ok, "bad", :bad},
+        "bad_snooze" => {:snooze, true}
+      }
+
+      for {action, result} <- actions do
+        log = """
+        Instead received:
+
+        #{inspect(result, pretty: true)}
+
+        The job will be considered a success.
+        """
+
+        assert capture_log(fn ->
+                 assert_perform_error(MisbehavedWorker, %{"action" => action}, message)
+               end) =~ log
       end
     end
 

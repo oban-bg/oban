@@ -217,7 +217,7 @@ defmodule Oban.Queue.Executor do
             error: PerformError.exception({worker, {:error, reason}})
         }
 
-      {:snooze, seconds} = result ->
+      {:snooze, seconds} = result when is_integer(seconds) and seconds > 0 ->
         %{exec | result: result, state: :snoozed, snooze: seconds}
 
       returned ->
