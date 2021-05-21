@@ -134,42 +134,40 @@ defmodule Oban.Queue.Executor do
   end
 
   @spec ack_event(t()) :: t()
-  def ack_event(%__MODULE__{} = exec) do
-    case exec.state do
-      :success ->
-        Engine.complete_job(exec.conf, exec.job)
-        exec
+  def ack_event(%__MODULE__{state: :success} = exec) do
+    Engine.complete_job(exec.conf, exec.job)
+    exec
+  end
 
-      :failure ->
-        job = job_with_unsaved_error(exec)
+  def ack_event(%__MODULE__{state: :failure} = exec) do
+    job = job_with_unsaved_error(exec)
 
-        Engine.error_job(exec.conf, job, backoff(exec.worker, job))
+    Engine.error_job(exec.conf, job, backoff(exec.worker, job))
 
-        %{exec | job: job}
+    %{exec | job: job}
+  end
 
-      :snoozed ->
-        Engine.snooze_job(exec.conf, exec.job, exec.snooze)
-        exec
+  def ack_event(%__MODULE__{state: :snoozed} = exec) do
+    Engine.snooze_job(exec.conf, exec.job, exec.snooze)
+    exec
+  end
 
-      :discard ->
-        job = job_with_unsaved_error(exec)
+  def ack_event(%__MODULE__{state: :discard} = exec) do
+    job = job_with_unsaved_error(exec)
 
-        Engine.discard_job(exec.conf, job)
+    Engine.discard_job(exec.conf, job)
 
-        %{exec | job: job}
-    end
+    %{exec | job: job}
   end
 
   @spec emit_event(t()) :: t()
-  def emit_event(%__MODULE__{} = exec) do
-    case exec.state do
-      :failure ->
-        execute_exception(exec)
+  def emit_event(%__MODULE__{state: :failure} = exec) do
+    execute_exception(exec)
+    exec
+  end
 
-      state when state in [:success, :snoozed, :discard] ->
-        execute_stop(exec)
-    end
-
+  def emit_event(%__MODULE__{state: state} = exec) when state in [:success, :snoozed, :discard] do
+    execute_stop(exec)
     exec
   end
 
