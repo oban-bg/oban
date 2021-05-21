@@ -1,8 +1,6 @@
 defmodule Oban.Queue.ExecutorTest do
   use Oban.Case, async: true
 
-  import ExUnit.CaptureLog
-
   alias Oban.{CrashError, PerformError}
   alias Oban.Queue.Executor
 
@@ -12,7 +10,6 @@ defmodule Oban.Queue.ExecutorTest do
     @impl Worker
     def perform(%{args: %{"mode" => "ok"}}), do: :ok
     def perform(%{args: %{"mode" => "result"}}), do: {:ok, :result}
-    def perform(%{args: %{"mode" => "warn"}}), do: {:bad, :this_will_warn}
     def perform(%{args: %{"mode" => "raise"}}), do: raise(ArgumentError)
     def perform(%{args: %{"mode" => "catch"}}), do: throw(:no_reason)
     def perform(%{args: %{"mode" => "error"}}), do: {:error, "no reason"}
@@ -45,13 +42,6 @@ defmodule Oban.Queue.ExecutorTest do
                @conf
                |> Executor.new(job)
                |> Executor.resolve_worker()
-    end
-
-    test "warning on unexpected return values" do
-      message = capture_log(fn -> %{state: :success} = call_with_mode("warn") end)
-
-      assert message =~ "Expected #{__MODULE__}.Worker.perform/1"
-      assert message =~ "{:bad, :this_will_warn}"
     end
 
     test "reporting duration and queue_time measurements" do

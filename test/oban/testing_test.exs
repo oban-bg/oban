@@ -3,6 +3,8 @@ defmodule Oban.TestingTest do
 
   use Oban.Testing, repo: Oban.Test.Repo
 
+  alias Oban.TelemetryHandler
+
   @moduletag :integration
 
   defmodule InvalidWorker do
@@ -67,17 +69,29 @@ defmodule Oban.TestingTest do
     test "validating the return value of the worker's perform/1 function" do
       message = "result to be one of"
 
-      assert_perform_error(MisbehavedWorker, %{"action" => "bad_atom"}, message)
-      assert_perform_error(MisbehavedWorker, %{"action" => "bad_string"}, message)
-      assert_perform_error(MisbehavedWorker, %{"action" => "bad_error"}, message)
-      assert_perform_error(MisbehavedWorker, %{"action" => "bad_tuple"}, message)
-      assert_perform_error(MisbehavedWorker, %{"action" => "bad_snooze"}, message)
+      actions = ["bad_atom", "bad_string", "bad_error", "bad_tuple", "bad_snooze"]
+
+      for action <- actions do
+        assert_perform_error(MisbehavedWorker, %{"action" => action}, message)
+      end
     end
 
     test "returning the value of worker's perform/1 function" do
       assert :ok = perform_job(Worker, %{ref: 1, action: "OK"})
       assert :discard = perform_job(Worker, %{ref: 1, action: "DISCARD"})
       assert {:error, _} = perform_job(Worker, %{ref: 1, action: "ERROR"})
+    end
+
+    test "emitting appropriate telemetry events" do
+      TelemetryHandler.attach_events("perform-job-handler")
+      assert :ok = perform_job(Worker, %{ref: 1, action: "OK"})
+
+      assert_receive {:event, :start, _measurements, %{args: args} = _meta}
+      assert %{"action" => "OK", "ref" => 1} = args
+      assert_receive {:event, :stop, _measurements, %{args: args} = _meta}
+      assert %{"action" => "OK", "ref" => 1} = args
+    after
+      :telemetry.detach("perform-job-handler")
     end
   end
 

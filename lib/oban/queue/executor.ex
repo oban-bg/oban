@@ -128,31 +128,67 @@ defmodule Oban.Queue.Executor do
 
   @spec report_finished(t()) :: t()
   def report_finished(%__MODULE__{} = exec) do
-    case exec.state do
-      :success ->
-        Engine.complete_job(exec.conf, exec.job)
+    exec
+    |> ack_event()
+    |> emit_event()
+  end
 
-        execute_stop(exec)
+  @spec ack_event(t()) :: t()
+  def ack_event(%__MODULE__{state: :success} = exec) do
+    Engine.complete_job(exec.conf, exec.job)
+    exec
+  end
 
-      :failure ->
-        job = job_with_unsaved_error(exec)
+  def ack_event(%__MODULE__{state: :failure} = exec) do
+    job = job_with_unsaved_error(exec)
 
-        Engine.error_job(exec.conf, job, backoff(exec.worker, job))
+    Engine.error_job(exec.conf, job, backoff(exec.worker, job))
 
-        execute_exception(%{exec | job: job})
+    %{exec | job: job}
+  end
 
-      :snoozed ->
-        Engine.snooze_job(exec.conf, exec.job, exec.snooze)
+  def ack_event(%__MODULE__{state: :snoozed} = exec) do
+    Engine.snooze_job(exec.conf, exec.job, exec.snooze)
+    exec
+  end
 
-        execute_stop(exec)
+  def ack_event(%__MODULE__{state: :discard} = exec) do
+    job = job_with_unsaved_error(exec)
 
-      :discard ->
-        job = job_with_unsaved_error(exec)
+    Engine.discard_job(exec.conf, job)
 
-        Engine.discard_job(exec.conf, job)
+    %{exec | job: job}
+  end
 
-        execute_stop(%{exec | job: job})
-    end
+  @spec emit_event(t()) :: t()
+  def emit_event(%__MODULE__{state: :failure} = exec) do
+    measurements = %{duration: exec.duration, queue_time: exec.queue_time}
+
+    meta =
+      Map.merge(exec.meta, %{
+        job: exec.job,
+        kind: exec.kind,
+        error: exec.error,
+        stacktrace: exec.stacktrace,
+        state: exec.state
+      })
+
+    Telemetry.execute([:oban, :job, :exception], measurements, meta)
+
+    exec
+  end
+
+  def emit_event(%__MODULE__{state: state} = exec) when state in [:success, :snoozed, :discard] do
+    measurements = %{duration: exec.duration, queue_time: exec.queue_time}
+
+    meta =
+      Map.merge(exec.meta, %{
+        job: exec.job,
+        state: exec.state,
+        result: exec.result
+      })
+
+    Telemetry.execute([:oban, :job, :stop], measurements, meta)
 
     exec
   end
@@ -177,37 +213,35 @@ defmodule Oban.Queue.Executor do
       {:ok, _value} = result ->
         %{exec | state: :success, result: result}
 
-      :discard ->
-        %{exec | state: :discard, error: PerformError.exception({worker, :discard})}
+      :discard = result ->
+        %{
+          exec
+          | result: result,
+            state: :discard,
+            error: PerformError.exception({worker, :discard})
+        }
 
-      {:discard, reason} ->
-        %{exec | state: :discard, error: PerformError.exception({worker, {:discard, reason}})}
+      {:discard, reason} = result ->
+        %{
+          exec
+          | result: result,
+            state: :discard,
+            error: PerformError.exception({worker, {:discard, reason}})
+        }
 
-      {:error, reason} ->
-        %{exec | state: :failure, error: PerformError.exception({worker, {:error, reason}})}
+      {:error, reason} = result ->
+        %{
+          exec
+          | result: result,
+            state: :failure,
+            error: PerformError.exception({worker, {:error, reason}})
+        }
 
-      {:snooze, seconds} ->
-        %{exec | state: :snoozed, snooze: seconds}
+      {:snooze, seconds} = result when is_integer(seconds) and seconds > 0 ->
+        %{exec | result: result, state: :snoozed, snooze: seconds}
 
       returned ->
-        Logger.warn(fn ->
-          """
-          Expected #{worker}.perform/1 to return:
-
-          - `:ok`
-          - `:discard`
-          - `{:ok, value}`
-          - `{:error, reason}`,
-          - `{:discard, reason}`
-          - `{:snooze, seconds}`
-
-          Instead received:
-
-          #{inspect(returned, pretty: true)}
-
-          The job will be considered a success.
-          """
-        end)
+        maybe_log_warning(exec, returned)
 
         %{exec | state: :success}
     end
@@ -230,34 +264,6 @@ defmodule Oban.Queue.Executor do
   defp backoff(nil, job), do: Worker.backoff(job)
   defp backoff(worker, job), do: worker.backoff(job)
 
-  defp execute_stop(exec) do
-    measurements = %{duration: exec.duration, queue_time: exec.queue_time}
-
-    meta =
-      Map.merge(exec.meta, %{
-        job: exec.job,
-        state: exec.state,
-        result: exec.result
-      })
-
-    Telemetry.execute([:oban, :job, :stop], measurements, meta)
-  end
-
-  defp execute_exception(exec) do
-    measurements = %{duration: exec.duration, queue_time: exec.queue_time}
-
-    meta =
-      Map.merge(exec.meta, %{
-        job: exec.job,
-        kind: exec.kind,
-        error: exec.error,
-        stacktrace: exec.stacktrace,
-        state: exec.state
-      })
-
-    Telemetry.execute([:oban, :job, :exception], measurements, meta)
-  end
-
   defp event_metadata(conf, job) do
     job
     |> Map.take([:id, :args, :queue, :worker, :attempt, :max_attempts, :tags])
@@ -269,5 +275,29 @@ defmodule Oban.Queue.Executor do
     unsaved_error = %{kind: exec.kind, reason: exec.error, stacktrace: exec.stacktrace}
 
     %{exec.job | unsaved_error: unsaved_error}
+  end
+
+  defp maybe_log_warning(exec, returned)
+  defp maybe_log_warning(%__MODULE__{safe: false}, _returned), do: :noop
+
+  defp maybe_log_warning(%__MODULE__{worker: worker}, returned) do
+    Logger.warn(fn ->
+      """
+      Expected #{worker}.perform/1 to return:
+
+      - `:ok`
+      - `:discard`
+      - `{:ok, value}`
+      - `{:error, reason}`,
+      - `{:discard, reason}`
+      - `{:snooze, seconds}`
+
+      Instead received:
+
+      #{inspect(returned, pretty: true)}
+
+      The job will be considered a success.
+      """
+    end)
   end
 end
