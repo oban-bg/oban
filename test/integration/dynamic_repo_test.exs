@@ -27,6 +27,25 @@ defmodule Oban.Integration.DynamicRepoTest do
     assert_receive {:ok, ^job_ref}
   end
 
+  test "rollback job insertion after transaction failure", context do
+    name = start_oban!(context.repo_pid, queues: [alpha: 1])
+
+    {:ok, app_repo_pid} =
+      start_supervised(%{DynamicRepo.child_spec(name: :app_repo) | id: :app_repo})
+
+    DynamicRepo.put_dynamic_repo(app_repo_pid)
+
+    ref = System.unique_integer([:positive, :monotonic])
+
+    assert {:error, :failure, :wat, %{job: %Oban.Job{args: %{ref: ^ref, action: "OK"}}}} =
+             name
+             |> Oban.insert(Ecto.Multi.new(), :job, Worker.new(%{ref: ref, action: "OK"}))
+             |> Ecto.Multi.run(:failure, fn _repo, _ -> {:error, :wat} end)
+             |> DynamicRepo.transaction()
+
+    refute_receive {:ok, ^ref}
+  end
+
   test "pruning", context do
     start_oban!(context.repo_pid, plugins: [{Oban.Plugins.Pruner, interval: 10, max_age: 60}])
 

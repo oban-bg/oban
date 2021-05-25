@@ -173,18 +173,25 @@ defmodule Oban.Repo do
 
       instance ->
         prev_instance = conf.repo.get_dynamic_repo()
-
-        try do
-          conf.repo.put_dynamic_repo(instance)
-          fun.()
-        after
-          conf.repo.put_dynamic_repo(prev_instance)
-        end
+        maybe_run_in_transaction(conf, fun, instance, prev_instance)
     end
   end
 
   defp get_dynamic_repo(%{get_dynamic_repo: fun}) when is_function(fun, 0), do: fun.()
   defp get_dynamic_repo(_conf), do: nil
+
+  def maybe_run_in_transaction(conf, fun, instance, prev_instance) do
+    unless in_transaction?(conf, prev_instance) do
+      conf.repo.put_dynamic_repo(instance)
+    end
+
+    fun.()
+  after
+    conf.repo.put_dynamic_repo(prev_instance)
+  end
+
+  defp in_transaction?(conf, instance) when is_pid(instance), do: conf.repo.in_transaction?()
+  defp in_transaction?(_, _), do: false
 
   defp query_opts(opts, conf) do
     opts
