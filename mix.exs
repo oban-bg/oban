@@ -108,6 +108,7 @@ defmodule Oban.MixProject do
         "../oban_web/CHANGELOG.md": [filename: "web-changelog", title: "Changelog"],
         "../oban_web/guides/web/installation.md": [filename: "web_installation"],
         "../oban_web/guides/web/customizing.md": [filename: "web_customizing"],
+        "../oban_web/guides/web/searching.md": [filename: "searching"],
         "../oban_web/guides/web/telemetry.md": [filename: "web_telemetry"]
       ]
     else
