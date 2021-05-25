@@ -191,6 +191,17 @@ defmodule Oban.Repo do
   end
 
   defp in_transaction?(conf, instance) when is_pid(instance), do: conf.repo.in_transaction?()
+
+  defp in_transaction?(conf, instance) when is_atom(instance) do
+    case GenServer.whereis(instance) do
+      pid when is_pid(pid) ->
+        in_transaction?(conf, pid)
+
+      _ ->
+        false
+    end
+  end
+
   defp in_transaction?(_, _), do: false
 
   defp query_opts(opts, conf) do

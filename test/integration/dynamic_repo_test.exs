@@ -30,10 +30,10 @@ defmodule Oban.Integration.DynamicRepoTest do
   test "rollback job insertion after transaction failure", context do
     name = start_oban!(context.repo_pid, queues: [alpha: 1])
 
-    {:ok, app_repo_pid} =
+    {:ok, _app_repo_pid} =
       start_supervised(%{DynamicRepo.child_spec(name: :app_repo) | id: :app_repo})
 
-    DynamicRepo.put_dynamic_repo(app_repo_pid)
+    DynamicRepo.put_dynamic_repo(:app_repo)
 
     ref = System.unique_integer([:positive, :monotonic])
 
