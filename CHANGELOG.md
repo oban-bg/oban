@@ -8,9 +8,92 @@ the [Oban.Web Changelog][owc]._
 [opc]: pro-changelog.html
 [owc]: web-changelog.html
 
+## [2.7.0] — 2021-05-25
+
+### Pluggable Notifier
+
+The PubSub functionality Oban relies on for starting, stopping, scaling, and
+pausing queues is now pluggable. The previous notifier was hard-coded to use
+Postgres for PubSub via `LISTEN/NOTIFY`. Unfortunately, `LISTEN/NOTIFY` doesn't
+work for PG Bouncer in "Transaction Mode." While relatively few users run in
+"Transaction Mode," it is increasingly common and deserved a work-around.
+
+`Oban.Notifier` defines a minimal behaviour and Oban ships with a default
+implementation, `Oban.PostgresNotifier`, based on the old `LISTEN/NOTIFY`
+module. You can specify a different notifier in your Oban configuration:
+
+```elixir
+config :my_app, Oban,
+  notifier: MyApp.CustomNotifier,
+  repo: MyApp.Repo,
+  ...
+```
+
+An alternate [`pg/pg2` based notifier][pgn] is available in Oban Pro.
+
+[pgn]: pg.html
+
+### Replacing Opts on Unique Conflict
+
+The `replace_args` option for updating args on unique conflict is replaced with
+a highly flexible `replace` option. Using `replace`, you can update any job
+field when there is a conflict. Replace works for any of the following fields:
+`args`, `max_attempts`, `meta`, `priority`, `queue`, `scheduled_at`, `tags`,
+`worker`.
+
+For example, to change the `priority` to 0 and increase `max_attempts` to 5 when
+there is a conflict:
+
+```elixir
+BusinessWorker.new(
+  args,
+  max_attempts: 5,
+  priority: 0,
+  replace: [:max_attempts, :priority]
+)
+```
+
+Another example is bumping the scheduled time to 1 second in the future on
+conflict. Either `scheduled_at` or `schedule_in` values will work, but the
+replace option is always `scheduled_at`.
+
+```elixir
+UrgentWorker.new(args, schedule_in: 1, replace: [:scheduled_at])
+```
+
+### Added
+
+- [Oban.Job] A new `conflict?` field indicates whether a unique job conflicted
+  with an existing job on insert.
+
+- [Oban.Telemetry] Always populate the `unsaved_error` field for `error` or
+  `discard` events. Previously, the field was empty for `discard` events.
+
+- [Oban.Queue.Engine] Define a `cancel_job/2` callback in the engine and
+  move cancellation from the query module to the `BasicEngine`.
+
+### Changed
+
+- [Oban.Testing] Thanks to a slight refactoring, the `perform_job/3` helper now
+  emits the same telemetry events that you'd have in production. The refactoring
+  also exposed and fixed an inconsistency around invalid snooze handlers.
+
+- [Oban.Testing] Expose `Testing.all_enqueued/0`, an alternate clause that
+  doesn't require any options. This new clause makes it possible to check for
+  any enqueued jobs without filters.
+
+- [Oban.Plugins.Stager] Limit the number of jobs staged at one time to prevent
+  timeout errors while staging a massive number of jobs.
+
+### Fixed
+
+- [Oban.Repo] Respect ongoing transactions when using `get_dynamic_repo`. Prior
+  to this fix, calls that use `Oban.Repo`, such as `Oban.insert/2`, could use a
+  different repo than the one used in the current transaction.
+
 ## [2.6.1] — 2021-04-02
 
-### Fixes
+### Fixed
 
 - [Oban.Drainer] Always use the `BasicEngine` for draining, regardless of the
   currently configured engine.
@@ -838,7 +921,8 @@ No changes from [2.0.0-rc.3][].
 
 For changes prior to 2.0 see the [1.2 branch][1.2]
 
-[Unreleased]: https://github.com/sorentwo/oban/compare/v2.6.1...HEAD
+[Unreleased]: https://github.com/sorentwo/oban/compare/v2.7.9...HEAD
+[2.7.0]: https://github.com/sorentwo/oban/compare/v2.6.1...v2.7.0
 [2.6.1]: https://github.com/sorentwo/oban/compare/v2.6.0...v2.6.1
 [2.6.0]: https://github.com/sorentwo/oban/compare/v2.5.0...v2.6.0
 [2.5.0]: https://github.com/sorentwo/oban/compare/v2.4.3...v2.5.0

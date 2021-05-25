@@ -2,7 +2,7 @@ defmodule Oban.MixProject do
   use Mix.Project
 
   @source_url "https://github.com/sorentwo/oban"
-  @version "2.6.1"
+  @version "2.7.0"
 
   def project do
     [
@@ -87,6 +87,7 @@ defmodule Oban.MixProject do
         "../oban_pro/CHANGELOG.md": [filename: "pro-changelog", title: "Changelog"],
         "../oban_pro/guides/pro/installation.md": [filename: "pro_installation"],
         "../oban_pro/guides/queue/smart_engine.md": [title: "Smart Engine"],
+        "../oban_pro/guides/notifiers/pg.md": [title: "PG Notifier"],
         "../oban_pro/guides/plugins/dynamic_cron.md": [title: "Dynamic Cron Plugin"],
         "../oban_pro/guides/plugins/dynamic_pruner.md": [title: "Dynamic Pruner Plugin"],
         "../oban_pro/guides/plugins/lifeline.md": [title: "Lifeline Plugin"],
