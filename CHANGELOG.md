@@ -8,6 +8,13 @@ the [Oban.Web Changelog][owc]._
 [opc]: pro-changelog.html
 [owc]: web-changelog.html
 
+## [2.7.1] — 2021-05-26
+
+### Fixed
+
+- [Oban.Telemetry] Restore the `:job` key to `[:oban, :job, :start]` events. It
+  was mistakenly removed during a refactoring.
+
 ## [2.7.0] — 2021-05-25
 
 ### Pluggable Notifier
@@ -921,7 +928,8 @@ No changes from [2.0.0-rc.3][].
 
 For changes prior to 2.0 see the [1.2 branch][1.2]
 
-[Unreleased]: https://github.com/sorentwo/oban/compare/v2.7.9...HEAD
+[Unreleased]: https://github.com/sorentwo/oban/compare/v2.7.1...HEAD
+[2.7.1]: https://github.com/sorentwo/oban/compare/v2.7.0...v2.7.1
 [2.7.0]: https://github.com/sorentwo/oban/compare/v2.6.1...v2.7.0
 [2.6.1]: https://github.com/sorentwo/oban/compare/v2.6.0...v2.6.1
 [2.6.0]: https://github.com/sorentwo/oban/compare/v2.5.0...v2.6.0
