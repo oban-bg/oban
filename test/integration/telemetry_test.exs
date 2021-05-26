@@ -25,10 +25,10 @@ defmodule Oban.Integration.TelemetryTest do
 
     name = start_supervised_oban!(queues: [alpha: 2])
 
-    %Job{id: stop_id} = insert!([ref: 1, action: "OK"], tags: ["baz"])
+    %Job{id: ok_id} = insert!([ref: 1, action: "OK"], tags: ["baz"])
     %Job{id: error_id} = insert!([ref: 2, action: "ERROR"], tags: ["foo"])
 
-    assert_receive {:event, :start, started_time, _stop_meta}
+    assert_receive {:event, :start, started_time, start_meta}
     assert_receive {:event, :stop, %{duration: stop_duration, queue_time: queue_time}, stop_meta}
     assert_receive {:event, :exception, error_duration, %{kind: :error} = error_meta}
 
@@ -37,7 +37,8 @@ defmodule Oban.Integration.TelemetryTest do
     assert queue_time > 0
     assert error_duration > 0
 
-    assert %{conf: %Config{name: ^name}, job: %Job{id: ^stop_id}, result: :ok} = stop_meta
+    assert %{conf: %Config{name: ^name}, job: %Job{}} = start_meta
+    assert %{conf: %Config{name: ^name}, job: %Job{id: ^ok_id}, result: :ok} = stop_meta
     assert %{conf: %Config{name: ^name}, job: %Job{id: ^error_id}} = error_meta
 
     assert %{job: %Job{unsaved_error: unsaved}} = error_meta
@@ -46,7 +47,7 @@ defmodule Oban.Integration.TelemetryTest do
     # Deprecated Meta
 
     assert %{
-             id: ^stop_id,
+             id: ^ok_id,
              args: %{},
              queue: "alpha",
              worker: "Oban.Integration.Worker",

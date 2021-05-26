@@ -267,8 +267,7 @@ defmodule Oban.Queue.Executor do
   defp event_metadata(conf, job) do
     job
     |> Map.take([:id, :args, :queue, :worker, :attempt, :max_attempts, :tags])
-    |> Map.put(:conf, conf)
-    |> Map.put(:prefix, conf.prefix)
+    |> Map.merge(%{conf: conf, job: job, prefix: conf.prefix})
   end
 
   defp job_with_unsaved_error(%__MODULE__{} = exec) do
