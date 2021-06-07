@@ -48,7 +48,7 @@ defmodule Oban.Worker do
     An error is recorded using the optional reason, though the job is still successful
   * `{:error, error}` — the job failed, record the error and schedule a retry if possible
   * `{:snooze, seconds}` — mark the job as `snoozed` and schedule it to run again `seconds` in the
-    future. Snoozing a job does not change the number of retries remaining on the job.
+    future. See [Snoozing](#module-snoozing-jobs) for more details.
 
   In addition to explicit return values, any _unhandled exception_, _exit_ or _throw_ will fail
   the job and schedule a retry if possible.
@@ -157,6 +157,33 @@ defmodule Oban.Worker do
             %MyApp.ApiError{status: 429} -> @five_minutes
             _ -> trunc(:math.pow(attempt, 4))
           end
+        end
+      end
+
+  ## Snoozing jobs
+
+  When returning `{:snooze, snooze_time}` in `c:perform/1`, the job is postponed for at
+  least `snooze_time` seconds. Snoozing is done by incrementing the job's `max_attempts` field and
+  scheduling execution for `snooze_time` seconds in the future.
+
+  Snoozing does not change the number of retries remaining on the job, but it does increment the `attempt`
+  number each time the job snoozes, which will affect the default backoff exponential retry
+  algorithm. In the example below the `c:backoff/1` callback compensates for snoozing:
+
+      defmodule MyApp.SnoozingWorker do
+        @max_attempts 20
+        use Oban.Worker, max_attempts: @max_attempts
+
+        @impl Worker
+        def backoff(%Job{} = job) do
+          corrected_attempt = @max_attempts - (job.max_attempts - job.attempt)
+
+          Worker.backoff(%{job | attempt: corrected_attempt)
+        end
+
+        @impl Worker
+        def perform(job) do
+          if MyApp.something?(job), do: :ok, else: {:snooze, 60}
         end
       end
 
