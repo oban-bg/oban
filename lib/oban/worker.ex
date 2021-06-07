@@ -162,12 +162,12 @@ defmodule Oban.Worker do
 
   ## Snoozing jobs
 
-  When returning `{:snooze, snooze_time}` in `c:perform/1`, the job will be postponed for at
-  least `snooze_time` seconds. Snoozing is done by incrementing the job `max_attempts` field and
+  When returning `{:snooze, snooze_time}` in `c:perform/1`, the job is postponed for at
+  least `snooze_time` seconds. Snoozing is done by incrementing the job's `max_attempts` field and
   scheduling execution for `snooze_time` seconds in the future.
 
   Snoozing does not change the number of retries remaining on the job, but it does increment the `attempt`
-  number each time the job is snooze, which will affect the default backoff exponential retry
+  number each time the job snoozes, which will affect the default backoff exponential retry
   algorithm. In the example below the `c:backoff/1` callback compensates for snoozing:
 
       defmodule MyApp.SnoozingWorker do
