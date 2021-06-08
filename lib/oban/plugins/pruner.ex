@@ -33,7 +33,7 @@ defmodule Oban.Plugins.Pruner do
 
   use GenServer
 
-  import Ecto.Query, only: [join: 5, limit: 2, select: 2, where: 3]
+  import Ecto.Query, only: [join: 5, limit: 2, or_where: 3, select: 2]
 
   alias Oban.{Config, Job, Query, Repo}
 
@@ -117,12 +117,13 @@ defmodule Oban.Plugins.Pruner do
   # Query
 
   defp delete_jobs(conf, seconds, limit) do
-    outdated_at = DateTime.add(DateTime.utc_now(), -seconds)
+    time = DateTime.add(DateTime.utc_now(), -seconds)
 
     subquery =
       Job
-      |> where([j], j.state in ["completed", "cancelled", "discarded"])
-      |> where([j], j.attempted_at < ^outdated_at)
+      |> or_where([j], j.state == "completed" and j.attempted_at < ^time)
+      |> or_where([j], j.state == "cancelled" and j.cancelled_at < ^time)
+      |> or_where([j], j.state == "discarded" and j.discarded_at < ^time)
       |> select([:id])
       |> limit(^limit)
 
