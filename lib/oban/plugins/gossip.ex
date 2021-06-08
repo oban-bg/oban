@@ -75,7 +75,7 @@ defmodule Oban.Plugins.Gossip do
       checks =
         Oban.Registry
         |> Registry.select(match)
-        |> Enum.map(&safe_check/1)
+        |> Enum.map(&safe_check(&1, state))
         |> Enum.reject(&is_nil/1)
         |> Enum.map(&sanitize_name/1)
 
@@ -91,10 +91,10 @@ defmodule Oban.Plugins.Gossip do
     %{state | timer: Process.send_after(self(), :gossip, state.interval)}
   end
 
-  defp safe_check(pid) do
-    if Process.alive?(pid), do: GenServer.call(pid, :check)
+  defp safe_check(pid, state) do
+    if Process.alive?(pid), do: GenServer.call(pid, :check, state.interval)
   catch
-    _exit -> nil
+    :exit, _ -> nil
   end
 
   defp sanitize_name(%{name: name} = check) when is_binary(name), do: check
