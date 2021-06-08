@@ -945,9 +945,9 @@ integrating with [Sentry][sentry] to report job failures:
 
 ```elixir
 defmodule ErrorReporter do
-  def handle_event([:oban, :job, :exception], measure, %{job: job}, _) do
+  def handle_event([:oban, :job, :exception], measure, meta, _) do
     extra =
-      job
+      meta.job
       |> Map.take([:id, :args, :meta, :queue, :worker])
       |> Map.merge(measure)
 
@@ -959,11 +959,11 @@ defmodule ErrorReporter do
   end
 end
 
-:telemetry.attach_many(
+:telemetry.attach(
   "oban-errors",
-  [[:oban, :job, :exception], [:oban, :circuit, :trip]],
+  [:oban, :job, :exception],
   &ErrorReporter.handle_event/4,
-  %{}
+  []
 )
 ```
 
