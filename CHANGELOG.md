@@ -8,6 +8,19 @@ the [Oban.Web Changelog][owc]._
 [opc]: https://hexdocs.pm/oban/pro-changelog.html
 [owc]: https://hexdocs.pm/oban/web-changelog.html
 
+## [2.7.2] — 2021-06-10
+
+### Fixed
+
+- [Oban.Plugins.Pruner] Consider `cancelled_at` or `discarded_at` timestamps
+  when querying prunable jobs. The previous query required an `attempted_at`
+  value, even for `cancelled` or `discarded` jobs. If a job was cancelled before
+  it was attempted then it wouldn't ever be pruned.
+
+- [Oban.Plugins.Gossip] Correct exit handling during safe checks. Occasionally,
+  producer checks time out and the previous `catch` block didn't handle exits
+  properly.
+
 ## [2.7.1] — 2021-05-26
 
 ### Fixed
@@ -928,7 +941,8 @@ No changes from [2.0.0-rc.3][].
 
 For changes prior to 2.0 see the [1.2 branch][1.2]
 
-[Unreleased]: https://github.com/sorentwo/oban/compare/v2.7.1...HEAD
+[Unreleased]: https://github.com/sorentwo/oban/compare/v2.7.2...HEAD
+[2.7.2]: https://github.com/sorentwo/oban/compare/v2.7.1...v2.7.2
 [2.7.1]: https://github.com/sorentwo/oban/compare/v2.7.0...v2.7.1
 [2.7.0]: https://github.com/sorentwo/oban/compare/v2.6.1...v2.7.0
 [2.6.1]: https://github.com/sorentwo/oban/compare/v2.6.0...v2.6.1
