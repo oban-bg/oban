@@ -11,6 +11,20 @@ defmodule Oban.TestingTest do
     def perform(_), do: :ok
   end
 
+  defmodule OverriddenWorker do
+    use Oban.Worker
+
+    @impl Worker
+    def new({key, val}, opts) do
+      super(%{key => val}, opts)
+    end
+
+    @impl Worker
+    def perform(%{args: args}) do
+      {:ok, args}
+    end
+  end
+
   defmodule MyApp.Worker do
     defmacro __using__(_opts) do
       quote do
@@ -64,6 +78,10 @@ defmodule Oban.TestingTest do
       )
 
       assert_perform_error(Worker, %{}, [priority: -1], "priority: must be greater than -1")
+    end
+
+    test "passing non-map args through to an overridden new/2 function" do
+      {:ok, %{"id" => 1}} = perform_job(OverriddenWorker, {:id, 1})
     end
 
     test "validating the return value of the worker's perform/1 function" do
