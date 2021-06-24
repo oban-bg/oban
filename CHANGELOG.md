@@ -381,7 +381,7 @@ defmodule MyApp.Repo.Migrations.UpdateObanJobsToV10 do
   end
 
   def down do
-    Oban.Migrations.down(version: 10)
+    Oban.Migrations.down(version: 9)
   end
 end
 ```
@@ -486,7 +486,7 @@ defmodule MyApp.Repo.Migrations.UpdateObanJobsToV9 do
   end
 
   def down do
-    Oban.Migrations.down(version: 9)
+    Oban.Migrations.down(version: 8)
   end
 end
 ```
