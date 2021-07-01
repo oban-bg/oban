@@ -47,13 +47,29 @@ defmodule Oban.Job do
           | :worker
         ]
 
+  @type schedule_in_option ::
+          pos_integer()
+          | {pos_integer(),
+             :second
+             | :seconds
+             | :minute
+             | :minutes
+             | :hour
+             | :hours
+             | :day
+             | :days
+             | :week
+             | :weeks
+             | :month
+             | :months}
+
   @type option ::
           {:args, args()}
           | {:max_attempts, pos_integer()}
           | {:meta, map()}
           | {:priority, pos_integer()}
           | {:queue, atom() | binary()}
-          | {:schedule_in, pos_integer()}
+          | {:schedule_in, schedule_in_option()}
           | {:replace_args, boolean()}
           | {:replace, [replace_option()]}
           | {:scheduled_at, DateTime.t()}
@@ -156,7 +172,8 @@ defmodule Oban.Job do
       other jobs in the same queue. The lower the number, the higher priority the job.
     * `:queue` — a named queue to push the job into. Jobs may be pushed into any queue, regardless
       of whether jobs are currently being processed for the queue.
-    * `:schedule_in` - the number of seconds until the job should be executed
+    * `:schedule_in` - the number of seconds until the job should be executed or a tuple containing
+      a number and unit
     * `:replace_args` - if the arguments should be replaced on a unique conflict
     * `:replace` - a list of keys to replace on a unique conflict
     * `:scheduled_at` - a time in the future after which the job should be executed
@@ -181,6 +198,10 @@ defmodule Oban.Job do
   Schedule a job to run in 5 seconds:
 
       %{id: 1} |> MyApp.Worker.new(schedule_in: 5) |> Oban.insert()
+
+  Schedule a job to run in 5 minutes:
+
+      %{id: 1} |> MyApp.Worker.new(schedule_in: {5, :minutes}) |> Oban.insert()
 
   Insert a job, ensuring that it is unique within the past minute:
 
@@ -293,10 +314,29 @@ defmodule Oban.Job do
   def valid_unique_opt?({:states, [_ | _] = states}), do: states -- states() == []
   def valid_unique_opt?(_option), do: false
 
+  @time_units ~w(
+    second
+    seconds
+    minute
+    minutes
+    hour
+    hours
+    day
+    days
+    week
+    weeks
+    month
+    months
+  )a
+
+  defguardp is_timestampable(value)
+            when is_integer(value) or
+                   (is_integer(elem(value, 0)) and elem(value, 1) in @time_units)
+
   defp put_scheduling(changeset, value) do
     case value do
-      in_seconds when is_integer(in_seconds) ->
-        scheduled_at = DateTime.add(DateTime.utc_now(), in_seconds)
+      value when is_timestampable(value) ->
+        scheduled_at = to_timestamp(value)
 
         put_change(changeset, :scheduled_at, scheduled_at)
 
@@ -377,6 +417,23 @@ defmodule Oban.Job do
   end
 
   defp normalize_tags(params), do: params
+
+  defp to_timestamp(seconds) when is_integer(seconds) do
+    DateTime.add(DateTime.utc_now(), seconds, :second)
+  end
+
+  defp to_timestamp({seconds, :second}), do: to_timestamp(seconds)
+  defp to_timestamp({seconds, :seconds}), do: to_timestamp(seconds)
+  defp to_timestamp({minutes, :minute}), do: to_timestamp(minutes * 60)
+  defp to_timestamp({minutes, :minutes}), do: to_timestamp({minutes, :minute})
+  defp to_timestamp({hours, :hour}), do: to_timestamp(hours * 60 * 60)
+  defp to_timestamp({hours, :hours}), do: to_timestamp({hours, :hour})
+  defp to_timestamp({days, :day}), do: to_timestamp(days * 24 * 60 * 60)
+  defp to_timestamp({days, :days}), do: to_timestamp({days, :day})
+  defp to_timestamp({weeks, :week}), do: to_timestamp(weeks * 7 * 24 * 60 * 60)
+  defp to_timestamp({weeks, :weeks}), do: to_timestamp({weeks, :week})
+  defp to_timestamp({months, :month}), do: to_timestamp(months * 30 * 24 * 60 * 60)
+  defp to_timestamp({months, :months}), do: to_timestamp({months, :month})
 
   defp validate_unique_opts(unique) do
     Enum.reduce_while(unique, :ok, fn {key, val}, _acc ->
