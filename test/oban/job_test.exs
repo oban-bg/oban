@@ -123,17 +123,6 @@ defmodule Oban.JobTest do
   end
 
   defp time_unit do
-    one_of([
-      :second,
-      :seconds,
-      :minute,
-      :minutes,
-      :hour,
-      :hours,
-      :day,
-      :days,
-      :week,
-      :weeks
-    ])
+    one_of([:second, :seconds, :minute, :minutes, :hour, :hours, :day, :days, :week, :weeks])
   end
 end
