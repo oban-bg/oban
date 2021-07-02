@@ -59,9 +59,7 @@ defmodule Oban.Job do
              | :day
              | :days
              | :week
-             | :weeks
-             | :month
-             | :months}
+             | :weeks}
 
   @type option ::
           {:args, args()}
@@ -325,8 +323,6 @@ defmodule Oban.Job do
     days
     week
     weeks
-    month
-    months
   )a
 
   defguardp is_timestampable(value)
@@ -432,8 +428,6 @@ defmodule Oban.Job do
   defp to_timestamp({days, :days}), do: to_timestamp({days, :day})
   defp to_timestamp({weeks, :week}), do: to_timestamp(weeks * 7 * 24 * 60 * 60)
   defp to_timestamp({weeks, :weeks}), do: to_timestamp({weeks, :week})
-  defp to_timestamp({months, :month}), do: to_timestamp(months * 30 * 24 * 60 * 60)
-  defp to_timestamp({months, :months}), do: to_timestamp({months, :month})
 
   defp validate_unique_opts(unique) do
     Enum.reduce_while(unique, :ok, fn {key, val}, _acc ->

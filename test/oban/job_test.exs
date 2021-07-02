@@ -13,10 +13,13 @@ defmodule Oban.JobTest do
     end
 
     property "scheduling a job for the future using a tuple" do
-      check all schedule_in <- tuple({integer(), time_unit()}) do
-        changeset = Job.new(%{}, worker: Fake, schedule_in: schedule_in)
-        assert changeset.changes[:state] == "scheduled"
-        assert changeset.changes[:scheduled_at]
+      now = DateTime.utc_now()
+
+      check all schedule_in <- tuple({positive_integer(), time_unit()}) do
+        assert %{changes: %{scheduled_at: %DateTime{} = scheduled_at, state: "scheduled"}} =
+                 Job.new(%{}, worker: Fake, schedule_in: schedule_in)
+
+        assert DateTime.compare(scheduled_at, now) == :gt
       end
     end
 
@@ -130,9 +133,7 @@ defmodule Oban.JobTest do
       :day,
       :days,
       :week,
-      :weeks,
-      :month,
-      :months
+      :weeks
     ])
   end
 end
