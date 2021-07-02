@@ -1,5 +1,6 @@
 defmodule Oban.JobTest do
   use Oban.Case, async: true
+  use ExUnitProperties
 
   doctest Oban.Job
 
@@ -11,10 +12,23 @@ defmodule Oban.JobTest do
       assert changeset.changes[:scheduled_at]
     end
 
+    property "scheduling a job for the future using a tuple" do
+      now = DateTime.utc_now()
+
+      check all schedule_in <- tuple({positive_integer(), time_unit()}) do
+        assert %{changes: %{scheduled_at: %DateTime{} = scheduled_at, state: "scheduled"}} =
+                 Job.new(%{}, worker: Fake, schedule_in: schedule_in)
+
+        assert DateTime.compare(scheduled_at, now) == :gt
+      end
+    end
+
     test ":schedule_in does not accept other types of values" do
       assert Job.new(%{}, worker: Fake, schedule_in: true).errors[:schedule_in]
       assert Job.new(%{}, worker: Fake, schedule_in: "10").errors[:schedule_in]
       assert Job.new(%{}, worker: Fake, schedule_in: 0.12).errors[:schedule_in]
+      assert Job.new(%{}, worker: Fake, schedule_in: {6, :units}).errors[:schedule_in]
+      assert Job.new(%{}, worker: Fake, schedule_in: {6.0, :hours}).errors[:schedule_in]
     end
   end
 
@@ -106,5 +120,9 @@ defmodule Oban.JobTest do
       assert map[:args] == %{foo: "bar"}
       Enum.each(attrs, fn {key, val} -> assert map[key] == val end)
     end
+  end
+
+  defp time_unit do
+    one_of([:second, :seconds, :minute, :minutes, :hour, :hours, :day, :days, :week, :weeks])
   end
 end
