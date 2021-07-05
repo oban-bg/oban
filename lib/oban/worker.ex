@@ -303,6 +303,7 @@ defmodule Oban.Worker do
       end
 
     time = trunc(:math.pow(2, clamped_attempt) + @backoff_base)
+
     Breaker.jitter(time)
   end
 

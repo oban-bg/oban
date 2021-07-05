@@ -48,13 +48,13 @@ defmodule Oban.Breaker do
 
   @spec jitter(time :: pos_integer(), opts :: Keyword.t()) :: pos_integer()
   def jitter(time, opts \\ []) do
-    mode = opts[:mode] || @default_jitter_mode
-    mult = opts[:mult] || @default_jitter_mult
+    mode = Keyword.get(opts, :mode, @default_jitter_mode)
+    mult = Keyword.get(opts, :mult, @default_jitter_mult)
 
     diff = trunc(:rand.uniform() * mult * time)
 
     case mode do
-      :add ->
+      :inc ->
         time + diff
 
       :dec ->
