@@ -203,7 +203,11 @@ defmodule Oban.Testing do
       assert :ok = perform_job(Vorker, %{"id" => 1})
   """
   @doc since: "2.0.0"
-  @spec perform_job(worker :: Worker.t(), args :: term(), opts :: [Job.option()]) ::
+  @spec perform_job(
+          worker :: Worker.t(),
+          args :: term(),
+          opts :: [Job.option() | {:repo, module()}]
+        ) ::
           Worker.result()
   def perform_job(worker, args, opts) when is_atom(worker) do
     {repo, opts} = Keyword.pop(opts, :repo)
