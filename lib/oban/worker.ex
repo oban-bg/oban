@@ -223,7 +223,7 @@ defmodule Oban.Worker do
 
   import Kernel, except: [to_string: 1]
 
-  alias Oban.Job
+  alias Oban.{Breaker, Job}
 
   @type t :: module()
   @type result ::
@@ -275,7 +275,6 @@ defmodule Oban.Worker do
 
   @max_for_backoff 20
   @backoff_base 15
-  @backoff_jitter 0.10
 
   @doc false
   defmacro __using__(opts) do
@@ -330,10 +329,9 @@ defmodule Oban.Worker do
         round(attempt / max_attempts * @max_for_backoff)
       end
 
-    base = :math.pow(2, clamped_attempt) + @backoff_base
-    diff = base * @backoff_jitter
+    time = trunc(:math.pow(2, clamped_attempt) + @backoff_base)
 
-    Enum.random(trunc(base - diff)..trunc(base + diff))
+    Breaker.jitter(time)
   end
 
   defp validate_opt!({:max_attempts, max_attempts}) do
