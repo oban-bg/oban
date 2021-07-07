@@ -648,6 +648,22 @@ defmodule Oban do
   end
 
   @doc """
+  Behaves like `retry_job/2`, but retries all `discarded` and `retryable` jobs.
+
+  ## Example
+
+      Oban.retry_all_jobs()
+      :ok
+  """
+  @doc since: "2.8.0"
+  @spec retry_all_jobs(name :: atom()) :: :ok
+  def retry_all_jobs(name \\ __MODULE__) do
+    name
+    |> config()
+    |> Query.retry_all_jobs()
+  end
+
+  @doc """
   Cancel an `executing`, `available`, `scheduled` or `retryable` job and mark it as `cancelled` to
   prevent it from running. If the job is currently `executing` it will be killed and otherwise it
   is ignored.
