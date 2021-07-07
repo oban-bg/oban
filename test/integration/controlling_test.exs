@@ -7,10 +7,11 @@ defmodule Oban.Integration.ControllingTest do
 
   describe "start_queue/2" do
     test "validating options" do
-      assert_invalid_opts(:start_queue, queue: nil)
+      assert_invalid_opts(:start_queue, queue: nil, limit: 1)
+      assert_invalid_opts(:start_queue, queue: "foo")
       assert_invalid_opts(:start_queue, limit: -1)
-      assert_invalid_opts(:start_queue, local_only: -1)
-      assert_invalid_opts(:start_queue, wat: -1)
+      assert_invalid_opts(:start_queue, local_only: -1, limit: 1)
+      assert_invalid_opts(:start_queue, wat: -1, limit: 1)
     end
 
     test "starting individual queues dynamically" do

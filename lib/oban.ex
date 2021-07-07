@@ -438,6 +438,7 @@ defmodule Oban do
   @spec start_queue(name(), opts :: [queue_option()]) :: :ok
   def start_queue(name \\ __MODULE__, [_ | _] = opts) do
     Enum.each(opts, &validate_queue_opt!/1)
+    require_queue_opts(opts, [:limit])
 
     conf = config(name)
 
@@ -730,5 +731,12 @@ defmodule Oban do
 
   defp validate_queue_opt!(option) do
     raise ArgumentError, "unknown option provided #{inspect(option)}"
+  end
+
+  defp require_queue_opts(opts, required_opts) do
+    Enum.each(required_opts, fn required_opt ->
+      if !Keyword.has_key?(opts, required_opt),
+        do: raise(ArgumentError, "expected #{required_opt} to be present in opts")
+    end)
   end
 end
