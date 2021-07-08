@@ -88,7 +88,7 @@ defmodule Oban.Query do
   def retry_all_jobs(conf) do
     query =
       Job
-      |> where([j], j.state not in ~w<available executing scheduled completed>)
+      |> where([j], j.state in ~w<discarded retryable>)
       |> update([j],
         set: [
           state: "available",
