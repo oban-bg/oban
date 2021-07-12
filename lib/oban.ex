@@ -435,11 +435,12 @@ defmodule Oban do
       :ok
   """
   @doc since: "0.12.0"
-  @spec start_queue(name(), opts :: [queue_option()]) :: :ok
+  @spec start_queue(name(), opts :: [{atom(), term()}]) :: :ok
   def start_queue(name \\ __MODULE__, [_ | _] = opts) do
-    Enum.each(opts, &validate_queue_opt!/1)
-
     conf = config(name)
+
+    validate_queue_opts!(opts, [:queue, :local_only])
+    validate_engine_meta!(conf, opts)
 
     data = %{
       action: :start,
@@ -477,7 +478,7 @@ defmodule Oban do
   @doc since: "0.2.0"
   @spec pause_queue(name(), opts :: [queue_option()]) :: :ok
   def pause_queue(name \\ __MODULE__, [_ | _] = opts) do
-    Enum.each(opts, &validate_queue_opt!/1)
+    validate_queue_opts!(opts, [:queue, :local_only])
 
     conf = config(name)
     data = %{action: :pause, queue: opts[:queue], ident: scope_signal(conf, opts)}
@@ -508,7 +509,7 @@ defmodule Oban do
   @doc since: "0.2.0"
   @spec resume_queue(name(), opts :: [queue_option()]) :: :ok
   def resume_queue(name \\ __MODULE__, [_ | _] = opts) do
-    Enum.each(opts, &validate_queue_opt!/1)
+    validate_queue_opts!(opts, [:queue, :local_only])
 
     conf = config(name)
     data = %{action: :resume, queue: opts[:queue], ident: scope_signal(conf, opts)}
@@ -545,9 +546,10 @@ defmodule Oban do
   @doc since: "0.2.0"
   @spec scale_queue(name(), opts :: [queue_option()]) :: :ok
   def scale_queue(name \\ __MODULE__, [_ | _] = opts) do
-    Enum.each(opts, &validate_queue_opt!/1)
-
     conf = config(name)
+
+    validate_queue_opts!(opts, [:queue, :local_only])
+    validate_engine_meta!(conf, opts)
 
     data = %{
       action: :scale,
@@ -585,7 +587,7 @@ defmodule Oban do
   @doc since: "0.12.0"
   @spec stop_queue(name(), opts :: [queue_option()]) :: :ok
   def stop_queue(name \\ __MODULE__, [_ | _] = opts) do
-    Enum.each(opts, &validate_queue_opt!/1)
+    validate_queue_opts!(opts, [:queue, :local_only])
 
     conf = config(name)
     data = %{action: :stop, queue: opts[:queue], ident: scope_signal(conf, opts)}
@@ -620,7 +622,7 @@ defmodule Oban do
   @doc since: "2.2.0"
   @spec check_queue(name(), opts :: [{:queue, queue_name()}]) :: queue_state()
   def check_queue(name \\ __MODULE__, [_ | _] = opts) do
-    Enum.each(opts, &validate_queue_opt!/1)
+    validate_queue_opts!(opts, [:queue])
 
     name
     |> Registry.via({:producer, to_string(opts[:queue])})
@@ -658,9 +660,9 @@ defmodule Oban do
       # Retries all retryable jobs
       Oban.retry_all_jobs()
       {:ok, 9}
-      
+
       # Retries all retryable jobs with priority 0
-      query = Ecto.Query.where(Oban.Job, priority: 0) 
+      query = Ecto.Query.where(Oban.Job, priority: 0)
       Oban.retry_all_jobs(Oban, query)
       {:ok, 5}
   """
@@ -767,26 +769,36 @@ defmodule Oban do
 
   ## Validation Helpers
 
-  defp validate_queue_opt!({:queue, queue}) do
+  defp validate_queue_opts!(opts, expected) when is_list(opts) do
+    unless Keyword.has_key?(opts, :queue) do
+      raise ArgumentError, "required option :queue is missing from #{inspect(opts)}"
+    end
+
+    opts
+    |> Keyword.take(expected)
+    |> Enum.each(&validate_queue_opts!/1)
+  end
+
+  defp validate_queue_opts!({:queue, queue}) do
     unless (is_atom(queue) and not is_nil(queue)) or (is_binary(queue) and byte_size(queue) > 0) do
       raise ArgumentError,
             "expected :queue to be a binary or atom (except `nil`), got: #{inspect(queue)}"
     end
   end
 
-  defp validate_queue_opt!({:limit, limit}) do
-    unless is_integer(limit) and limit > 0 do
-      raise ArgumentError, "expected :limit to be a positive integer, got: #{inspect(limit)}"
-    end
-  end
-
-  defp validate_queue_opt!({:local_only, local_only}) do
+  defp validate_queue_opts!({:local_only, local_only}) do
     unless is_boolean(local_only) do
       raise ArgumentError, "expected :local_only to be a boolean, got: #{inspect(local_only)}"
     end
   end
 
-  defp validate_queue_opt!(option) do
+  defp validate_queue_opts!(option) do
     raise ArgumentError, "unknown option provided #{inspect(option)}"
+  end
+
+  defp validate_engine_meta!(conf, opts) do
+    opts = Keyword.drop(opts, [:local_only])
+
+    with {:error, error} <- conf.engine.validate_meta(conf, opts), do: raise(error)
   end
 end

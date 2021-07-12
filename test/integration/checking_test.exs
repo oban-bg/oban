@@ -20,4 +20,11 @@ defmodule Oban.Integration.CheckingTest do
     assert %{limit: 2, queue: "gamma", running: [_]} = Oban.check_queue(name, queue: :gamma)
     assert %{paused: true, queue: "delta", running: []} = Oban.check_queue(name, queue: :delta)
   end
+
+  test "checking an unknown or invalid queue" do
+    name = start_supervised_oban!(queues: [])
+
+    assert_raise ArgumentError, fn -> Oban.check_queue(name, wrong: nil) end
+    assert_raise ArgumentError, fn -> Oban.check_queue(name, queue: nil) end
+  end
 end

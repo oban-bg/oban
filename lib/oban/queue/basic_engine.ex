@@ -7,8 +7,9 @@ defmodule Oban.Queue.BasicEngine do
   import DateTime, only: [utc_now: 0]
 
   alias Oban.{Config, Job, Repo}
+  alias Oban.Queue.Engine
 
-  @impl true
+  @impl Engine
   def init(%Config{} = conf, opts) do
     meta =
       opts
@@ -22,24 +23,58 @@ defmodule Oban.Queue.BasicEngine do
     {:ok, meta}
   end
 
-  @impl true
+  @impl Engine
   def put_meta(_conf, %{} = meta, key, value) do
     Map.put(meta, key, value)
   end
 
-  @impl true
+  @impl Engine
   def check_meta(_conf, %{} = meta, %{} = running) do
     jids = for {_, {_, exec}} <- running, do: exec.job.id
 
     Map.put(meta, :running, jids)
   end
 
-  @impl true
+  @impl Engine
+  def validate_meta(_conf, opts) when is_list(opts) do
+    if Keyword.has_key?(opts, :limit) do
+      Enum.reduce_while(opts, :ok, &validate_meta/2)
+    else
+      {:error, ArgumentError.exception("missing required option :limit")}
+    end
+  end
+
+  def validate_meta(opt, _acc) do
+    case validate_meta(opt) do
+      {:error, error} -> {:halt, {:error, ArgumentError.exception(error)}}
+      _ -> {:cont, :ok}
+    end
+  end
+
+  defp validate_meta({:limit, limit}) do
+    unless is_integer(limit) and limit > 0 do
+      {:error, "expected :limit to be an integer greater than 0, got: #{inspect(limit)}"}
+    end
+  end
+
+  defp validate_meta({:paused, paused}) do
+    unless is_boolean(paused) do
+      {:error, "expected :paused to be a boolean, got: #{inspect(paused)}"}
+    end
+  end
+
+  defp validate_meta({:queue, queue}) do
+    unless is_atom(queue) or (is_binary(queue) and byte_size(queue) > 0) do
+      {:error, "expected :queue to be an atom or binary, got: #{inspect(queue)}"}
+    end
+  end
+
+  @impl Engine
   def refresh(_conf, %{} = meta) do
     %{meta | updated_at: utc_now()}
   end
 
-  @impl true
+  @impl Engine
   def fetch_jobs(_conf, %{paused: true} = meta, _running) do
     {:ok, {meta, []}}
   end
@@ -81,7 +116,7 @@ defmodule Oban.Queue.BasicEngine do
     )
   end
 
-  @impl true
+  @impl Engine
   def complete_job(%Config{} = conf, %Job{} = job) do
     Repo.update_all(
       conf,
@@ -92,7 +127,7 @@ defmodule Oban.Queue.BasicEngine do
     :ok
   end
 
-  @impl true
+  @impl Engine
   def discard_job(%Config{} = conf, %Job{} = job) do
     updates = [
       set: [state: "discarded", discarded_at: utc_now()],
@@ -106,7 +141,7 @@ defmodule Oban.Queue.BasicEngine do
     :ok
   end
 
-  @impl true
+  @impl Engine
   def error_job(%Config{} = conf, %Job{} = job, seconds) when is_integer(seconds) do
     %Job{attempt: attempt, id: id, max_attempts: max_attempts} = job
 
@@ -127,7 +162,7 @@ defmodule Oban.Queue.BasicEngine do
     :ok
   end
 
-  @impl true
+  @impl Engine
   def snooze_job(%Config{} = conf, %Job{id: id}, seconds) when is_integer(seconds) do
     updates = [
       set: [state: "scheduled", scheduled_at: seconds_from_now(seconds)],
@@ -139,7 +174,7 @@ defmodule Oban.Queue.BasicEngine do
     :ok
   end
 
-  @impl true
+  @impl Engine
   def cancel_job(%Config{} = conf, %Job{id: id}) do
     query = where(Job, [j], j.id == ^id)
 
@@ -148,7 +183,7 @@ defmodule Oban.Queue.BasicEngine do
     :ok
   end
 
-  @impl true
+  @impl Engine
   def cancel_all_jobs(%Config{} = conf, queryable) do
     query =
       queryable
