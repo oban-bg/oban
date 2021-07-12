@@ -87,6 +87,10 @@ defmodule Oban.Plugins.Gossip do
     {:noreply, schedule_gossip(state)}
   end
 
+  def handle_info(_message, state) do
+    {:noreply, state}
+  end
+
   defp schedule_gossip(state) do
     %{state | timer: Process.send_after(self(), :gossip, state.interval)}
   end
