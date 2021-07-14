@@ -648,7 +648,7 @@ defmodule Oban do
   end
 
   @doc """
-  Behaves like `retry_job/2`, but retries all `discarded` and `retryable` jobs.
+  Retries all discarded and retryable jobs. For more complex mass retries, see `retry_all_jobs/2`.
 
   ## Example
 
@@ -656,12 +656,33 @@ defmodule Oban do
       :ok
   """
   @doc since: "2.8.0"
-  @spec retry_all_jobs(name :: atom()) :: :ok
-  def retry_all_jobs(name \\ __MODULE__) do
-    name
+  @spec retry_all_jobs :: :ok
+  def retry_all_jobs() do
+    __MODULE__
     |> config()
     |> Query.retry_all_jobs()
   end
+
+  @doc """
+  Retries all jobs that match on the given queryable.
+
+  ## Example
+
+      # Retries all jobs with priority 0
+      Oban.Job |> Ecto.Query.where(priority: 0) |> Oban.retry_all_jobs()
+      :ok
+  """
+  @doc since: "2.8.0"
+  @spec retry_all_jobs(name :: atom(), queryable :: Ecto.Queryable.t()) :: :ok
+  def retry_all_jobs(name \\ __MODULE__, queryable) do
+    name
+    |> config()
+    |> Query.retry_all_jobs(queryable)
+  end
+
+  # @doc since: "2.8.0"
+  # @spec retry_all_jobs(queryable :: Ecto.Queryable.t()) :: :ok
+  # defdelegate retry_all_jobs(queryable), to: Query
 
   @doc """
   Cancel an `executing`, `available`, `scheduled` or `retryable` job and mark it as `cancelled` to
