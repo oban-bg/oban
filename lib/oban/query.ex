@@ -84,30 +84,12 @@ defmodule Oban.Query do
     :ok
   end
 
-  @spec retry_all_jobs(Config.t()) :: :ok
-  def retry_all_jobs(conf) do
-    query =
-      Job
-      |> where([j], j.state in ["retryable", "discarded"])
-      |> update([j],
-        set: [
-          state: "available",
-          max_attempts: fragment("GREATEST(?, ? + 1)", j.max_attempts, j.attempt),
-          scheduled_at: ^utc_now(),
-          completed_at: nil,
-          cancelled_at: nil,
-          discarded_at: nil
-        ]
-      )
-
-    Repo.update_all(conf, query, [])
-    :ok
-  end
-
   @spec retry_all_jobs(Config.t(), Ecto.Queryable.t()) :: :ok
   def retry_all_jobs(conf, queryable) do
     query =
-      update(queryable, [j],
+      queryable
+      |> where([j], j.state not in ["available", "executing", "scheduled"])
+      |> update([j],
         set: [
           state: "available",
           max_attempts: fragment("GREATEST(?, ? + 1)", j.max_attempts, j.attempt),

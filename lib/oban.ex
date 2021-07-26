@@ -648,23 +648,9 @@ defmodule Oban do
   end
 
   @doc """
-  Retries all discarded and retryable jobs. For more complex mass retries, see `retry_all_jobs/2`.
-
-  ## Example
-
-      Oban.retry_all_jobs()
-      :ok
-  """
-  @doc since: "2.8.0"
-  @spec retry_all_jobs :: :ok
-  def retry_all_jobs() do
-    __MODULE__
-    |> config()
-    |> Query.retry_all_jobs()
-  end
-
-  @doc """
-  Retries all jobs that match on the given queryable.
+  Retries all jobs that match on the given queryable. Please note that no matter the used
+  queryable it will never retry available, executing or scheduled jobs.
+  If no queryable is given, all jobs in states where retry is possible will be retried.
 
   ## Example
 
@@ -674,7 +660,7 @@ defmodule Oban do
   """
   @doc since: "2.8.0"
   @spec retry_all_jobs(name :: atom(), queryable :: Ecto.Queryable.t()) :: :ok
-  def retry_all_jobs(name \\ __MODULE__, queryable) do
+  def retry_all_jobs(name \\ __MODULE__, queryable \\ Job) do
     name
     |> config()
     |> Query.retry_all_jobs(queryable)
