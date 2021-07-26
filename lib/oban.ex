@@ -666,10 +666,6 @@ defmodule Oban do
     |> Query.retry_all_jobs(queryable)
   end
 
-  # @doc since: "2.8.0"
-  # @spec retry_all_jobs(queryable :: Ecto.Queryable.t()) :: :ok
-  # defdelegate retry_all_jobs(queryable), to: Query
-
   @doc """
   Cancel an `executing`, `available`, `scheduled` or `retryable` job and mark it as `cancelled` to
   prevent it from running. If the job is currently `executing` it will be killed and otherwise it
