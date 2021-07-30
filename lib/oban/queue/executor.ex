@@ -108,7 +108,7 @@ defmodule Oban.Queue.Executor do
   def perform(%__MODULE__{state: :unset} = exec) do
     case exec.worker.timeout(exec.job) do
       :infinity ->
-        perform_inline(exec)
+        perform_inline(exec, exec.safe)
 
       timeout when is_integer(timeout) ->
         perform_timed(exec, timeout)
@@ -193,8 +193,8 @@ defmodule Oban.Queue.Executor do
     exec
   end
 
-  defp perform_inline(%{safe: true} = exec) do
-    perform_inline(%{exec | safe: false})
+  defp perform_inline(exec, true = _safe) do
+    perform_inline(exec, false)
   rescue
     error ->
       %{exec | state: :failure, error: error, stacktrace: __STACKTRACE__}
@@ -205,7 +205,7 @@ defmodule Oban.Queue.Executor do
       %{exec | state: :failure, error: error, stacktrace: __STACKTRACE__}
   end
 
-  defp perform_inline(%{worker: worker, job: job} = exec) do
+  defp perform_inline(%{worker: worker, job: job} = exec, _safe) do
     case worker.perform(job) do
       :ok ->
         %{exec | state: :success, result: :ok}
@@ -248,7 +248,7 @@ defmodule Oban.Queue.Executor do
   end
 
   defp perform_timed(exec, timeout) do
-    task = Task.async(fn -> perform_inline(exec) end)
+    task = Task.async(fn -> perform_inline(exec, exec.safe) end)
 
     case Task.yield(task, timeout) || Task.shutdown(task) do
       {:ok, reply} ->
