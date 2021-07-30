@@ -8,6 +8,35 @@ the [Oban.Web Changelog][owc]._
 [opc]: https://hexdocs.pm/oban/pro-changelog.html
 [owc]: https://hexdocs.pm/oban/web-changelog.html
 
+## [2.8.0] — 2021-07-30
+
+### Time Unit Scheduling
+
+It's now possible to specify a unit for `:schedule_in`, rather than always
+assuming seconds. This makes it possible to schedule a job using clearer
+minutes, hours, days, or weeks, e.g. `schedule_in: {1, :minute}` or
+`schedule_in: {3, :days}`.
+
+### Changed
+
+- [Oban.Testing] Accept non-map args to `perform_job/3` for compatibility with
+  overridden `Worker.new/2` callbacks.
+
+- [Oban.Queue.Producer] Include some jitter when scheduling queue refreshes to
+  prevent queues from refreshing simultaneously. In extreme cases, refresh
+  contention could cause producers to crash.
+
+### Fixed
+
+- [Oban.Queue.Executor] Restore logged warnings for unexpected job results by
+  retaining the `safe` flag during normal execution.
+
+- [Oban.Plugins.Gossip] Catch and discard unexpected messages rather than
+  crashing the plugin.
+
+- [Oban.Testing] Eliminate dialyzer warnings by including `repo` option in
+  the `Oban.Testing.perform_job/3` spec.
+
 ## [2.7.2] — 2021-06-10
 
 ### Fixed
@@ -941,7 +970,8 @@ No changes from [2.0.0-rc.3][].
 
 For changes prior to 2.0 see the [1.2 branch][1.2]
 
-[Unreleased]: https://github.com/sorentwo/oban/compare/v2.7.2...HEAD
+[Unreleased]: https://github.com/sorentwo/oban/compare/v2.8.0...HEAD
+[2.8.0]: https://github.com/sorentwo/oban/compare/v2.7.2...v2.8.0
 [2.7.2]: https://github.com/sorentwo/oban/compare/v2.7.1...v2.7.2
 [2.7.1]: https://github.com/sorentwo/oban/compare/v2.7.0...v2.7.1
 [2.7.0]: https://github.com/sorentwo/oban/compare/v2.6.1...v2.7.0
