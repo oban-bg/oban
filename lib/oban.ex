@@ -648,9 +648,10 @@ defmodule Oban do
   end
 
   @doc """
-  Retries all jobs that match on the given queryable. Please note that no matter the used
-  queryable it will never retry available, executing or scheduled jobs.
-  If no queryable is given, all jobs in states where retry is possible will be retried.
+  Retries all jobs that match on the given queryable. Please note that no matter the
+  queryable constraints, it will never retry `available`, `executing` or `scheduled` jobs.
+  
+  If no queryable is given, Oban will retry all jobs in retryable states.
 
   ## Example
 
