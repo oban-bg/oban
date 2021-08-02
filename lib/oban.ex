@@ -648,6 +648,30 @@ defmodule Oban do
   end
 
   @doc """
+  Retries all jobs that match on the given queryable. Please note that no matter the
+  queryable constraints, it will never retry `available`, `executing` or `scheduled` jobs.
+  
+  If no queryable is given, Oban will retry all jobs in retryable states.
+
+  ## Example
+
+      # Retries all retryable jobs
+      Oban.retry_all_jobs()
+      {:ok, 9}
+      
+      # Retries all retryable jobs with priority 0
+      Oban.Job |> Ecto.Query.where(priority: 0) |> Oban.retry_all_jobs()
+      {:ok, 5}
+  """
+  @doc since: "2.9.0"
+  @spec retry_all_jobs(name :: atom(), queryable :: Ecto.Queryable.t()) :: {:ok, integer()}
+  def retry_all_jobs(name \\ __MODULE__, queryable \\ Job) do
+    name
+    |> config()
+    |> Query.retry_all_jobs(queryable)
+  end
+
+  @doc """
   Cancel an `executing`, `available`, `scheduled` or `retryable` job and mark it as `cancelled` to
   prevent it from running. If the job is currently `executing` it will be killed and otherwise it
   is ignored.

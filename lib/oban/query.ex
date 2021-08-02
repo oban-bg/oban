@@ -84,6 +84,27 @@ defmodule Oban.Query do
     :ok
   end
 
+  @spec retry_all_jobs(Config.t(), Ecto.Queryable.t()) :: {:ok, integer()}
+  def retry_all_jobs(conf, queryable) do
+    query =
+      queryable
+      |> where([j], j.state not in ["available", "executing", "scheduled"])
+      |> update([j],
+        set: [
+          state: "available",
+          max_attempts: fragment("GREATEST(?, ? + 1)", j.max_attempts, j.attempt),
+          scheduled_at: ^utc_now(),
+          completed_at: nil,
+          cancelled_at: nil,
+          discarded_at: nil
+        ]
+      )
+
+    {count, _} = Repo.update_all(conf, query, [])
+
+    {:ok, count}
+  end
+
   @spec with_xact_lock(Config.t(), lock_key(), fun()) :: {:ok, any()} | {:error, any()}
   def with_xact_lock(%Config{} = conf, lock_key, fun) when is_function(fun, 0) do
     Repo.transaction(conf, fn ->
