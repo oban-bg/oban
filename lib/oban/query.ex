@@ -84,7 +84,7 @@ defmodule Oban.Query do
     :ok
   end
 
-  @spec retry_all_jobs(Config.t(), Ecto.Queryable.t()) :: :ok
+  @spec retry_all_jobs(Config.t(), Ecto.Queryable.t()) :: {:ok, integer()}
   def retry_all_jobs(conf, queryable) do
     query =
       queryable
@@ -100,8 +100,9 @@ defmodule Oban.Query do
         ]
       )
 
-    Repo.update_all(conf, query, [])
-    :ok
+    {count, _} = Repo.update_all(conf, query, [])
+
+    {:ok, count}
   end
 
   @spec with_xact_lock(Config.t(), lock_key(), fun()) :: {:ok, any()} | {:error, any()}

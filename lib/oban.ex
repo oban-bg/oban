@@ -658,8 +658,8 @@ defmodule Oban do
       Oban.Job |> Ecto.Query.where(priority: 0) |> Oban.retry_all_jobs()
       :ok
   """
-  @doc since: "2.8.0"
-  @spec retry_all_jobs(name :: atom(), queryable :: Ecto.Queryable.t()) :: :ok
+  @doc since: "2.9.0"
+  @spec retry_all_jobs(name :: atom(), queryable :: Ecto.Queryable.t()) :: {:ok, integer()}
   def retry_all_jobs(name \\ __MODULE__, queryable \\ Job) do
     name
     |> config()
