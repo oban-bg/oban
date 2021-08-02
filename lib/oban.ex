@@ -655,7 +655,11 @@ defmodule Oban do
 
   ## Example
 
-      # Retries all jobs with priority 0
+      # Retries all retryable jobs
+      Oban.retry_all_jobs()
+      {:ok, 9}
+      
+      # Retries all retryable jobs with priority 0
       Oban.Job |> Ecto.Query.where(priority: 0) |> Oban.retry_all_jobs()
       {:ok, 5}
   """
