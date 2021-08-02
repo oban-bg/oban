@@ -656,7 +656,7 @@ defmodule Oban do
 
       # Retries all jobs with priority 0
       Oban.Job |> Ecto.Query.where(priority: 0) |> Oban.retry_all_jobs()
-      :ok
+      {:ok, 5}
   """
   @doc since: "2.9.0"
   @spec retry_all_jobs(name :: atom(), queryable :: Ecto.Queryable.t()) :: {:ok, integer()}
