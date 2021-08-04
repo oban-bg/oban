@@ -141,16 +141,24 @@ defmodule Oban.Queue.BasicEngine do
 
   @impl true
   def cancel_job(%Config{} = conf, %Job{id: id}) do
-    query =
-      Job
-      |> where([j], j.id == ^id)
-      |> where([j], j.state not in ["completed", "discarded", "cancelled"])
+    query = where(Job, [j], j.id == ^id)
 
-    updates = [set: [state: "cancelled", cancelled_at: utc_now()]]
-
-    Repo.update_all(conf, query, updates)
+    cancel_all_jobs(conf, query)
 
     :ok
+  end
+
+  @impl true
+  def cancel_all_jobs(%Config{} = conf, queryable) do
+    query =
+      queryable
+      |> where([j], j.state not in ["completed", "discarded", "cancelled"])
+      |> update([j], set: [state: "cancelled", cancelled_at: ^utc_now()])
+      |> select([:id])
+
+    {_count, cancelled} = Repo.update_all(conf, query, [])
+
+    {:ok, Enum.map(cancelled, & &1.id)}
   end
 
   # Helpers

@@ -695,6 +695,34 @@ defmodule Oban do
     Notifier.notify(conf, :signal, %{action: :pkill, job_id: job_id})
   end
 
+  @doc """
+  Cancel many jobs based on a queryable and mark them as `cancelled` to prevent them from running.
+  If any the jobs is currently `executing` it will be killed and otherwise it is ignored.
+
+  If an executing job happens to fail before it can be cancelled the state is set to `cancelled`.
+
+  However, if it manages to complete successfully then the state will still be `completed`.
+
+  Only jobs with the statuses`executing`, `available`, `scheduled` or `retryable` can be cancelled.
+
+  ## Example
+
+  Cancel all scheduled jobs for a specific worker:
+
+      query = Ecto.Query.where(Oban.Job, worker: MyApp.MyWorker)
+      Oban.cancel_all_jobs(Oban, query)
+      :ok
+  """
+  def cancel_all_jobs(name \\ __MODULE__, queryable \\ Job) do
+    conf = config(name)
+
+    {:ok, job_ids} = Engine.cancel_all_jobs(conf, queryable)
+
+    Enum.each(job_ids, &Notifier.notify(conf, :signal, %{action: :pkill, job_id: &1}))
+
+    {:ok, Enum.count(job_ids)}
+  end
+
   ## Child Spec Helpers
 
   defp plugin_child_spec({module, opts}, conf) do
