@@ -12,12 +12,12 @@ defmodule Oban.Queue.BasicEngine do
   def init(%Config{} = conf, opts) do
     meta =
       opts
-      |> Keyword.put_new(:paused, false)
-      |> Keyword.put(:name, conf.name)
-      |> Keyword.put(:node, conf.node)
-      |> Keyword.put(:started_at, utc_now())
-      |> Keyword.put(:updated_at, utc_now())
       |> Map.new()
+      |> Map.put_new(:paused, false)
+      |> Map.put(:name, conf.name)
+      |> Map.put(:node, conf.node)
+      |> Map.put(:started_at, utc_now())
+      |> Map.put(:updated_at, utc_now())
 
     {:ok, meta}
   end
