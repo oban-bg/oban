@@ -13,11 +13,11 @@ defmodule Oban.Queue.Drainer do
 
     args =
       opts
-      |> Keyword.put_new(:with_recursion, false)
-      |> Keyword.put_new(:with_safety, true)
-      |> Keyword.put_new(:with_scheduled, false)
-      |> Keyword.update!(:queue, &to_string/1)
       |> Map.new()
+      |> Map.put_new(:with_recursion, false)
+      |> Map.put_new(:with_safety, true)
+      |> Map.put_new(:with_scheduled, false)
+      |> Map.update!(:queue, &to_string/1)
 
     drain(conf, %{failure: 0, success: 0}, args)
   end
