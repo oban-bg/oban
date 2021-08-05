@@ -154,11 +154,11 @@ defmodule Oban.Queue.BasicEngine do
       queryable
       |> where([j], j.state not in ["completed", "discarded", "cancelled"])
       |> update([j], set: [state: "cancelled", cancelled_at: ^utc_now()])
-      |> select([:id])
+      |> select([j], j.id)
 
-    {_count, cancelled} = Repo.update_all(conf, query, [])
+    {_count, cancelled_ids} = Repo.update_all(conf, query, [])
 
-    {:ok, Enum.map(cancelled, & &1.id)}
+    {:ok, cancelled_ids}
   end
 
   # Helpers

@@ -717,9 +717,11 @@ defmodule Oban do
 
     {:ok, job_ids} = Engine.cancel_all_jobs(conf, queryable)
 
-    Enum.each(job_ids, &Notifier.notify(conf, :signal, %{action: :pkill, job_id: &1}))
+    messages = Enum.map(job_ids, fn id -> %{action: :pkill, job_id: id} end)
 
-    {:ok, Enum.count(job_ids)}
+    Notifier.notify(conf, :signal, messages)
+
+    {:ok, length(job_ids)}
   end
 
   ## Child Spec Helpers
