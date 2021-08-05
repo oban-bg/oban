@@ -709,7 +709,7 @@ defmodule Oban do
 
   Cancel all scheduled jobs for a specific worker:
 
-      query = Ecto.Query.where(Oban.Job, worker: MyApp.MyWorker)
+      query = Ecto.Query.where(Oban.Job, worker: "MyApp.MyWorker")
       Oban.cancel_all_jobs(Oban, query)
       :ok
   """
