@@ -697,7 +697,7 @@ defmodule Oban do
 
   @doc """
   Cancel many jobs based on a queryable and mark them as `cancelled` to prevent them from running.
-  If any the jobs is currently `executing` it will be killed and otherwise it is ignored.
+  Any currently `executing` jobs are killed while the others are ignored.
 
   If an executing job happens to fail before it can be cancelled the state is set to `cancelled`.
 
