@@ -699,11 +699,10 @@ defmodule Oban do
   Cancel many jobs based on a queryable and mark them as `cancelled` to prevent them from running.
   Any currently `executing` jobs are killed while the others are ignored.
 
-  If an executing job happens to fail before it can be cancelled the state is set to `cancelled`.
+  If executing jobs happen to fail before cancellation then the state is set to `cancelled`.
+  However, any that complete successfully will remain `completed`.
 
-  However, if it manages to complete successfully then the state will still be `completed`.
-
-  Only jobs with the statuses`executing`, `available`, `scheduled` or `retryable` can be cancelled.
+  Only jobs with the statuses `executing`, `available`, `scheduled`, or `retryable` can be cancelled.
 
   ## Example
 
