@@ -25,6 +25,8 @@ defmodule Oban.Breaker do
     meta = %{
       config: state.conf,
       error: exception,
+      kind: :error,
+      reason: exception,
       message: error_message(exception),
       name: state.name,
       stacktrace: stacktrace
