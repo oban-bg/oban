@@ -158,17 +158,29 @@ defmodule Oban.Notifier do
   def notify(conf_or_server \\ Oban, channel, payload)
 
   def notify(%Config{} = conf, channel, payload) when is_channel(channel) do
-    conf.name
-    |> Registry.whereis(Oban.Notifier)
-    |> conf.notifier.notify(channel, normalize_payload(payload))
+    with_span(conf, channel, payload, fn ->
+      conf.name
+      |> Registry.whereis(Oban.Notifier)
+      |> conf.notifier.notify(channel, normalize_payload(payload))
+    end)
   end
 
   def notify(server, channel, payload) when is_channel(channel) do
     conf = Oban.config(server)
 
-    conf.name
-    |> Registry.whereis(Oban.Notifier)
-    |> conf.notifier.notify(channel, normalize_payload(payload))
+    with_span(conf, channel, payload, fn ->
+      conf.name
+      |> Registry.whereis(Oban.Notifier)
+      |> conf.notifier.notify(channel, normalize_payload(payload))
+    end)
+  end
+
+  defp with_span(conf, channel, payload, cb) do
+    tele_meta = %{conf: conf, channel: channel, payload: payload}
+
+    :telemetry.span([:oban, :notifier, :notify], tele_meta, fn ->
+      {cb.(), tele_meta}
+    end)
   end
 
   defp normalize_payload(payload) do
