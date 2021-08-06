@@ -170,6 +170,20 @@ defmodule Oban.Integration.ControllingTest do
       end)
     end
 
+    test "forwarding scaling options for alternative engines" do
+      # This is an abuse of `scale` because other engines support other options and passing
+      # `paused` verifies that other options are supported.
+      name = start_supervised_oban!(queues: [alpha: 1])
+
+      wait_for_notifier(name)
+
+      assert :ok = Oban.scale_queue(name, queue: :alpha, limit: 5, paused: true)
+
+      with_backoff(fn ->
+        assert %{limit: 5, paused: true} = Oban.check_queue(name, queue: :alpha)
+      end)
+    end
+
     test "scaling queues only on the local node" do
       name1 = start_supervised_oban!(queues: [alpha: 2])
       name2 = start_supervised_oban!(queues: [alpha: 2])

@@ -132,8 +132,12 @@ defmodule Oban.Queue.Producer do
         %{"action" => "resume", "queue" => ^queue} ->
           Engine.put_meta(state.conf, state.meta, :paused, false)
 
-        %{"action" => "scale", "queue" => ^queue, "limit" => limit} ->
-          Engine.put_meta(state.conf, state.meta, :limit, limit)
+        %{"action" => "scale", "queue" => ^queue} ->
+          payload
+          |> Map.drop(["action", "queue"])
+          |> Enum.reduce(state.meta, fn {key, val}, meta ->
+            Engine.put_meta(state.conf, meta, String.to_existing_atom(key), val)
+          end)
 
         %{"action" => "pkill", "job_id" => jid} ->
           for {ref, {pid, exec}} <- state.running, exec.job.id == jid do
