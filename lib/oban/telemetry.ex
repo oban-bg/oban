@@ -128,6 +128,22 @@ defmodule Oban.Telemetry do
   * `:engine` — the module of the engine used
   * `:job` - the `Oban.Job` in question
 
+  ### Notifier Events
+
+  Oban emits telemetry a span event each time the Notifier is triggered:
+
+  * `[:oban, :notifier, :notify, :start | :stop | :exception]`
+
+  | event        | measures       | metadata                       |
+  | ------------ | -------------- | ------------------------------ |
+  | `:start`     | `:system_time` | `:conf`, `channel`, `payload`  |
+  | `:stop`      | `:duration`    | `:conf`, `channel`, `payload`  |
+  | `:exception` | `:duration`    | `:conf`, `channel`, `payload`  |
+
+  * `:conf` — the config of the Oban supervised producer
+  * `:channel` — the channel on which the notification was sent
+  * `:payload` - the payload that was sent
+
   ### Circuit Events
 
   All processes that interact with the database have circuit breakers to prevent errors from
