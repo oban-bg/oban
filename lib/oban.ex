@@ -436,6 +436,11 @@ defmodule Oban do
 
       Oban.start_queue(queue: :media, limit: 5, local_only: true)
       :ok
+
+  Start the `:media` queue in a `paused` state.
+
+      Oban.start_queue(queue: :media, limit: 5, paused: true)
+      :ok
   """
   @doc since: "0.12.0"
   @spec start_queue(name(), opts :: [{atom(), term()}]) :: :ok
@@ -525,8 +530,10 @@ defmodule Oban do
   ## Options
 
   * `:queue` - a string or atom specifying the queue to scale, required
-  * `:limit` — the new concurrency limit
+  * `:limit` — the new concurrency limit, required
   * `:local_only` — whether the queue will be scaled only on the local node, default: `false`
+
+  In addition, all engine-specific queue options are passed along after validation.
 
   ## Example
 
@@ -553,12 +560,11 @@ defmodule Oban do
     validate_queue_opts!(opts, [:queue, :local_only])
     validate_engine_meta!(conf, opts)
 
-    data = %{
-      action: :scale,
-      queue: opts[:queue],
-      limit: opts[:limit],
-      ident: scope_signal(conf, opts)
-    }
+    data =
+      opts
+      |> Map.new()
+      |> Map.put(:action, :scale)
+      |> Map.put(:ident, scope_signal(conf, opts))
 
     Notifier.notify(conf, :signal, data)
   end
