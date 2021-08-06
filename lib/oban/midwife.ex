@@ -36,11 +36,13 @@ defmodule Oban.Midwife do
   @impl GenServer
   def handle_info({:notification, :signal, payload}, %State{conf: conf} = state) do
     case payload do
-      %{"action" => "start", "queue" => queue, "limit" => limit} ->
-        Supervisor.start_child(Registry.via(conf.name), queue_spec(queue, limit, conf))
+      %{"action" => "start"} ->
+        conf.name
+        |> Registry.via()
+        |> Supervisor.start_child(queue_spec(conf, payload))
 
-      %{"action" => "stop", "queue" => queue} ->
-        %{id: child_id} = queue_spec(queue, 0, conf)
+      %{"action" => "stop"} ->
+        %{id: child_id} = queue_spec(conf, payload)
 
         Supervisor.terminate_child(Registry.via(conf.name), child_id)
         Supervisor.delete_child(Registry.via(conf.name), child_id)
@@ -56,7 +58,12 @@ defmodule Oban.Midwife do
     {:noreply, state}
   end
 
-  defp queue_spec(queue, limit, conf) do
-    QueueSupervisor.child_spec({queue, limit: limit}, conf)
+  defp queue_spec(conf, %{"queue" => queue} = payload) do
+    spec_opts =
+      payload
+      |> Map.drop(["action", "local_only"])
+      |> Keyword.new(fn {key, val} -> {String.to_existing_atom(key), val} end)
+
+    QueueSupervisor.child_spec({queue, spec_opts}, conf)
   end
 end

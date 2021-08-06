@@ -20,21 +20,19 @@ defmodule Oban.Integration.ControllingTest do
       name = start_supervised_oban!(queues: [alpha: 9])
 
       assert :ok = Oban.start_queue(name, queue: :gamma, limit: 5)
-      assert :ok = Oban.start_queue(name, queue: :delta, limit: 6)
+      assert :ok = Oban.start_queue(name, queue: :delta, limit: 6, paused: true)
       assert :ok = Oban.start_queue(name, queue: :alpha, limit: 5)
 
       with_backoff(fn ->
         assert %{limit: 9} = Oban.check_queue(name, queue: :alpha)
         assert %{limit: 5} = Oban.check_queue(name, queue: :gamma)
-        assert %{limit: 6} = Oban.check_queue(name, queue: :delta)
+        assert %{limit: 6, paused: true} = Oban.check_queue(name, queue: :delta)
       end)
     end
 
     test "starting individual queues only on the local node" do
       name1 = start_supervised_oban!(queues: [])
       name2 = start_supervised_oban!(queues: [])
-
-      wait_for_notifier(name1)
 
       assert :ok = Oban.start_queue(name1, queue: :alpha, limit: 1, local_only: true)
 
