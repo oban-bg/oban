@@ -69,6 +69,31 @@ defmodule Oban.Telemetry do
   * `:conf` — the config of the Oban supervised producer
   * `:dispatched_count` — the number of jobs fetched and started by the producer
 
+  ### Engine Events
+
+  Oban emits the following telemetry span events for the configured Engine:
+
+  * `[:oban, :engine, :refresh, :start | :stop | :exception]` — when the engine is refreshed
+  * `[:oban, :engine, :fetch_jobs, :start | :stop | :exception]` — when new jobs are fetched
+
+  | :refresh event | measures       | metadata                |
+  | -------------- | -------------- | ----------------------- |
+  | `:start`       | `:system_time` | `:queue, :conf`         |
+  | `:stop`        | `:duration`    | `:queue, :conf`         |
+  | `:exception`   | `:duration`    | `:queue, :conf`         |
+
+  | :fetch_jobs event | measures       | metadata                |
+  | ----------------- | -------------- | ----------------------- |
+  | `:start`          | `:system_time` | `:queue, :conf`         |
+  | `:stop`           | `:duration`    | `:queue, :conf, :jobs`  |
+  | `:exception`      | `:duration`    | `:queue, :conf`         |
+
+  Metadata
+
+  * `:queue` — the name of the queue as a string, e.g. "default" or "mailers"
+  * `:conf` — the config of the Oban supervised producer
+  * `:jobs` — the jobs fetched by the engine
+
   ### Circuit Events
 
   All processes that interact with the database have circuit breakers to prevent errors from

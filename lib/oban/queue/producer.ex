@@ -154,7 +154,13 @@ defmodule Oban.Queue.Producer do
   end
 
   def handle_info(:refresh, %State{} = state) do
-    meta = Engine.refresh(state.conf, state.meta)
+    tele_meta = tele_meta(state)
+
+    meta =
+      :telemetry.span([:oban, :engine, :refresh], tele_meta, fn ->
+        meta = Engine.refresh(state.conf, state.meta)
+        {meta, tele_meta}
+      end)
 
     {:noreply, schedule_refresh(%{state | meta: meta})}
   end
@@ -208,7 +214,7 @@ defmodule Oban.Queue.Producer do
   end
 
   defp dispatch(%State{} = state) do
-    tele_meta = %{conf: state.conf, queue: state.meta.queue}
+    tele_meta = tele_meta(state)
 
     {meta, dispatched} =
       :telemetry.span([:oban, :producer], tele_meta, fn ->
@@ -221,7 +227,13 @@ defmodule Oban.Queue.Producer do
   end
 
   defp start_jobs(%State{} = state) do
-    {:ok, {meta, jobs}} = Engine.fetch_jobs(state.conf, state.meta, state.running)
+    tele_meta = tele_meta(state)
+
+    {meta, jobs} =
+      :telemetry.span([:oban, :engine, :fetch_jobs], tele_meta, fn ->
+        {:ok, {meta, jobs}} = Engine.fetch_jobs(state.conf, state.meta, state.running)
+        {{meta, jobs}, Map.put(tele_meta, :jobs, jobs)}
+      end)
 
     dispatched =
       for job <- jobs, into: %{} do
@@ -239,4 +251,6 @@ defmodule Oban.Queue.Producer do
 
     %{state | running: Map.delete(state.running, ref)}
   end
+
+  defp tele_meta(%State{} = state), do: %{conf: state.conf, queue: state.meta.queue}
 end
