@@ -87,7 +87,7 @@ defmodule Oban.Queue.Engine do
 
   @doc false
   def fetch_jobs(%Config{} = conf, %{} = meta, %{} = running) do
-    with_span(:fetch_jobs, conf, %{meta: meta, running: running}, fn ->
+    with_span(:fetch_jobs, conf, fn ->
       conf.engine.fetch_jobs(conf, meta, running)
     end)
   end
@@ -108,14 +108,14 @@ defmodule Oban.Queue.Engine do
 
   @doc false
   def error_job(%Config{} = conf, %Job{} = job, seconds) when is_integer(seconds) do
-    with_span(:error_job, conf, %{job: job, seconds: seconds}, fn ->
+    with_span(:error_job, conf, %{job: job}, fn ->
       conf.engine.error_job(conf, job, seconds)
     end)
   end
 
   @doc false
   def snooze_job(%Config{} = conf, %Job{} = job, seconds) when is_integer(seconds) do
-    with_span(:snooze_job, conf, %{job: job, seconds: seconds}, fn ->
+    with_span(:snooze_job, conf, %{job: job}, fn ->
       conf.engine.snooze_job(conf, job, seconds)
     end)
   end
@@ -127,7 +127,7 @@ defmodule Oban.Queue.Engine do
     end)
   end
 
-  defp with_span(event, %Config{} = conf, additional_meta, cb) do
+  defp with_span(event, %Config{} = conf, additional_meta \\ %{}, cb) do
     tele_meta =
       additional_meta
       |> Map.put(:conf, conf)
