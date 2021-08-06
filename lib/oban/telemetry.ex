@@ -84,43 +84,43 @@ defmodule Oban.Telemetry do
 
   * `[:oban, :engine, :complete_job, :start | :stop | :exception]` — when an engine operation is called
 
-  | event        | measures       | metadata                 |
-  | ------------ | -------------- | ------------------------ |
-  | `:start`     | `:system_time` | `:conf`, `engine`, `job` |
-  | `:stop`      | `:duration`    | `:conf`, `engine`, `job` |
-  | `:exception` | `:duration`    | `:conf`, `engine`, `job` |
+  | event        | measures       | metadata                                                 |
+  | ------------ | -------------- | -------------------------------------------------------  |
+  | `:start`     | `:system_time` | `:conf`, `engine`, `job`                                 |
+  | `:stop`      | `:duration`    | `:conf`, `engine`, `job`                                 |
+  | `:exception` | `:duration`    | `:conf`, `engine`, `job`, `kind`, `reason`, `stacktrace` |
 
   * `[:oban, :engine, :discard_job, :start | :stop | :exception]`
 
-  | event        | measures       | metadata                 |
-  | ------------ | -------------- | ------------------------ |
-  | `:start`     | `:system_time` | `:conf`, `engine`, `job` |
-  | `:stop`      | `:duration`    | `:conf`, `engine`, `job` |
-  | `:exception` | `:duration`    | `:conf`, `engine`, `job` |
+  | event        | measures       | metadata                                                 |
+  | ------------ | -------------- | -------------------------------------------------------  |
+  | `:start`     | `:system_time` | `:conf`, `engine`, `job`                                 |
+  | `:stop`      | `:duration`    | `:conf`, `engine`, `job`                                 |
+  | `:exception` | `:duration`    | `:conf`, `engine`, `job`, `kind`, `reason`, `stacktrace` |
 
   * `[:oban, :engine, :error_job, :start | :stop | :exception]`
 
-  | event        | measures       | metadata                 |
-  | ------------ | -------------- | ------------------------ |
-  | `:start`     | `:system_time` | `:conf`, `engine`, `job` |
-  | `:stop`      | `:duration`    | `:conf`, `engine`, `job` |
-  | `:exception` | `:duration`    | `:conf`, `engine`, `job` |
+  | event        | measures       | metadata                                                 |
+  | ------------ | -------------- | -------------------------------------------------------  |
+  | `:start`     | `:system_time` | `:conf`, `engine`, `job`                                 |
+  | `:stop`      | `:duration`    | `:conf`, `engine`, `job`                                 |
+  | `:exception` | `:duration`    | `:conf`, `engine`, `job`, `kind`, `reason`, `stacktrace` |
 
   * `[:oban, :engine, :snooze_job, :start | :stop | :exception]`
 
-  | event        | measures       | metadata                 |
-  | ------------ | -------------- | ------------------------ |
-  | `:start`     | `:system_time` | `:conf`, `engine`, `job` |
-  | `:stop`      | `:duration`    | `:conf`, `engine`, `job` |
-  | `:exception` | `:duration`    | `:conf`, `engine`, `job` |
+  | event        | measures       | metadata                                                 |
+  | ------------ | -------------- | -------------------------------------------------------  |
+  | `:start`     | `:system_time` | `:conf`, `engine`, `job`                                 |
+  | `:stop`      | `:duration`    | `:conf`, `engine`, `job`                                 |
+  | `:exception` | `:duration`    | `:conf`, `engine`, `job`, `kind`, `reason`, `stacktrace` |
 
   * `[:oban, :engine, :cancel_job, :start | :stop | :exception]`
 
-  | event        | measures       | metadata                 |
-  | ------------ | -------------- | ------------------------ |
-  | `:start`     | `:system_time` | `:conf`, `engine`, `job` |
-  | `:stop`      | `:duration`    | `:conf`, `engine`, `job` |
-  | `:exception` | `:duration`    | `:conf`, `engine`, `job` |
+  | event        | measures       | metadata                                                 |
+  | ------------ | -------------- | -------------------------------------------------------  |
+  | `:start`     | `:system_time` | `:conf`, `engine`, `job`                                 |
+  | `:stop`      | `:duration`    | `:conf`, `engine`, `job`                                 |
+  | `:exception` | `:duration`    | `:conf`, `engine`, `job`, `kind`, `reason`, `stacktrace` |
 
   Metadata
 
@@ -134,15 +134,16 @@ defmodule Oban.Telemetry do
 
   * `[:oban, :notifier, :notify, :start | :stop | :exception]`
 
-  | event        | measures       | metadata                       |
-  | ------------ | -------------- | ------------------------------ |
-  | `:start`     | `:system_time` | `:conf`, `channel`, `payload`  |
-  | `:stop`      | `:duration`    | `:conf`, `channel`, `payload`  |
-  | `:exception` | `:duration`    | `:conf`, `channel`, `payload`  |
+  | event        | measures       | metadata                                                       |
+  | ------------ | -------------- | -------------------------------------------------------------- |
+  | `:start`     | `:system_time` | `:conf`, `channel`, `payload`                                  |
+  | `:stop`      | `:duration`    | `:conf`, `channel`, `payload`                                  |
+  | `:exception` | `:duration`    | `:conf`, `channel`, `payload`, `kind`, `reason`, `stacktrace`  |
 
   * `:conf` — the config of the Oban supervised producer
   * `:channel` — the channel on which the notification was sent
   * `:payload` - the payload that was sent
+  * `kind`, `reason`, `stacktrace`, see the explanation above.
 
   ### Circuit Events
 
