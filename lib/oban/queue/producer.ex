@@ -17,7 +17,6 @@ defmodule Oban.Queue.Producer do
       :dispatch_timer,
       :refresh_timer,
       dispatch_cooldown: 5,
-      refresh_interval: :timer.seconds(30),
       running: %{}
     ]
   end
@@ -205,7 +204,7 @@ defmodule Oban.Queue.Producer do
   end
 
   defp schedule_refresh(%State{} = state) do
-    cooldown = Breaker.jitter(state.refresh_interval, mode: :dec, mult: 0.5)
+    cooldown = Breaker.jitter(state.meta.refresh_interval, mode: :dec, mult: 0.5)
     timer = Process.send_after(self(), :refresh, cooldown)
 
     %{state | refresh_timer: timer}

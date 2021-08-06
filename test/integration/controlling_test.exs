@@ -19,13 +19,13 @@ defmodule Oban.Integration.ControllingTest do
     test "starting individual queues dynamically" do
       name = start_supervised_oban!(queues: [alpha: 9])
 
-      assert :ok = Oban.start_queue(name, queue: :gamma, limit: 5)
+      assert :ok = Oban.start_queue(name, queue: :gamma, limit: 5, refresh_interval: 10)
       assert :ok = Oban.start_queue(name, queue: :delta, limit: 6, paused: true)
       assert :ok = Oban.start_queue(name, queue: :alpha, limit: 5)
 
       with_backoff(fn ->
         assert %{limit: 9} = Oban.check_queue(name, queue: :alpha)
-        assert %{limit: 5} = Oban.check_queue(name, queue: :gamma)
+        assert %{limit: 5, refresh_interval: 10} = Oban.check_queue(name, queue: :gamma)
         assert %{limit: 6, paused: true} = Oban.check_queue(name, queue: :delta)
       end)
     end
