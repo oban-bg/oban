@@ -87,31 +87,54 @@ defmodule Oban.Queue.Engine do
 
   @doc false
   def fetch_jobs(%Config{} = conf, %{} = meta, %{} = running) do
-    conf.engine.fetch_jobs(conf, meta, running)
+    with_span(:fetch_jobs, conf, %{meta: meta, running: running}, fn ->
+      conf.engine.fetch_jobs(conf, meta, running)
+    end)
   end
 
   @doc false
   def complete_job(%Config{} = conf, %Job{} = job) do
-    conf.engine.complete_job(conf, job)
+    with_span(:complete_job, conf, %{job: job}, fn ->
+      conf.engine.complete_job(conf, job)
+    end)
   end
 
   @doc false
   def discard_job(%Config{} = conf, %Job{} = job) do
-    conf.engine.discard_job(conf, job)
+    with_span(:discard_job, conf, %{job: job}, fn ->
+      conf.engine.discard_job(conf, job)
+    end)
   end
 
   @doc false
   def error_job(%Config{} = conf, %Job{} = job, seconds) when is_integer(seconds) do
-    conf.engine.error_job(conf, job, seconds)
+    with_span(:error_job, conf, %{job: job, seconds: seconds}, fn ->
+      conf.engine.error_job(conf, job, seconds)
+    end)
   end
 
   @doc false
   def snooze_job(%Config{} = conf, %Job{} = job, seconds) when is_integer(seconds) do
-    conf.engine.snooze_job(conf, job, seconds)
+    with_span(:snooze_job, conf, %{job: job, seconds: seconds}, fn ->
+      conf.engine.snooze_job(conf, job, seconds)
+    end)
   end
 
   @doc false
   def cancel_job(%Config{} = conf, %Job{} = job) do
-    conf.engine.cancel_job(conf, job)
+    with_span(:cancel_job, conf, %{job: job}, fn ->
+      conf.engine.cancel_job(conf, job)
+    end)
+  end
+
+  defp with_span(event, %Config{} = conf, additional_meta, cb) do
+    tele_meta =
+      additional_meta
+      |> Map.put(:conf, conf)
+      |> Map.put(:engine, conf.engine)
+
+    :telemetry.span([:oban, :engine, event], tele_meta, fn ->
+      {cb.(), tele_meta}
+    end)
   end
 end
