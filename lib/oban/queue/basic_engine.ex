@@ -15,6 +15,7 @@ defmodule Oban.Queue.BasicEngine do
       opts
       |> Map.new()
       |> Map.put_new(:paused, false)
+      |> Map.put_new(:refresh_interval, :timer.seconds(30))
       |> Map.put(:name, conf.name)
       |> Map.put(:node, conf.node)
       |> Map.put(:started_at, utc_now())
@@ -38,34 +39,9 @@ defmodule Oban.Queue.BasicEngine do
   @impl Engine
   def validate_meta(_conf, opts) when is_list(opts) do
     if Keyword.has_key?(opts, :limit) do
-      Enum.reduce_while(opts, :ok, &validate_meta/2)
+      Enum.reduce_while(opts, :ok, &validate_meta_opt/2)
     else
       {:error, ArgumentError.exception("missing required option :limit")}
-    end
-  end
-
-  def validate_meta(opt, _acc) do
-    case validate_meta(opt) do
-      {:error, error} -> {:halt, {:error, ArgumentError.exception(error)}}
-      _ -> {:cont, :ok}
-    end
-  end
-
-  defp validate_meta({:limit, limit}) do
-    unless is_integer(limit) and limit > 0 do
-      {:error, "expected :limit to be an integer greater than 0, got: #{inspect(limit)}"}
-    end
-  end
-
-  defp validate_meta({:paused, paused}) do
-    unless is_boolean(paused) do
-      {:error, "expected :paused to be a boolean, got: #{inspect(paused)}"}
-    end
-  end
-
-  defp validate_meta({:queue, queue}) do
-    unless is_atom(queue) or (is_binary(queue) and byte_size(queue) > 0) do
-      {:error, "expected :queue to be an atom or binary, got: #{inspect(queue)}"}
     end
   end
 
@@ -194,6 +170,39 @@ defmodule Oban.Queue.BasicEngine do
     {_count, cancelled_ids} = Repo.update_all(conf, query, [])
 
     {:ok, cancelled_ids}
+  end
+
+  # Validation
+
+  defp validate_meta_opt(opt, _acc) do
+    case validate_meta_opt(opt) do
+      {:error, error} -> {:halt, {:error, ArgumentError.exception(error)}}
+      _ -> {:cont, :ok}
+    end
+  end
+
+  defp validate_meta_opt({:limit, limit}) do
+    unless is_integer(limit) and limit > 0 do
+      {:error, "expected :limit to be an integer greater than 0, got: #{inspect(limit)}"}
+    end
+  end
+
+  defp validate_meta_opt({:paused, paused}) do
+    unless is_boolean(paused) do
+      {:error, "expected :paused to be a boolean, got: #{inspect(paused)}"}
+    end
+  end
+
+  defp validate_meta_opt({:queue, queue}) do
+    unless is_atom(queue) or (is_binary(queue) and byte_size(queue) > 0) do
+      {:error, "expected :queue to be an atom or binary, got: #{inspect(queue)}"}
+    end
+  end
+
+  defp validate_meta_opt({:refresh_interval, interval}) do
+    unless is_integer(interval) and interval > 0 do
+      {:error, "expected :refresh_interval to be positive integer, got: #{inspect(interval)}"}
+    end
   end
 
   # Helpers
