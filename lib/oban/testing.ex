@@ -341,7 +341,7 @@ defmodule Oban.Testing do
 
   ## Examples
 
-  Refute that a job will not be enqueued in the next 100ms:
+  Refute that a job will be enqueued in the next 100ms:
 
       refute_enqueued [worker: MyWorker], 100
   """
