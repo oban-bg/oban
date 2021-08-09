@@ -166,13 +166,9 @@ defmodule Oban.Notifier do
   end
 
   def notify(server, channel, payload) when is_channel(channel) do
-    conf = Oban.config(server)
-
-    with_span(conf, channel, payload, fn ->
-      conf.name
-      |> Registry.whereis(Oban.Notifier)
-      |> conf.notifier.notify(channel, normalize_payload(payload))
-    end)
+    server
+    |> Oban.config()
+    |> notify(channel, payload)
   end
 
   defp with_span(conf, channel, payload, cb) do
