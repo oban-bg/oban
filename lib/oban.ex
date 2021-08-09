@@ -443,7 +443,7 @@ defmodule Oban do
       :ok
   """
   @doc since: "0.12.0"
-  @spec start_queue(name(), opts :: [{atom(), term()}]) :: :ok
+  @spec start_queue(name(), opts :: Keyword.t()) :: :ok
   def start_queue(name \\ __MODULE__, [_ | _] = opts) do
     conf = config(name)
 
