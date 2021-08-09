@@ -148,19 +148,18 @@ defmodule Oban.Queue.Engine do
     end)
   end
 
-  defp with_span(event, %Config{} = conf, additional_meta \\ %{}, fun) do
-    tele_meta =
-      additional_meta
-      |> Map.put(:conf, conf)
-      |> Map.put(:engine, conf.engine)
+  @doc false
+  def cancel_all_jobs(%Config{} = conf, queryable) do
+    with_span(:cancel_all_jobs, conf, fn ->
+      conf.engine.cancel_all_jobs(conf, queryable)
+    end)
+  end
+
+  defp with_span(event, %Config{} = conf, tele_meta \\ %{}, fun) do
+    tele_meta = Map.merge(tele_meta, %{conf: conf, engine: conf.engine})
 
     :telemetry.span([:oban, :engine, event], tele_meta, fn ->
       {fun.(), tele_meta}
     end)
-  end
-
-  @doc false
-  def cancel_all_jobs(%Config{} = conf, queryable) do
-    conf.engine.cancel_all_jobs(conf, queryable)
   end
 end

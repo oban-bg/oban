@@ -146,6 +146,14 @@ defmodule Oban.Telemetry do
   | `:stop`      | `:duration`    | `:conf`, `engine`, `job`                                 |
   | `:exception` | `:duration`    | `:conf`, `engine`, `job`, `kind`, `reason`, `stacktrace` |
 
+  * `[:oban, :engine, :cancel_all_jobs, :start | :stop | :exception]`
+
+  | event        | measures       | metadata                                                 |
+  | ------------ | -------------- | ------------------------------------------------- |
+  | `:start`     | `:system_time` | `:conf`, `engine`                                 |
+  | `:stop`      | `:duration`    | `:conf`, `engine`                                 |
+  | `:exception` | `:duration`    | `:conf`, `engine`, `kind`, `reason`, `stacktrace` |
+
   Metadata
 
   * `:conf` — the config of the Oban supervised producer
