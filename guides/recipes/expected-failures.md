@@ -64,7 +64,7 @@ defmodule MyApp.ErrorReporter do
     if Reportable.reportable?(meta.job.worker, meta.job.attempt) do
       context = Map.take(meta.job, [:id, :args, :queue, :worker])
 
-      Honeybadger.notify(meta.error, context, meta.stacktrace)
+      Honeybadger.notify(meta.reason, context, meta.stacktrace)
     end
   end
 end
