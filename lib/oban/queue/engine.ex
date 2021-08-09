@@ -127,14 +127,14 @@ defmodule Oban.Queue.Engine do
     end)
   end
 
-  defp with_span(event, %Config{} = conf, additional_meta \\ %{}, cb) do
+  defp with_span(event, %Config{} = conf, additional_meta \\ %{}, fun) do
     tele_meta =
       additional_meta
       |> Map.put(:conf, conf)
       |> Map.put(:engine, conf.engine)
 
     :telemetry.span([:oban, :engine, event], tele_meta, fn ->
-      {cb.(), tele_meta}
+      {fun.(), tele_meta}
     end)
   end
 end
