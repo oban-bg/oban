@@ -169,6 +169,7 @@ defmodule Oban.Queue.Executor do
         job: exec.job,
         kind: exec.kind,
         error: exec.error,
+        reason: exec.error,
         stacktrace: exec.stacktrace,
         state: exec.state
       })
