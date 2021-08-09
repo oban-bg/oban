@@ -73,6 +73,30 @@ defmodule Oban.Telemetry do
 
   Oban emits telemetry span events for the following Engine operations:
 
+  * `[:oban, :engine, :init, :start | :stop | :exception]`
+
+  | event        | measures       | metadata           |
+  | ------------ | -------------- | ------------------ |
+  | `:start`     | `:system_time` | `:conf`, `engine`  |
+  | `:stop`      | `:duration`    | `:conf`, `engine`  |
+  | `:exception` | `:duration`    | `:conf`, `engine`  |
+
+  * `[:oban, :engine, :refresh, :start | :stop | :exception]`
+
+  | event        | measures       | metadata           |
+  | ------------ | -------------- | ------------------ |
+  | `:start`     | `:system_time` | `:conf`, `engine`  |
+  | `:stop`      | `:duration`    | `:conf`, `engine`  |
+  | `:exception` | `:duration`    | `:conf`, `engine`  |
+
+  * `[:oban, :engine, :put_meta, :start | :stop | :exception]`
+
+  | event        | measures       | metadata           |
+  | ------------ | -------------- | ------------------ |
+  | `:start`     | `:system_time` | `:conf`, `engine`  |
+  | `:stop`      | `:duration`    | `:conf`, `engine`  |
+  | `:exception` | `:duration`    | `:conf`, `engine`  |
+
   * `[:oban, :engine, :fetch_jobs, :start | :stop | :exception]`
 
   | event        | measures       | metadata           |
