@@ -179,13 +179,37 @@ defmodule Oban.Notifier do
     end)
   end
 
-  defp normalize_payload(payload) do
-    payload
-    |> List.wrap()
-    |> Enum.map(&Jason.encode!/1)
-  end
-
   defp validate_channels!([]), do: :ok
   defp validate_channels!([head | tail]) when is_channel(head), do: validate_channels!(tail)
   defp validate_channels!([head | _]), do: raise(ArgumentError, "unexpected channel: #{head}")
+
+  defp normalize_payload(payload) do
+    payload
+    |> List.wrap()
+    |> Enum.map(&encode/1)
+  end
+
+  defp encode(payload) do
+    payload
+    |> to_encodable()
+    |> Jason.encode!()
+  end
+
+  defp to_encodable(%_{} = term), do: term
+
+  defp to_encodable(map) when is_map(map) do
+    for {key, val} <- map, into: %{}, do: {key, to_encodable(val)}
+  end
+
+  defp to_encodable(list) when is_list(list) do
+    for element <- list, do: to_encodable(element)
+  end
+
+  defp to_encodable(tuple) when is_tuple(tuple) do
+    tuple
+    |> Tuple.to_list()
+    |> to_encodable()
+  end
+
+  defp to_encodable(term), do: term
 end
