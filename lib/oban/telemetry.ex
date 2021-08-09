@@ -106,7 +106,7 @@ defmodule Oban.Telemetry do
   | `:exception` | `:duration`    | `:conf`, `engine`  |
 
 
-  * `[:oban, :engine, :complete_job, :start | :stop | :exception]` — when an engine operation is called
+  * `[:oban, :engine, :complete_job, :start | :stop | :exception]`
 
   | event        | measures       | metadata                                                 |
   | ------------ | -------------- | -------------------------------------------------------  |
