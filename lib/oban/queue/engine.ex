@@ -33,11 +33,6 @@ defmodule Oban.Queue.Engine do
   @callback check_meta(conf(), meta(), running()) :: map()
 
   @doc """
-  Validate metadata options for a queue engine.
-  """
-  @callback validate_meta(conf(), opts()) :: :ok | {:error, Exception.t()}
-
-  @doc """
   Fetch available jobs for the given queue, up to configured limits.
   """
   @callback fetch_jobs(conf(), meta(), running()) :: {:ok, {meta(), [Job.t()]}} | {:error, term()}
@@ -99,11 +94,6 @@ defmodule Oban.Queue.Engine do
   @doc false
   def check_meta(%Config{} = conf, %{} = meta, %{} = running) do
     conf.engine.check_meta(conf, meta, running)
-  end
-
-  @doc false
-  def validate_meta(%Config{} = conf, [_ | _] = opts) do
-    conf.engine.validate_meta(conf, opts)
   end
 
   @doc false

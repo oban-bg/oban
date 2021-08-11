@@ -805,8 +805,11 @@ defmodule Oban do
   end
 
   defp validate_engine_meta!(conf, opts) do
-    opts = Keyword.drop(opts, [:local_only])
+    opts =
+      opts
+      |> Keyword.drop([:local_only])
+      |> Keyword.put(:validate, true)
 
-    with {:error, error} <- conf.engine.validate_meta(conf, opts), do: raise(error)
+    with {:error, error} <- conf.engine.init(conf, opts), do: raise(error)
   end
 end

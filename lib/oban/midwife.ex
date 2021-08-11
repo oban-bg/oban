@@ -61,7 +61,7 @@ defmodule Oban.Midwife do
   defp queue_spec(conf, %{"queue" => queue} = payload) do
     spec_opts =
       payload
-      |> Map.drop(["action", "local_only"])
+      |> Map.drop(["action", "ident", "local_only"])
       |> Keyword.new(fn {key, val} -> {String.to_existing_atom(key), val} end)
 
     QueueSupervisor.child_spec({queue, spec_opts}, conf)

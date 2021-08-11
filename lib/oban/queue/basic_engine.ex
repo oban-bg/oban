@@ -11,17 +11,21 @@ defmodule Oban.Queue.BasicEngine do
 
   @impl Engine
   def init(%Config{} = conf, opts) do
-    meta =
-      opts
-      |> Map.new()
-      |> Map.put_new(:paused, false)
-      |> Map.put_new(:refresh_interval, :timer.seconds(30))
-      |> Map.put(:name, conf.name)
-      |> Map.put(:node, conf.node)
-      |> Map.put(:started_at, utc_now())
-      |> Map.put(:updated_at, utc_now())
+    if Keyword.has_key?(opts, :limit) do
+      with :ok <- Enum.reduce_while(opts, :ok, &validate_meta_opt/2) do
+        meta =
+          opts
+          |> Map.new()
+          |> Map.put_new(:paused, false)
+          |> Map.put_new(:refresh_interval, :timer.seconds(30))
+          |> Map.merge(%{name: conf.name, node: conf.node})
+          |> Map.merge(%{started_at: utc_now(), updated_at: utc_now()})
 
-    {:ok, meta}
+        {:ok, meta}
+      end
+    else
+      {:error, ArgumentError.exception("missing required option :limit")}
+    end
   end
 
   @impl Engine
@@ -34,15 +38,6 @@ defmodule Oban.Queue.BasicEngine do
     jids = for {_, {_, exec}} <- running, do: exec.job.id
 
     Map.put(meta, :running, jids)
-  end
-
-  @impl Engine
-  def validate_meta(_conf, opts) when is_list(opts) do
-    if Keyword.has_key?(opts, :limit) do
-      Enum.reduce_while(opts, :ok, &validate_meta_opt/2)
-    else
-      {:error, ArgumentError.exception("missing required option :limit")}
-    end
   end
 
   @impl Engine
@@ -204,6 +199,10 @@ defmodule Oban.Queue.BasicEngine do
       {:error, "expected :refresh_interval to be positive integer, got: #{inspect(interval)}"}
     end
   end
+
+  defp validate_meta_opt({:validate, _}), do: :ok
+
+  defp validate_meta_opt(opt), do: {:error, "unexpected option #{inspect(opt)}"}
 
   # Helpers
 
