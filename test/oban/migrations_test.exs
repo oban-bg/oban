@@ -37,6 +37,18 @@ defmodule Oban.MigrationsTest do
     end
   end
 
+  defmodule DefaultMigrationNoSchemaCreation do
+    use Ecto.Migration
+
+    def up do
+      Oban.Migrations.up(prefix: "migrating", create_schema: false)
+    end
+
+    def down do
+      Oban.Migrations.down(prefix: "migrating")
+    end
+  end
+
   @base_version 20_300_000_000_000
 
   test "migrating up and down between specific versions" do
@@ -100,6 +112,28 @@ defmodule Oban.MigrationsTest do
 
       clear_migrated()
     end)
+  end
+
+  test "skipping schema creation when schema doesn't exist" do
+    assert_raise Postgrex.Error, fn ->
+      Ecto.Migrator.up(Repo, @base_version, DefaultMigrationNoSchemaCreation)
+    end
+
+    refute table_exists?("oban_jobs")
+    assert migrated_version() == 0
+  after
+    clear_migrated()
+  end
+
+  test "skipping schema creation when schema does exist" do
+    Repo.query!("CREATE SCHEMA IF NOT EXISTS migrating")
+
+    assert :ok = Ecto.Migrator.up(Repo, @base_version, DefaultMigrationNoSchemaCreation)
+
+    assert table_exists?("oban_jobs")
+    assert migrated_version() == current_version()
+  after
+    clear_migrated()
   end
 
   defp migrated_version do

@@ -59,6 +59,20 @@ defmodule Oban.Migrations do
     prefix: "private",
     ...
   ```
+
+  In some cases, for example if your "private" schema already exists and your database user in production 
+  doesn't have permissions to create a new schema, trying to create the schema from the migration will result
+  in an error. In such situations, it may be useful to inhibit the creation of the "private" schema:
+
+  ```elixir
+  defmodule MyApp.Repo.Migrations.AddPrefixedObanJobsTable do
+    use Ecto.Migration
+
+    def up, do: Oban.Migrations.up(prefix: "private", create_schema: false)
+
+    def down, do: Oban.Migrations.down(prefix: "private")
+  end
+  ```
   """
 
   use Ecto.Migration
@@ -85,14 +99,19 @@ defmodule Oban.Migrations do
   Run migrations in an alternate prefix:
 
       Oban.Migrations.up(prefix: "payments")
+
+  Run migrations in an alternate prefix but don't try to create the schema:
+
+      Oban.Migrations.up(prefix: "payments", create_schema: false)
   """
   def up(opts \\ []) when is_list(opts) do
     prefix = Keyword.get(opts, :prefix, @default_prefix)
     version = Keyword.get(opts, :version, @current_version)
+    create_schema = Keyword.get(opts, :create_schema, true)
     initial = migrated_version(repo(), prefix)
 
     cond do
-      initial == 0 -> change(prefix, @initial_version..version, :up)
+      initial == 0 -> change(prefix, @initial_version..version, :up, create_schema)
       initial < version -> change(prefix, (initial + 1)..version, :up)
       true -> :ok
     end
@@ -148,13 +167,20 @@ defmodule Oban.Migrations do
     end
   end
 
-  defp change(prefix, range, direction) do
+  defp change(prefix, range, direction, create_schema \\ true) do
     for index <- range do
       pad_idx = String.pad_leading(to_string(index), 2, "0")
 
+      args =
+        if index == 1 && direction == :up do
+          [prefix, create_schema]
+        else
+          [prefix]
+        end
+
       [__MODULE__, "V#{pad_idx}"]
       |> Module.concat()
-      |> apply(direction, [prefix])
+      |> apply(direction, args)
     end
 
     case direction do
