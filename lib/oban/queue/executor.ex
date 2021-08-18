@@ -136,6 +136,7 @@ defmodule Oban.Queue.Executor do
   @spec ack_event(t()) :: t()
   def ack_event(%__MODULE__{state: :success} = exec) do
     Engine.complete_job(exec.conf, exec.job)
+
     exec
   end
 
@@ -149,6 +150,7 @@ defmodule Oban.Queue.Executor do
 
   def ack_event(%__MODULE__{state: :snoozed} = exec) do
     Engine.snooze_job(exec.conf, exec.job, exec.snooze)
+
     exec
   end
 

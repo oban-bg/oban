@@ -15,7 +15,7 @@ defmodule Oban.Integration.ExecutingTest do
     end
 
     property "jobs inserted into running queues are executed", context do
-      check all jobs <- list_of(job()), max_runs: 20 do
+      check all jobs <- list_of(job()), max_runs: 40 do
         capture_log(fn ->
           for job <- Oban.insert_all(context.name, jobs) do
             %{args: %{"ref" => ref, "action" => action}, id: id, max_attempts: max} = job
@@ -74,10 +74,11 @@ defmodule Oban.Integration.ExecutingTest do
             action <- member_of(~w(OK DISCARD ERROR EXIT FAIL KILL SNOOZE TASK_ERROR)),
             ref <- integer(),
             max_attempts <- integer(1..20),
+            timeout <- frequency([{3, constant(0)}, {1, constant(100)}]),
             priority <- integer(0..3),
             meta <- map_of(string(:ascii), integer()),
             tags <- list_of(string(:ascii)) do
-      args = %{ref: ref, action: action}
+      args = %{ref: ref, action: action, timeout: timeout}
 
       opts = [
         queue: queue,

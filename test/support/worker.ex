@@ -95,7 +95,7 @@ defmodule Oban.Integration.Worker do
   def backoff(%_{} = job), do: Worker.backoff(job)
 
   @impl Worker
-  def timeout(%_{args: %{"timeout" => timeout}}), do: timeout
+  def timeout(%_{args: %{"timeout" => timeout}}) when timeout > 0, do: timeout
   def timeout(_job), do: :infinity
 
   def pid_to_bin(pid \\ self()) do
