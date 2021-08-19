@@ -249,7 +249,7 @@ defmodule Oban.Integration.ControllingTest do
 
     assert_receive {:started, 4}
 
-    assert {:ok, 3} = Oban.cancel_all_jobs(name)
+    assert {:ok, 3} = Oban.cancel_all_jobs(name, Job)
 
     refute_receive {:ok, 4}, 200
 
@@ -304,7 +304,7 @@ defmodule Oban.Integration.ControllingTest do
     job_e = insert!(%{ref: 5}, state: "executing", max_attempts: 1, attempt: 1)
     job_f = insert!(%{ref: 6}, state: "scheduled", max_attempts: 1, attempt: 1)
 
-    assert {:ok, 3} = Oban.retry_all_jobs(name)
+    assert {:ok, 3} = Oban.retry_all_jobs(name, Job)
 
     assert %Job{state: "available", max_attempts: 21} = Repo.reload(job_a)
     assert %Job{state: "available", max_attempts: 20} = Repo.reload(job_b)

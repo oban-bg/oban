@@ -68,7 +68,7 @@ defmodule Oban.Queue.Engine do
   Mark many `executing`, `available`, `scheduled` or `retryable` job as `cancelled` to prevent them
   from running. If the job is currently `executing` it will be killed and otherwise it is ignored.
   """
-  @callback cancel_all_jobs(conf(), Job.t()) :: {:ok, [pos_integer()]}
+  @callback cancel_all_jobs(conf(), Job.t()) :: {:ok, {pos_integer(), [Job.t()]}}
 
   @doc false
   def init(%Config{} = conf, [_ | _] = opts) do

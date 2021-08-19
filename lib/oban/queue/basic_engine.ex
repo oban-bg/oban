@@ -6,6 +6,7 @@ defmodule Oban.Queue.BasicEngine do
   import Ecto.Query
   import DateTime, only: [utc_now: 0]
 
+  alias Ecto.Multi
   alias Oban.{Config, Job, Repo}
   alias Oban.Queue.Engine
 
@@ -156,15 +157,28 @@ defmodule Oban.Queue.BasicEngine do
 
   @impl Engine
   def cancel_all_jobs(%Config{} = conf, queryable) do
-    query =
+    all_executing = fn _repo, _changes ->
+      query =
+        queryable
+        |> where(state: "executing")
+        |> select([:id])
+
+      {:ok, Repo.all(conf, query)}
+    end
+
+    cancel_query =
       queryable
       |> where([j], j.state not in ["completed", "discarded", "cancelled"])
       |> update([j], set: [state: "cancelled", cancelled_at: ^utc_now()])
-      |> select([j], j.id)
 
-    {_count, cancelled_ids} = Repo.update_all(conf, query, [])
+    multi =
+      Multi.new()
+      |> Multi.run(:executing, all_executing)
+      |> Multi.update_all(:cancelled, cancel_query, [])
 
-    {:ok, cancelled_ids}
+    {:ok, %{executing: executing, cancelled: {count, _}}} = Repo.transaction(conf, multi)
+
+    {:ok, {count, executing}}
   end
 
   # Validation
