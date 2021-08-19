@@ -3,11 +3,11 @@ defmodule Oban.Migrations.V04 do
 
   use Ecto.Migration
 
-  def up(prefix) do
+  def up(prefix: prefix) do
     execute("DROP FUNCTION IF EXISTS #{prefix}.oban_wrap_id(value bigint)")
   end
 
-  def down(prefix) do
+  def down(prefix: prefix) do
     execute """
     CREATE OR REPLACE FUNCTION #{prefix}.oban_wrap_id(value bigint) RETURNS int AS $$
     BEGIN

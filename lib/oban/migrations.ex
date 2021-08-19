@@ -111,9 +111,14 @@ defmodule Oban.Migrations do
     initial = migrated_version(repo(), prefix)
 
     cond do
-      initial == 0 -> change(prefix, @initial_version..version, :up, create_schema)
-      initial < version -> change(prefix, (initial + 1)..version, :up)
-      true -> :ok
+      initial == 0 ->
+        change(@initial_version..version, :up, prefix: prefix, create_schema: create_schema)
+
+      initial < version ->
+        change((initial + 1)..version, :up, prefix: prefix)
+
+      true ->
+        :ok
     end
   end
 
@@ -140,7 +145,7 @@ defmodule Oban.Migrations do
     initial = max(migrated_version(repo(), prefix), @initial_version)
 
     if initial >= version do
-      change(prefix, initial..version, :down)
+      change(initial..version, :down, prefix: prefix)
     end
   end
 
@@ -167,21 +172,23 @@ defmodule Oban.Migrations do
     end
   end
 
-  defp change(prefix, range, direction, create_schema \\ true) do
+  defp change(range, direction, opts) do
     for index <- range do
       pad_idx = String.pad_leading(to_string(index), 2, "0")
 
-      args =
-        if index == 1 && direction == :up do
-          [prefix, create_schema]
+      opts =
+        if direction == :up && index == 1 do
+          opts
         else
-          [prefix]
+          Keyword.take(opts, [:prefix])
         end
 
       [__MODULE__, "V#{pad_idx}"]
       |> Module.concat()
-      |> apply(direction, args)
+      |> apply(direction, [opts])
     end
+
+    prefix = opts[:prefix]
 
     case direction do
       :up -> record_version(prefix, Enum.max(range))

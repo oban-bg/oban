@@ -3,7 +3,7 @@ defmodule Oban.Migrations.V05 do
 
   use Ecto.Migration
 
-  def up(prefix) do
+  def up(prefix: prefix) do
     drop_if_exists index(:oban_jobs, [:scheduled_at], prefix: prefix)
     drop_if_exists index(:oban_jobs, [:queue], prefix: prefix)
     drop_if_exists index(:oban_jobs, [:state], prefix: prefix)
@@ -11,7 +11,7 @@ defmodule Oban.Migrations.V05 do
     create_if_not_exists index(:oban_jobs, [:queue, :state, :scheduled_at, :id], prefix: prefix)
   end
 
-  def down(prefix) do
+  def down(prefix: prefix) do
     drop_if_exists index(:oban_jobs, [:queue, :state, :scheduled_at, :id], prefix: prefix)
 
     state = "#{prefix}.oban_job_state"

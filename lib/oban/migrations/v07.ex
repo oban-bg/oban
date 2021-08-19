@@ -3,7 +3,7 @@ defmodule Oban.Migrations.V07 do
 
   use Ecto.Migration
 
-  def up(prefix) do
+  def up(prefix: prefix) do
     create_if_not_exists index(
                            :oban_jobs,
                            ["attempted_at desc", :id],
@@ -13,7 +13,7 @@ defmodule Oban.Migrations.V07 do
                          )
   end
 
-  def down(prefix) do
+  def down(prefix: prefix) do
     drop_if_exists index(:oban_jobs, [:attempted_at, :id], prefix: prefix)
   end
 end
