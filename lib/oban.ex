@@ -665,18 +665,21 @@ defmodule Oban do
 
   ## Example
 
-      # Retries all retryable jobs
-      Oban.retry_all_jobs()
+  Retries all retryable jobs
+
+      Oban.retry_all_jobs(Oban.Job)
       {:ok, 9}
 
-      # Retries all retryable jobs with priority 0
-      query = Ecto.Query.where(Oban.Job, priority: 0)
-      Oban.retry_all_jobs(Oban, query)
+  Retries all retryable jobs with priority 0
+
+      Oban.Job
+      |> Ecto.Query.where(priority: 0)
+      |> Oban.retry_all_jobs()
       {:ok, 5}
   """
   @doc since: "2.9.0"
-  @spec retry_all_jobs(name :: atom(), queryable :: Ecto.Queryable.t()) :: {:ok, integer()}
-  def retry_all_jobs(name \\ __MODULE__, queryable \\ Job) do
+  @spec retry_all_jobs(name(), queryable :: Ecto.Queryable.t()) :: {:ok, non_neg_integer()}
+  def retry_all_jobs(name \\ __MODULE__, queryable) do
     name
     |> config()
     |> Query.retry_all_jobs(queryable)
@@ -717,13 +720,21 @@ defmodule Oban do
 
   ## Example
 
-  Cancel all scheduled jobs for a specific worker:
+  Cancel all jobs:
 
-      query = Ecto.Query.where(Oban.Job, worker: "MyApp.MyWorker")
-      Oban.cancel_all_jobs(Oban, query)
-      :ok
+      Oban.cancel_all_jobs(Oban.Job)
+      {:ok, 9}
+
+  Cancel all jobs for a specific worker:
+
+      Oban.Job
+      |> Ecto.Query.where(worker: "MyApp.MyWorker")
+      |> Oban.cancel_all_jobs()
+      {:ok, 2}
   """
-  def cancel_all_jobs(name \\ __MODULE__, queryable \\ Job) do
+  @doc since: "2.9.0"
+  @spec cancel_all_jobs(name(), queryable :: Ecto.Queryable.t()) :: {:ok, non_neg_integer()}
+  def cancel_all_jobs(name \\ __MODULE__, queryable) do
     conf = config(name)
 
     case Engine.cancel_all_jobs(conf, queryable) do
