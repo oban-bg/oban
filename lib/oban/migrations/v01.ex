@@ -4,7 +4,7 @@ defmodule Oban.Migrations.V01 do
   use Ecto.Migration
 
   def up(prefix, create_schema) do
-    if prefix != "public" && create_schema, do: execute("CREATE SCHEMA IF NOT EXISTS #{prefix}")
+    if create_schema, do: execute("CREATE SCHEMA IF NOT EXISTS #{prefix}")
 
     execute """
     DO $$

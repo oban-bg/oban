@@ -107,7 +107,7 @@ defmodule Oban.Migrations do
   def up(opts \\ []) when is_list(opts) do
     prefix = Keyword.get(opts, :prefix, @default_prefix)
     version = Keyword.get(opts, :version, @current_version)
-    create_schema = Keyword.get(opts, :create_schema, true)
+    create_schema = Keyword.get(opts, :create_schema, prefix != "public")
     initial = migrated_version(repo(), prefix)
 
     cond do
