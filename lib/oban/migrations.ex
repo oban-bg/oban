@@ -112,10 +112,10 @@ defmodule Oban.Migrations do
 
     cond do
       initial == 0 ->
-        change(@initial_version..version, :up, prefix: prefix, create_schema: create_schema)
+        change(@initial_version..version, :up, %{prefix: prefix, create_schema: create_schema})
 
       initial < version ->
-        change((initial + 1)..version, :up, prefix: prefix)
+        change((initial + 1)..version, :up, %{prefix: prefix})
 
       true ->
         :ok
@@ -145,7 +145,7 @@ defmodule Oban.Migrations do
     initial = max(migrated_version(repo(), prefix), @initial_version)
 
     if initial >= version do
-      change(initial..version, :down, prefix: prefix)
+      change(initial..version, :down, %{prefix: prefix})
     end
   end
 
@@ -176,29 +176,20 @@ defmodule Oban.Migrations do
     for index <- range do
       pad_idx = String.pad_leading(to_string(index), 2, "0")
 
-      opts =
-        if direction == :up && index == 1 do
-          opts
-        else
-          Keyword.take(opts, [:prefix])
-        end
-
       [__MODULE__, "V#{pad_idx}"]
       |> Module.concat()
       |> apply(direction, [opts])
     end
 
-    prefix = opts[:prefix]
-
     case direction do
-      :up -> record_version(prefix, Enum.max(range))
-      :down -> record_version(prefix, Enum.min(range) - 1)
+      :up -> record_version(opts, Enum.max(range))
+      :down -> record_version(opts, Enum.min(range) - 1)
     end
   end
 
-  defp record_version(_prefix, 0), do: :ok
+  defp record_version(_opts, 0), do: :ok
 
-  defp record_version(prefix, version) do
+  defp record_version(%{prefix: prefix}, version) do
     execute "COMMENT ON TABLE #{prefix}.oban_jobs IS '#{version}'"
   end
 end

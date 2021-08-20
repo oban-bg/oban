@@ -3,7 +3,7 @@ defmodule Oban.Migrations.V10 do
 
   use Ecto.Migration
 
-  def up(prefix: prefix) do
+  def up(%{prefix: prefix}) do
     # These didn't have defaults out of consideration for older PG versions
     alter table(:oban_jobs, prefix: prefix) do
       modify :args, :map, default: %{}
@@ -40,7 +40,7 @@ defmodule Oban.Migrations.V10 do
     create_if_not_exists index(:oban_jobs, [:meta], using: :gin, prefix: prefix)
   end
 
-  def down(prefix: prefix) do
+  def down(%{prefix: prefix}) do
     alter table(:oban_jobs, prefix: prefix) do
       modify :args, :map, default: nil
       modify :priority, :integer, null: true

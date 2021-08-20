@@ -3,7 +3,7 @@ defmodule Oban.Migrations.V09 do
 
   use Ecto.Migration
 
-  def up(prefix: prefix) do
+  def up(%{prefix: prefix}) do
     alter table(:oban_jobs, prefix: prefix) do
       add_if_not_exists(:meta, :map, default: %{})
       add_if_not_exists(:cancelled_at, :utc_datetime_usec)
@@ -51,7 +51,7 @@ defmodule Oban.Migrations.V09 do
                          )
   end
 
-  def down(prefix: prefix) do
+  def down(%{prefix: prefix}) do
     alter table(:oban_jobs, prefix: prefix) do
       remove_if_exists(:meta, :map)
       remove_if_exists(:cancelled_at, :utc_datetime_usec)

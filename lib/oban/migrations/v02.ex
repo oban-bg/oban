@@ -3,7 +3,7 @@ defmodule Oban.Migrations.V02 do
 
   use Ecto.Migration
 
-  def up(prefix: prefix) do
+  def up(%{prefix: prefix}) do
     # We only need the scheduled_at index for scheduled and available jobs
     drop_if_exists index(:oban_jobs, [:scheduled_at], prefix: prefix)
 
@@ -33,7 +33,7 @@ defmodule Oban.Migrations.V02 do
     """
   end
 
-  def down(prefix: prefix) do
+  def down(%{prefix: prefix}) do
     drop_if_exists constraint(:oban_jobs, :queue_length, prefix: prefix)
     drop_if_exists constraint(:oban_jobs, :worker_length, prefix: prefix)
 

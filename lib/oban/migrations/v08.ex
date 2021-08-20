@@ -3,7 +3,7 @@ defmodule Oban.Migrations.V08 do
 
   use Ecto.Migration
 
-  def up(prefix: prefix) do
+  def up(%{prefix: prefix}) do
     alter table(:oban_jobs, prefix: prefix) do
       add_if_not_exists(:discarded_at, :utc_datetime_usec)
       add_if_not_exists(:priority, :integer)
@@ -48,7 +48,7 @@ defmodule Oban.Migrations.V08 do
     """
   end
 
-  def down(prefix: prefix) do
+  def down(%{prefix: prefix}) do
     drop_if_exists index(:oban_jobs, [:queue, :state, :priority, :scheduled_at, :id],
                      prefix: prefix
                    )
