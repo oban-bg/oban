@@ -59,6 +59,20 @@ defmodule Oban.Migrations do
     prefix: "private",
     ...
   ```
+
+  In some cases, for example if your "private" schema already exists and your database user in production 
+  doesn't have permissions to create a new schema, trying to create the schema from the migration will result
+  in an error. In such situations, it may be useful to inhibit the creation of the "private" schema:
+
+  ```elixir
+  defmodule MyApp.Repo.Migrations.AddPrefixedObanJobsTable do
+    use Ecto.Migration
+
+    def up, do: Oban.Migrations.up(prefix: "private", create_schema: false)
+
+    def down, do: Oban.Migrations.down(prefix: "private")
+  end
+  ```
   """
 
   use Ecto.Migration
@@ -85,16 +99,26 @@ defmodule Oban.Migrations do
   Run migrations in an alternate prefix:
 
       Oban.Migrations.up(prefix: "payments")
+
+  Run migrations in an alternate prefix but don't try to create the schema:
+
+      Oban.Migrations.up(prefix: "payments", create_schema: false)
   """
   def up(opts \\ []) when is_list(opts) do
     prefix = Keyword.get(opts, :prefix, @default_prefix)
     version = Keyword.get(opts, :version, @current_version)
+    create_schema = Keyword.get(opts, :create_schema, prefix != "public")
     initial = migrated_version(repo(), prefix)
 
     cond do
-      initial == 0 -> change(prefix, @initial_version..version, :up)
-      initial < version -> change(prefix, (initial + 1)..version, :up)
-      true -> :ok
+      initial == 0 ->
+        change(@initial_version..version, :up, %{prefix: prefix, create_schema: create_schema})
+
+      initial < version ->
+        change((initial + 1)..version, :up, %{prefix: prefix})
+
+      true ->
+        :ok
     end
   end
 
@@ -121,7 +145,7 @@ defmodule Oban.Migrations do
     initial = max(migrated_version(repo(), prefix), @initial_version)
 
     if initial >= version do
-      change(prefix, initial..version, :down)
+      change(initial..version, :down, %{prefix: prefix})
     end
   end
 
@@ -148,24 +172,24 @@ defmodule Oban.Migrations do
     end
   end
 
-  defp change(prefix, range, direction) do
+  defp change(range, direction, opts) do
     for index <- range do
       pad_idx = String.pad_leading(to_string(index), 2, "0")
 
       [__MODULE__, "V#{pad_idx}"]
       |> Module.concat()
-      |> apply(direction, [prefix])
+      |> apply(direction, [opts])
     end
 
     case direction do
-      :up -> record_version(prefix, Enum.max(range))
-      :down -> record_version(prefix, Enum.min(range) - 1)
+      :up -> record_version(opts, Enum.max(range))
+      :down -> record_version(opts, Enum.min(range) - 1)
     end
   end
 
-  defp record_version(_prefix, 0), do: :ok
+  defp record_version(_opts, 0), do: :ok
 
-  defp record_version(prefix, version) do
+  defp record_version(%{prefix: prefix}, version) do
     execute "COMMENT ON TABLE #{prefix}.oban_jobs IS '#{version}'"
   end
 end

@@ -3,8 +3,8 @@ defmodule Oban.Migrations.V01 do
 
   use Ecto.Migration
 
-  def up(prefix) do
-    if prefix != "public", do: execute("CREATE SCHEMA IF NOT EXISTS #{prefix}")
+  def up(%{prefix: prefix, create_schema: create_schema}) do
+    if create_schema, do: execute("CREATE SCHEMA IF NOT EXISTS #{prefix}")
 
     execute """
     DO $$
@@ -85,7 +85,7 @@ defmodule Oban.Migrations.V01 do
     """
   end
 
-  def down(prefix) do
+  def down(%{prefix: prefix}) do
     execute "DROP TRIGGER IF EXISTS oban_notify ON #{prefix}.oban_jobs"
     execute "DROP FUNCTION IF EXISTS #{prefix}.oban_jobs_notify()"
 
