@@ -163,7 +163,7 @@ defmodule Oban.MixProject do
       {:ecto_sql, ">= 3.4.3"},
       {:jason, "~> 1.1"},
       {:postgrex, "~> 0.14"},
-      {:telemetry, "~> 0.4"},
+      {:telemetry, "~> 1.0"},
       {:stream_data, "~> 0.4", only: [:test, :dev]},
       {:tzdata, "~> 1.0", only: [:test, :dev]},
       {:benchee, "~> 1.0", only: [:test, :dev], runtime: false},
