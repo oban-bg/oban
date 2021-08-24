@@ -58,10 +58,11 @@ defmodule Oban.JobTest do
     end
 
     test "overriding unique defaults" do
-      changeset = Job.new(%{}, worker: Fake, unique: [fields: [:worker], states: [:available]])
+      changeset =
+        Job.new(%{}, worker: Fake, unique: [fields: [:meta, :worker], states: [:available]])
 
       assert changeset.changes[:unique] == %{
-               fields: [:worker],
+               fields: [:meta, :worker],
                keys: [],
                period: 60,
                states: [:available]
