@@ -12,6 +12,7 @@ defmodule Oban.Query do
   @spec fetch_or_insert_job(Config.t(), Job.changeset()) :: {:ok, Job.t()} | {:error, term()}
   def fetch_or_insert_job(conf, changeset) do
     fun = fn -> insert_unique(conf, changeset) end
+
     with {:ok, result} <- Repo.transaction(conf, fun), do: result
   end
 
@@ -173,6 +174,22 @@ defmodule Oban.Query do
       end
 
     dynamic([j], fragment("? @> ?", j.args, ^args) and ^acc)
+  end
+
+  defp unique_field({changeset, :meta, keys}, acc) do
+    meta =
+      case keys do
+        [] ->
+          Changeset.get_field(changeset, :meta)
+
+        [_ | _] ->
+          changeset
+          |> Changeset.get_field(:meta)
+          |> Map.new(fn {key, val} -> {to_string(key), val} end)
+          |> Map.take(keys)
+      end
+
+    dynamic([j], fragment("? @> ?", j.meta, ^meta) and ^acc)
   end
 
   defp unique_field({changeset, field, _}, acc) do

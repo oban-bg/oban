@@ -16,7 +16,7 @@ defmodule Oban.Job do
   @type errors :: [%{at: DateTime.t(), attempt: pos_integer(), error: binary()}]
   @type tags :: [binary()]
 
-  @type unique_field :: [:args | :queue | :worker]
+  @type unique_field :: [:args | :meta | :queue | :worker]
 
   @type unique_period :: pos_integer() | :infinity
 
@@ -172,7 +172,6 @@ defmodule Oban.Job do
       of whether jobs are currently being processed for the queue.
     * `:schedule_in` - the number of seconds until the job should be executed or a tuple containing
       a number and unit
-    * `:replace_args` - if the arguments should be replaced on a unique conflict
     * `:replace` - a list of keys to replace on a unique conflict
     * `:scheduled_at` - a time in the future after which the job should be executed
     * `:tags` — a list of tags to group and organize related jobs, i.e. to identify scheduled jobs
@@ -220,6 +219,14 @@ defmodule Oban.Job do
 
       %{account_id: 1, url: "https://example.com"}
       |> MyApp.Worker.new(unique: [fields: [:args, :worker], keys: keys])
+      |> Oban.insert()
+
+  Insert a unique job considering only specified keys in the meta:
+
+      unique = [fields: [:meta], keys: [:slug]]
+
+      %{id: 1}
+      |> MyApp.Worker.new(meta: %{slug: "unique-key"}, unique: unique)
       |> Oban.insert()
   """
   @doc since: "0.1.0"
@@ -304,7 +311,7 @@ defmodule Oban.Job do
 
   @doc false
   @spec valid_unique_opt?({:fields | :period | :states, [atom()] | integer()}) :: boolean()
-  def valid_unique_opt?({:fields, [_ | _] = fields}), do: fields -- @unique_fields == []
+  def valid_unique_opt?({:fields, [_ | _] = fields}), do: fields -- [:meta | @unique_fields] == []
   def valid_unique_opt?({:keys, []}), do: true
   def valid_unique_opt?({:keys, [_ | _] = keys}), do: Enum.all?(keys, &is_atom/1)
   def valid_unique_opt?({:period, :infinity}), do: true
@@ -356,11 +363,11 @@ defmodule Oban.Job do
       [_ | _] = opts ->
         unique =
           opts
-          |> Keyword.put_new(:fields, @unique_fields)
-          |> Keyword.put_new(:keys, [])
-          |> Keyword.put_new(:period, @unique_period)
-          |> Keyword.put_new(:states, @unique_states)
           |> Map.new()
+          |> Map.put_new(:fields, @unique_fields)
+          |> Map.put_new(:keys, [])
+          |> Map.put_new(:period, @unique_period)
+          |> Map.put_new(:states, @unique_states)
 
         case validate_unique_opts(unique) do
           :ok ->

@@ -39,6 +39,7 @@ defmodule Oban.Integration.UniquenessTest do
   test "scoping uniqueness to particular fields", context do
     assert %Job{id: id_1} = unique_insert!(context.name, %{id: 1}, queue: "default")
     assert %Job{id: id_2} = unique_insert!(context.name, %{id: 2}, queue: "delta")
+
     assert %Job{id: ^id_2} = unique_insert!(context.name, %{id: 1}, unique: [fields: [:worker]])
 
     assert %Job{id: ^id_1} =
@@ -67,6 +68,18 @@ defmodule Oban.Integration.UniquenessTest do
              unique_insert!(context.name, %{id: 2, url: "https://a.co"}, unique: [keys: [:id]])
 
     assert %Job{id: ^id_2} = unique_insert!(context.name, %{"id" => 2}, unique: [keys: [:id]])
+
+    assert count_jobs() == 2
+  end
+
+  test "scoping uniqueness by specific meta keys", %{name: name} do
+    unique = [fields: [:meta], keys: [:slug]]
+
+    assert %Job{id: id_1} = unique_insert!(name, %{}, meta: %{slug: "abc123"}, unique: unique)
+    assert %Job{id: id_2} = unique_insert!(name, %{}, meta: %{slug: "def456"}, unique: unique)
+
+    assert %Job{id: ^id_1} = unique_insert!(name, %{}, meta: %{slug: "abc123"}, unique: unique)
+    assert %Job{id: ^id_2} = unique_insert!(name, %{}, meta: %{slug: "def456"}, unique: unique)
 
     assert count_jobs() == 2
   end
