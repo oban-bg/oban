@@ -57,6 +57,15 @@ defmodule Oban.TestingTest do
     def perform(%{args: %{"action" => "bad_snooze"}}), do: {:snooze, true}
   end
 
+  defmodule AttemptDrivenWorker do
+    use Oban.Worker
+
+    @impl Oban.Worker
+    def perform(%{attempt: attempt}) do
+      {:ok, attempt}
+    end
+  end
+
   describe "perform_job/3" do
     test "verifying that the worker implements the Oban.Worker behaviour" do
       message = "worker to be a module that implements"
@@ -98,6 +107,11 @@ defmodule Oban.TestingTest do
       assert :ok = perform_job(Worker, %{ref: 1, action: "OK"})
       assert :discard = perform_job(Worker, %{ref: 1, action: "DISCARD"})
       assert {:error, _} = perform_job(Worker, %{ref: 1, action: "ERROR"})
+    end
+
+    test "defaulting the number of attempts to mimic real execution" do
+      assert {:ok, 1} = perform_job(AttemptDrivenWorker, %{})
+      assert {:ok, 2} = perform_job(AttemptDrivenWorker, %{}, attempt: 2)
     end
 
     test "emitting appropriate telemetry events" do

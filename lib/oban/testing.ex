@@ -212,6 +212,8 @@ defmodule Oban.Testing do
   def perform_job(worker, args, opts) when is_atom(worker) do
     {repo, opts} = Keyword.pop(opts, :repo)
 
+    opts = Keyword.put_new(opts, :attempt, 1)
+
     assert_valid_worker(worker)
 
     changeset =
