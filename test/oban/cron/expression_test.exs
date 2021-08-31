@@ -141,6 +141,7 @@ defmodule Oban.Cron.ExpressionTest do
               one_of([
                 constant("*"),
                 integer(min..max),
+                map(integer(min..max), &"#{&1}/2"),
                 map(integer((min + 1)..max), &"*/#{&1}"),
                 map(integer(min..(max - 2)), &"#{&1}-#{&1 + 1}"),
                 map(integer(min..(max - 3)), &"#{&1}-#{&1 + 2}/1"),

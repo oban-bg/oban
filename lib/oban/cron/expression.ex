@@ -146,8 +146,8 @@ defmodule Oban.Cron.Expression do
       part == "*" -> range
       part =~ ~r/^\d+$/ -> parse_literal(part)
       part =~ ~r/^\*\/[1-9]\d?$/ -> parse_step(part, range)
-      part =~ ~r/^\d+\-\d+\/[1-9]\d?$/ -> parse_range_step(part)
-      part =~ ~r/^\d+\-\d+$/ -> parse_range(part)
+      part =~ ~r/^\d+(\-\d+)?\/[1-9]\d?$/ -> parse_range_step(part, range)
+      part =~ ~r/^\d+\-\d+$/ -> parse_range(part, range)
       true -> raise ArgumentError, "unrecognized cron expression: #{part}"
     end
   end
@@ -167,15 +167,19 @@ defmodule Oban.Cron.Expression do
     Enum.filter(range, &(rem(&1, step) == 0))
   end
 
-  defp parse_range(part) do
-    [rmin, rmax] = String.split(part, "-", parts: 2)
-
-    String.to_integer(rmin)..String.to_integer(rmax)
-  end
-
-  defp parse_range_step(part) do
+  defp parse_range_step(part, max_range) do
     [range, step] = String.split(part, "/")
 
-    parse_step(step, parse_range(range))
+    parse_step(step, parse_range(range, max_range))
+  end
+
+  defp parse_range(part, max_range) do
+    case String.split(part, "-") do
+      [rall] ->
+        String.to_integer(rall)..Enum.max(max_range)
+
+      [rmin, rmax] ->
+        String.to_integer(rmin)..String.to_integer(rmax)
+    end
   end
 end
