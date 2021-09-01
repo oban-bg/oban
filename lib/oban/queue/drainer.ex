@@ -14,6 +14,7 @@ defmodule Oban.Queue.Drainer do
     args =
       opts
       |> Map.new()
+      |> Map.put_new(:with_limit, @infinite)
       |> Map.put_new(:with_recursion, false)
       |> Map.put_new(:with_safety, true)
       |> Map.put_new(:with_scheduled, false)
@@ -31,19 +32,12 @@ defmodule Oban.Queue.Drainer do
     Repo.update_all(conf, query, set: [state: "available"])
   end
 
-  defp fetch_available(conf, queue) do
-    {:ok, meta} = conf.engine.init(conf, queue: queue, limit: @infinite)
-    {:ok, {_meta, jobs}} = conf.engine.fetch_jobs(conf, meta, %{})
-
-    jobs
-  end
-
   defp drain(conf, old_acc, %{queue: queue} = args) do
     if args.with_scheduled, do: stage_scheduled(conf, queue)
 
     new_acc =
       conf
-      |> fetch_available(args.queue)
+      |> fetch_available(args)
       |> Enum.reduce(old_acc, fn job, acc ->
         result =
           conf
@@ -59,5 +53,12 @@ defmodule Oban.Queue.Drainer do
     else
       new_acc
     end
+  end
+
+  defp fetch_available(conf, %{queue: queue, with_limit: limit}) do
+    {:ok, meta} = conf.engine.init(conf, queue: queue, limit: limit)
+    {:ok, {_meta, jobs}} = conf.engine.fetch_jobs(conf, meta, %{})
+
+    jobs
   end
 end

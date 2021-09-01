@@ -60,11 +60,25 @@ defmodule Oban.Integration.DrainingTest do
 
       insert!(ref: 1, recur: 3)
 
-      Oban.drain_queue(name, queue: :alpha, with_recursion: true)
+      assert %{success: 3} = Oban.drain_queue(name, queue: :alpha, with_recursion: true)
 
       assert_received {:ok, 1, 3}
       assert_received {:ok, 2, 3}
       assert_received {:ok, 3, 3}
+    end
+  end
+
+  describe ":with_limit" do
+    test "only the specified number of jobs are executed when :with_limit is used" do
+      name = start_supervised_oban!(queues: false)
+
+      insert!(ref: 1, action: "OK")
+      insert!(ref: 2, action: "OK")
+
+      assert %{success: 1} = Oban.drain_queue(name, queue: :alpha, with_limit: 1)
+
+      assert_received {:ok, 1}
+      refute_received {:ok, 2}
     end
   end
 end

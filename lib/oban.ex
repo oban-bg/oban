@@ -50,6 +50,7 @@ defmodule Oban do
 
   @type drain_option ::
           {:queue, queue_name()}
+          | {:with_limit, pos_integer()}
           | {:with_recursion, boolean()}
           | {:with_safety, boolean()}
           | {:with_scheduled, boolean()}
@@ -375,6 +376,8 @@ defmodule Oban do
   ## Options
 
   * `:queue` - a string or atom specifying the queue to drain, required
+  * `:with_limit` — the maximum number of jobs to drain at once. When recursion is enabled this is
+    how many jobs are processed per-iteration.
   * `:with_recursion` — whether to keep draining a queue repeatedly when jobs insert _more_ jobs
   * `:with_safety` — whether to silently catch errors when draining, default `true`
   * `:with_scheduled` — whether to include any scheduled jobs when draining, default `false`
@@ -396,10 +399,20 @@ defmodule Oban do
       assert_raise RuntimeError, fn -> Oban.drain_queue(queue: :risky, with_safety: false) end
 
   Drain a queue repeatedly until there aren't any more jobs to run. This is particularly useful
-  for testing jobs that enqueue other jobs.
+  for testing jobs that enqueue other jobs:
 
       Oban.drain_queue(queue: :default, with_recursion: true)
       %{success: 2, failure: 1}
+
+  Drain only the top (by scheduled time and priority) five jobs off a queue:
+
+      Oban.drain_queue(queue: :default, with_limit: 5)
+      %{success: 1, failure: 0}
+
+  Drain a queue recursively, only one job at a time:
+
+      Oban.drain_queue(queue: :default, with_limit: 1, with_recursion: true)
+      %{success: 3, failure: 0}
   """
   @doc since: "0.4.0"
   @spec drain_queue(name(), [drain_option()]) :: drain_result()
