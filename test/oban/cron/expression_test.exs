@@ -19,6 +19,12 @@ defmodule Oban.Cron.ExpressionTest do
       end
     end
 
+    test "step ranges are calculated from the lower value of the range" do
+      assert MapSet.new([0, 12]) == Expr.parse!("* 0/12 * * *").hours
+      assert MapSet.new([1, 8, 15, 22]) == Expr.parse!("* 1/7 * * *").hours
+      assert MapSet.new([1, 8]) == Expr.parse!("* 1-14/7 * * *").hours
+    end
+
     test "parsing expressions that are out of bounds fails" do
       expressions = [
         "60 * * * *",

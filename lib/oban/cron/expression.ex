@@ -164,7 +164,7 @@ defmodule Oban.Cron.Expression do
       |> String.replace_leading("*/", "")
       |> String.to_integer()
 
-    Enum.filter(range, &(rem(&1, step) == 0))
+    Enum.take_every(range, step)
   end
 
   defp parse_range_step(part, max_range) do
