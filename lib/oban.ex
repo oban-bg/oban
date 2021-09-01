@@ -55,7 +55,11 @@ defmodule Oban do
           | {:with_safety, boolean()}
           | {:with_scheduled, boolean()}
 
-  @type drain_result :: %{failure: non_neg_integer(), success: non_neg_integer()}
+  @type drain_result :: %{
+          failure: non_neg_integer(),
+          snoozed: non_neg_integer(),
+          success: non_neg_integer()
+        }
 
   @type wrapper :: %{:changesets => Job.changeset_list(), optional(atom()) => term()}
 
@@ -387,12 +391,12 @@ defmodule Oban do
   Drain a queue with three available jobs, two of which succeed and one of which fails:
 
       Oban.drain_queue(queue: :default)
-      %{success: 2, failure: 1}
+      %{failure: 1, snoozed: 0, success: 2}
 
   Drain a queue including any scheduled jobs:
 
       Oban.drain_queue(queue: :default, with_scheduled: true)
-      %{success: 1, failure: 0}
+      %{failure: 0, snoozed: 0, success: 1}
 
   Drain a queue and assert an error is raised:
 
@@ -402,17 +406,17 @@ defmodule Oban do
   for testing jobs that enqueue other jobs:
 
       Oban.drain_queue(queue: :default, with_recursion: true)
-      %{success: 2, failure: 1}
+      %{failure: 1, snoozed: 0, success: 2}
 
   Drain only the top (by scheduled time and priority) five jobs off a queue:
 
       Oban.drain_queue(queue: :default, with_limit: 5)
-      %{success: 1, failure: 0}
+      %{failure: 0, snoozed: 0, success: 1}
 
   Drain a queue recursively, only one job at a time:
 
       Oban.drain_queue(queue: :default, with_limit: 1, with_recursion: true)
-      %{success: 3, failure: 0}
+      %{failure: 0, snoozed: 0, success: 3}
   """
   @doc since: "0.4.0"
   @spec drain_queue(name(), [drain_option()]) :: drain_result()
