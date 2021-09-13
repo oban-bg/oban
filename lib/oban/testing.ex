@@ -120,7 +120,7 @@ defmodule Oban.Testing do
 
   alias Ecto.Changeset
 
-  alias Oban.{Job, Queue.Executor, Repo, Worker}
+  alias Oban.{Config, Job, Queue.Executor, Repo, Worker}
 
   @wait_interval 10
 
@@ -225,7 +225,7 @@ defmodule Oban.Testing do
 
     result =
       [repo: repo]
-      |> Oban.Config.new()
+      |> Config.new()
       |> Executor.new(create_job(changeset))
       |> Executor.put(:safe, false)
       |> Executor.record_started()
@@ -263,9 +263,9 @@ defmodule Oban.Testing do
   @doc since: "0.6.0"
   @spec all_enqueued(repo :: module(), opts :: Keyword.t()) :: [Job.t()]
   def all_enqueued(repo, opts) when is_list(opts) do
-    {repo_opts, opts} = extract_repo_opts(repo, opts)
+    {conf, opts} = extract_conf(repo, opts)
 
-    Repo.all(repo_opts, base_query(opts))
+    Repo.all(conf, base_query(opts))
   end
 
   @doc """
@@ -446,12 +446,9 @@ defmodule Oban.Testing do
   # Enqueued Helpers
 
   defp get_job(repo, opts) do
-    {repo_opts, opts} = extract_repo_opts(repo, opts)
+    {conf, opts} = extract_conf(repo, opts)
 
-    Repo.one(
-      repo_opts,
-      opts |> base_query() |> limit(1) |> select([:id])
-    )
+    Repo.one(conf, opts |> base_query() |> limit(1) |> select([:id]))
   end
 
   defp wait_for_job(repo, opts, timeout) when timeout > 0 do
@@ -469,11 +466,11 @@ defmodule Oban.Testing do
   defp wait_for_job(_repo, _opts, _timeout), do: nil
 
   defp available_jobs(repo, opts) do
-    {repo_opts, opts} = extract_repo_opts(repo, opts)
+    {conf, opts} = extract_conf(repo, opts)
 
     fields = Keyword.keys(opts)
 
-    repo_opts
+    conf
     |> Repo.all([] |> base_query() |> select(^fields))
     |> Enum.map(&Map.take(&1, fields))
   end
@@ -487,10 +484,15 @@ defmodule Oban.Testing do
     |> order_by(desc: :id)
   end
 
-  defp extract_repo_opts(repo, opts) do
-    {prefix, opts} = Keyword.pop(opts, :prefix, "public")
+  defp extract_conf(repo, opts) do
+    {conf_opts, opts} = Keyword.split(opts, [:prefix])
 
-    {%{repo: repo, prefix: prefix}, opts}
+    conf =
+      conf_opts
+      |> Keyword.put(:repo, repo)
+      |> Config.new()
+
+    {conf, opts}
   end
 
   defp extract_field_opts({key, {value, field_opts}}, field_opts_acc) do

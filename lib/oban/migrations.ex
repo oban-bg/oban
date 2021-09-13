@@ -77,7 +77,7 @@ defmodule Oban.Migrations do
 
   use Ecto.Migration
 
-  alias Oban.Repo
+  alias Oban.{Config, Repo}
 
   @initial_version 1
   @current_version 10
@@ -166,7 +166,9 @@ defmodule Oban.Migrations do
     AND pg_namespace.nspname = '#{prefix}'
     """
 
-    case Repo.query(%{repo: repo, prefix: prefix}, query) do
+    conf = Config.new(repo: repo, prefix: prefix)
+
+    case Repo.query(conf, query) do
       {:ok, %{rows: [[version]]}} when is_binary(version) -> String.to_integer(version)
       _ -> 0
     end
