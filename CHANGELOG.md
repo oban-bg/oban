@@ -3,10 +3,114 @@
 All notable changes to `Oban` are documented here.
 
 _🌟 Looking for changes to Web or Pro? Check the [Oban.Pro Changelog][opc] or
-the [Oban.Web Changelog][owc]._
+the [Oban.Web Changelog][owc]. 🌟_
 
 [opc]: https://hexdocs.pm/oban/pro-changelog.html
 [owc]: https://hexdocs.pm/oban/web-changelog.html
+
+## [2.9.0] — 2021-09-15
+
+### Optionally Use Meta for Unique Jobs
+
+It's now possible to use the `meta` field for unique jobs. Unique jobs have
+always supported `worker`, `queue`, and `args` fields. That was flexible, but
+forced applications to put ad-hoc unique values in `args` when they should
+really be in `meta`.
+
+The `meta` field supports `keys`, just like `args`. That makes it possible to
+use highly efficient fingerprint style uniqueness (and possibly drop the index
+on `args`, if desired).
+
+Here's an example of using a single "fingerprint" key in `meta` for uniqueness:
+
+```elixir
+defmodule MyApp.FingerprintWorker do
+  use Oban.Worker, unique: [fields: [:worker, :meta], keys: [:fingerprint]]
+
+  @impl Worker
+  def new(args, opts) do
+    fingerprint = :erlang.phash2(args)
+
+    super(args, Keyword.put(opts, :meta, %{fingerprint: fingerprint}))
+  end
+end
+```
+
+For backward compatiblity `meta` isn't included in unique `fields` by default.
+
+### Expanded Start and Scale Options
+
+After extensive refactoring to queue option management and validation, now it's
+possible to start and scale queues with all supported options. Previously
+start/stop functions only supported the `limit` option for dynamic scaling,
+reducing runtime flexibility considerably.
+
+Now it's possible to start a queue in the paused state:
+
+```elixir
+Oban.start_queue(queue: :dynamic, paused: true)
+```
+
+Even better, for apps that use an alternative engine like the SmartEngine from
+Oban Pro, it's possible to start a dynamic queue with options like global
+concurrency or rate limiting:
+
+```elixir
+Oban.start_queue(queue: :dynamic, local_limit: 10, global_limit: 50)
+```
+
+All options are also passed through `scale_queue`, locally or globally, even
+allowing you to reconfigure a feature like rate limiting at runtime:
+
+```elixir
+Oban.scale_queue(queue: :dynamic, rate_limit: [allowed: 50, period: 60])
+```
+
+### Added
+
+- [Oban] Add `Oban.cancel_all_jobs/1,2` to cancel multiple jobs at once, within
+  an atomic transaction. The function accepts a `Job` query for complete control
+  over which jobs are cancelled.
+
+- [Oban] Add `Oban.retry_all_jobs/1,2` to retry multiple jobs at once, within an
+  atomic transaction. Like `cancel_all_jobs`, it accepts a query for
+  fine-grained control.
+
+- [Oban] Add `with_limit` option to `drain_queue/2`, which controls the number
+  of jobs that are fetched and executed concurrently. When paired with
+  `with_recursion` this can drastically speed up interdependent job draining,
+  i.e. workflows.
+
+- [Oban.Telemetry] Add telemetry span events for all engine and notifier
+  actions. Now all database operations are covered by spans.
+
+- [Oban.Migrations] Add `create_schema` option to prevent automatic schema
+  creation in migrations.
+
+### Changed
+
+- [Oban] Consistently include a `:snoozed` count in `drain_queue/2` output.
+  Previously the count was only included when there was at least one snoozed
+  job.
+
+- [Oban.Testing] Default to `attempt: 1` for `perform_job/3`, as a worker's
+  `perform/1` would never be called with `attempt: 0`.
+
+### Fixed
+
+- [Oban.Queue.Supervisor] Change supervisor strategy to `:one_for_all`.
+
+  Queue supervisors used a `:rest_for_one` strategy, which allowed the task
+  supervisor to keep running when a producer crashed. That allowed duplicate
+  long-lived jobs to run simultaneously, which is a bug in itself, but could
+  also cause `attempt > max_attempts` violations.
+
+- [Oban.Plugins.Cron] Start step ranges from the minimum value, rather than for
+  the entire set. Now the range `8-23/4` correctly includes `[8, 12, 16, 20]`.
+
+- [Oban.Plugins.Cron] Correcly parse step ranges with a single value, e.g. `0 1/2 * * *`
+
+- [Oban.Telemetry] Comply with `:telemetry.span/3` by exposing errors as `reason` in metadata
 
 ## [2.8.0] — 2021-07-30
 
@@ -970,7 +1074,8 @@ No changes from [2.0.0-rc.3][].
 
 For changes prior to 2.0 see the [1.2 branch][1.2]
 
-[Unreleased]: https://github.com/sorentwo/oban/compare/v2.8.0...HEAD
+[Unreleased]: https://github.com/sorentwo/oban/compare/v2.9.0...HEAD
+[2.9.0]: https://github.com/sorentwo/oban/compare/v2.8.0...v2.9.0
 [2.8.0]: https://github.com/sorentwo/oban/compare/v2.7.2...v2.8.0
 [2.7.2]: https://github.com/sorentwo/oban/compare/v2.7.1...v2.7.2
 [2.7.1]: https://github.com/sorentwo/oban/compare/v2.7.0...v2.7.1
