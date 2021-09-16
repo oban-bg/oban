@@ -22,4 +22,15 @@ defmodule Oban.Integration.IsolationTest do
     assert_receive {:ok, 1}
     refute_receive {:ok, 2}
   end
+
+  test "controlling jobs with a custom prefix" do
+    name = start_supervised_oban!(prefix: "private", queues: [alpha: 5])
+
+    insert!(name, %{ref: 1}, schedule_in: 10)
+    insert!(name, %{ref: 2}, schedule_in: 10)
+    insert!(name, %{ref: 3}, schedule_in: 10)
+
+    assert {:ok, 3} = Oban.cancel_all_jobs(name, Job)
+    assert {:ok, 3} = Oban.retry_all_jobs(name, Job)
+  end
 end

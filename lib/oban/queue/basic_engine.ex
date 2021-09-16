@@ -174,7 +174,7 @@ defmodule Oban.Queue.BasicEngine do
     multi =
       Multi.new()
       |> Multi.run(:executing, all_executing)
-      |> Multi.update_all(:cancelled, cancel_query, [])
+      |> Multi.update_all(:cancelled, cancel_query, [], log: conf.log, prefix: conf.prefix)
 
     {:ok, %{executing: executing, cancelled: {count, _}}} = Repo.transaction(conf, multi)
 
