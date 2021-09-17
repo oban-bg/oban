@@ -46,9 +46,8 @@ defmodule Oban.Integration.InsertingTest do
 
   test "handling empty changesets list from wrapper with insert_all/2" do
     name = start_supervised_oban!(queues: false)
-    wrap = %{changesets: []}
 
-    assert [] = Oban.insert_all(name, wrap)
+    assert [] = Oban.insert_all(name, %{changesets: []})
   end
 
   test "inserting multiple jobs within a multi using insert_all/4" do
