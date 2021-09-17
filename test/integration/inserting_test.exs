@@ -44,6 +44,12 @@ defmodule Oban.Integration.InsertingTest do
     [_job_1, _job_2] = Oban.insert_all(name, wrap)
   end
 
+  test "handling empty changesets list from wrapper with insert_all/2" do
+    name = start_supervised_oban!(queues: false)
+
+    assert [] = Oban.insert_all(name, %{changesets: []})
+  end
+
   test "inserting multiple jobs within a multi using insert_all/4" do
     name = start_supervised_oban!(queues: false)
 
@@ -88,5 +94,14 @@ defmodule Oban.Integration.InsertingTest do
       name
       |> Oban.insert_all(Ecto.Multi.new(), "jobs", wrap)
       |> Repo.transaction()
+  end
+
+  test "handling empty changesets list from wrapper using insert_all/4" do
+    name = start_supervised_oban!(queues: false)
+
+    assert {:ok, %{jobs: []}} =
+             name
+             |> Oban.insert_all(Ecto.Multi.new(), :jobs, %{changesets: []})
+             |> Repo.transaction()
   end
 end
