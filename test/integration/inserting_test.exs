@@ -98,11 +98,10 @@ defmodule Oban.Integration.InsertingTest do
 
   test "handling empty changesets list from wrapper using insert_all/4" do
     name = start_supervised_oban!(queues: false)
-    wrap = %{changesets: []}
 
-    assert {:ok, %{}} =
+    assert {:ok, %{jobs: []}} =
              name
-             |> Oban.insert_all(Ecto.Multi.new(), "jobs", wrap)
+             |> Oban.insert_all(Ecto.Multi.new(), :jobs, %{changesets: []})
              |> Repo.transaction()
   end
 end
