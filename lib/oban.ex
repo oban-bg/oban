@@ -304,7 +304,7 @@ defmodule Oban do
   @spec insert_all(name(), changesets_or_wrapper()) :: [Job.t()]
   def insert_all(name \\ __MODULE__, changesets_or_wrapper)
 
-  def insert_all(name, %{changesets: [_ | _] = changesets}) do
+  def insert_all(name, %{changesets: changesets}) when is_list(changesets) do
     insert_all(name, changesets)
   end
 
@@ -336,7 +336,7 @@ defmodule Oban do
         ) :: Multi.t()
   def insert_all(name \\ __MODULE__, multi, multi_name, changesets_or_wrapper)
 
-  def insert_all(name, multi, multi_name, %{changesets: [_ | _] = changesets}) do
+  def insert_all(name, multi, multi_name, %{changesets: changesets}) when is_list(changesets) do
     insert_all(name, multi, multi_name, changesets)
   end
 
