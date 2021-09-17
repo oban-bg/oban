@@ -118,7 +118,7 @@ defmodule Oban do
     and running more jobs. A slight cooldown period prevents a producer from flooding with
     messages and thrashing the database. The cooldown period _directly impacts_ a producer's
     throughput: jobs per second for a single queue is calculated by `(1000 / cooldown) * limit`.
-    For example, with a `5ms` cooldown and a queue limit of `25` a single queue can run 2,500
+    For example, with a `5ms` cooldown and a queue limit of `25` a single queue can run 5,000
     jobs/sec.
 
     The default is `5ms` and the minimum is `1ms`, which is likely faster than the database can
