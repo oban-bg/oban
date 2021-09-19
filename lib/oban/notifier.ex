@@ -174,7 +174,7 @@ defmodule Oban.Notifier do
   defp with_span(conf, channel, payload, fun) do
     tele_meta = %{conf: conf, channel: channel, payload: payload}
 
-    :telemetry.span([:oban, :notifier, :notify], tele_meta, fn ->
+    :telemetry.span(conf.telemetry_prefix ++ [:notifier, :notify], tele_meta, fn ->
       {fun.(), tele_meta}
     end)
   end

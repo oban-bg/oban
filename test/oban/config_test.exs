@@ -81,6 +81,13 @@ defmodule Oban.ConfigTest do
       assert_valid(shutdown_grace_period: 10)
     end
 
+    test ":telemetry_prefix is validated as a list of atoms" do
+      refute_valid(telemetry_prefix: :oban)
+      refute_valid(telemetry_prefix: ["oban"])
+
+      assert_valid(telemetry_prefix: [:oban])
+    end
+
     test ":log is validated as `false` or a valid log level" do
       refute_valid(log: 1)
       refute_valid(log: "false")

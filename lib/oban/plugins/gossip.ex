@@ -71,7 +71,7 @@ defmodule Oban.Plugins.Gossip do
 
     match = [{{{state.conf.name, {:producer, :_}}, :"$1", :_}, [], [:"$1"]}]
 
-    :telemetry.span([:oban, :plugin], meta, fn ->
+    :telemetry.span(state.conf.telemetry_prefix ++ [:plugin], meta, fn ->
       checks =
         Oban.Registry
         |> Registry.select(match)

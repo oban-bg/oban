@@ -214,7 +214,7 @@ defmodule Oban.Queue.Producer do
     tele_meta = %{conf: state.conf, queue: state.meta.queue}
 
     {meta, dispatched} =
-      :telemetry.span([:oban, :producer], tele_meta, fn ->
+      :telemetry.span(state.conf.telemetry_prefix ++ [:producer], tele_meta, fn ->
         {meta, dispatched} = start_jobs(state)
 
         {{meta, dispatched}, Map.put(tele_meta, :dispatched_count, map_size(dispatched))}

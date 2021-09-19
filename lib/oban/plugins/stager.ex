@@ -79,7 +79,7 @@ defmodule Oban.Plugins.Stager do
   def handle_info(:stage, %State{} = state) do
     meta = %{conf: state.conf, plugin: __MODULE__}
 
-    :telemetry.span([:oban, :plugin], meta, fn ->
+    :telemetry.span(state.conf.telemetry_prefix ++ [:plugin], meta, fn ->
       case lock_and_stage(state) do
         {:ok, staged_count} when is_integer(staged_count) ->
           {:ok, Map.put(meta, :staged_count, staged_count)}

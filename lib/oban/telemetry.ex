@@ -305,16 +305,20 @@ defmodule Oban.Telemetry do
   Attach a logger at the `:debug` level:
 
       :ok = Oban.Telemetry.attach_default_logger(:debug)
+
+  Attach a logger with a specific oban prefix:
+
+      :ok = Oban.Telemetry.attach_default_logger(:info, [:my_oban])
   """
   @doc since: "0.4.0"
   @spec attach_default_logger(Logger.level()) :: :ok | {:error, :already_exists}
-  def attach_default_logger(level \\ :info) do
+  def attach_default_logger(level \\ :info, telemetry_prefix \\ [:oban]) do
     events = [
-      [:oban, :job, :start],
-      [:oban, :job, :stop],
-      [:oban, :job, :exception],
-      [:oban, :circuit, :trip],
-      [:oban, :circuit, :open]
+      telemetry_prefix ++ [:job, :start],
+      telemetry_prefix ++ [:job, :stop],
+      telemetry_prefix ++ [:job, :exception],
+      telemetry_prefix ++ [:circuit, :trip],
+      telemetry_prefix ++ [:circuit, :open]
     ]
 
     :telemetry.attach_many("oban-default-logger", events, &handle_event/4, level)
@@ -370,17 +374,19 @@ defmodule Oban.Telemetry do
 
   @doc false
   @spec handle_event([atom()], map(), map(), Logger.level()) :: :ok
-  def handle_event([:oban, :job, event], measure, meta, level) do
-    meta
-    |> Map.take([:args, :worker, :queue])
-    |> Map.merge(converted_measurements(measure))
-    |> log_message("job:#{event}", level)
-  end
+  def handle_event(event_name, measure, meta, level) do
+    case Enum.slice(event_name, -2..-1) do
+      [:job, event] ->
+        meta
+        |> Map.take([:args, :worker, :queue])
+        |> Map.merge(converted_measurements(measure))
+        |> log_message("job:#{event}", level)
 
-  def handle_event([:oban, :circuit, event], _measure, meta, level) do
-    meta
-    |> Map.take([:message, :name])
-    |> log_message("circuit:#{event}", level)
+      [:circuit, event] ->
+        meta
+        |> Map.take([:message, :name])
+        |> log_message("circuit:#{event}", level)
+    end
   end
 
   defp converted_measurements(measure) do
