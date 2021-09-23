@@ -86,6 +86,7 @@ defmodule Oban.ConfigTest do
       refute_valid(telemetry_prefix: ["oban"])
 
       assert_valid(telemetry_prefix: [:oban])
+      assert_valid(telemetry_prefix: [:my_app, :oban])
     end
 
     test ":log is validated as `false` or a valid log level" do
