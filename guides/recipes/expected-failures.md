@@ -40,6 +40,8 @@ of `Reportable` within the worker module:
 defmodule MyApp.Workers.FlakyWorker do
   use Oban.Worker
 
+  defstruct []
+
   defimpl MyApp.Reportable do
     @threshold 3
 
@@ -53,6 +55,10 @@ defmodule MyApp.Workers.FlakyWorker do
 end
 ```
 
+Note that we've also used `defstruct []` to make our worker a viable struct.
+This is necessary for our protocol to dispatch correctly, as protocols consider
+all modules to be a plain `atom`.
+
 The final step is to call `reportable?/2` from our application's error reporter,
 passing in the worker module and the attempt number:
 
@@ -61,10 +67,22 @@ defmodule MyApp.ErrorReporter do
   alias MyApp.Reportable
 
   def handle_event(_, _, meta, _) do
-    if Reportable.reportable?(meta.job.worker, meta.job.attempt) do
+    worker_struct = maybe_get_worker_struct(meta.job.worker)
+
+    if Reportable.reportable?(worker_struct, meta.job.attempt) do
       context = Map.take(meta.job, [:id, :args, :queue, :worker])
 
       Honeybadger.notify(meta.reason, context, meta.stacktrace)
+    end
+  end
+
+  def maybe_get_worker_struct(worker) do
+    try do
+      worker
+      |> Oban.Worker.from_string()
+      |> struct()
+    rescue
+      UndefinedFunctionError -> worker
     end
   end
 end
