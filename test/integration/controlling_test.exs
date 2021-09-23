@@ -222,7 +222,7 @@ defmodule Oban.Integration.ControllingTest do
     job_a = insert!(%{ref: 1}, schedule_in: 10)
     job_b = insert!(%{ref: 2}, schedule_in: 10, state: "retryable")
     job_c = insert!(%{ref: 3}, state: "completed")
-    job_d = insert!(%{ref: 4, sleep: 100})
+    job_d = insert!(%{ref: 4, sleep: 200})
 
     assert_receive {:started, 4}
 
@@ -231,7 +231,7 @@ defmodule Oban.Integration.ControllingTest do
     assert :ok = Oban.cancel_job(name, job_c.id)
     assert :ok = Oban.cancel_job(name, job_d.id)
 
-    refute_receive {:ok, 4}, 200
+    refute_receive {:ok, 4}, 250
 
     assert %Job{state: "cancelled", cancelled_at: %_{}} = Repo.reload(job_a)
     assert %Job{state: "cancelled", cancelled_at: %_{}} = Repo.reload(job_b)
@@ -245,13 +245,13 @@ defmodule Oban.Integration.ControllingTest do
     job_a = insert!(%{ref: 1}, schedule_in: 10)
     job_b = insert!(%{ref: 2}, schedule_in: 10, state: "retryable")
     job_c = insert!(%{ref: 3}, state: "completed")
-    job_d = insert!(%{ref: 4, sleep: 100})
+    job_d = insert!(%{ref: 4, sleep: 200})
 
     assert_receive {:started, 4}
 
     assert {:ok, 3} = Oban.cancel_all_jobs(name, Job)
 
-    refute_receive {:ok, 4}, 200
+    refute_receive {:ok, 4}, 250
 
     assert %Job{state: "cancelled", cancelled_at: %_{}} = Repo.reload(job_a)
     assert %Job{state: "cancelled", cancelled_at: %_{}} = Repo.reload(job_b)
