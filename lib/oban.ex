@@ -101,7 +101,7 @@ defmodule Oban do
     For testing purposes `:queues` may be set to `false` or `nil`, which effectively disables all
     job dispatching.
 
-  * `:telemetry_prefix` - list of atoms that prefixes telemetry events. For example, a telemetry
+  * `:telemetry_prefix` - a list of atoms that prefixes telemetry events. For example, a telemetry
     prefix of `[:my_app, :oban]` would span job start telemetry events as `[:my_app, :oban, :job,
     :start]`. Defaults to `[:oban]`.
 
