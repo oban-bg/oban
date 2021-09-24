@@ -128,4 +128,27 @@ defmodule Oban.Integration.TelemetryTest do
   after
     :telemetry.detach("oban-default-logger")
   end
+
+  test "the default handler supports custom telemetry prefixes" do
+    name = start_supervised_oban!(telemetry_prefix: [:custom_prefix], queues: [alpha: 3])
+
+    :ok = Telemetry.attach_default_logger(telemetry_prefix: [:custom_prefix], logger_level: :warn)
+
+    Oban.config(name)
+
+    logged =
+      capture_log(fn ->
+        assert %{conn: conn} = :sys.get_state(Oban.Registry.whereis(name, Oban.Notifier))
+        assert Process.exit(conn, :forced_exit)
+
+        # Give it time to log
+        Process.sleep(50)
+      end)
+
+    assert logged =~ ~s("event":"circuit:trip")
+    assert logged =~ ~s("message":":forced_exit")
+    assert logged =~ ~s("name":"Elixir.Oban.Notifier")
+  after
+    :telemetry.detach("oban-default-logger")
+  end
 end

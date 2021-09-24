@@ -302,17 +302,22 @@ defmodule Oban.Telemetry do
 
       :ok = Oban.Telemetry.attach_default_logger()
 
-  Attach a logger at the `:debug` level:
+  Attach a logger with a specific oban prefix and level:
 
-      :ok = Oban.Telemetry.attach_default_logger(:debug)
-
-  Attach a logger with a specific oban prefix:
-
-      :ok = Oban.Telemetry.attach_default_logger(:info, [:my_oban])
+      :ok = Oban.Telemetry.attach_default_logger(telemetry_prefix: [:my_oban], logger_level: :debug)
   """
   @doc since: "0.4.0"
   @spec attach_default_logger(Logger.level()) :: :ok | {:error, :already_exists}
-  def attach_default_logger(level \\ :info, telemetry_prefix \\ [:oban]) do
+  def attach_default_logger(level_or_opts \\ :info)
+
+  def attach_default_logger(level) when is_atom(level) do
+    attach_default_logger(logger_level: level)
+  end
+
+  def attach_default_logger(opts) when is_list(opts) do
+    telemetry_prefix = Keyword.get(opts, :telemetry_prefix, [:oban])
+    level = Keyword.get(opts, :logger_level, :info)
+
     events = [
       telemetry_prefix ++ [:job, :start],
       telemetry_prefix ++ [:job, :stop],
