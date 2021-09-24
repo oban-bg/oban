@@ -379,19 +379,35 @@ defmodule Oban.Telemetry do
 
   @doc false
   @spec handle_event([atom()], map(), map(), Logger.level()) :: :ok
-  def handle_event(event_name, measure, meta, level) do
-    case Enum.slice(event_name, -2..-1) do
-      [:job, event] ->
-        meta
-        |> Map.take([:args, :worker, :queue])
-        |> Map.merge(converted_measurements(measure))
-        |> log_message("job:#{event}", level)
+  def handle_event([_, :job, event], measure, meta, level),
+    do: handle_job_event(event, measure, meta, level)
 
-      [:circuit, event] ->
-        meta
-        |> Map.take([:message, :name])
-        |> log_message("circuit:#{event}", level)
-    end
+  def handle_event([_, _, :job, event], measure, meta, level),
+    do: handle_job_event(event, measure, meta, level)
+
+  def handle_event([_, _, _, :job, event], measure, meta, level),
+    do: handle_job_event(event, measure, meta, level)
+
+  def handle_event([_, :circuit, event], _measure, meta, level),
+    do: handle_circuit_event(event, meta, level)
+
+  def handle_event([_, _, :circuit, event], _measure, meta, level),
+    do: handle_circuit_event(event, meta, level)
+
+  def handle_event([_, _, _, :circuit, event], _measure, meta, level),
+    do: handle_circuit_event(event, meta, level)
+
+  defp handle_job_event(event, measure, meta, level) do
+    meta
+    |> Map.take([:args, :worker, :queue])
+    |> Map.merge(converted_measurements(measure))
+    |> log_message("job:#{event}", level)
+  end
+
+  defp handle_circuit_event(event, meta, level) do
+    meta
+    |> Map.take([:message, :name])
+    |> log_message("circuit:#{event}", level)
   end
 
   defp converted_measurements(measure) do

@@ -84,6 +84,7 @@ defmodule Oban.ConfigTest do
     test ":telemetry_prefix is validated as a list of atoms" do
       refute_valid(telemetry_prefix: :oban)
       refute_valid(telemetry_prefix: ["oban"])
+      refute_valid(telemetry_prefix: [:more, :than, :three, :elements])
 
       assert_valid(telemetry_prefix: [:oban])
       assert_valid(telemetry_prefix: [:my_app, :oban])
