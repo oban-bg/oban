@@ -106,7 +106,7 @@ defmodule Oban.Query do
   # Helpers
 
   defp insert_unique(%Config{} = conf, changeset) do
-    query_opts = [on_conflict: :nothing]
+    query_opts = [on_conflict: :nothing, log: conf.log]
 
     with {:ok, query, lock_key} <- unique_query(changeset),
          :ok <- acquire_lock(conf, lock_key, query_opts),
