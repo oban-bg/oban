@@ -792,7 +792,9 @@ defmodule Oban do
     time = %{system_time: System.system_time()}
     meta = %{pid: self(), conf: conf}
 
-    init_task = fn -> Telemetry.execute([:oban, :supervisor, :init], time, meta) end
+    init_task = fn ->
+      Telemetry.execute(conf.telemetry_prefix ++ [:supervisor, :init], time, meta)
+    end
 
     Supervisor.child_spec({Task, init_task}, restart: :temporary)
   end

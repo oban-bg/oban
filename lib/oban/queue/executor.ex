@@ -86,7 +86,11 @@ defmodule Oban.Queue.Executor do
   end
 
   def record_started(%__MODULE__{} = exec) do
-    Telemetry.execute([:oban, :job, :start], %{system_time: exec.start_time}, exec.meta)
+    Telemetry.execute(
+      exec.conf.telemetry_prefix ++ [:job, :start],
+      %{system_time: exec.start_time},
+      exec.meta
+    )
 
     exec
   end
@@ -176,7 +180,7 @@ defmodule Oban.Queue.Executor do
         state: exec.state
       })
 
-    Telemetry.execute([:oban, :job, :exception], measurements, meta)
+    Telemetry.execute(exec.conf.telemetry_prefix ++ [:job, :exception], measurements, meta)
 
     exec
   end
@@ -191,7 +195,7 @@ defmodule Oban.Queue.Executor do
         result: exec.result
       })
 
-    Telemetry.execute([:oban, :job, :stop], measurements, meta)
+    Telemetry.execute(exec.conf.telemetry_prefix ++ [:job, :stop], measurements, meta)
 
     exec
   end
