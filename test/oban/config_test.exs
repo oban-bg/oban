@@ -85,6 +85,7 @@ defmodule Oban.ConfigTest do
       refute_valid(telemetry_prefix: :oban)
       refute_valid(telemetry_prefix: ["oban"])
       refute_valid(telemetry_prefix: [:more, :than, :three, :elements])
+      refute_valid(telemetry_prefix: [])
 
       assert_valid(telemetry_prefix: [:oban])
       assert_valid(telemetry_prefix: [:my_app, :oban])
