@@ -187,7 +187,7 @@ end
 ```
 
 This will run all of Oban's versioned migrations for your database. Migrations
-between versions are idempotent and will _never_ change after a release. As new
+between versions are idempotent and rarely† change after a release. As new
 versions are released you may need to run additional migrations.
 
 Now, run the migration to create the table:
@@ -198,6 +198,9 @@ mix ecto.migrate
 
 Next see [Usage](#Usage) for how to integrate Oban into your application and
 start defining jobs!
+
+_† The only exception is the removal of `oban_beats`. That table is no longer
+created or modified in any migrations_
 
 [ecto]: https://hex.pm/packages/ecto
 [jason]: https://hex.pm/packages/jason
