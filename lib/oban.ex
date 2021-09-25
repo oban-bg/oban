@@ -491,6 +491,10 @@ defmodule Oban do
   * `:queue` - a string or atom specifying the queue to pause, required
   * `:local_only` - whether the queue will be paused only on the local node, default: `false`
 
+  Note: by default, Oban does not verify that the given queue exists unless `:local_only`
+  is set to `true` as even if the queue does not exist locally, it might be running on
+  another node.
+
   ## Example
 
   Pause the default queue:
@@ -507,6 +511,7 @@ defmodule Oban do
   @spec pause_queue(name(), opts :: [queue_option()]) :: :ok
   def pause_queue(name \\ __MODULE__, [_ | _] = opts) do
     validate_queue_opts!(opts, [:queue, :local_only])
+    validate_queue_exists!(name, opts)
 
     conf = config(name)
     data = %{action: :pause, queue: opts[:queue], ident: scope_signal(conf, opts)}
@@ -521,6 +526,10 @@ defmodule Oban do
 
   * `:queue` - a string or atom specifying the queue to resume, required
   * `:local_only` - whether the queue will be resumed only on the local node, default: `false`
+
+  Note: by default, Oban does not verify that the given queue exists unless `:local_only`
+  is set to `true` as even if the queue does not exist locally, it might be running on
+  another node.
 
   ## Example
 
@@ -538,6 +547,7 @@ defmodule Oban do
   @spec resume_queue(name(), opts :: [queue_option()]) :: :ok
   def resume_queue(name \\ __MODULE__, [_ | _] = opts) do
     validate_queue_opts!(opts, [:queue, :local_only])
+    validate_queue_exists!(name, opts)
 
     conf = config(name)
     data = %{action: :resume, queue: opts[:queue], ident: scope_signal(conf, opts)}
@@ -555,6 +565,10 @@ defmodule Oban do
   * `:local_only` — whether the queue will be scaled only on the local node, default: `false`
 
   In addition, all engine-specific queue options are passed along after validation.
+
+  Note: by default, Oban does not verify that the given queue exists unless `:local_only`
+  is set to `true` as even if the queue does not exist locally, it might be running on
+  another node.
 
   ## Example
 
@@ -580,6 +594,7 @@ defmodule Oban do
 
     validate_queue_opts!(opts, [:queue, :local_only])
     validate_engine_meta!(conf, opts)
+    validate_queue_exists!(name, opts)
 
     data =
       opts
@@ -600,6 +615,10 @@ defmodule Oban do
   The shutdown process pauses the queue first and allows current jobs to exit gracefully, provided
   they finish within the shutdown limit.
 
+  Note: by default, Oban does not verify that the given queue exists unless `:local_only`
+  is set to `true` as even if the queue does not exist locally, it might be running on
+  another node.
+
   ## Options
 
   * `:queue` - a string or atom specifying the queue to stop, required
@@ -617,6 +636,7 @@ defmodule Oban do
   @spec stop_queue(name(), opts :: [queue_option()]) :: :ok
   def stop_queue(name \\ __MODULE__, [_ | _] = opts) do
     validate_queue_opts!(opts, [:queue, :local_only])
+    validate_queue_exists!(name, opts)
 
     conf = config(name)
     data = %{action: :stop, queue: opts[:queue], ident: scope_signal(conf, opts)}
@@ -652,6 +672,7 @@ defmodule Oban do
   @spec check_queue(name(), opts :: [{:queue, queue_name()}]) :: queue_state()
   def check_queue(name \\ __MODULE__, [_ | _] = opts) do
     validate_queue_opts!(opts, [:queue])
+    validate_queue_exists!(name, opts)
 
     name
     |> Registry.via({:producer, to_string(opts[:queue])})
@@ -845,5 +866,14 @@ defmodule Oban do
       |> Keyword.put(:validate, true)
 
     with {:error, error} <- conf.engine.init(conf, opts), do: raise(error)
+  end
+
+  defp validate_queue_exists!(name, opts) do
+    queue = opts[:queue]
+    local_only = opts[:local_only]
+
+    if local_only && is_nil(Registry.whereis(name, {:producer, to_string(queue)})) do
+      raise ArgumentError, "queue #{inspect(queue)} does not exist locally"
+    end
   end
 end
