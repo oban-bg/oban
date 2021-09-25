@@ -80,6 +80,16 @@ defmodule Oban.Integration.ControllingTest do
         refute supervised_queue?(name2, "alpha")
       end)
     end
+
+    test "trying to stop queues that don't exist" do
+      name = start_supervised_oban!(queues: [])
+
+      assert :ok = Oban.pause_queue(name, queue: :alpha)
+
+      assert_raise ArgumentError, "queue :alpha does not exist locally", fn ->
+        Oban.pause_queue(name, queue: :alpha, local_only: true)
+      end
+    end
   end
 
   describe "pause_queue/2 and resume_queue/2" do
@@ -146,6 +156,26 @@ defmodule Oban.Integration.ControllingTest do
         assert %{paused: true} = Oban.check_queue(name2, queue: :alpha)
       end)
     end
+
+    test "trying to resume queues that don't exist" do
+      name = start_supervised_oban!(queues: [])
+
+      assert :ok = Oban.resume_queue(name, queue: :alpha)
+
+      assert_raise ArgumentError, "queue :alpha does not exist locally", fn ->
+        Oban.resume_queue(name, queue: :alpha, local_only: true)
+      end
+    end
+
+    test "trying to pause queues that don't exist" do
+      name = start_supervised_oban!(queues: [])
+
+      assert :ok = Oban.pause_queue(name, queue: :alpha)
+
+      assert_raise ArgumentError, "queue :alpha does not exist locally", fn ->
+        Oban.pause_queue(name, queue: :alpha, local_only: true)
+      end
+    end
   end
 
   describe "scale_queue/2" do
@@ -197,6 +227,16 @@ defmodule Oban.Integration.ControllingTest do
         assert %{limit: 2} = Oban.check_queue(name1, queue: :alpha)
         assert %{limit: 1} = Oban.check_queue(name2, queue: :alpha)
       end)
+    end
+
+    test "trying to scale queues that don't exist" do
+      name = start_supervised_oban!(queues: [])
+
+      assert :ok = Oban.scale_queue(name, queue: :alpha, limit: 1)
+
+      assert_raise ArgumentError, "queue :alpha does not exist locally", fn ->
+        Oban.scale_queue(name, queue: :alpha, limit: 1, local_only: true)
+      end
     end
   end
 
