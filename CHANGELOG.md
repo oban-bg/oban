@@ -8,6 +8,11 @@ the [Oban.Web Changelog][owc]. 🌟_
 [opc]: https://hexdocs.pm/oban/pro-changelog.html
 [owc]: https://hexdocs.pm/oban/web-changelog.html
 
+## [2.9.2] — 2021-09-27
+
+- [Oban] Loosen telemetry requirement to allow either `0.4` or `1.0` without
+  forcing apps to use an override.
+
 ## [2.9.1] — 2021-09-23
 
 ### Fixed
@@ -1082,7 +1087,8 @@ No changes from [2.0.0-rc.3][].
 
 For changes prior to 2.0 see the [1.2 branch][1.2]
 
-[Unreleased]: https://github.com/sorentwo/oban/compare/v2.9.1...HEAD
+[Unreleased]: https://github.com/sorentwo/oban/compare/v2.9.2...HEAD
+[2.9.2]: https://github.com/sorentwo/oban/compare/v2.9.1...v2.9.2
 [2.9.1]: https://github.com/sorentwo/oban/compare/v2.9.0...v2.9.1
 [2.9.0]: https://github.com/sorentwo/oban/compare/v2.8.0...v2.9.0
 [2.8.0]: https://github.com/sorentwo/oban/compare/v2.7.2...v2.8.0
