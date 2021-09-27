@@ -207,7 +207,7 @@ defmodule Oban.Config do
   defp validate_opt!({:telemetry_prefix, prefix}) do
     unless is_list(prefix) and Enum.all?(prefix, &is_atom/1) and length(prefix) in 1..3 do
       raise ArgumentError,
-            "expected :telemetry_prefix to be a non-empty list of atoms with less than 3 items, got: #{inspect(prefix)}"
+            "expected :telemetry_prefix to be a non-empty list of atoms with up to 3 items, got: #{inspect(prefix)}"
     end
   end
 
