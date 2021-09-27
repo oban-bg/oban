@@ -308,7 +308,7 @@ defmodule Oban.Telemetry do
   """
   @doc since: "0.4.0"
   @spec attach_default_logger(Logger.level()) :: :ok | {:error, :already_exists}
-  def attach_default_logger(level_or_opts \\ :info)
+  def attach_default_logger(level_or_opts \\ [logger_level: :info])
 
   def attach_default_logger(level) when is_atom(level) do
     attach_default_logger(logger_level: level)
