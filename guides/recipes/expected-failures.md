@@ -78,9 +78,9 @@ defmodule MyApp.ErrorReporter do
 
   def maybe_get_worker_struct(worker) do
     try do
-      worker
-      |> Oban.Worker.from_string()
-      |> struct()
+      {:ok, module} = Oban.Worker.from_string()
+
+      struct(module)
     rescue
       UndefinedFunctionError -> worker
     end
