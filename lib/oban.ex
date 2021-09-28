@@ -866,7 +866,7 @@ defmodule Oban do
     queue = opts[:queue]
     local_only = opts[:local_only]
 
-    if local_only && is_nil(Registry.whereis(name, {:producer, to_string(queue)})) do
+    if local_only and is_nil(Registry.whereis(name, {:producer, to_string(queue)})) do
       raise ArgumentError, "queue #{inspect(queue)} does not exist locally"
     end
   end
