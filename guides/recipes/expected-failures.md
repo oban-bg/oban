@@ -80,6 +80,7 @@ defmodule MyApp.ErrorReporter do
     try do
       worker
       |> Oban.Worker.from_string()
+      |> elem(1)
       |> struct()
     rescue
       UndefinedFunctionError -> worker
