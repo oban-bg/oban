@@ -148,7 +148,7 @@ defmodule Oban.Queue.Engine do
   defp with_span(event, %Config{} = conf, tele_meta \\ %{}, fun) do
     tele_meta = Map.merge(tele_meta, %{conf: conf, engine: conf.engine})
 
-    :telemetry.span([:oban, :engine, event], tele_meta, fn ->
+    :telemetry.span(conf.telemetry_prefix ++ [:engine, event], tele_meta, fn ->
       {fun.(), tele_meta}
     end)
   end

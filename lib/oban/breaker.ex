@@ -32,7 +32,7 @@ defmodule Oban.Breaker do
       stacktrace: stacktrace
     }
 
-    Telemetry.execute([:oban, :circuit, :trip], %{}, meta)
+    Telemetry.execute(state.conf.telemetry_prefix ++ [:circuit, :trip], %{}, meta)
 
     if is_reference(state.reset_timer), do: Process.cancel_timer(state.reset_timer)
 
@@ -43,7 +43,7 @@ defmodule Oban.Breaker do
 
   @spec open_circuit(state_struct()) :: state_struct()
   def open_circuit(%{circuit: _, name: name, conf: conf} = state) do
-    Telemetry.execute([:oban, :circuit, :open], %{}, %{name: name, conf: conf})
+    Telemetry.execute(conf.telemetry_prefix ++ [:circuit, :open], %{}, %{name: name, conf: conf})
 
     %{state | circuit: :enabled}
   end
