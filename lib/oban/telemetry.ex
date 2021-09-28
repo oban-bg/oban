@@ -283,6 +283,8 @@ defmodule Oban.Telemetry do
 
   require Logger
 
+  @type attach_option :: {:logger_level, Logger.level()} | {:telemetry_prefix, [atom()]}
+
   @doc """
   Attaches a default structured JSON Telemetry handler for logging.
 
@@ -307,7 +309,8 @@ defmodule Oban.Telemetry do
       :ok = Oban.Telemetry.attach_default_logger(telemetry_prefix: [:my_oban], logger_level: :debug)
   """
   @doc since: "0.4.0"
-  @spec attach_default_logger(Logger.level()) :: :ok | {:error, :already_exists}
+  @spec attach_default_logger(Logger.level() | [attach_option()]) ::
+          :ok | {:error, :already_exists}
   def attach_default_logger(level_or_opts \\ [logger_level: :info])
 
   def attach_default_logger(level) when is_atom(level) do
