@@ -7,6 +7,8 @@ defmodule Oban.Plugins.Gossip do
   Gossip enables real-time updates across an entire cluster, and is essential to the operation of
   UIs like Oban Web.
 
+  The Gossip plugin entirely replaced heartbeats and the legacy `oban_beats` table.
+
   ## Using the Plugin
 
   The following example demonstrates using the plugin without any configuration, which will broadcast
