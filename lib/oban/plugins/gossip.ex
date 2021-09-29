@@ -1,6 +1,11 @@
 defmodule Oban.Plugins.Gossip do
   @moduledoc """
-  Periodically broadcast queue activity to the gossip notification channel.
+  The Gossip plugin uses PubSub to periodically exchange queue state information between all
+  interested nodes. This allows Oban instances to broadcast state information regardless of which
+  engine they are using, and without storing anything in the database.
+
+  Gossip enables real-time updates across an entire cluster, and is essential to the operation of
+  UIs like Oban Web.
 
   ## Using the Plugin
 
