@@ -329,7 +329,7 @@ defmodule Oban.Telemetry do
       telemetry_prefix ++ [:circuit, :open]
     ]
 
-    :telemetry.attach_many("oban-default-logger", events, &handle_event/4, level)
+    :telemetry.attach_many("oban-default-logger", events, &__MODULE__.handle_event/4, level)
   end
 
   @deprecated "Use the official :telemetry.span/3 instead"
