@@ -13,6 +13,12 @@ defmodule Oban.Integration.IsolationTest do
     assert_enqueued worker: Worker
   end
 
+  test "assuring that the perform will execute with custom prefix" do
+    assert :ok = perform_job(Worker, %{ref: 1, action: "OK"}, prefix: "private")
+    assert :discard = perform_job(Worker, %{ref: 1, action: "DISCARD"}, prefix: "private")
+    assert {:error, _} = perform_job(Worker, %{ref: 1, action: "ERROR"}, prefix: "private")
+  end
+
   test "inserting and executing unique jobs with a custom prefix" do
     name = start_supervised_oban!(prefix: "private", queues: [alpha: 5])
 
