@@ -250,7 +250,7 @@ defmodule Oban.Queue.Executor do
       returned ->
         maybe_log_warning(exec, returned)
 
-        %{exec | state: :success}
+        %{exec | state: :success, result: returned}
     end
   end
 

@@ -94,9 +94,10 @@ defmodule Oban.TestingTest do
     end
 
     test "validating the return value of the worker's perform/1 function" do
-      message = "result to be one of"
+      assert_perform_error(MisbehavedWorker, %{"action" => "bad_atom"}, ":bad")
 
-      actions = ["bad_atom", "bad_string", "bad_error", "bad_tuple", "bad_snooze"]
+      message = "Expected result to be one of"
+      actions = ["bad_string", "bad_error", "bad_tuple", "bad_snooze"]
 
       for action <- actions do
         assert_perform_error(MisbehavedWorker, %{"action" => action}, message)
@@ -220,7 +221,7 @@ defmodule Oban.TestingTest do
       refute_enqueued worker: Ping, prefix: "private"
     end
 
-    test "refuting that jobs are now or will eventually be enqueued" do
+    test "refuting that jobs will eventually be enqueued" do
       Task.async(fn ->
         Process.sleep(50)
 

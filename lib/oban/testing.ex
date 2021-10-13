@@ -1,6 +1,6 @@
 defmodule Oban.Testing do
   @moduledoc """
-  This module simplifies making assertions about enqueued jobs during testing.
+  This module simplifies testing workers and making assertions about enqueued jobs.
 
   Assertions may be made on any property of a job, but you'll typically want to check by `args`,
   `queue` or `worker`. If you're using namespacing through PostgreSQL schemas, also called
@@ -13,15 +13,14 @@ defmodule Oban.Testing do
 
       use Oban.Testing, repo: MyApp.Repo
 
-  That will define three helper functions, `assert_enqueued/1,2`, `refute_enqueued/1,2` and
-  `all_enqueued/1`. The functions can then be used to make assertions on the jobs that have been
-  inserted in the database while testing.
+  That will define the helper functions you'll use to make assertions on the jobs that should (or
+  should not) be inserted in the database while testing.
 
-  You can also specify an alternate prefix to use in all assertions:
+  Along with the `repo` you can also specify an alternate prefix to use in all assertions:
 
       use Oban.Testing, repo: MyApp.Repo, prefix: "business"
 
-  Some examples:
+  Some example assertions:
 
   ```elixir
   # Assert that a job was already enqueued
