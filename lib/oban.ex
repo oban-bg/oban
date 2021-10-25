@@ -535,7 +535,7 @@ defmodule Oban do
 
   Resume a paused default queue:
 
-      Oban.resume_queue(:default)
+      Oban.resume_queue(queue: :default)
       :ok
 
   Resume the default queue, but only on the local node:
