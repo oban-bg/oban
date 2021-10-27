@@ -42,15 +42,7 @@ defmodule Oban.Plugins.Cron do
   alias Oban.Cron.Expression
   alias Oban.{Config, Job, Query, Worker}
 
-  @type cron_opt ::
-          {:args, Job.args()}
-          | {:max_attempts, pos_integer()}
-          | {:paused, boolean()}
-          | {:priority, 0..3}
-          | {:queue, atom() | binary()}
-          | {:tags, Job.tags()}
-
-  @type cron_input :: {binary(), module(), [cron_opt()]}
+  @type cron_input :: {binary(), module()} | {binary(), module(), [Job.option()]}
 
   @type option ::
           {:conf, Config.t()}
@@ -189,8 +181,11 @@ defmodule Oban.Plugins.Cron do
     end
 
     unless Keyword.keyword?(opts) do
-      raise ArgumentError,
-            "#{inspect(worker)} options must be a keyword list, got: #{inspect(opts)}"
+      raise ArgumentError, "options must be a keyword list, got: #{inspect(opts)}"
+    end
+
+    unless build_changeset(worker, opts).valid? do
+      raise ArgumentError, "expected valid job options, got: #{inspect(opts)}"
     end
   end
 
@@ -216,14 +211,18 @@ defmodule Oban.Plugins.Cron do
     {:ok, datetime} = DateTime.now(timezone)
 
     for {expr, worker, opts} <- crontab, Expression.now?(expr, datetime) do
-      {args, opts} = Keyword.pop(opts, :args, %{})
-
-      opts = unique_opts(worker.__opts__(), opts)
-
-      {:ok, job} = Query.fetch_or_insert_job(conf, worker.new(args, opts))
+      {:ok, job} = Query.fetch_or_insert_job(conf, build_changeset(worker, opts))
 
       job
     end
+  end
+
+  defp build_changeset(worker, opts) do
+    {args, opts} = Keyword.pop(opts, :args, %{})
+
+    opts = unique_opts(worker.__opts__(), opts)
+
+    worker.new(args, opts)
   end
 
   # Make each job unique for 59 seconds to prevent double-enqueue if the node or scheduler

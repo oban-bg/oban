@@ -38,8 +38,18 @@ defmodule Oban.Plugins.CronTest do
     end
 
     test "worker options format is validated" do
-      assert_raise ArgumentError, ~r/Worker options must be a keyword list/, fn ->
+      assert_raise ArgumentError, ~r/options must be a keyword list/, fn ->
         Cron.validate!(crontab: [{"* * * * *", Worker, %{foo: "bar"}}])
+      end
+    end
+
+    test "worker options are validated" do
+      assert_raise ArgumentError, ~r/expected valid job options/, fn ->
+        Cron.validate!(crontab: [{"* * * * *", Worker, priority: -1}])
+      end
+
+      assert_raise ArgumentError, ~r/expected valid job options/, fn ->
+        Cron.validate!(crontab: [{"* * * * *", Worker, unique: []}])
       end
     end
 
