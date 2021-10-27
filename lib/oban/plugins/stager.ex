@@ -25,15 +25,13 @@ defmodule Oban.Plugins.Stager do
   import Ecto.Query,
     only: [
       distinct: 2,
-      from: 2,
       join: 5,
       limit: 2,
-      select: 2,
-      subquery: 1,
+      select: 3,
       where: 3
     ]
 
-  alias Oban.{Config, Job, Query, Repo}
+  alias Oban.{Config, Job, Notifier, Query, Repo}
 
   @type option :: {:conf, Config.t()} | {:name, GenServer.name()} | {:interval, pos_integer()}
 
@@ -120,23 +118,17 @@ defmodule Oban.Plugins.Stager do
     )
   end
 
-  @pg_notify "pg_notify(?, json_build_object('queue', ?)::text)"
-
   defp notify_queues(state) do
-    channel = "#{state.conf.prefix}.oban_insert"
-
-    subquery =
+    query =
       Job
       |> where([j], j.state == "available")
       |> where([j], not is_nil(j.queue))
-      |> select([:queue])
+      |> select([j], %{queue: j.queue})
       |> distinct(true)
 
-    query = from job in subquery(subquery), select: fragment(@pg_notify, ^channel, job.queue)
+    payload = Repo.all(state.conf, query)
 
-    Repo.all(state.conf, query)
-
-    :ok
+    Notifier.notify(state.conf, :insert, payload)
   end
 
   defp schedule_staging(state) do
