@@ -444,8 +444,8 @@ Multiple jobs can be inserted in a single transaction:
 
 ```elixir
 Ecto.Multi.new()
-|> Oban.insert(:b_job, MyApp.Business.new(%{id: 1}))
-|> Oban.insert(:m_job, MyApp.Mailer.new(%{email: "brewser@example.com"}))
+|> Oban.insert(:business_job, MyApp.Business.new(%{id: 1}))
+|> Oban.insert(:mailer_job, MyApp.Mailer.new(%{email: "brewser@example.com"}))
 |> Repo.transaction()
 ```
 
