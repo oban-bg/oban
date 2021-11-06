@@ -92,7 +92,7 @@ orphaned due to crashes.
 
 - **Job Canceling** — Jobs can be canceled in the middle of execution regardless
   of which node they are running on. This stops the job at once and flags it as
-  `discarded`.
+  `cancelled`.
 
 - **Triggered Execution** — Database triggers ensure that jobs are dispatched as
   soon as they are inserted into the database.
