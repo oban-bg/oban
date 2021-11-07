@@ -151,7 +151,7 @@ defmodule Oban.MixProject do
       licenses: ["Apache-2.0"],
       links: %{
         Website: "https://getoban.pro",
-        Changelog: "#{@source_url}/blob/master/CHANGELOG.md",
+        Changelog: "#{@source_url}/blob/main/CHANGELOG.md",
         GitHub: @source_url,
         Sponsor: "https://getoban.pro"
       }

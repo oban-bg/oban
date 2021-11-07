@@ -1,6 +1,6 @@
 <p align="center">
   <a href="https://github.com/sorentwo/oban">
-    <img alt="oban" src="https://raw.githubusercontent.com/sorentwo/oban/master/assets/oban-logotype-large.png" width="435">
+    <img alt="oban" src="https://raw.githubusercontent.com/sorentwo/oban/main/assets/oban-logotype-large.png" width="435">
   </a>
 </p>
 
@@ -49,7 +49,7 @@
 
 ---
 
-_Note: This README is for the unreleased master branch, please reference the
+_Note: This README is for the unreleased main branch, please reference the
 [official documentation on hexdocs][hexdoc] for the latest stable release._
 
 [hexdoc]: https://hexdocs.pm/oban/Oban.html
