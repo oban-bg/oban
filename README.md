@@ -1060,6 +1060,11 @@ The function `repo_pid/1` must return the pid of the repo for the given
 instance. You can use `Registry` to register the repo (for example in the repo's
 `init/2` callback) and discover it.
 
+If your application exclusively uses dynamic repositories and doesn't specify
+all credentials upfront, you must implement an `init/1` callback in your Ecto
+Repo. Doing so provides the Postgres notifier with the correct credentials on
+init, allowing jobs to process as expected.
+
 [dynamic]: https://hexdocs.pm/ecto/replicas-and-dynamic-repositories.html#dynamic-repositories
 
 <!-- MDOC -->
