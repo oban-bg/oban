@@ -170,10 +170,16 @@ defmodule Oban.Queue.Executor do
   def emit_event(%__MODULE__{state: :failure} = exec) do
     measurements = %{duration: exec.duration, queue_time: exec.queue_time}
 
+    kind =
+      case exec.kind do
+        {:EXIT, _pid} -> :exit
+        kind when kind in [:exit, :throw, :error] -> kind
+      end
+
     meta =
       Map.merge(exec.meta, %{
         job: exec.job,
-        kind: exec.kind,
+        kind: kind,
         error: exec.error,
         reason: exec.error,
         stacktrace: exec.stacktrace,

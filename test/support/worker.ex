@@ -14,6 +14,7 @@ defmodule Oban.Integration.Worker do
   end
 
   @impl Worker
+  # credo:disable-for-next-line Credo.Check.Refactor.CyclomaticComplexity
   def perform(%_{args: %{"ref" => ref, "action" => action, "bin_pid" => bin_pid}}) do
     pid = bin_to_pid(bin_pid)
 
@@ -61,6 +62,13 @@ defmodule Oban.Integration.Worker do
         |> Task.await()
 
         :ok
+
+      "TASK_EXIT" ->
+        send(pid, {:async, ref})
+
+        fn -> apply(Kernel, :exit, [{:timeout, :not_a_list}]) end
+        |> Task.async()
+        |> Task.await()
     end
   end
 
