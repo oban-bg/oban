@@ -66,10 +66,14 @@ defmodule Oban.Integration.Worker do
       "TASK_EXIT" ->
         send(pid, {:async, ref})
 
-        fn -> exit({:timeout, :not_a_list}) end
-        |> Task.async()
+        Task.async(&exit/0)
         |> Task.await()
     end
+  end
+
+  @dialyzer {:nowarn_function, exit: 0}
+  defp exit() do
+    exit({:timeout, :not_a_list})
   end
 
   def perform(%_{args: %{"ref" => ref, "recur" => recur, "bin_pid" => bin_pid}} = job) do
