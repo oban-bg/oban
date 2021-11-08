@@ -178,7 +178,7 @@ defmodule Oban.Worker do
         def backoff(%Job{} = job) do
           corrected_attempt = @max_attempts - (job.max_attempts - job.attempt)
 
-          Worker.backoff(%{job | attempt: corrected_attempt)
+          Worker.backoff(%{job | attempt: corrected_attempt})
         end
 
         @impl Worker
