@@ -8,6 +8,41 @@ the [Oban.Web Changelog][owc]. 🌟_
 [opc]: https://hexdocs.pm/oban/pro-changelog.html
 [owc]: https://hexdocs.pm/oban/web-changelog.html
 
+## [2.10.0] — 2021-11-09
+
+### Added
+
+- [Oban.Telemetry] Add customizable prefix for all telemetry events.
+
+  For example, a telemetry prefix of `[:my_app, :oban]` would span job start
+  telemetry events as `[:my_app, :oban, :job, :start]`. The default is
+  `[:oban]`, which matches the existing functionality.
+
+### Fixed
+
+- [Oban.Plugins.Stager] Use the notifier to broadcast inserted and available
+  jobs rather than inlining them into a Postgres query.
+
+  With this change the notifier is entirely swappable and there **isn't any
+  reason to use the `Repeater` plugin in production**.
+
+- [Oban.Plugins.Cron] Validate job options on init.
+
+  Providing invalid job args in the cron tab, e.g. `priority: 5` or `unique:
+  []`, wasn't caught until runtime. At that point each insert attempt would
+  fail, crashing the plugin.
+
+- [Oban.Queue.Producer] Prevent crashing on exception formatting when a job
+  exits without a stacktrace, most notably with `{:EXIT, pid}`.
+
+- [Oban.Testing] Return invalid results from `perform_job`, rather than always
+  returning `nil`.
+
+- [Oban] Validate that a queue exists when controlling or checking locally, e.g.
+  calls to `Oban.check_queue` or `Oban.scale_queue`.
+
+- [Oban.Telemetry] Use module capture for telemetry logging to prevent warnings.
+
 ## [2.9.2] — 2021-09-27
 
 - [Oban] Loosen telemetry requirement to allow either `0.4` or `1.0` without
@@ -1087,7 +1122,8 @@ No changes from [2.0.0-rc.3][].
 
 For changes prior to 2.0 see the [1.2 branch][1.2]
 
-[Unreleased]: https://github.com/sorentwo/oban/compare/v2.9.2...HEAD
+[Unreleased]: https://github.com/sorentwo/oban/compare/v2.10.0...HEAD
+[2.10.0]: https://github.com/sorentwo/oban/compare/v2.9.2...v2.10.0
 [2.9.2]: https://github.com/sorentwo/oban/compare/v2.9.1...v2.9.2
 [2.9.1]: https://github.com/sorentwo/oban/compare/v2.9.0...v2.9.1
 [2.9.0]: https://github.com/sorentwo/oban/compare/v2.8.0...v2.9.0
