@@ -8,7 +8,19 @@ the [Oban.Web Changelog][owc]. 🌟_
 [opc]: https://hexdocs.pm/oban/pro-changelog.html
 [owc]: https://hexdocs.pm/oban/web-changelog.html
 
+## [2.10.1] — 2021-11-09
+
+### Removed
+
+- [Oban.Telemetry] Remove the customizable prefix for telemetry events in favor
+  of workarounds such as `keep/drop` in [Telemetry Metrics][tel-fil].
+
+[tel-fil]: https://hexdocs.pm/telemetry_metrics/Telemetry.Metrics.html#module-filtering-on-metadata
+
 ## [2.10.0] — 2021-11-09
+
+**Retired: This version is retired and superseded by v2.10.1 due to the
+immediate reversion of telemetry prefixes**
 
 ### Added
 
@@ -1122,7 +1134,8 @@ No changes from [2.0.0-rc.3][].
 
 For changes prior to 2.0 see the [1.2 branch][1.2]
 
-[Unreleased]: https://github.com/sorentwo/oban/compare/v2.10.0...HEAD
+[Unreleased]: https://github.com/sorentwo/oban/compare/v2.10.1...HEAD
+[2.10.1]: https://github.com/sorentwo/oban/compare/v2.10.0...v2.10.1
 [2.10.0]: https://github.com/sorentwo/oban/compare/v2.9.2...v2.10.0
 [2.9.2]: https://github.com/sorentwo/oban/compare/v2.9.1...v2.9.2
 [2.9.1]: https://github.com/sorentwo/oban/compare/v2.9.0...v2.9.1
