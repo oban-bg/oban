@@ -101,10 +101,6 @@ defmodule Oban do
     For testing purposes `:queues` may be set to `false` or `nil`, which effectively disables all
     job dispatching.
 
-  * `:telemetry_prefix` - a list of atoms that prefixes telemetry events. For example, a telemetry
-    prefix of `[:my_app, :oban]` would span job start telemetry events as `[:my_app, :oban, :job,
-    :start]`. Defaults to `[:oban]`.
-
   * `:log` — either `false` to disable logging or a standard log level (`:error`, `:warn`,
     `:info`, `:debug`). This determines whether queries are logged or not; overriding the repo's
     configured log level. Defaults to `false`, where no queries are logged.
@@ -813,9 +809,7 @@ defmodule Oban do
     time = %{system_time: System.system_time()}
     meta = %{pid: self(), conf: conf}
 
-    init_task = fn ->
-      Telemetry.execute(conf.telemetry_prefix ++ [:supervisor, :init], time, meta)
-    end
+    init_task = fn -> Telemetry.execute([:oban, :supervisor, :init], time, meta) end
 
     Supervisor.child_spec({Task, init_task}, restart: :temporary)
   end

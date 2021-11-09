@@ -86,7 +86,7 @@ defmodule Oban.Plugins.Pruner do
   def handle_info(:prune, %State{} = state) do
     meta = %{conf: state.conf, plugin: __MODULE__}
 
-    :telemetry.span(state.conf.telemetry_prefix ++ [:plugin], meta, fn ->
+    :telemetry.span([:oban, :plugin], meta, fn ->
       case lock_and_delete_jobs(state) do
         {:ok, {pruned_count, _}} when is_integer(pruned_count) ->
           {:ok, Map.put(meta, :pruned_count, pruned_count)}

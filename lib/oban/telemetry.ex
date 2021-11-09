@@ -283,8 +283,6 @@ defmodule Oban.Telemetry do
 
   require Logger
 
-  @type attach_option :: {:logger_level, Logger.level()} | {:telemetry_prefix, [atom()]}
-
   @doc """
   Attaches a default structured JSON Telemetry handler for logging.
 
@@ -304,29 +302,19 @@ defmodule Oban.Telemetry do
 
       :ok = Oban.Telemetry.attach_default_logger()
 
-  Attach a logger with a specific oban prefix and level:
+  Attach a logger at the `:debug` level:
 
-      :ok = Oban.Telemetry.attach_default_logger(telemetry_prefix: [:my_oban], logger_level: :debug)
+      :ok = Oban.Telemetry.attach_default_logger(:debug)
   """
   @doc since: "0.4.0"
-  @spec attach_default_logger(Logger.level() | [attach_option()]) ::
-          :ok | {:error, :already_exists}
-  def attach_default_logger(level_or_opts \\ [logger_level: :info])
-
-  def attach_default_logger(level) when is_atom(level) do
-    attach_default_logger(logger_level: level)
-  end
-
-  def attach_default_logger(opts) when is_list(opts) do
-    telemetry_prefix = Keyword.get(opts, :telemetry_prefix, [:oban])
-    level = Keyword.get(opts, :logger_level, :info)
-
+  @spec attach_default_logger(Logger.level()) :: :ok | {:error, :already_exists}
+  def attach_default_logger(level \\ :info) do
     events = [
-      telemetry_prefix ++ [:job, :start],
-      telemetry_prefix ++ [:job, :stop],
-      telemetry_prefix ++ [:job, :exception],
-      telemetry_prefix ++ [:circuit, :trip],
-      telemetry_prefix ++ [:circuit, :open]
+      [:oban, :job, :start],
+      [:oban, :job, :stop],
+      [:oban, :job, :exception],
+      [:oban, :circuit, :trip],
+      [:oban, :circuit, :open]
     ]
 
     :telemetry.attach_many("oban-default-logger", events, &__MODULE__.handle_event/4, level)
@@ -382,32 +370,14 @@ defmodule Oban.Telemetry do
 
   @doc false
   @spec handle_event([atom()], map(), map(), Logger.level()) :: :ok
-  def handle_event([_, :job, event], measure, meta, level),
-    do: handle_job_event(event, measure, meta, level)
-
-  def handle_event([_, _, :job, event], measure, meta, level),
-    do: handle_job_event(event, measure, meta, level)
-
-  def handle_event([_, _, _, :job, event], measure, meta, level),
-    do: handle_job_event(event, measure, meta, level)
-
-  def handle_event([_, :circuit, event], _measure, meta, level),
-    do: handle_circuit_event(event, meta, level)
-
-  def handle_event([_, _, :circuit, event], _measure, meta, level),
-    do: handle_circuit_event(event, meta, level)
-
-  def handle_event([_, _, _, :circuit, event], _measure, meta, level),
-    do: handle_circuit_event(event, meta, level)
-
-  defp handle_job_event(event, measure, meta, level) do
+  def handle_event([:oban, :job, event], measure, meta, level) do
     meta
     |> Map.take([:args, :worker, :queue])
     |> Map.merge(converted_measurements(measure))
     |> log_message("job:#{event}", level)
   end
 
-  defp handle_circuit_event(event, meta, level) do
+  def handle_event([:oban, :circuit, event], _measure, meta, level) do
     meta
     |> Map.take([:message, :name])
     |> log_message("circuit:#{event}", level)

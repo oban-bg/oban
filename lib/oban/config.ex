@@ -18,7 +18,6 @@ defmodule Oban.Config do
           queues: [{atom(), Keyword.t()}],
           repo: module(),
           shutdown_grace_period: timeout(),
-          telemetry_prefix: [atom()],
           log: false | Logger.level(),
           get_dynamic_repo: nil | (() -> pid() | atom())
         }
@@ -37,7 +36,6 @@ defmodule Oban.Config do
             queues: [],
             repo: nil,
             shutdown_grace_period: :timer.seconds(15),
-            telemetry_prefix: [:oban],
             log: false,
             get_dynamic_repo: nil
 
@@ -201,13 +199,6 @@ defmodule Oban.Config do
     unless is_pos_integer(period) do
       raise ArgumentError,
             "expected :shutdown_grace_period to be a positive integer, got: #{inspect(period)}"
-    end
-  end
-
-  defp validate_opt!({:telemetry_prefix, prefix}) do
-    unless is_list(prefix) and Enum.all?(prefix, &is_atom/1) and length(prefix) in 1..3 do
-      raise ArgumentError,
-            "expected :telemetry_prefix to be a non-empty list of atoms with up to 3 items, got: #{inspect(prefix)}"
     end
   end
 

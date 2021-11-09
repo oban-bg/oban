@@ -117,7 +117,7 @@ defmodule Oban.Plugins.Cron do
 
     meta = %{conf: state.conf, plugin: __MODULE__}
 
-    :telemetry.span(state.conf.telemetry_prefix ++ [:plugin], meta, fn ->
+    :telemetry.span([:oban, :plugin], meta, fn ->
       case lock_and_insert_jobs(state) do
         {:ok, inserted_jobs} when is_list(inserted_jobs) ->
           {:ok, Map.put(meta, :jobs, inserted_jobs)}

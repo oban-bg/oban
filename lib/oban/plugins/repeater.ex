@@ -52,7 +52,7 @@ defmodule Oban.Plugins.Repeater do
     match = [{{{state.conf.name, {:producer, :"$1"}}, :"$2", :_}, [], [{{:"$1", :"$2"}}]}]
     meta = %{conf: state.conf, plugin: __MODULE__}
 
-    :telemetry.span(state.conf.telemetry_prefix ++ [:plugin], meta, fn ->
+    :telemetry.span([:oban, :plugin], meta, fn ->
       for {queue, pid} <- Registry.select(Oban.Registry, match) do
         send(pid, {:notification, :insert, %{"queue" => queue}})
       end
