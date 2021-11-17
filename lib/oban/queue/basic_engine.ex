@@ -115,21 +115,14 @@ defmodule Oban.Queue.BasicEngine do
 
   @impl Engine
   def error_job(%Config{} = conf, %Job{} = job, seconds) when is_integer(seconds) do
-    %Job{attempt: attempt, id: id, max_attempts: max_attempts} = job
-
-    set =
-      if attempt >= max_attempts do
-        [state: "discarded", discarded_at: utc_now()]
-      else
-        [state: "retryable", scheduled_at: seconds_from_now(seconds)]
-      end
-
     updates = [
-      set: set,
-      push: [errors: %{attempt: attempt, at: utc_now(), error: format_blamed(job.unsaved_error)}]
+      set: [state: "retryable", scheduled_at: seconds_from_now(seconds)],
+      push: [
+        errors: %{attempt: job.attempt, at: utc_now(), error: format_blamed(job.unsaved_error)}
+      ]
     ]
 
-    Repo.update_all(conf, where(Job, id: ^id), updates)
+    Repo.update_all(conf, where(Job, id: ^job.id), updates)
 
     :ok
   end

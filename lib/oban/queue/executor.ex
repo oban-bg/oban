@@ -143,7 +143,11 @@ defmodule Oban.Queue.Executor do
   def ack_event(%__MODULE__{state: :failure} = exec) do
     job = job_with_unsaved_error(exec)
 
-    Engine.error_job(exec.conf, job, backoff(exec.worker, job))
+    if job.attempt >= job.max_attempts do
+      Engine.discard_job(exec.conf, job)
+    else
+      Engine.error_job(exec.conf, job, backoff(exec.worker, job))
+    end
 
     %{exec | job: job}
   end
