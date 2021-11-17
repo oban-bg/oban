@@ -404,8 +404,7 @@ defmodule Oban.Testing do
 
     changeset
     |> Changeset.traverse_errors(traverser)
-    |> Enum.map(fn {key, val} -> "#{key}: #{val}" end)
-    |> Enum.join("\n")
+    |> Enum.map_join("\n", fn {key, val} -> "#{key}: #{val}" end)
   end
 
   defp json_encode_decode(map) do

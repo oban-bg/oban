@@ -167,7 +167,7 @@ defmodule Oban.MixProject do
       {:stream_data, "~> 0.4", only: [:test, :dev]},
       {:tzdata, "~> 1.0", only: [:test, :dev]},
       {:benchee, "~> 1.0", only: [:test, :dev], runtime: false},
-      {:credo, "~> 1.4", only: [:test, :dev], runtime: false},
+      {:credo, "~> 1.6", only: [:test, :dev], runtime: false},
       {:dialyxir, "~> 1.0", only: [:test, :dev], runtime: false},
       {:ex_doc, "~> 0.20", only: [:test, :dev], runtime: false}
     ]
