@@ -64,6 +64,7 @@ defmodule Oban.Cron.Expression do
 
   The parser can handle common expressions that use minutes, hours, days, months and weekdays,
   along with ranges and steps. It also supports common extensions, also called nicknames.
+  The second argument, now is only used for @reboot common expression.
 
   Raises an `ArgumentError` if the expression cannot be parsed.
 
@@ -89,24 +90,24 @@ defmodule Oban.Cron.Expression do
       iex> parse!("60 * * * *")
       ** (ArgumentError)
   """
-  @spec parse!(input :: binary()) :: t()
-  def parse!("@annually"), do: parse!("0 0 1 1 *")
-  def parse!("@yearly"), do: parse!("0 0 1 1 *")
-  def parse!("@monthly"), do: parse!("0 0 1 * *")
-  def parse!("@weekly"), do: parse!("0 0 * * 0")
-  def parse!("@midnight"), do: parse!("0 0 * * *")
-  def parse!("@daily"), do: parse!("0 0 * * *")
-  def parse!("@hourly"), do: parse!("0 * * * *")
+  @spec parse!(input :: binary(), DateTime.t()) :: t()
+  def parse!(expression, now \\ DateTime.utc_now())
 
-  def parse!("@reboot") do
-    now = DateTime.utc_now()
+  def parse!("@annually", _now), do: parse!("0 0 1 1 *")
+  def parse!("@yearly", _now), do: parse!("0 0 1 1 *")
+  def parse!("@monthly", _now), do: parse!("0 0 1 * *")
+  def parse!("@weekly", _now), do: parse!("0 0 * * 0")
+  def parse!("@midnight", _now), do: parse!("0 0 * * *")
+  def parse!("@daily", _now), do: parse!("0 0 * * *")
+  def parse!("@hourly", _now), do: parse!("0 * * * *")
 
+  def parse!("@reboot", now) do
     [now.minute, now.hour, now.day, now.month, day_of_week(now)]
     |> Enum.join(" ")
     |> parse!()
   end
 
-  def parse!(input) when is_binary(input) do
+  def parse!(input, _now) when is_binary(input) do
     [mip, hrp, dap, mop, wdp] =
       input
       |> String.trim()

@@ -142,6 +142,15 @@ defmodule Oban.Plugins.CronTest do
     assert inserted_refs() == [1]
   end
 
+  test "reboot jobs with specified timezone are also enqueued on startup" do
+    run_with_opts(
+      crontab: [{"@reboot", Worker, args: worker_args(1)}],
+      timezone: "America/Chicago"
+    )
+
+    assert inserted_refs() == [1]
+  end
+
   test "translating deprecated crontab/timezone config into plugin usage" do
     assert [timezone: "America/Chicago", crontab: [{"* * * * *", Worker}]]
            |> start_supervised_oban!()

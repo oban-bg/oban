@@ -143,11 +143,13 @@ defmodule Oban.Plugins.Cron do
 
   # Parsing & Validation Helpers
 
-  defp parse_crontab(%State{crontab: crontab} = state) do
+  defp parse_crontab(%State{crontab: crontab, timezone: timezone} = state) do
+    now = DateTime.shift_zone!(DateTime.utc_now(), timezone)
+
     parsed =
       Enum.map(crontab, fn
-        {expression, worker} -> {Expression.parse!(expression), worker, []}
-        {expression, worker, opts} -> {Expression.parse!(expression), worker, opts}
+        {expression, worker} -> {Expression.parse!(expression, now), worker, []}
+        {expression, worker, opts} -> {Expression.parse!(expression, now), worker, opts}
       end)
 
     %{state | crontab: parsed}
