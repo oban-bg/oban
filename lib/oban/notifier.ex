@@ -41,6 +41,8 @@ defmodule Oban.Notifier do
   Listening for job complete events from another process:
 
       def insert_and_listen(args) do
+        :ok = Oban.Notifier.listen([:gosip])
+        
         {:ok, job} =
           args
           |> MyApp.Worker.new()
