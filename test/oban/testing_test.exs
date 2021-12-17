@@ -163,7 +163,7 @@ defmodule Oban.TestingTest do
       assert_enqueued worker: Ping, scheduled_at: seconds_from_now(60)
     end
 
-    test "checking for jobs allows to configure timetamp delta" do
+    test "checking for jobs allows to configure timestamp delta" do
       insert!(%{}, worker: Ping, scheduled_at: seconds_from_now(60))
 
       assert_enqueued worker: Ping, scheduled_at: {seconds_from_now(69), delta: 10}
