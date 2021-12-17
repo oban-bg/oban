@@ -66,7 +66,7 @@ immediate reversion of telemetry prefixes**
 
 - [Oban] Correctly handle `prefix` in `cancel_job` and `cancel_all_jobs`.
 
-- [Oban] Safely guard against empty changeset lits passed to `insert_all/2,4`.
+- [Oban] Safely guard against empty changeset list passed to `insert_all/2,4`.
 
 ## [2.9.0] — 2021-09-15
 
@@ -96,7 +96,7 @@ defmodule MyApp.FingerprintWorker do
 end
 ```
 
-For backward compatiblity `meta` isn't included in unique `fields` by default.
+For backward compatibility `meta` isn't included in unique `fields` by default.
 
 ### Expanded Start and Scale Options
 
@@ -168,7 +168,7 @@ Oban.scale_queue(queue: :dynamic, rate_limit: [allowed: 50, period: 60])
 - [Oban.Plugins.Cron] Start step ranges from the minimum value, rather than for
   the entire set. Now the range `8-23/4` correctly includes `[8, 12, 16, 20]`.
 
-- [Oban.Plugins.Cron] Correcly parse step ranges with a single value, e.g. `0 1/2 * * *`
+- [Oban.Plugins.Cron] Correctly parse step ranges with a single value, e.g. `0 1/2 * * *`
 
 - [Oban.Telemetry] Comply with `:telemetry.span/3` by exposing errors as `reason` in metadata
 
@@ -370,7 +370,7 @@ plugin.
 
 - [Oban.Telemetry] Stop emitting circuit events for queue producers. As
   producers no longer poll, the circuit breaker masked real errors more than it
-  guarded against sporatic issues.
+  guarded against sporadic issues.
 
 - [Oban.Telemetry] Delay `[:oban, :supervisor, :init]` event until the complete
   supervision tree finishes initialization.
