@@ -286,12 +286,12 @@ defmodule Oban.Worker do
 
       @doc false
       def __opts__ do
-        Keyword.put(unquote(opts), :worker, Kernel.to_string(__MODULE__))
+        Keyword.put(unquote(opts), :worker, to_string(__MODULE__))
       end
 
       @impl Worker
       def new(args, opts \\ []) when is_map(args) and is_list(opts) do
-        Job.new(args, Keyword.merge(__opts__(), opts, &Worker.resolve_opts/3))
+        Job.new(args, Worker.merge_opts(__opts__(), opts))
       end
 
       @impl Worker
@@ -300,8 +300,8 @@ defmodule Oban.Worker do
       end
 
       @impl Worker
-      def timeout(%Job{} = _job) do
-        :infinity
+      def timeout(%Job{} = job) do
+        Worker.timeout(job)
       end
 
       defoverridable Worker
@@ -314,11 +314,15 @@ defmodule Oban.Worker do
   end
 
   @doc false
-  def resolve_opts(:unique, [_ | _] = opts_1, [_ | _] = opts_2) do
-    Keyword.merge(opts_1, opts_2)
-  end
+  def merge_opts(base_opts, opts) do
+    Keyword.merge(base_opts, opts, fn
+      :unique, [_ | _] = opts_1, [_ | _] = opts_2 ->
+        Keyword.merge(opts_1, opts_2)
 
-  def resolve_opts(_key, _opts, opts), do: opts
+      _key, _opts, opts_2 ->
+        opts_2
+    end)
+  end
 
   @doc false
   def backoff(%Job{attempt: attempt, max_attempts: max_attempts}) do
@@ -334,46 +338,9 @@ defmodule Oban.Worker do
     Breaker.jitter(time)
   end
 
-  defp validate_opt!({:max_attempts, max_attempts}) do
-    unless is_integer(max_attempts) and max_attempts > 0 do
-      raise ArgumentError,
-            "expected :max_attempts to be a positive integer, got: #{inspect(max_attempts)}"
-    end
-  end
-
-  defp validate_opt!({:priority, priority}) do
-    unless is_integer(priority) and priority > -1 and priority < 4 do
-      raise ArgumentError,
-            "expected :priority to be an integer from 0 to 3, got: #{inspect(priority)}"
-    end
-  end
-
-  defp validate_opt!({:queue, queue}) do
-    unless is_atom(queue) or is_binary(queue) do
-      raise ArgumentError, "expected :queue to be an atom or a binary, got: #{inspect(queue)}"
-    end
-  end
-
-  defp validate_opt!({:tags, tags}) do
-    unless is_list(tags) and Enum.all?(tags, &is_binary/1) do
-      raise ArgumentError, "expected :tags to be a list of strings, got: #{inspect(tags)}"
-    end
-  end
-
-  defp validate_opt!({:unique, unique}) do
-    unless is_list(unique) and Enum.all?(unique, &Job.valid_unique_opt?/1) do
-      raise ArgumentError, "unexpected unique options: #{inspect(unique)}"
-    end
-  end
-
-  defp validate_opt!({:worker, worker}) do
-    unless is_binary(worker) do
-      raise ArgumentError, "expected :worker to be a binary, got: #{inspect(worker)}"
-    end
-  end
-
-  defp validate_opt!(option) do
-    raise ArgumentError, "unknown option provided #{inspect(option)}"
+  @doc false
+  def timeout(%Job{} = _job) do
+    :infinity
   end
 
   @doc """
@@ -434,5 +401,49 @@ defmodule Oban.Worker do
   rescue
     ArgumentError ->
       {:error, %RuntimeError{message: "unknown worker: #{worker_name}"}}
+  end
+
+  # Validation Helpers
+
+  defp validate_opt!({:max_attempts, max_attempts}) do
+    unless is_integer(max_attempts) and max_attempts > 0 do
+      raise ArgumentError,
+            "expected :max_attempts to be a positive integer, got: #{inspect(max_attempts)}"
+    end
+  end
+
+  defp validate_opt!({:priority, priority}) do
+    unless is_integer(priority) and priority > -1 and priority < 4 do
+      raise ArgumentError,
+            "expected :priority to be an integer from 0 to 3, got: #{inspect(priority)}"
+    end
+  end
+
+  defp validate_opt!({:queue, queue}) do
+    unless is_atom(queue) or is_binary(queue) do
+      raise ArgumentError, "expected :queue to be an atom or a binary, got: #{inspect(queue)}"
+    end
+  end
+
+  defp validate_opt!({:tags, tags}) do
+    unless is_list(tags) and Enum.all?(tags, &is_binary/1) do
+      raise ArgumentError, "expected :tags to be a list of strings, got: #{inspect(tags)}"
+    end
+  end
+
+  defp validate_opt!({:unique, unique}) do
+    unless is_list(unique) and Enum.all?(unique, &Job.valid_unique_opt?/1) do
+      raise ArgumentError, "unexpected unique options: #{inspect(unique)}"
+    end
+  end
+
+  defp validate_opt!({:worker, worker}) do
+    unless is_binary(worker) do
+      raise ArgumentError, "expected :worker to be a binary, got: #{inspect(worker)}"
+    end
+  end
+
+  defp validate_opt!(option) do
+    raise ArgumentError, "unknown option provided #{inspect(option)}"
   end
 end

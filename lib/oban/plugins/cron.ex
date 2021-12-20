@@ -230,7 +230,7 @@ defmodule Oban.Plugins.Cron do
   # a one second window where a double enqueue can happen.
   defp unique_opts(worker_opts, crontab_opts) do
     [unique: [period: 59]]
-    |> Keyword.merge(worker_opts, &Worker.resolve_opts/3)
-    |> Keyword.merge(crontab_opts, &Worker.resolve_opts/3)
+    |> Worker.merge_opts(worker_opts)
+    |> Worker.merge_opts(crontab_opts)
   end
 end
