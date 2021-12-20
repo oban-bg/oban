@@ -113,8 +113,6 @@ defmodule Oban.Plugins.Cron do
 
   @impl GenServer
   def handle_info(:evaluate, %State{} = state) do
-    state = schedule_evaluate(state)
-
     meta = %{conf: state.conf, plugin: __MODULE__}
 
     :telemetry.span([:oban, :plugin], meta, fn ->
@@ -130,6 +128,11 @@ defmodule Oban.Plugins.Cron do
       end
     end)
 
+    state =
+      state
+      |> schedule_evaluate()
+      |> discard_reboots()
+
     {:noreply, state}
   end
 
@@ -139,6 +142,12 @@ defmodule Oban.Plugins.Cron do
     timer = Process.send_after(self(), :evaluate, interval_to_next_minute())
 
     %{state | timer: timer}
+  end
+
+  defp discard_reboots(state) do
+    crontab = Enum.reject(state.crontab, fn {expr, _worker, _opts} -> expr.reboot? end)
+
+    %{state | crontab: crontab}
   end
 
   # Parsing & Validation Helpers

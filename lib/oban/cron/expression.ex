@@ -6,10 +6,11 @@ defmodule Oban.Cron.Expression do
           hours: MapSet.t(),
           days: MapSet.t(),
           months: MapSet.t(),
-          weekdays: MapSet.t()
+          weekdays: MapSet.t(),
+          reboot?: boolean()
         }
 
-  defstruct [:minutes, :hours, :days, :months, :weekdays]
+  defstruct [:minutes, :hours, :days, :months, :weekdays, reboot?: false]
 
   @dow_map %{
     "SUN" => "0",
@@ -40,7 +41,11 @@ defmodule Oban.Cron.Expression do
   Evaluate whether a cron struct overlaps with the current date time.
   """
   @spec now?(cron :: t(), datetime :: DateTime.t()) :: boolean()
-  def now?(%__MODULE__{} = cron, datetime \\ DateTime.utc_now()) do
+  def now?(cron, datetime \\ DateTime.utc_now())
+
+  def now?(%__MODULE__{reboot?: true}, _datetime), do: true
+
+  def now?(%__MODULE__{} = cron, datetime) do
     cron
     |> Map.from_struct()
     |> Enum.all?(&included?(&1, datetime))
@@ -52,6 +57,7 @@ defmodule Oban.Cron.Expression do
   defp included?({:days, set}, datetime), do: MapSet.member?(set, datetime.day)
   defp included?({:months, set}, datetime), do: MapSet.member?(set, datetime.month)
   defp included?({:weekdays, set}, datetime), do: MapSet.member?(set, day_of_week(datetime))
+  defp included?({:reboot?, _}, _datetime), do: true
 
   defp day_of_week(datetime) do
     datetime
@@ -97,14 +103,7 @@ defmodule Oban.Cron.Expression do
   def parse!("@midnight"), do: parse!("0 0 * * *")
   def parse!("@daily"), do: parse!("0 0 * * *")
   def parse!("@hourly"), do: parse!("0 * * * *")
-
-  def parse!("@reboot") do
-    now = DateTime.utc_now()
-
-    [now.minute, now.hour, now.day, now.month, day_of_week(now)]
-    |> Enum.join(" ")
-    |> parse!()
-  end
+  def parse!("@reboot"), do: %__MODULE__{reboot?: true}
 
   def parse!(input) when is_binary(input) do
     [mip, hrp, dap, mop, wdp] =

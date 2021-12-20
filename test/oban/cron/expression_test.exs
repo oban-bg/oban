@@ -80,12 +80,10 @@ defmodule Oban.Cron.ExpressionTest do
       end
     end
 
-    test "the @reboot special expression initially evaluates to now" do
-      cron = Expr.parse!("@reboot")
-
-      assert Expr.now?(cron)
-      refute Expr.now?(cron, DateTime.add(DateTime.utc_now(), -60, :second))
-      refute Expr.now?(cron, DateTime.add(DateTime.utc_now(), 60, :second))
+    test "the @reboot special expression evaluates to now" do
+      assert "@reboot"
+             |> Expr.parse!()
+             |> Expr.now?()
     end
 
     test "literal days of the week match the current datetime" do
