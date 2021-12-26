@@ -3,11 +3,10 @@ defmodule Oban.Senator do
 
   use GenServer
 
-  alias Oban.{Breaker, Repo}
+  alias Oban.{Breaker, Connection, Registry}
 
   # TODO: This needs a circuit breaker
-  # TODO: This needs to handle some error case, right?
-  #   namely, the connection that holds the lock errors, but the senator is still alive
+  # TODO: Monitor the connection and relinquish leadership on DOWN
 
   @type option :: {:name, module()} | {:conf, Config.t()}
 
@@ -16,11 +15,10 @@ defmodule Oban.Senator do
 
     defstruct [
       :conf,
-      :name,
       :timer,
       leader?: false,
-      leader_boost: 4,
-      interval: :timer.minutes(1),
+      leader_boost: 2,
+      interval: :timer.seconds(30),
       key_base: 428_836_387_984
     ]
   end
@@ -37,8 +35,6 @@ defmodule Oban.Senator do
 
   @impl GenServer
   def init(opts) do
-    # Process.flag(:trap_exit, true)
-
     {:ok, struct!(State, opts), {:continue, :start}}
   end
 
@@ -82,11 +78,15 @@ defmodule Oban.Senator do
     %{state | timer: Process.send_after(self(), :election, time)}
   end
 
-  defp acquire_lock?(%State{conf: conf, key_base: key_base} = state) do
+  defp acquire_lock?(%State{conf: conf, key_base: key_base}) do
     key = key_base + :erlang.phash2(conf.name)
+    query = "SELECT pg_try_advisory_lock(#{key})"
 
-    {:ok, %{rows: [[acquired]]}} = Repo.query(conf, "SELECT pg_try_advisory_lock($1)", [key])
+    {:ok, %{rows: [[raw_boolean]]}} =
+      conf.name
+      |> Registry.via(Connection)
+      |> GenServer.call({:query, query})
 
-    acquired
+    raw_boolean == "t"
   end
 end
