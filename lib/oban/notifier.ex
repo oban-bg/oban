@@ -42,7 +42,7 @@ defmodule Oban.Notifier do
 
       def insert_and_listen(args) do
         :ok = Oban.Notifier.listen([:gosip])
-        
+
         {:ok, job} =
           args
           |> MyApp.Worker.new()

@@ -162,7 +162,7 @@ defmodule Oban.MixProject do
     [
       {:ecto_sql, "~> 3.6"},
       {:jason, "~> 1.1"},
-      {:postgrex, "~> 0.14"},
+      {:postgrex, "~> 0.14", path: "../postgrex", override: true},
       {:telemetry, "~> 0.4 or ~> 1.0"},
       {:stream_data, "~> 0.4", only: [:test, :dev]},
       {:tzdata, "~> 1.0", only: [:test, :dev]},
