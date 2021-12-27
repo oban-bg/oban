@@ -20,7 +20,7 @@ defmodule Oban.NotifierTest do
       assert %{"date" => "2021-08-09", "keyword" => [["a", 1], ["b", 1]]} = notice
       assert %{"map" => %{"tuple" => [1, "second"]}, "tuple" => [1, "second"]} = notice
 
-      stop_supervised(Oban)
+      stop_supervised(name)
     end
   end
 end
