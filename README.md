@@ -956,10 +956,6 @@ defmodule ErrorReporter do
 
     Sentry.capture_exception(meta.reason, stacktrace: meta.stacktrace, extra: extra)
   end
-
-  def handle_event([:oban, :circuit, :trip], _measure, meta, _) do
-    Sentry.capture_exception(meta.reason, stacktrace: meta.stacktrace, extra: meta)
-  end
 end
 
 :telemetry.attach(

@@ -223,7 +223,7 @@ defmodule Oban.Worker do
 
   import Kernel, except: [to_string: 1]
 
-  alias Oban.{Breaker, Job}
+  alias Oban.{Backoff, Job}
 
   @type t :: module()
   @type result ::
@@ -335,7 +335,7 @@ defmodule Oban.Worker do
 
     time = trunc(:math.pow(2, clamped_attempt) + @backoff_base)
 
-    Breaker.jitter(time)
+    Backoff.jitter(time)
   end
 
   @doc false

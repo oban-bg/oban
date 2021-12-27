@@ -3,7 +3,7 @@ defmodule Oban.Queue.Producer do
 
   use GenServer
 
-  alias Oban.{Breaker, Notifier}
+  alias Oban.{Backoff, Notifier}
   alias Oban.Queue.{Engine, Executor}
 
   defmodule State do
@@ -99,7 +99,7 @@ defmodule Oban.Queue.Producer do
     # Without this we may crash the producer if there are any db errors. Alternatively, we would
     # block the producer while awaiting a retry.
     Task.Supervisor.async_nolink(state.foreman, fn ->
-      Breaker.with_retry(fn ->
+      Backoff.with_retry(fn ->
         %{exec | kind: {:EXIT, pid}, error: error, stacktrace: stack, state: :failure}
         |> Executor.record_finished()
         |> Executor.report_finished()
@@ -204,7 +204,7 @@ defmodule Oban.Queue.Producer do
   end
 
   defp schedule_refresh(%State{} = state) do
-    cooldown = Breaker.jitter(state.meta.refresh_interval, mode: :dec, mult: 0.5)
+    cooldown = Backoff.jitter(state.meta.refresh_interval, mode: :dec, mult: 0.5)
     timer = Process.send_after(self(), :refresh, cooldown)
 
     %{state | refresh_timer: timer}

@@ -36,8 +36,7 @@ defmodule Oban do
         }
 
   @type option ::
-          {:circuit_backoff, timeout()}
-          | {:dispatch_cooldown, pos_integer()}
+          {:dispatch_cooldown, pos_integer()}
           | {:get_dynamic_repo, nil | (() -> pid() | atom())}
           | {:log, false | Logger.level()}
           | {:name, name()}
@@ -114,10 +113,6 @@ defmodule Oban do
 
   Additional options used to tune system behaviour. These are primarily useful for testing or
   troubleshooting and don't usually need modification.
-
-  * `:circuit_backoff` — the number of milliseconds until queries are attempted after a database
-    error. All processes communicating with the database are equipped with circuit breakers and
-    will use this for the backoff. Defaults to `30_000ms`.
 
   * `:dispatch_cooldown` — the minimum number of milliseconds a producer will wait before fetching
     and running more jobs. A slight cooldown period prevents a producer from flooding with

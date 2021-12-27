@@ -2,7 +2,7 @@ defmodule Oban.Queue.Executor do
   @moduledoc false
 
   alias Oban.{
-    Breaker,
+    Backoff,
     Config,
     CrashError,
     Job,
@@ -82,7 +82,7 @@ defmodule Oban.Queue.Executor do
       |> perform()
       |> record_finished()
 
-    Breaker.with_retry(fn -> report_finished(exec).state end)
+    Backoff.with_retry(fn -> report_finished(exec).state end)
   end
 
   def record_started(%__MODULE__{} = exec) do
