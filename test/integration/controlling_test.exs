@@ -1,7 +1,7 @@
 defmodule Oban.Integration.ControllingTest do
   use Oban.Case
 
-  alias Oban.{Notifier, Registry}
+  alias Oban.{Connection, Registry}
 
   @moduletag :integration
 
@@ -19,6 +19,8 @@ defmodule Oban.Integration.ControllingTest do
     test "starting individual queues dynamically" do
       name = start_supervised_oban!(queues: [alpha: 9])
 
+      wait_for_notifier(name)
+
       assert :ok = Oban.start_queue(name, queue: :gamma, limit: 5, refresh_interval: 10)
       assert :ok = Oban.start_queue(name, queue: :delta, limit: 6, paused: true)
       assert :ok = Oban.start_queue(name, queue: :alpha, limit: 5)
@@ -33,6 +35,9 @@ defmodule Oban.Integration.ControllingTest do
     test "starting individual queues only on the local node" do
       name1 = start_supervised_oban!(queues: [])
       name2 = start_supervised_oban!(queues: [])
+
+      wait_for_notifier(name1)
+      wait_for_notifier(name2)
 
       assert :ok = Oban.start_queue(name1, queue: :alpha, limit: 1, local_only: true)
 
@@ -362,12 +367,9 @@ defmodule Oban.Integration.ControllingTest do
 
   defp wait_for_notifier(oban_name) do
     with_backoff(fn ->
-      notifier_state =
-        oban_name
-        |> Registry.via(Notifier)
-        |> :sys.get_state()
-
-      assert is_pid(notifier_state.conn)
+      assert oban_name
+             |> Registry.via(Connection)
+             |> Connection.connected?()
     end)
   end
 

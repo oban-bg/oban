@@ -6,13 +6,16 @@ defmodule Oban.Connection do
   alias Oban.{Config, Repo}
   alias Postgrex.Notifications
 
-  # NOTE: Do we need circuit breaker stuff here?
-
   defmodule State do
     @moduledoc false
 
     @enforce_keys [:conf]
-    defstruct [:conf, :from, :ref, channels: %{}, listeners: %{}]
+    defstruct [:conf, :from, :ref, connected?: false, channels: %{}, listeners: %{}]
+  end
+
+  @doc false
+  def connected?(pid) do
+    Notifications.call(pid, :connected?)
   end
 
   @doc false
@@ -27,6 +30,7 @@ defmodule Oban.Connection do
       conf
       |> Repo.config()
       |> Keyword.put(:name, name)
+      |> Keyword.put(:sync_connect, false)
 
     %{id: name, start: {Notifications, :start_link, [__MODULE__, call_opts, conn_opts]}}
   end
@@ -36,10 +40,27 @@ defmodule Oban.Connection do
     {:ok, struct!(State, args)}
   end
 
-  # TODO: Handle reconnection here later
   @impl Notifications
-  def connect(state) do
-    {:noreply, state}
+  def handle_connect(%State{channels: channels} = state) do
+    state = %{state | connected?: true}
+
+    if map_size(channels) > 0 do
+      parts =
+        channels
+        |> Map.keys()
+        |> Enum.map_join("\n", &~s(LISTEN "#{&1}";))
+
+      query = "DO $$BEGIN #{parts} END$$"
+
+      {:query, query, state}
+    else
+      {:noreply, state}
+    end
+  end
+
+  @impl Notifications
+  def handle_disconnect(%State{} = state) do
+    {:noreply, %{state | connected?: false}}
   end
 
   @impl Notifications
@@ -47,7 +68,13 @@ defmodule Oban.Connection do
     {:query, query, %{state | from: from}}
   end
 
-  def handle_call({:listen, channels}, {pid, _}, %State{} = state) do
+  def handle_call(:connected?, from, %State{} = state) do
+    Notifications.reply(from, state.connected?)
+
+    {:noreply, state}
+  end
+
+  def handle_call({:listen, channels}, {pid, _} = from, %State{} = state) do
     new_channels = channels -- Map.keys(state.channels)
 
     state =
@@ -55,17 +82,19 @@ defmodule Oban.Connection do
       |> put_listener(pid, channels)
       |> put_channels(pid, channels)
 
-    if Enum.any?(new_channels) do
-      parts = Enum.map_join(new_channels, "\n", &~s(LISTEN "#{&1}";))
+    if state.connected? and Enum.any?(new_channels) do
+      parts = Enum.map_join(new_channels, " \n", &~s(LISTEN "#{&1}";))
       query = "DO $$BEGIN #{parts} END$$"
 
-      {:query, query, state}
+      {:query, query, %{state | from: from}}
     else
-      {:reply, :ok, state}
+      Notifications.reply(from, :ok)
+
+      {:noreply, state}
     end
   end
 
-  def handle_call({:unlisten, channels}, {pid, _}, %State{} = state) do
+  def handle_call({:unlisten, channels}, {pid, _} = from, %State{} = state) do
     state =
       state
       |> del_listener(pid, channels)
@@ -73,21 +102,32 @@ defmodule Oban.Connection do
 
     del_channels = Map.keys(state.channels) -- channels
 
-    if Enum.any?(del_channels) do
-      parts = Enum.map_join(del_channels, "\n", &~s(UNLISTEN "#{&1}";))
+    if state.connected? and Enum.any?(del_channels) do
+      parts = Enum.map_join(del_channels, " \n", &~s(UNLISTEN "#{&1}";))
       query = "DO $$BEGIN #{parts} END$$"
 
-      {:query, query, state}
+      {:query, query, %{state | from: from}}
     else
-      {:reply, :ok, state}
+      Notifications.reply(from, :ok)
+
+      {:noreply, state}
     end
   end
 
   @impl Notifications
   def handle_info({:DOWN, _ref, :process, pid, _reason}, %State{} = state) do
-    # TODO: Clean up when handle_info works
+    case Map.pop(state.listeners, pid) do
+      {{_ref, channel_set}, listeners} ->
+        state =
+          state
+          |> Map.put(:listeners, listeners)
+          |> del_channels(pid, MapSet.to_list(channel_set))
 
-    {:noreply, state}
+        {:noreply, state}
+
+      {nil, _listeners} ->
+        {:noreply, state}
+    end
   end
 
   def handle_info(_message, state) do
@@ -95,12 +135,12 @@ defmodule Oban.Connection do
   end
 
   @impl Notifications
-  def handle_result(%{num_rows: 0}, state) do
-    {:noreply, state}
-  end
-
   def handle_result(result, %State{from: from} = state) do
-    Notifications.reply(from, {:ok, result})
+    if result.num_rows > 0 do
+      Notifications.reply(from, {:ok, result})
+    else
+      Notifications.reply(from, :ok)
+    end
 
     {:noreply, %{state | from: nil}}
   end

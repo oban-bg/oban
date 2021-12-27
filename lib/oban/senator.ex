@@ -112,7 +112,7 @@ defmodule Oban.Senator do
   defp acquire_lock?(%State{conf: conf, key: key}) do
     conn = Registry.whereis(conf.name, Connection)
 
-    if Process.alive?(conn) do
+    if is_pid(conn) and Process.alive?(conn) do
       query = "SELECT pg_try_advisory_lock(#{key})"
 
       {:ok, %{rows: [[raw_boolean]]}} = GenServer.call(conn, {:query, query})
