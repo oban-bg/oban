@@ -28,7 +28,7 @@ defmodule Oban.Connection do
       |> Repo.config()
       |> Keyword.put(:name, name)
 
-    %{id: __MODULE__, start: {Notifications, :start_link, [__MODULE__, call_opts, conn_opts]}}
+    %{id: name, start: {Notifications, :start_link, [__MODULE__, call_opts, conn_opts]}}
   end
 
   @impl Notifications
@@ -112,7 +112,7 @@ defmodule Oban.Connection do
     if in_scope?(decoded, state.conf) do
       channel = reverse_channel(full_channel)
 
-      for {pid, {_ref, channels}} <- state.listeners, full_channel in channels do
+      for pid <- Map.get(state.channels, full_channel, []) do
         send(pid, {:notification, channel, decoded})
       end
     end

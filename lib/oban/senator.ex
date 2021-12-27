@@ -5,26 +5,36 @@ defmodule Oban.Senator do
 
   alias Oban.{Breaker, Connection, Registry}
 
-  # TODO: This needs a circuit breaker
-  # TODO: Monitor the connection and relinquish leadership on DOWN
-
   @type option :: {:name, module()} | {:conf, Config.t()}
+
+  @key_base 428_836_387_984
 
   defmodule State do
     @moduledoc false
 
+    @enforce_keys [:conf, :key]
     defstruct [
       :conf,
+      :conn_ref,
+      :key,
       :timer,
-      leader?: false,
-      leader_boost: 2,
       interval: :timer.seconds(30),
-      key_base: 428_836_387_984
+      leader?: false,
+      leader_boost: 2
     ]
   end
 
   @spec leader?(GenServer.server()) :: boolean()
   def leader?(pid), do: GenServer.call(pid, :leader?)
+
+  @spec child_spec(Keyword.t()) :: Supervisor.child_spec()
+  def child_spec(opts) do
+    name = Keyword.get(opts, :name, __MODULE__)
+
+    opts
+    |> super()
+    |> Supervisor.child_spec(id: name)
+  end
 
   @spec start_link([option]) :: GenServer.on_start()
   def start_link(opts) do
@@ -35,6 +45,11 @@ defmodule Oban.Senator do
 
   @impl GenServer
   def init(opts) do
+    Process.flag(:trap_exit, true)
+
+    conf = Keyword.fetch!(opts, :conf)
+    opts = Keyword.put_new(opts, :key, @key_base + :erlang.phash2(conf.name))
+
     {:ok, struct!(State, opts), {:continue, :start}}
   end
 
@@ -46,26 +61,40 @@ defmodule Oban.Senator do
   end
 
   @impl GenServer
-  def handle_continue(:start, state) do
+  def handle_continue(:start, %State{} = state) do
     handle_info(:election, state)
   end
 
   @impl GenServer
-  def handle_info(:election, state) do
+  def handle_info(:election, %State{} = state) do
     state =
       state
+      |> monitor_conn()
       |> election()
       |> schedule_election()
 
     {:noreply, state}
   end
 
+  def handle_info({:DOWN, _ref, :process, _pid, _reason}, %State{} = state) do
+    {:noreply, %{state | conn_ref: nil, leader?: false}}
+  end
+
   @impl GenServer
-  def handle_call(:leader?, _from, state) do
+  def handle_call(:leader?, _from, %State{} = state) do
     {:reply, state.leader?, state}
   end
 
-  defp election(%State{} = state) do
+  defp monitor_conn(%State{conf: conf, conn_ref: nil} = state) do
+    case Registry.whereis(conf.name, Connection) do
+      pid when is_pid(pid) -> %{state | conn_ref: Process.monitor(pid)}
+      nil -> state
+    end
+  end
+
+  defp monitor_conn(state), do: state
+
+  defp election(state) do
     leader? = state.leader? or acquire_lock?(state)
 
     %{state | leader?: leader?}
@@ -78,15 +107,19 @@ defmodule Oban.Senator do
     %{state | timer: Process.send_after(self(), :election, time)}
   end
 
-  defp acquire_lock?(%State{conf: conf, key_base: key_base}) do
-    key = key_base + :erlang.phash2(conf.name)
-    query = "SELECT pg_try_advisory_lock(#{key})"
+  defp acquire_lock?(%State{conn_ref: nil}), do: false
 
-    {:ok, %{rows: [[raw_boolean]]}} =
-      conf.name
-      |> Registry.via(Connection)
-      |> GenServer.call({:query, query})
+  defp acquire_lock?(%State{conf: conf, key: key}) do
+    conn = Registry.whereis(conf.name, Connection)
 
-    raw_boolean == "t"
+    if Process.alive?(conn) do
+      query = "SELECT pg_try_advisory_lock(#{key})"
+
+      {:ok, %{rows: [[raw_boolean]]}} = GenServer.call(conn, {:query, query})
+
+      raw_boolean == "t"
+    else
+      false
+    end
   end
 end
