@@ -5,12 +5,7 @@ defmodule Oban.ConfigTest do
   alias Oban.Plugins.Pruner
 
   describe "new/1" do
-    test ":circuit_backoff is validated as an integer" do
-      refute_valid(circuit_backoff: -1)
-      refute_valid(circuit_backoff: 0)
-      refute_valid(circuit_backoff: "5")
-      refute_valid(circuit_backoff: 1.0)
-
+    test "legacy :circuit_backoff option is ignored" do
       assert_valid(circuit_backoff: 10)
     end
 

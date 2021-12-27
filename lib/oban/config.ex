@@ -7,7 +7,6 @@ defmodule Oban.Config do
   """
 
   @type t :: %__MODULE__{
-          circuit_backoff: timeout(),
           dispatch_cooldown: pos_integer(),
           engine: module(),
           notifier: module(),
@@ -25,8 +24,7 @@ defmodule Oban.Config do
   @type option :: {:name, module()} | {:conf, t()}
 
   @enforce_keys [:node, :repo]
-  defstruct circuit_backoff: :timer.seconds(30),
-            dispatch_cooldown: 5,
+  defstruct dispatch_cooldown: 5,
             engine: Oban.Queue.BasicEngine,
             notifier: Oban.PostgresNotifier,
             name: Oban,
@@ -51,6 +49,7 @@ defmodule Oban.Config do
       |> Keyword.put_new(:node, node_name())
       |> Keyword.update(:plugins, [], &(&1 || []))
       |> Keyword.update(:queues, [], &(&1 || []))
+      |> Keyword.delete(:circuit_backoff)
 
     Enum.each(opts, &validate_opt!/1)
 
@@ -125,13 +124,6 @@ defmodule Oban.Config do
 
       _ ->
         Keyword.drop(opts, [:poll_interval])
-    end
-  end
-
-  defp validate_opt!({:circuit_backoff, backoff}) do
-    unless is_pos_integer(backoff) do
-      raise ArgumentError,
-            "expected :circuit_backoff to be a positive integer, got: #{inspect(backoff)}"
     end
   end
 

@@ -3,7 +3,7 @@ defmodule Oban.Senator do
 
   use GenServer
 
-  alias Oban.{Breaker, Connection, Registry}
+  alias Oban.{Backoff, Connection, Registry}
 
   @type option :: {:name, module()} | {:conf, Config.t()}
 
@@ -102,7 +102,7 @@ defmodule Oban.Senator do
 
   defp schedule_election(%State{interval: interval} = state) do
     base = if state.leader?, do: div(interval, state.leader_boost), else: interval
-    time = Breaker.jitter(base)
+    time = Backoff.jitter(base)
 
     %{state | timer: Process.send_after(self(), :election, time)}
   end
@@ -112,7 +112,7 @@ defmodule Oban.Senator do
   defp acquire_lock?(%State{conf: conf, key: key}) do
     conn = Registry.whereis(conf.name, Connection)
 
-    if is_pid(conn) and Process.alive?(conn) do
+    if is_pid(conn) and Process.alive?(conn) and Connection.connected?(conn) do
       query = "SELECT pg_try_advisory_lock(#{key})"
 
       {:ok, %{rows: [[raw_boolean]]}} = GenServer.call(conn, {:query, query})

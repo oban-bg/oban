@@ -177,26 +177,6 @@ defmodule Oban.Telemetry do
   * `:payload` - the payload that was sent
   * `kind`, `reason`, `stacktrace`, see the explanation above.
 
-  ### Circuit Events
-
-  All processes that interact with the database have circuit breakers to prevent errors from
-  crashing the entire supervision tree. Processes emit a `[:oban, :circuit, :trip]` event when a
-  circuit is tripped and `[:oban, :circuit, :open]` when the breaker is subsequently opened again.
-
-  | event                      | measures | metadata                                              |
-  | -------------------------- | -------- | ----------------------------------------------------- |
-  | `[:oban, :circuit, :trip]` |          | `:kind, :reason, :message, :name, :stacktrace, :conf` |
-  | `[:oban, :circuit, :open]` |          | `:name, :conf`                                        |
-
-  Metadata
-
-  * `:kind` — the kind of error (see the explanation above)
-  * `:reason` — the error that tripped the circuit, see the error kinds breakdown above
-  * `:name` — the registered name of the process that tripped a circuit, i.e. `Oban.Notifier`
-  * `:message` — a formatted error message describing what went wrong
-  * `:stacktrace` — exception stacktrace, when available
-  * `:conf` — the config of the Oban supervisor that the producer is for
-
   ### Plugin Events
 
   All the Oban plugins emit telemetry events under the `[:oban, :plugin, *]` pattern (where `*` is
@@ -312,9 +292,7 @@ defmodule Oban.Telemetry do
     events = [
       [:oban, :job, :start],
       [:oban, :job, :stop],
-      [:oban, :job, :exception],
-      [:oban, :circuit, :trip],
-      [:oban, :circuit, :open]
+      [:oban, :job, :exception]
     ]
 
     :telemetry.attach_many("oban-default-logger", events, &__MODULE__.handle_event/4, level)
@@ -375,12 +353,6 @@ defmodule Oban.Telemetry do
     |> Map.take([:args, :worker, :queue])
     |> Map.merge(converted_measurements(measure))
     |> log_message("job:#{event}", level)
-  end
-
-  def handle_event([:oban, :circuit, event], _measure, meta, level) do
-    meta
-    |> Map.take([:message, :name])
-    |> log_message("circuit:#{event}", level)
   end
 
   defp converted_measurements(measure) do

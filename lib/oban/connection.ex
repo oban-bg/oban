@@ -14,8 +14,9 @@ defmodule Oban.Connection do
   end
 
   @doc false
-  def connected?(pid) do
-    Notifications.call(pid, :connected?)
+  @spec connected?(GenServer.server()) :: boolean()
+  def connected?(server) do
+    Notifications.call(server, :connected?)
   end
 
   @doc false
