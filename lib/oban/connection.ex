@@ -101,7 +101,7 @@ defmodule Oban.Connection do
       |> del_listener(pid, channels)
       |> del_channels(pid, channels)
 
-    del_channels = Map.keys(state.channels) -- channels
+    del_channels = channels -- Map.keys(state.channels)
 
     if state.connected? and Enum.any?(del_channels) do
       parts = Enum.map_join(del_channels, " \n", &~s(UNLISTEN "#{&1}";))
@@ -226,7 +226,7 @@ defmodule Oban.Connection do
     listener_channels =
       for channel <- channels, reduce: state.channels do
         acc ->
-          Map.update(acc, channel, [], &List.delete(&1, pid))
+          acc = Map.update(acc, channel, [], &List.delete(&1, pid))
 
           if Enum.empty?(acc[channel]), do: Map.delete(acc, channel), else: acc
       end

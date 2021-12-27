@@ -3,9 +3,13 @@ defmodule Oban.Senator do
 
   use GenServer
 
-  alias Oban.{Backoff, Connection, Registry}
+  alias Oban.{Backoff, Config, Connection, Registry}
 
-  @type option :: {:name, module()} | {:conf, Config.t()}
+  @type option ::
+          {:name, module()}
+          | {:conf, Config.t()}
+          | {:key, pos_integer()}
+          | {:interval, timeout()}
 
   @key_base 428_836_387_984
 
