@@ -3,31 +3,6 @@ defmodule Oban.Integration.ResiliencyTest do
 
   @moduletag :integration
 
-  defmodule Handler do
-    def handle([:oban, :circuit, :trip], %{}, meta, pid) do
-      send(pid, {:tripped, meta})
-    end
-  end
-
-  setup do
-    :telemetry.attach("circuit-handler", [:oban, :circuit, :trip], &Handler.handle/4, self())
-
-    on_exit(fn -> :telemetry.detach("circuit-handler") end)
-  end
-
-  test "reporting notification connection errors" do
-    name = start_supervised_oban!(queues: [alpha: 1])
-
-    assert %{conn: conn} =
-             name
-             |> Oban.Registry.whereis(Oban.Notifier)
-             |> :sys.get_state()
-
-    assert Process.exit(conn, :forced_exit)
-
-    assert_receive {:tripped, %{message: ":forced_exit"}}
-  end
-
   test "retrying recording job completion after errors" do
     start_supervised_oban!(queues: [alpha: 1])
 

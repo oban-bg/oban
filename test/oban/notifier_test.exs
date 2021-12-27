@@ -7,7 +7,7 @@ defmodule Oban.NotifierTest do
     test "notifying with complex types" do
       name = start_supervised_oban!(queues: [])
 
-      Notifier.listen(name, [:signal])
+      Notifier.listen(name, [:insert, :gossip, :signal])
 
       Notifier.notify(name, :signal, %{
         date: ~D[2021-08-09],
