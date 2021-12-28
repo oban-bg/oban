@@ -28,8 +28,14 @@ defmodule Oban.Senator do
     ]
   end
 
-  @spec leader?(GenServer.server()) :: boolean()
-  def leader?(pid), do: GenServer.call(pid, :leader?)
+  @spec leader?(Config.t() | GenServer.server()) :: boolean()
+  def leader?(%Config{name: name}) do
+    name
+    |> Registry.via(__MODULE__)
+    |> leader?()
+  end
+
+  def leader?(server), do: GenServer.call(server, :leader?)
 
   @spec child_spec(Keyword.t()) :: Supervisor.child_spec()
   def child_spec(opts) do
@@ -130,5 +136,7 @@ defmodule Oban.Senator do
     else
       false
     end
+  catch
+    :exit, _value -> false
   end
 end

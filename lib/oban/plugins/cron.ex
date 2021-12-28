@@ -40,7 +40,7 @@ defmodule Oban.Plugins.Cron do
   use GenServer
 
   alias Oban.Cron.Expression
-  alias Oban.{Config, Job, Query, Worker}
+  alias Oban.{Config, Job, Query, Repo, Senator, Worker}
 
   @type cron_input :: {binary(), module()} | {binary(), module(), [Job.option()]}
 
@@ -58,7 +58,6 @@ defmodule Oban.Plugins.Cron do
       :name,
       :timer,
       crontab: [],
-      lock_key: 1_149_979_440_242_868_001,
       timezone: "Etc/UTC"
     ]
   end
@@ -116,12 +115,9 @@ defmodule Oban.Plugins.Cron do
     meta = %{conf: state.conf, plugin: __MODULE__}
 
     :telemetry.span([:oban, :plugin], meta, fn ->
-      case lock_and_insert_jobs(state) do
+      case check_leadership_and_insert_jobs(state) do
         {:ok, inserted_jobs} when is_list(inserted_jobs) ->
           {:ok, Map.put(meta, :jobs, inserted_jobs)}
-
-        {:ok, false} ->
-          {:ok, Map.put(meta, :jobs, [])}
 
         error ->
           {:error, Map.put(meta, :error, error)}
@@ -210,10 +206,14 @@ defmodule Oban.Plugins.Cron do
 
   # Inserting Helpers
 
-  defp lock_and_insert_jobs(state) do
-    Query.with_xact_lock(state.conf, state.lock_key, fn ->
-      insert_jobs(state.conf, state.crontab, state.timezone)
-    end)
+  defp check_leadership_and_insert_jobs(state) do
+    if Senator.leader?(state.conf) do
+      Repo.transaction(state.conf, fn ->
+        insert_jobs(state.conf, state.crontab, state.timezone)
+      end)
+    else
+      {:ok, []}
+    end
   end
 
   defp insert_jobs(conf, crontab, timezone) do

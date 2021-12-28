@@ -35,7 +35,7 @@ defmodule Oban.Plugins.Pruner do
 
   import Ecto.Query, only: [join: 5, limit: 2, or_where: 3, select: 2]
 
-  alias Oban.{Config, Job, Query, Repo}
+  alias Oban.{Config, Job, Repo, Senator}
 
   @type option ::
           {:conf, Config.t()}
@@ -52,8 +52,7 @@ defmodule Oban.Plugins.Pruner do
       :timer,
       max_age: 60,
       interval: :timer.seconds(30),
-      limit: 10_000,
-      lock_key: 1_149_979_440_242_868_002
+      limit: 10_000
     ]
   end
 
@@ -87,12 +86,9 @@ defmodule Oban.Plugins.Pruner do
     meta = %{conf: state.conf, plugin: __MODULE__}
 
     :telemetry.span([:oban, :plugin], meta, fn ->
-      case lock_and_delete_jobs(state) do
+      case check_leadership_and_delete_jobs(state) do
         {:ok, {pruned_count, _}} when is_integer(pruned_count) ->
           {:ok, Map.put(meta, :pruned_count, pruned_count)}
-
-        {:ok, false} ->
-          {:ok, Map.put(meta, :pruned_count, 0)}
 
         error ->
           {:error, Map.put(meta, :error, error)}
@@ -104,10 +100,14 @@ defmodule Oban.Plugins.Pruner do
 
   # Scheduling
 
-  defp lock_and_delete_jobs(state) do
-    Query.with_xact_lock(state.conf, state.lock_key, fn ->
-      delete_jobs(state.conf, state.max_age, state.limit)
-    end)
+  defp check_leadership_and_delete_jobs(state) do
+    if Senator.leader?(state.conf) do
+      Repo.transaction(state.conf, fn ->
+        delete_jobs(state.conf, state.max_age, state.limit)
+      end)
+    else
+      {:ok, {0, []}}
+    end
   end
 
   defp schedule_prune(state) do

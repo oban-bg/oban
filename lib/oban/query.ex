@@ -85,16 +85,6 @@ defmodule Oban.Query do
     {:ok, count}
   end
 
-  @spec with_xact_lock(Config.t(), lock_key(), fun()) :: {:ok, any()} | {:error, any()}
-  def with_xact_lock(%Config{} = conf, lock_key, fun) when is_function(fun, 0) do
-    Repo.transaction(conf, fn ->
-      case acquire_lock(conf, lock_key) do
-        :ok -> fun.()
-        _er -> false
-      end
-    end)
-  end
-
   # Helpers
 
   defp insert_unique(%Config{} = conf, changeset) do
@@ -198,7 +188,7 @@ defmodule Oban.Query do
     where(query, [j], j.inserted_at > ^since)
   end
 
-  defp acquire_lock(conf, base_key, opts \\ []) do
+  defp acquire_lock(conf, base_key, opts) do
     pref_key = :erlang.phash2(conf.prefix)
     lock_key = pref_key + base_key
 
