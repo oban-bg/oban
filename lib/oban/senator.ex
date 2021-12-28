@@ -99,7 +99,7 @@ defmodule Oban.Senator do
   defp monitor_conn(state), do: state
 
   defp election(state) do
-    leader? = state.leader? or acquire_lock?(state)
+    leader? = (state.leader? and connected?(state)) or acquire_lock?(state)
 
     %{state | leader?: leader?}
   end
@@ -111,15 +111,20 @@ defmodule Oban.Senator do
     %{state | timer: Process.send_after(self(), :election, time)}
   end
 
-  defp acquire_lock?(%State{conn_ref: nil}), do: false
+  defp connected?(%State{conn_ref: nil}), do: false
 
-  defp acquire_lock?(%State{conf: conf, key: key}) do
+  defp connected?(%State{conf: conf}) do
     conn = Registry.whereis(conf.name, Connection)
 
-    if is_pid(conn) and Process.alive?(conn) and Connection.connected?(conn) do
-      query = "SELECT pg_try_advisory_lock(#{key})"
+    is_pid(conn) and Process.alive?(conn) and Connection.connected?(conn)
+  end
 
-      {:ok, %{rows: [[raw_boolean]]}} = GenServer.call(conn, {:query, query})
+  defp acquire_lock?(%State{conf: conf, key: key} = state) do
+    if connected?(state) do
+      {:ok, %{rows: [[raw_boolean]]}} =
+        conf.name
+        |> Registry.via(Connection)
+        |> GenServer.call({:query, "SELECT pg_try_advisory_lock(#{key})"})
 
       raw_boolean == "t"
     else
