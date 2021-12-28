@@ -31,7 +31,7 @@ defmodule Oban.Plugins.Stager do
       where: 3
     ]
 
-  alias Oban.{Config, Job, Notifier, Query, Repo}
+  alias Oban.{Config, Job, Notifier, Repo, Senator}
 
   @type option :: {:conf, Config.t()} | {:name, GenServer.name()} | {:interval, pos_integer()}
 
@@ -78,12 +78,9 @@ defmodule Oban.Plugins.Stager do
     meta = %{conf: state.conf, plugin: __MODULE__}
 
     :telemetry.span([:oban, :plugin], meta, fn ->
-      case lock_and_stage(state) do
+      case check_leadership_and_stage(state) do
         {:ok, staged_count} when is_integer(staged_count) ->
           {:ok, Map.put(meta, :staged_count, staged_count)}
-
-        {:ok, false} ->
-          {:ok, Map.put(meta, :staged_count, 0)}
 
         error ->
           {:error, Map.put(meta, :error, error)}
@@ -93,14 +90,18 @@ defmodule Oban.Plugins.Stager do
     {:noreply, schedule_staging(state)}
   end
 
-  defp lock_and_stage(state) do
-    Query.with_xact_lock(state.conf, state.lock_key, fn ->
-      {sched_count, nil} = stage_scheduled(state)
+  defp check_leadership_and_stage(state) do
+    if Senator.leader?(state.conf) do
+      Repo.transaction(state.conf, fn ->
+        {sched_count, nil} = stage_scheduled(state)
 
-      notify_queues(state)
+        notify_queues(state)
 
-      sched_count
-    end)
+        sched_count
+      end)
+    else
+      {:ok, 0}
+    end
   end
 
   defp stage_scheduled(state) do

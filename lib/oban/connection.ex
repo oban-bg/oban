@@ -15,9 +15,7 @@ defmodule Oban.Connection do
 
   @doc false
   @spec connected?(GenServer.server()) :: boolean()
-  def connected?(server) do
-    Notifications.call(server, :connected?)
-  end
+  def connected?(server), do: Notifications.call(server, :connected?)
 
   @doc false
   @spec child_spec(Keyword.t()) :: Supervisor.child_spec()
