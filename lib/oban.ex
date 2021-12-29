@@ -65,6 +65,11 @@ defmodule Oban do
 
   @type changesets_or_wrapper :: Job.changeset_list() | wrapper()
 
+  defguardp is_list_or_wrapper(cw)
+            when is_list(cw) or
+                   (is_map(cw) and is_map_key(cw, :changesets) and is_list(cw.changesets)) or
+                   is_function(cw, 1)
+
   @doc """
   Starts an `Oban` supervision tree linked to the current process.
 
@@ -302,13 +307,7 @@ defmodule Oban do
   """
   @doc since: "0.9.0"
   @spec insert_all(name(), changesets_or_wrapper()) :: [Job.t()]
-  def insert_all(name \\ __MODULE__, changesets_or_wrapper)
-
-  def insert_all(name, %{changesets: changesets}) when is_list(changesets) do
-    insert_all(name, changesets)
-  end
-
-  def insert_all(name, changesets) when is_list(changesets) do
+  def insert_all(name \\ __MODULE__, changesets) when is_list_or_wrapper(changesets) do
     name
     |> config()
     |> Query.insert_all_jobs(changesets)
@@ -334,14 +333,8 @@ defmodule Oban do
           multi_name :: Multi.name(),
           changesets_or_wrapper() | Job.changeset_list_fun()
         ) :: Multi.t()
-  def insert_all(name \\ __MODULE__, multi, multi_name, changesets_or_wrapper)
-
-  def insert_all(name, multi, multi_name, %{changesets: changesets}) when is_list(changesets) do
-    insert_all(name, multi, multi_name, changesets)
-  end
-
-  def insert_all(name, %Multi{} = multi, multi_name, changesets)
-      when is_list(changesets) or is_function(changesets, 1) do
+  def insert_all(name \\ __MODULE__, multi, multi_name, changesets)
+      when is_list_or_wrapper(changesets) do
     name
     |> config()
     |> Query.insert_all_jobs(multi, multi_name, changesets)

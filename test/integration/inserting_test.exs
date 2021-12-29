@@ -88,12 +88,13 @@ defmodule Oban.Integration.InsertingTest do
 
   test "inserting multiple jobs from a changeset wrapper using insert_all/4" do
     name = start_supervised_oban!(queues: false)
-    wrap = %{changesets: [Worker.new(%{ref: 0}), Worker.new(%{ref: 1})]}
+    wrap = %{changesets: [Worker.new(%{ref: 0})]}
 
-    {:ok, %{"jobs" => [_job_1, _job_2]}} =
-      name
-      |> Oban.insert_all(Ecto.Multi.new(), "jobs", wrap)
-      |> Repo.transaction()
+    multi = Ecto.Multi.new()
+    multi = Oban.insert_all(name, multi, "jobs-1", wrap)
+    multi = Oban.insert_all(name, multi, "jobs-2", fn _ -> wrap end)
+
+    {:ok, %{"jobs-1" => [_job_1], "jobs-2" => [_job_2]}} = Repo.transaction(multi)
   end
 
   test "handling empty changesets list from wrapper using insert_all/4" do

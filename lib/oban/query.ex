@@ -9,20 +9,12 @@ defmodule Oban.Query do
 
   @type lock_key :: pos_integer()
 
-  @spec fetch_or_insert_job(Config.t(), Job.changeset()) :: {:ok, Job.t()} | {:error, term()}
   def fetch_or_insert_job(conf, changeset) do
     fun = fn -> insert_unique(conf, changeset) end
 
     with {:ok, result} <- Repo.transaction(conf, fun), do: result
   end
 
-  @spec fetch_or_insert_job(
-          Config.t(),
-          Multi.t(),
-          Multi.name(),
-          Job.changeset() | Job.changeset_fun()
-        ) ::
-          Multi.t()
   def fetch_or_insert_job(conf, multi, name, fun) when is_function(fun, 1) do
     Multi.run(multi, name, fn repo, changes ->
       insert_unique(%{conf | repo: repo}, fun.(changes))
@@ -35,9 +27,11 @@ defmodule Oban.Query do
     end)
   end
 
-  @spec insert_all_jobs(Config.t(), Job.changeset_list()) :: [Job.t()]
-  def insert_all_jobs(%Config{} = conf, changesets) when is_list(changesets) do
-    entries = Enum.map(changesets, &Job.to_map/1)
+  def insert_all_jobs(%Config{} = conf, changesets) do
+    entries =
+      changesets
+      |> expand_changesets(%{})
+      |> Enum.map(&Job.to_map/1)
 
     case Repo.insert_all(conf, Job, entries, on_conflict: :nothing, returning: true) do
       {0, _} -> []
@@ -45,23 +39,21 @@ defmodule Oban.Query do
     end
   end
 
-  @spec insert_all_jobs(
-          Config.t(),
-          Multi.t(),
-          Multi.name(),
-          Job.changeset_list() | Job.changeset_list_fun()
-        ) :: Multi.t()
-  def insert_all_jobs(conf, multi, name, changesets) when is_list(changesets) do
-    Multi.run(multi, name, fn repo, _changes ->
+  def insert_all_jobs(conf, multi, name, wrapper) do
+    Multi.run(multi, name, fn repo, changes ->
+      changesets = expand_changesets(wrapper, changes)
+
       {:ok, insert_all_jobs(%{conf | repo: repo}, changesets)}
     end)
   end
 
-  def insert_all_jobs(conf, multi, name, changesets_fun) when is_function(changesets_fun, 1) do
-    Multi.run(multi, name, fn repo, changes ->
-      {:ok, insert_all_jobs(%{conf | repo: repo}, changesets_fun.(changes))}
-    end)
+  @doc false
+  def expand_changesets(fun, changes) when is_function(fun, 1) do
+    expand_changesets(fun.(changes), changes)
   end
+
+  def expand_changesets(%{changesets: changesets}, _), do: expand_changesets(changesets, %{})
+  def expand_changesets(changesets, _) when is_list(changesets), do: changesets
 
   @spec retry_job(Config.t(), pos_integer()) :: :ok
   def retry_job(conf, id) do
