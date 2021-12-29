@@ -59,6 +59,8 @@ defmodule Oban.Integration.ControllingTest do
     test "stopping individual queues" do
       name = start_supervised_oban!(queues: [alpha: 5, delta: 5, gamma: 5])
 
+      wait_for_notifier(name)
+
       assert supervised_queue?(name, "delta")
       assert supervised_queue?(name, "gamma")
 
@@ -130,6 +132,7 @@ defmodule Oban.Integration.ControllingTest do
       name1 = start_supervised_oban!(queues: [alpha: 1])
       name2 = start_supervised_oban!(queues: [alpha: 1])
 
+      wait_for_notifier(name1)
       wait_for_notifier(name2)
 
       assert :ok = Oban.pause_queue(name2, queue: :alpha, local_only: true)

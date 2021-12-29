@@ -1,10 +1,10 @@
 defmodule Oban.Connection do
   @moduledoc false
 
-  @behaviour Postgrex.Notifications
+  @behaviour Postgrex.SimpleConnection
 
   alias Oban.{Config, Repo}
-  alias Postgrex.Notifications
+  alias Postgrex.SimpleConnection, as: Simple
 
   defmodule State do
     @moduledoc false
@@ -15,31 +15,54 @@ defmodule Oban.Connection do
 
   @doc false
   @spec connected?(GenServer.server()) :: boolean()
-  def connected?(server), do: Notifications.call(server, :connected?)
+  def connected?(server), do: Simple.call(server, :connected?)
 
   @doc false
   @spec child_spec(Keyword.t()) :: Supervisor.child_spec()
   def child_spec(opts) do
+    opts = Keyword.put_new(opts, :name, __MODULE__)
+
+    %{id: opts[:name], start: {__MODULE__, :start_link, [opts]}}
+  end
+
+  @spec start_link(Keyword.t()) :: {:ok, pid} | {:error, Postgrex.Error.t()}
+  def start_link(opts) do
+    name = Keyword.fetch!(opts, :name)
     conf = Keyword.fetch!(opts, :conf)
-    name = Keyword.get(opts, :name, __MODULE__)
 
     call_opts = [conf: conf]
 
     conn_opts =
       conf
       |> Repo.config()
-      |> Keyword.put(:name, name)
-      |> Keyword.put(:sync_connect, false)
+      |> Keyword.put_new(:name, name)
+      |> Keyword.put_new(:auto_reconnect, true)
+      |> Keyword.put_new(:sync_connect, false)
 
-    %{id: name, start: {Notifications, :start_link, [__MODULE__, call_opts, conn_opts]}}
+    Simple.start_link(__MODULE__, call_opts, conn_opts)
   end
 
-  @impl Notifications
+  @impl Simple
   def init(args) do
     {:ok, struct!(State, args)}
   end
 
-  @impl Notifications
+  @impl Simple
+  def notify(full_channel, payload, %State{} = state) do
+    decoded = Jason.decode!(payload)
+
+    if in_scope?(decoded, state.conf) do
+      channel = reverse_channel(full_channel)
+
+      for pid <- Map.get(state.channels, full_channel, []) do
+        send(pid, {:notification, channel, decoded})
+      end
+    end
+
+    :ok
+  end
+
+  @impl Simple
   def handle_connect(%State{channels: channels} = state) do
     state = %{state | connected?: true}
 
@@ -57,18 +80,18 @@ defmodule Oban.Connection do
     end
   end
 
-  @impl Notifications
+  @impl Simple
   def handle_disconnect(%State{} = state) do
     {:noreply, %{state | connected?: false}}
   end
 
-  @impl Notifications
+  @impl Simple
   def handle_call({:query, query}, from, %State{} = state) do
     {:query, query, %{state | from: from}}
   end
 
   def handle_call(:connected?, from, %State{} = state) do
-    Notifications.reply(from, state.connected?)
+    Simple.reply(from, state.connected?)
 
     {:noreply, state}
   end
@@ -87,7 +110,7 @@ defmodule Oban.Connection do
 
       {:query, query, %{state | from: from}}
     else
-      Notifications.reply(from, :ok)
+      Simple.reply(from, :ok)
 
       {:noreply, state}
     end
@@ -107,13 +130,13 @@ defmodule Oban.Connection do
 
       {:query, query, %{state | from: from}}
     else
-      Notifications.reply(from, :ok)
+      Simple.reply(from, :ok)
 
       {:noreply, state}
     end
   end
 
-  @impl Notifications
+  @impl Simple
   def handle_info({:DOWN, _ref, :process, pid, _reason}, %State{} = state) do
     case Map.pop(state.listeners, pid) do
       {{_ref, channel_set}, listeners} ->
@@ -133,30 +156,15 @@ defmodule Oban.Connection do
     {:noreply, state}
   end
 
-  @impl Notifications
+  @impl Simple
   def handle_result(result, %State{from: from} = state) do
     if result.num_rows > 0 do
-      Notifications.reply(from, {:ok, result})
+      Simple.reply(from, {:ok, result})
     else
-      Notifications.reply(from, :ok)
+      Simple.reply(from, :ok)
     end
 
     {:noreply, %{state | from: nil}}
-  end
-
-  @impl Notifications
-  def handle_notification(full_channel, payload, %State{} = state) do
-    decoded = Jason.decode!(payload)
-
-    if in_scope?(decoded, state.conf) do
-      channel = reverse_channel(full_channel)
-
-      for pid <- Map.get(state.channels, full_channel, []) do
-        send(pid, {:notification, channel, decoded})
-      end
-    end
-
-    {:noreply, state}
   end
 
   # Helpers
