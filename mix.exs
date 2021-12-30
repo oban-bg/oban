@@ -162,8 +162,7 @@ defmodule Oban.MixProject do
     [
       {:ecto_sql, "~> 3.6"},
       {:jason, "~> 1.1"},
-      {:postgrex, "~> 0.14",
-       github: "sorentwo/postgrex", branch: "notification-callback-module", override: true},
+      {:postgrex, "0.16.0-dev", github: "elixir-ecto/postgrex", override: true},
       {:telemetry, "~> 0.4 or ~> 1.0"},
       {:stream_data, "~> 0.4", only: [:test, :dev]},
       {:tzdata, "~> 1.0", only: [:test, :dev]},
