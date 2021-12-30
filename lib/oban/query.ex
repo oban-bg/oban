@@ -55,36 +55,6 @@ defmodule Oban.Query do
   def expand_changesets(%{changesets: changesets}, _), do: expand_changesets(changesets, %{})
   def expand_changesets(changesets, _) when is_list(changesets), do: changesets
 
-  @spec retry_job(Config.t(), pos_integer()) :: :ok
-  def retry_job(conf, id) do
-    query = where(Job, [j], j.id == ^id)
-
-    retry_all_jobs(conf, query)
-
-    :ok
-  end
-
-  @spec retry_all_jobs(Config.t(), Ecto.Queryable.t()) :: {:ok, integer()}
-  def retry_all_jobs(conf, queryable) do
-    query =
-      queryable
-      |> where([j], j.state not in ["available", "executing", "scheduled"])
-      |> update([j],
-        set: [
-          state: "available",
-          max_attempts: fragment("GREATEST(?, ? + 1)", j.max_attempts, j.attempt),
-          scheduled_at: ^utc_now(),
-          completed_at: nil,
-          cancelled_at: nil,
-          discarded_at: nil
-        ]
-      )
-
-    {count, _} = Repo.update_all(conf, query, [])
-
-    {:ok, count}
-  end
-
   # Helpers
 
   defp insert_unique(%Config{} = conf, changeset) do

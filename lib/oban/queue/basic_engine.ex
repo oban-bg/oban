@@ -174,6 +174,36 @@ defmodule Oban.Queue.BasicEngine do
     {:ok, {count, executing}}
   end
 
+  @impl Engine
+  def retry_job(%Config{} = conf, %Job{id: id}) do
+    query = where(Job, [j], j.id == ^id)
+
+    retry_all_jobs(conf, query)
+
+    :ok
+  end
+
+  @impl Engine
+  def retry_all_jobs(%Config{} = conf, queryable) do
+    query =
+      queryable
+      |> where([j], j.state not in ["available", "executing", "scheduled"])
+      |> update([j],
+        set: [
+          state: "available",
+          max_attempts: fragment("GREATEST(?, ? + 1)", j.max_attempts, j.attempt),
+          scheduled_at: ^utc_now(),
+          completed_at: nil,
+          cancelled_at: nil,
+          discarded_at: nil
+        ]
+      )
+
+    {count, _} = Repo.update_all(conf, query, [])
+
+    {:ok, count}
+  end
+
   # Validation
 
   defp validate_meta_opt(opt, _acc) do

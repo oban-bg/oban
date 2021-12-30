@@ -6,6 +6,7 @@ defmodule Oban.Queue.Engine do
   @type conf :: Config.t()
   @type meta :: map()
   @type opts :: Keyword.t()
+  @type queryable :: Ecto.Queryable.t()
   @type running :: map()
   @type seconds :: pos_integer()
 
@@ -60,15 +61,27 @@ defmodule Oban.Queue.Engine do
 
   @doc """
   Mark an `executing`, `available`, `scheduled` or `retryable` job as `cancelled` to prevent it
-  from running. If the job is currently `executing` it will be killed and otherwise it is ignored.
+  from running.
   """
   @callback cancel_job(conf(), Job.t()) :: :ok
 
   @doc """
   Mark many `executing`, `available`, `scheduled` or `retryable` job as `cancelled` to prevent them
-  from running. If the job is currently `executing` it will be killed and otherwise it is ignored.
+  from running.
   """
-  @callback cancel_all_jobs(conf(), Job.t()) :: {:ok, {pos_integer(), [Job.t()]}}
+  @callback cancel_all_jobs(conf(), queryable()) :: {:ok, {non_neg_integer(), [Job.t()]}}
+
+  @doc """
+  Mark a job as `available`, adding attempts if already maxed out. If the job is currently
+  `available`, `executing` or `scheduled` it should be ignored.
+  """
+  @callback retry_job(conf(), Job.t()) :: :ok
+
+  @doc """
+  Mark many jobs as `available`, adding attempts if already maxed out. Any jobs currently
+  `available`, `executing` or `scheduled` should be ignored.
+  """
+  @callback retry_all_jobs(conf(), queryable()) :: {:ok, non_neg_integer()}
 
   @doc false
   def init(%Config{} = conf, [_ | _] = opts) do
@@ -142,6 +155,20 @@ defmodule Oban.Queue.Engine do
   def cancel_all_jobs(%Config{} = conf, queryable) do
     with_span(:cancel_all_jobs, conf, fn ->
       conf.engine.cancel_all_jobs(conf, queryable)
+    end)
+  end
+
+  @doc false
+  def retry_job(%Config{} = conf, %Job{} = job) do
+    with_span(:retry_job, conf, fn ->
+      conf.engine.retry_job(conf, job)
+    end)
+  end
+
+  @doc false
+  def retry_all_jobs(%Config{} = conf, queryable) do
+    with_span(:retry_all_jobs, conf, fn ->
+      conf.engine.retry_all_jobs(conf, queryable)
     end)
   end
 

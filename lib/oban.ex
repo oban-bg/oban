@@ -682,7 +682,7 @@ defmodule Oban do
   def retry_job(name \\ __MODULE__, job_id) when is_integer(job_id) do
     name
     |> config()
-    |> Query.retry_job(job_id)
+    |> Engine.retry_job(%Job{id: job_id})
   end
 
   @doc """
@@ -710,7 +710,7 @@ defmodule Oban do
   def retry_all_jobs(name \\ __MODULE__, queryable) do
     name
     |> config()
-    |> Query.retry_all_jobs(queryable)
+    |> Engine.retry_all_jobs(queryable)
   end
 
   @doc """
