@@ -30,11 +30,12 @@ defmodule Oban.Queue.Executor do
           start_mono: integer(),
           start_time: integer(),
           stop_mono: integer(),
-          worker: Worker.t(),
           safe: boolean(),
           snooze: pos_integer(),
           stacktrace: Exception.stacktrace(),
-          state: :unset | :discard | :failure | :success | :snoozed
+          state: :unset | :discard | :failure | :success | :snoozed,
+          timer: reference(),
+          worker: Worker.t()
         }
 
   @enforce_keys [:conf, :job]
@@ -48,6 +49,7 @@ defmodule Oban.Queue.Executor do
     :start_mono,
     :start_time,
     :stop_mono,
+    :timer,
     :worker,
     safe: true,
     duration: 0,
@@ -79,8 +81,10 @@ defmodule Oban.Queue.Executor do
       exec
       |> record_started()
       |> resolve_worker()
+      |> start_timeout()
       |> perform()
       |> record_finished()
+      |> cancel_timeout()
 
     Backoff.with_retry(fn -> report_finished(exec).state end)
   end
@@ -104,18 +108,23 @@ defmodule Oban.Queue.Executor do
     end
   end
 
-  @spec perform(t()) :: t()
-  def perform(%__MODULE__{state: :unset} = exec) do
+  @spec start_timeout(t()) :: t()
+  def start_timeout(%__MODULE__{} = exec) do
     case exec.worker.timeout(exec.job) do
-      :infinity ->
-        perform_inline(exec, exec.safe)
-
       timeout when is_integer(timeout) ->
-        perform_timed(exec, timeout)
+        {:ok, timer} = :timer.exit_after(timeout, TimeoutError.exception({exec.worker, timeout}))
+
+        %{exec | timer: timer}
+
+      :infinity ->
+        exec
     end
   end
 
-  def perform(%__MODULE__{} = exec), do: exec
+  @spec perform(t()) :: t()
+  def perform(%__MODULE__{state: :unset} = exec) do
+    perform_inline(exec, exec.safe)
+  end
 
   @spec record_finished(t()) :: t()
   def record_finished(%__MODULE__{} = exec) do
@@ -124,6 +133,13 @@ defmodule Oban.Queue.Executor do
     queue_time = DateTime.diff(exec.job.attempted_at, exec.job.scheduled_at, :nanosecond)
 
     %{exec | duration: duration, queue_time: queue_time, stop_mono: stop_mono}
+  end
+
+  @spec cancel_timeout(t()) :: t()
+  def cancel_timeout(%__MODULE__{timer: timer} = exec) do
+    unless is_nil(timer), do: :timer.cancel(timer)
+
+    exec
   end
 
   @spec report_finished(t()) :: t()
@@ -257,20 +273,6 @@ defmodule Oban.Queue.Executor do
         maybe_log_warning(exec, returned)
 
         %{exec | state: :success, result: returned}
-    end
-  end
-
-  defp perform_timed(exec, timeout) do
-    task = Task.async(fn -> perform_inline(exec, exec.safe) end)
-
-    case Task.yield(task, timeout) || Task.shutdown(task) do
-      {:ok, reply} ->
-        reply
-
-      nil ->
-        error = TimeoutError.exception({exec.worker, timeout})
-
-        %{exec | state: :failure, error: error}
     end
   end
 

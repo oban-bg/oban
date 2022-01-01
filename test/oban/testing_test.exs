@@ -55,6 +55,12 @@ defmodule Oban.TestingTest do
     def perform(%{args: %{"action" => "bad_error"}}), do: :error
     def perform(%{args: %{"action" => "bad_tuple"}}), do: {:ok, "bad", :bad}
     def perform(%{args: %{"action" => "bad_snooze"}}), do: {:snooze, true}
+    def perform(%{args: %{"action" => "bad_code"}}), do: raise(RuntimeError, "bad")
+    def perform(%{args: %{"action" => "bad_timing"}}), do: Process.sleep(10)
+
+    @impl Oban.Worker
+    def timeout(%{args: %{"timeout" => timeout}}), do: timeout
+    def timeout(_job), do: :infinity
   end
 
   defmodule AttemptDrivenWorker do
@@ -108,6 +114,28 @@ defmodule Oban.TestingTest do
       assert :ok = perform_job(Worker, %{ref: 1, action: "OK"})
       assert :discard = perform_job(Worker, %{ref: 1, action: "DISCARD"})
       assert {:error, _} = perform_job(Worker, %{ref: 1, action: "ERROR"})
+    end
+
+    test "not rescuing unhandled exceptions" do
+      assert_raise RuntimeError, fn ->
+        perform_job(MisbehavedWorker, %{"action" => "bad_code"})
+      end
+
+      assert_raise RuntimeError, fn ->
+        perform_job(MisbehavedWorker, %{"action" => "bad_code", "timeout" => 20})
+      end
+    end
+
+    test "respecting a worker's timeout" do
+      Process.flag(:trap_exit, true)
+
+      perform_job(MisbehavedWorker, %{"action" => "bad_timing", "timeout" => 1})
+
+      assert_receive {:EXIT, _pid, %Oban.TimeoutError{}}
+
+      perform_job(MisbehavedWorker, %{"action" => "bad_timing", "timeout" => 20})
+
+      refute_receive {:EXIT, _pid, %Oban.TimeoutError{}}
     end
 
     test "defaulting the number of attempts to mimic real execution" do

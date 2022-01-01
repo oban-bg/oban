@@ -3,7 +3,7 @@ defmodule Oban.Queue.Producer do
 
   use GenServer
 
-  alias Oban.{Backoff, Notifier}
+  alias Oban.{Backoff, Notifier, TimeoutError}
   alias Oban.Queue.{Engine, Executor}
 
   defmodule State do
@@ -96,11 +96,17 @@ defmodule Oban.Queue.Producer do
         _ -> {reason, []}
       end
 
+    kind =
+      case reason do
+        %TimeoutError{} -> :error
+        _ -> {:EXIT, pid}
+      end
+
     # Without this we may crash the producer if there are any db errors. Alternatively, we would
     # block the producer while awaiting a retry.
     Task.Supervisor.async_nolink(state.foreman, fn ->
       Backoff.with_retry(fn ->
-        %{exec | kind: {:EXIT, pid}, error: error, stacktrace: stack, state: :failure}
+        %{exec | kind: kind, error: error, stacktrace: stack, state: :failure}
         |> Executor.record_finished()
         |> Executor.report_finished()
       end)

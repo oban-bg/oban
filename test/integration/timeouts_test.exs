@@ -4,7 +4,7 @@ defmodule Oban.Integration.TimeoutsTest do
   @moduletag :integration
 
   test "jobs that exceed the worker's timeout fail" do
-    start_supervised_oban!(queues: [alpha: 5])
+    start_supervised_oban!(queues: [alpha: 1])
 
     job = insert!(ref: 1, sleep: 100, timeout: 20)
 

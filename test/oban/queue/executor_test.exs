@@ -15,11 +15,6 @@ defmodule Oban.Queue.ExecutorTest do
     def perform(%{args: %{"mode" => "catch"}}), do: throw(:no_reason)
     def perform(%{args: %{"mode" => "error"}}), do: {:error, "no reason"}
     def perform(%{args: %{"mode" => "sleep"}}), do: Process.sleep(10)
-    def perform(%{args: %{"mode" => "timed"}}), do: Process.sleep(10)
-
-    @impl Worker
-    def timeout(%{args: %{"mode" => "timed"}}), do: 20
-    def timeout(_), do: :infinity
   end
 
   @conf Config.new(repo: Repo)
