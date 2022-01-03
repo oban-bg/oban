@@ -116,7 +116,11 @@ defmodule Oban.Plugins.CronTest do
     name2 = start_supervised_oban!(plugins: [{Cron, opts}])
     name3 = start_supervised_oban!(plugins: [{Cron, opts}])
 
-    for name <- [name1, name2, name3], do: stop_supervised(name)
+    for name <- [name1, name2, name3] do
+      name
+      |> send_evaluate()
+      |> stop_supervised()
+    end
 
     assert inserted_refs() == [1]
   end
@@ -179,7 +183,16 @@ defmodule Oban.Plugins.CronTest do
   defp run_with_opts(opts) do
     [plugins: [{Cron, opts}]]
     |> start_supervised_oban!()
+    |> send_evaluate()
     |> stop_supervised()
+  end
+
+  defp send_evaluate(name) do
+    name
+    |> Registry.whereis({:plugin, Cron})
+    |> send(:evaluate)
+
+    name
   end
 
   defp inserted_refs do

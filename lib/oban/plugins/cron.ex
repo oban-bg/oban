@@ -94,13 +94,9 @@ defmodule Oban.Plugins.Cron do
       State
       |> struct!(opts)
       |> parse_crontab()
+      |> schedule_evaluate()
 
-    {:ok, state, {:continue, :start}}
-  end
-
-  @impl GenServer
-  def handle_continue(:start, %State{} = state) do
-    handle_info(:evaluate, state)
+    {:ok, state}
   end
 
   @impl GenServer
@@ -126,8 +122,8 @@ defmodule Oban.Plugins.Cron do
 
     state =
       state
-      |> schedule_evaluate()
       |> discard_reboots()
+      |> schedule_evaluate()
 
     {:noreply, state}
   end
