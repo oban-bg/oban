@@ -41,9 +41,9 @@ defmodule Oban do
           | {:log, false | Logger.level()}
           | {:name, name()}
           | {:node, binary()}
-          | {:plugins, [module() | {module() | Keyword.t()}]}
+          | {:plugins, false | [module() | {module() | Keyword.t()}]}
           | {:prefix, binary()}
-          | {:queues, [{queue_name(), pos_integer() | Keyword.t()}]}
+          | {:queues, false | [{queue_name(), pos_integer() | Keyword.t()}]}
           | {:repo, module()}
           | {:shutdown_grace_period, timeout()}
 
