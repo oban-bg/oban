@@ -11,7 +11,7 @@ defmodule Oban do
   use Supervisor
 
   alias Ecto.{Changeset, Multi}
-  alias Oban.{Config, Connection, Job, Midwife, Notifier, Query, Registry, Senator, Telemetry}
+  alias Oban.{Config, Connection, Job, Midwife, Notifier, Registry, Senator, Telemetry}
   alias Oban.Queue.{Drainer, Engine, Producer}
   alias Oban.Queue.Supervisor, as: QueueSupervisor
 
@@ -60,9 +60,10 @@ defmodule Oban do
           success: non_neg_integer()
         }
 
-  @type wrapper :: %{:changesets => Job.changeset_list(), optional(atom()) => term()}
-
-  @type changesets_or_wrapper :: Job.changeset_list() | wrapper()
+  @type changeset_or_fun :: Job.changeset() | Job.changeset_fun()
+  @type changesets_or_wrapper :: Job.changeset_list() | changeset_wrapper()
+  @type changesets_or_wrapper_or_fun :: changesets_or_wrapper() | Job.changeset_list_fun()
+  @type changeset_wrapper :: %{:changesets => Job.changeset_list(), optional(atom()) => term()}
 
   defguardp is_list_or_wrapper(cw)
             when is_list(cw) or
@@ -219,12 +220,11 @@ defmodule Oban do
       {:ok, job} = Oban.insert(MyApp.Worker.new(%{id: 1}, unique: [period: 30]))
   """
   @doc since: "0.7.0"
-  @spec insert(name(), Job.changeset()) ::
-          {:ok, Job.t()} | {:error, Job.changeset()} | {:error, term()}
+  @spec insert(name(), Job.changeset()) :: {:ok, Job.t()} | {:error, Job.changeset() | term()}
   def insert(name \\ __MODULE__, %Changeset{} = changeset) do
     name
     |> config()
-    |> Query.fetch_or_insert_job(changeset)
+    |> Engine.insert_job(changeset)
   end
 
   @doc """
@@ -243,24 +243,13 @@ defmodule Oban do
       |> MyApp.Repo.transaction()
   """
   @doc since: "0.7.0"
-  @spec insert(
-          name,
-          multi :: Multi.t(),
-          multi_name :: Multi.name(),
-          changeset_or_fun :: Job.changeset() | Job.changeset_fun()
-        ) :: Multi.t()
-  def insert(name \\ __MODULE__, multi, multi_name, changeset_or_fun)
-
-  def insert(name, %Multi{} = multi, multi_name, %Changeset{} = changeset) do
+  @spec insert(name, multi :: Multi.t(), multi_name :: Multi.name(), changeset_or_fun()) ::
+          Multi.t()
+  def insert(name \\ __MODULE__, %Multi{} = multi, multi_name, changeset_or_fun)
+      when is_struct(changeset_or_fun, Changeset) or is_function(changeset_or_fun, 1) do
     name
     |> config()
-    |> Query.fetch_or_insert_job(multi, multi_name, changeset)
-  end
-
-  def insert(name, %Multi{} = multi, multi_name, fun) when is_function(fun, 1) do
-    name
-    |> config()
-    |> Query.fetch_or_insert_job(multi, multi_name, fun)
+    |> Engine.insert_job(multi, multi_name, changeset_or_fun)
   end
 
   @doc """
@@ -307,7 +296,7 @@ defmodule Oban do
   def insert_all(name \\ __MODULE__, changesets) when is_list_or_wrapper(changesets) do
     name
     |> config()
-    |> Query.insert_all_jobs(changesets)
+    |> Engine.insert_all_jobs(changesets)
   end
 
   @doc """
@@ -328,13 +317,13 @@ defmodule Oban do
           name(),
           multi :: Multi.t(),
           multi_name :: Multi.name(),
-          changesets_or_wrapper() | Job.changeset_list_fun()
+          changesets_or_wrapper_or_fun() | Job.changeset_list_fun()
         ) :: Multi.t()
   def insert_all(name \\ __MODULE__, multi, multi_name, changesets)
       when is_list_or_wrapper(changesets) do
     name
     |> config()
-    |> Query.insert_all_jobs(multi, multi_name, changesets)
+    |> Engine.insert_all_jobs(multi, multi_name, changesets)
   end
 
   @doc """

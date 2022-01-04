@@ -1,9 +1,11 @@
 defmodule Oban.Queue.Engine do
   @moduledoc false
 
+  alias Ecto.{Changeset, Multi}
   alias Oban.{Config, Job}
 
   @type conf :: Config.t()
+  @type job :: Job.t()
   @type meta :: map()
   @type opts :: Keyword.t()
   @type queryable :: Ecto.Queryable.t()
@@ -32,6 +34,27 @@ defmodule Oban.Queue.Engine do
   Format engine meta in a digestible format for queue inspection.
   """
   @callback check_meta(conf(), meta(), running()) :: map()
+
+  @doc """
+  Insert a job into the database.
+  """
+  @callback insert_job(conf(), Job.changeset()) :: {:ok, Job.t()} | {:error, term()}
+
+  @doc """
+  Insert a job within an `Ecto.Multi`.
+  """
+  @callback insert_job(conf(), Multi.t(), Multi.name(), Oban.changeset_or_fun()) :: Multi.t()
+
+  @doc """
+  Insert multiple jobs into the database.
+  """
+  @callback insert_all_jobs(conf(), Oban.changesets_or_wrapper()) :: [Job.t()]
+
+  @doc """
+  Insert multiple jobs within an `Ecto.Multi`
+  """
+  @callback insert_all_jobs(conf(), Multi.t(), Multi.name(), Oban.changesets_or_wrapper_or_fun()) ::
+              Multi.t()
 
   @doc """
   Fetch available jobs for the given queue, up to configured limits.
@@ -107,6 +130,34 @@ defmodule Oban.Queue.Engine do
   @doc false
   def check_meta(%Config{} = conf, %{} = meta, %{} = running) do
     conf.engine.check_meta(conf, meta, running)
+  end
+
+  @doc false
+  def insert_job(%Config{} = conf, %Changeset{} = changeset) do
+    with_span(:insert_job, conf, fn ->
+      conf.engine.insert_job(conf, changeset)
+    end)
+  end
+
+  @doc false
+  def insert_job(%Config{} = conf, %Multi{} = multi, name, changeset) do
+    with_span(:insert_job, conf, fn ->
+      conf.engine.insert_job(conf, multi, name, changeset)
+    end)
+  end
+
+  @doc false
+  def insert_all_jobs(%Config{} = conf, changesets) do
+    with_span(:insert_all_jobs, conf, fn ->
+      conf.engine.insert_all_jobs(conf, changesets)
+    end)
+  end
+
+  @doc false
+  def insert_all_jobs(%Config{} = conf, %Multi{} = multi, name, changesets) do
+    with_span(:insert_all_jobs, conf, fn ->
+      conf.engine.insert_all_jobs(conf, multi, name, changesets)
+    end)
   end
 
   @doc false
