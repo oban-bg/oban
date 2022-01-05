@@ -40,7 +40,7 @@ defmodule Oban.Plugins.Cron do
   use GenServer
 
   alias Oban.Cron.Expression
-  alias Oban.{Config, Job, Repo, Senator, Worker}
+  alias Oban.{Config, Job, Query, Repo, Senator, Worker}
 
   @type cron_input :: {binary(), module()} | {binary(), module(), [Job.option()]}
 
@@ -216,7 +216,7 @@ defmodule Oban.Plugins.Cron do
     {:ok, datetime} = DateTime.now(timezone)
 
     for {expr, worker, opts} <- crontab, Expression.now?(expr, datetime) do
-      {:ok, job} = Oban.insert(conf.name, build_changeset(worker, opts))
+      {:ok, job} = Query.fetch_or_insert_job(conf, build_changeset(worker, opts))
 
       job
     end
