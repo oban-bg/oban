@@ -22,10 +22,12 @@ jobs:
               elixir: '1.11'
               otp: '21.3'
               postgres: '10.19-alpine'
+            exclude_tags: 'reindex'
           - pair:
               elixir: '1.13'
               otp: '24.2'
               postgres: '14.1-alpine'
+            exclude_tags: 'nothing'
             lint: lint
 
     runs-on: ubuntu-latest
@@ -92,7 +94,7 @@ jobs:
       - name: Run mix test
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:${{job.services.postgres.ports[5432]}}/oban_test
-        run: mix test
+        run: mix test --exclude ${{ matrix.exclude_tags }}
 
       - name: Run dialyzer
         run: mix dialyzer

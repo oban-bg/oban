@@ -12,6 +12,7 @@ defmodule Oban.Plugins.ReindexerTest do
     end)
   end
 
+  @tag :reindex
   test "reindexing according to the provided schedule" do
     name = start_supervised_oban!(plugins: [{Reindexer, schedule: "* * * * *"}])
 
