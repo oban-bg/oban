@@ -21,10 +21,10 @@ jobs:
           - pair:
               elixir: '1.11'
               otp: '21.3'
-              postgres: '9.6-alpine'
+              postgres: '10.19-alpine'
           - pair:
-              elixir: '1.12'
-              otp: '24.0'
+              elixir: '1.13'
+              otp: '24.2'
               postgres: '14.1-alpine'
             lint: lint
 
