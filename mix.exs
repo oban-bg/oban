@@ -133,6 +133,7 @@ defmodule Oban.MixProject do
         Oban.Plugins.Cron,
         Oban.Plugins.Gossip,
         Oban.Plugins.Pruner,
+        Oban.Plugins.Reindexer,
         Oban.Plugins.Repeater,
         Oban.Plugins.Stager
       ],

@@ -19,10 +19,10 @@ defmodule Oban.Plugins.Pruner do
 
   ## Options
 
-  * `:max_age` — the number of seconds after which a job may be pruned
   * `:limit` — the maximum number of jobs to prune at one time. The default is 10,000 to prevent
     request timeouts. Applications that steadily generate more than 10k jobs a minute should increase
     this value.
+  * `:max_age` — the number of seconds after which a job may be pruned. Defaults to 60s.
 
   ## Instrumenting with Telemetry
 
