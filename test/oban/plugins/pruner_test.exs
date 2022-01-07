@@ -1,5 +1,5 @@
 defmodule Oban.Plugins.PrunerTest do
-  use Oban.Case
+  use Oban.Case, async: true
 
   import Ecto.Query
 
@@ -18,12 +18,14 @@ defmodule Oban.Plugins.PrunerTest do
     %Job{id: id_1} = insert!(%{}, state: "completed", attempted_at: seconds_ago(59))
     %Job{id: id_2} = insert!(%{}, state: "completed", attempted_at: seconds_ago(10))
 
-    start_supervised_oban!(plugins: [{Pruner, interval: 10, max_age: 60}])
+    name = start_supervised_oban!(plugins: [{Pruner, interval: 10, max_age: 60}])
 
     with_backoff(fn -> assert retained_ids() == [id_1, id_2] end)
 
     assert_receive {:event, :start, %{system_time: _}, %{conf: _, plugin: Pruner}}
     assert_receive {:event, :stop, %{duration: _}, %{conf: _, plugin: Pruner, pruned_count: 4}}
+
+    stop_supervised(name)
   after
     :telemetry.detach("plugin-pruner-handler")
   end

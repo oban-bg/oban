@@ -132,6 +132,7 @@ defmodule Oban.MixProject do
       Plugins: [
         Oban.Plugins.Cron,
         Oban.Plugins.Gossip,
+        Oban.Plugins.Lifeline,
         Oban.Plugins.Pruner,
         Oban.Plugins.Reindexer,
         Oban.Plugins.Repeater,
