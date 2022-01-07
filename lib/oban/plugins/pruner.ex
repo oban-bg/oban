@@ -17,6 +17,12 @@ defmodule Oban.Plugins.Pruner do
         plugins: [{Oban.Plugins.Pruner, max_age: 300}],
         ...
 
+  _🌟 This plugin treats all jobs the same and only retains by time. To retain by length or
+  provide custom rules for specific queues, workers and job states see the `DynamicPruner` plugin
+  in [Oban Pro][pro]._
+
+  [pro]: dynamic_pruner.html
+
   ## Options
 
   * `:limit` — the maximum number of jobs to prune at one time. The default is 10,000 to prevent

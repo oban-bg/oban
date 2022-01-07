@@ -90,7 +90,7 @@ defmodule Oban.MixProject do
         "../oban_pro/guides/notifiers/pg.md": [title: "PG Notifier"],
         "../oban_pro/guides/plugins/dynamic_cron.md": [title: "Dynamic Cron Plugin"],
         "../oban_pro/guides/plugins/dynamic_pruner.md": [title: "Dynamic Pruner Plugin"],
-        "../oban_pro/guides/plugins/lifeline.md": [title: "Lifeline Plugin"],
+        "../oban_pro/guides/plugins/dynamic_lifeline.md": [title: "Dynamic Lifeline Plugin"],
         "../oban_pro/guides/plugins/relay.md": [title: "Relay Plugin"],
         "../oban_pro/guides/plugins/reprioritizer.md": [title: "Reprioritizer Plugin"],
         "../oban_pro/guides/workers/batch.md": [title: "Batch Worker"],
@@ -122,8 +122,8 @@ defmodule Oban.MixProject do
       Guides: ~r{guides/[^\/]+\.md},
       Recipes: ~r{guides/recipes/.?},
       "Upgrade Guides": ~r{guides/upgrading/.*},
-      "Oban Pro": ~r{oban_pro/.?},
-      "Oban Web": ~r{oban_web/.?}
+      "🌟 Oban Pro": ~r{oban_pro/.?},
+      "🧭 Oban Web": ~r{oban_web/.?}
     ]
   end
 

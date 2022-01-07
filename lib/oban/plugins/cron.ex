@@ -18,6 +18,12 @@ defmodule Oban.Plugins.Cron do
            ]}
         ]
 
+  _🌟 This plugin only loads the crontab statically, at boot time. To configure cron schedules
+  dynamically at runtime, across your entire cluster, see the `DynamicCron` plugin in [Oban
+  Pro][pro]._
+
+  [pro]: dynamic_cron.html
+
   ## Options
 
   * `:crontab` — a list of cron expressions that enqueue jobs on a periodic basis. See [Periodic
