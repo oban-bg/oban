@@ -19,12 +19,12 @@ defmodule Oban.Plugins.LifelineTest do
     job_b = insert!(%{}, state: "executing", attempted_at: seconds_ago(7))
     job_c = insert!(%{}, state: "executing", attempted_at: seconds_ago(8), attempt: 20)
 
+    assert_receive {:event, :start, _meta, %{plugin: Lifeline}}
+    assert_receive {:event, :stop, _meta, %{plugin: Lifeline, rescued_count: 2}}
+
     assert %{state: "executing"} = Repo.reload(job_a)
     assert %{state: "available"} = Repo.reload(job_b)
     assert %{state: "discarded"} = Repo.reload(job_c)
-
-    assert_receive {:event, :start, _meta, %{plugin: Lifeline}}
-    assert_receive {:event, :stop, _meta, %{plugin: Lifeline, rescued_count: 2}}
 
     stop_supervised(name)
   end
