@@ -20,8 +20,8 @@ defmodule Oban.Plugins.ReindexerTest do
     |> Registry.whereis({:plugin, Reindexer})
     |> send(:reindex)
 
-    assert_receive {:event, :start, %{system_time: _}, %{conf: _, plugin: Reindexer}}
-    assert_receive {:event, :stop, %{duration: _}, %{conf: _, plugin: Reindexer}}
+    assert_receive {:event, :start, %{system_time: _}, %{plugin: Reindexer}}
+    assert_receive {:event, :stop, %{duration: _}, %{plugin: Reindexer}}
 
     stop_supervised(name)
   end

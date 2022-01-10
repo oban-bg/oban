@@ -47,7 +47,7 @@ defmodule Oban.Plugins.Lifeline do
 
   import Ecto.Query, only: [update: 3, where: 3]
 
-  alias Oban.{Config, Job, Repo}
+  alias Oban.{Config, Job, Repo, Senator}
 
   @type option ::
           {:conf, Config.t()}
@@ -102,19 +102,33 @@ defmodule Oban.Plugins.Lifeline do
     meta = %{conf: state.conf, plugin: __MODULE__}
 
     :telemetry.span([:oban, :plugin], meta, fn ->
-      time = DateTime.add(DateTime.utc_now(), -state.rescue_after, :millisecond)
+      case check_leadership_and_rescue_jobs(state) do
+        {:ok, {rescued_count, _}} when is_integer(rescued_count) ->
+          {:ok, Map.put(meta, :rescued_count, rescued_count)}
 
-      query =
-        Job
-        |> where([j], j.state == "executing" and j.attempted_at < ^time)
-        |> update([j], set: [state: rescued_state(j.attempt, j.max_attempts)])
-
-      {count, _} = Repo.update_all(state.conf, query, [])
-
-      {:ok, Map.put(meta, :rescued_count, count)}
+        error ->
+          {:error, Map.put(meta, :error, error)}
+      end
     end)
 
     {:noreply, schedule_rescue(state)}
+  end
+
+  defp check_leadership_and_rescue_jobs(state) do
+    if Senator.leader?(state.conf) do
+      Repo.transaction(state.conf, fn ->
+        time = DateTime.add(DateTime.utc_now(), -state.rescue_after, :millisecond)
+
+        query =
+          Job
+          |> where([j], j.state == "executing" and j.attempted_at < ^time)
+          |> update([j], set: [state: rescued_state(j.attempt, j.max_attempts)])
+
+        Repo.update_all(state.conf, query, [])
+      end)
+    else
+      {:ok, 0}
+    end
   end
 
   defp schedule_rescue(state) do

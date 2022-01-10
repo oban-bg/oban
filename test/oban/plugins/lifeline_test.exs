@@ -15,9 +15,9 @@ defmodule Oban.Plugins.LifelineTest do
   test "rescuing executing jobs older than the rescue window" do
     name = start_supervised_oban!(plugins: [{Lifeline, interval: 10, rescue_after: 5_000}])
 
-    job_a = insert!(%{}, state: "executing", attempted_at: seconds_ago(4))
-    job_b = insert!(%{}, state: "executing", attempted_at: seconds_ago(6))
-    job_c = insert!(%{}, state: "executing", attempted_at: seconds_ago(7), attempt: 20)
+    job_a = insert!(%{}, state: "executing", attempted_at: seconds_ago(3))
+    job_b = insert!(%{}, state: "executing", attempted_at: seconds_ago(7))
+    job_c = insert!(%{}, state: "executing", attempted_at: seconds_ago(8), attempt: 20)
 
     assert %{state: "executing"} = Repo.reload(job_a)
     assert %{state: "available"} = Repo.reload(job_b)
