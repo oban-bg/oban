@@ -61,7 +61,7 @@ defmodule Oban.Telemetry do
   | ------------ | -------------- | --------------------------------------------- |
   | `:start`     | `:system_time` | `:queue, :conf`                               |
   | `:stop`      | `:duration`    | `:queue, :conf, :dispatched_count`            |
-  | `:exception` | `:duration`    | `:queue, :conf`, :kind, :reason, :stacktrace  |
+  | `:exception` | `:duration`    | `:queue, :conf, :kind, :reason, :stacktrace`  |
 
   Metadata
 
