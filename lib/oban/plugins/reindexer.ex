@@ -39,7 +39,7 @@ defmodule Oban.Plugins.Reindexer do
 
   use GenServer
 
-  alias Oban.{Config, Repo}
+  alias Oban.{Config, Repo, Senator}
   alias Oban.Cron.Expression
   alias Oban.Plugins.Cron
 
@@ -81,23 +81,39 @@ defmodule Oban.Plugins.Reindexer do
     meta = %{conf: state.conf, plugin: __MODULE__}
 
     :telemetry.span([:oban, :plugin], meta, fn ->
-      {:ok, datetime} = DateTime.now(state.timezone)
+      case check_leadership_and_reindex(state) do
+        {:ok, _} ->
+          {:ok, meta}
 
-      if Expression.now?(state.schedule, datetime) do
-        table = "#{state.conf.prefix}.oban_jobs"
-
-        {:ok, _} = Repo.query(state.conf, "REINDEX TABLE CONCURRENTLY #{table}", [])
-
-        {:ok, meta}
+        error ->
+          {:error, Map.put(meta, :error, error)}
       end
     end)
 
     {:noreply, schedule_reindex(state)}
   end
 
+  # Scheduling
+
   defp schedule_reindex(state) do
     timer = Process.send_after(self(), :reindex, Cron.interval_to_next_minute())
 
     %{state | timer: timer}
+  end
+
+  # Reindexing
+
+  defp check_leadership_and_reindex(state) do
+    if Senator.leader?(state.conf) do
+      {:ok, datetime} = DateTime.now(state.timezone)
+
+      if Expression.now?(state.schedule, datetime) do
+        table = "#{state.conf.prefix}.oban_jobs"
+
+        Repo.query(state.conf, "REINDEX TABLE CONCURRENTLY #{table}", [])
+      end
+    else
+      {:ok, []}
+    end
   end
 end
