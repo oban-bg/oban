@@ -39,7 +39,7 @@ defmodule Oban.Telemetry do
 
   * `:conf` — the config of the Oban supervised producer
   * `:job` — the executing `Oban.Job`
-  * `:state` — one of `:success`, `:discard` or `:snoozed`
+  * `:state` — one of `:success`, `:failure`, `:discard` or `:snoozed`
   * `:result` — the `perform/1` return value, only included when the state is `:success`
 
   For `:exception` events the metadata includes details about what caused the failure. The `:kind`
