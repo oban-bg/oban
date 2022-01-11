@@ -44,7 +44,8 @@ defmodule Oban.MixProject do
         formatters: ["html"],
         extras: extras() ++ pro_extras() ++ web_extras(),
         groups_for_extras: groups_for_extras(),
-        groups_for_modules: groups_for_modules()
+        groups_for_modules: groups_for_modules(),
+        skip_undefined_reference_warnings_on: ["CHANGELOG.md"]
       ]
     ]
   end
