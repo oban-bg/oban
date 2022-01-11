@@ -43,8 +43,7 @@ defmodule Oban.Plugins.Stager do
       :name,
       :timer,
       limit: 5_000,
-      interval: :timer.seconds(1),
-      lock_key: 1_149_979_440_242_868_003
+      interval: :timer.seconds(1)
     ]
   end
 
