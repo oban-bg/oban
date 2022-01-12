@@ -33,7 +33,7 @@ defmodule Oban.Queue.Executor do
           safe: boolean(),
           snooze: pos_integer(),
           stacktrace: Exception.stacktrace(),
-          state: :unset | :discard | :failure | :success | :snoozed,
+          state: :unset | :discard | :exhausted | :failure | :success | :snoozed,
           timer: reference(),
           worker: Worker.t()
         }
@@ -75,7 +75,7 @@ defmodule Oban.Queue.Executor do
     %{exec | safe: value}
   end
 
-  @spec call(t()) :: :success | :failure
+  @spec call(t()) :: t()
   def call(%__MODULE__{} = exec) do
     exec =
       exec
@@ -83,12 +83,14 @@ defmodule Oban.Queue.Executor do
       |> resolve_worker()
       |> start_timeout()
       |> perform()
+      |> normalize_state()
       |> record_finished()
       |> cancel_timeout()
 
     Backoff.with_retry(fn -> report_finished(exec).state end)
   end
 
+  @spec record_started(t()) :: t()
   def record_started(%__MODULE__{} = exec) do
     Telemetry.execute([:oban, :job, :start], %{system_time: exec.start_time}, exec.meta)
 
@@ -126,6 +128,14 @@ defmodule Oban.Queue.Executor do
     perform_inline(exec, exec.safe)
   end
 
+  @spec normalize_state(t()) :: t()
+  def normalize_state(%__MODULE__{state: :failure, job: job} = exec)
+       when job.attempt >= job.max_attempts do
+    %{exec | state: :exhausted}
+  end
+
+  def normalize_state(exec), do: exec
+
   @spec record_finished(t()) :: t()
   def record_finished(%__MODULE__{} = exec) do
     stop_mono = System.monotonic_time()
@@ -156,14 +166,11 @@ defmodule Oban.Queue.Executor do
     exec
   end
 
-  def ack_event(%__MODULE__{state: :failure} = exec) do
+  def ack_event(%__MODULE__{state: :failure, worker: worker} = exec) do
     job = job_with_unsaved_error(exec)
+    backoff = if worker, do: worker.backoff(job), else: Worker.backoff(job)
 
-    if job.attempt >= job.max_attempts do
-      Engine.discard_job(exec.conf, job)
-    else
-      Engine.error_job(exec.conf, job, backoff(exec.worker, job))
-    end
+    Engine.error_job(exec.conf, job, backoff)
 
     %{exec | job: job}
   end
@@ -174,7 +181,7 @@ defmodule Oban.Queue.Executor do
     exec
   end
 
-  def ack_event(%__MODULE__{state: :discard} = exec) do
+  def ack_event(%__MODULE__{state: state} = exec) when state in [:discard, :exhausted] do
     job = job_with_unsaved_error(exec)
 
     Engine.discard_job(exec.conf, job)
@@ -183,7 +190,7 @@ defmodule Oban.Queue.Executor do
   end
 
   @spec emit_event(t()) :: t()
-  def emit_event(%__MODULE__{state: :failure} = exec) do
+  def emit_event(%__MODULE__{state: state} = exec) when state in [:failure, :exhausted] do
     measurements = %{duration: exec.duration, queue_time: exec.queue_time}
 
     kind =
@@ -192,6 +199,8 @@ defmodule Oban.Queue.Executor do
         kind when kind in [:exit, :throw, :error] -> kind
       end
 
+    state = if state == :exhausted, do: :discard, else: state
+
     meta =
       Map.merge(exec.meta, %{
         job: exec.job,
@@ -199,7 +208,7 @@ defmodule Oban.Queue.Executor do
         error: exec.error,
         reason: exec.error,
         stacktrace: exec.stacktrace,
-        state: exec.state
+        state: state
       })
 
     Telemetry.execute([:oban, :job, :exception], measurements, meta)
@@ -243,28 +252,13 @@ defmodule Oban.Queue.Executor do
         %{exec | state: :success, result: result}
 
       :discard = result ->
-        %{
-          exec
-          | result: result,
-            state: :discard,
-            error: PerformError.exception({worker, :discard})
-        }
+        %{exec | result: result, state: :discard, error: perform_error(worker, result)}
 
-      {:discard, reason} = result ->
-        %{
-          exec
-          | result: result,
-            state: :discard,
-            error: PerformError.exception({worker, {:discard, reason}})
-        }
+      {:discard, _reason} = result ->
+        %{exec | result: result, state: :discard, error: perform_error(worker, result)}
 
-      {:error, reason} = result ->
-        %{
-          exec
-          | result: result,
-            state: :failure,
-            error: PerformError.exception({worker, {:error, reason}})
-        }
+      {:error, _reason} = result ->
+        %{exec | result: result, state: :failure, error: perform_error(worker, result)}
 
       {:snooze, seconds} = result when is_integer(seconds) and seconds > 0 ->
         %{exec | result: result, state: :snoozed, snooze: seconds}
@@ -276,8 +270,7 @@ defmodule Oban.Queue.Executor do
     end
   end
 
-  defp backoff(nil, job), do: Worker.backoff(job)
-  defp backoff(worker, job), do: worker.backoff(job)
+  defp perform_error(worker, result), do: PerformError.exception({worker, result})
 
   defp event_metadata(conf, job) do
     job

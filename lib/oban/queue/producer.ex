@@ -107,6 +107,7 @@ defmodule Oban.Queue.Producer do
     Task.Supervisor.async_nolink(state.foreman, fn ->
       Backoff.with_retry(fn ->
         %{exec | kind: kind, error: error, stacktrace: stack, state: :failure}
+        |> Executor.normalize_state()
         |> Executor.record_finished()
         |> Executor.report_finished()
       end)

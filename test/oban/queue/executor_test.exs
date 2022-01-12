@@ -15,6 +15,7 @@ defmodule Oban.Queue.ExecutorTest do
     def perform(%{args: %{"mode" => "catch"}}), do: throw(:no_reason)
     def perform(%{args: %{"mode" => "error"}}), do: {:error, "no reason"}
     def perform(%{args: %{"mode" => "sleep"}}), do: Process.sleep(10)
+    def perform(%{args: %{"mode" => "discard"}}), do: {:discard, :no_reason}
   end
 
   @conf Config.new(repo: Repo)
@@ -29,10 +30,20 @@ defmodule Oban.Queue.ExecutorTest do
       assert %{state: :snoozed, snooze: 1} = call_with_mode("snooze")
     end
 
+    test "reporting :discard status" do
+      assert %{state: :discard} = call_with_mode("discard")
+    end
+
     test "raising, catching and error tuples are failures" do
       assert %{state: :failure} = call_with_mode("raise")
       assert %{state: :failure, error: %CrashError{}} = call_with_mode("catch")
       assert %{state: :failure, error: %PerformError{}} = call_with_mode("error")
+    end
+
+    test "reporting a failure with exhausted retries as :exhaust" do
+      job = %Job{args: %{"mode" => "error"}, worker: inspect(Worker), attempt: 1, max_attempts: 1}
+
+      assert %{state: :exhausted, error: %PerformError{}} = exec(job)
     end
 
     test "inability to resolve a worker is a failure" do
@@ -59,7 +70,9 @@ defmodule Oban.Queue.ExecutorTest do
                |> Executor.new(job)
                |> Executor.resolve_worker()
                |> Executor.perform()
+               |> Executor.normalize_state()
                |> Executor.record_finished()
+               |> Executor.cancel_timeout()
 
       duration_ms = System.convert_time_unit(duration, :native, :millisecond)
       queue_time_ms = System.convert_time_unit(queue_time, :native, :millisecond)
@@ -70,11 +83,14 @@ defmodule Oban.Queue.ExecutorTest do
   end
 
   defp call_with_mode(mode) do
-    job = %Job{args: %{"mode" => mode}, worker: to_string(Worker)}
+    exec(%Job{args: %{"mode" => mode}, worker: to_string(Worker)})
+  end
 
+  defp exec(job) do
     @conf
     |> Executor.new(job)
     |> Executor.resolve_worker()
     |> Executor.perform()
+    |> Executor.normalize_state()
   end
 end
