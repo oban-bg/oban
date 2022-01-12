@@ -242,8 +242,7 @@ defmodule Oban.Telemetry do
     :telemetry.attach_many("oban-default-logger", events, &__MODULE__.handle_event/4, level)
   end
 
-  @deprecated "Use the official :telemetry.span/3 instead"
-  @spec span(name :: atom(), fun :: (() -> term()), meta :: map()) :: term()
+  @doc false
   def span(name, fun, meta \\ %{}) when is_atom(name) and is_function(fun, 0) do
     start_time = System.system_time()
     start_mono = System.monotonic_time()
