@@ -29,21 +29,21 @@ defmodule Oban.Telemetry do
   provide the error type, the error itself, and the stacktrace. The following chart shows which
   metadata you can expect for each event:
 
-  | event        | measures                   | metadata                                           |
-  | ------------ | -------------------------- | -------------------------------------------------- |
-  | `:start`     | `:system_time`             | `:job, :conf, :state`                              |
-  | `:stop`      | `:duration`, `:queue_time` | `:job, :conf, :state, :result`                     |
-  | `:exception` | `:duration`, `:queue_time` | `:job, :conf, :state, :kind, :reason, :stacktrace` |
+  | event        | measures                   | metadata                                                     |
+  | ------------ | -------------------------- | ------------------------------------------------------------ |
+  | `:start`     | `:system_time`             | `:conf`, `:job`, `:state`                                    |
+  | `:stop`      | `:duration`, `:queue_time` | `:conf`, `:job`, `:state`, `:result`                         |
+  | `:exception` | `:duration`, `:queue_time` | `:conf`, `:job`, `:state`, `:kind`, `:reason`, `:stacktrace` |
 
-  Metadata
+  #### Metadata
 
-  * `:conf` — the config of the Oban supervised producer
+  * `:conf` — the executing Oban instance's config
   * `:job` — the executing `Oban.Job`
   * `:state` — one of `:success`, `:failure`, `:discard` or `:snoozed`
-  * `:result` — the `perform/1` return value, only included when the state is `:success`
+  * `:result` — the `perform/1` return value, included unless job failed with an exception or crash
 
-  For `:exception` events the metadata includes details about what caused the failure. The `:kind`
-  value is determined by how an error occurred. Here are the possible kinds:
+  For `:exception` events the metadata also includes details about what caused the failure. The
+  `:kind` value is determined by how an error occurred. Here are the possible kinds:
 
   * `:error` — from an `{:error, error}` return value. Some Erlang functions may also throw an
     `:error` tuple, which will be reported as `:error`.
@@ -51,114 +51,46 @@ defmodule Oban.Telemetry do
   * `:throw` — from a caught value, this doesn't necessarily mean that an error occurred and the
     error value is unpredictable
 
-  ### Producer Events
-
-  Oban emits the following telemetry span events for each queue's producer:
-
-  * `[:oban, :producer, :start | :stop | :exception]` — when a producer dispatches new jobs
-
-  | event        | measures       | metadata                                      |
-  | ------------ | -------------- | --------------------------------------------- |
-  | `:start`     | `:system_time` | `:queue, :conf`                               |
-  | `:stop`      | `:duration`    | `:queue, :conf, :dispatched_count`            |
-  | `:exception` | `:duration`    | `:queue, :conf, :kind, :reason, :stacktrace`  |
-
-  Metadata
-
-  * `:queue` — the name of the queue as a string, e.g. "default" or "mailers"
-  * `:conf` — the config of the Oban supervised producer
-  * `:dispatched_count` — the number of jobs fetched and started by the producer
-
   ### Engine Events
 
   Oban emits telemetry span events for the following Engine operations:
 
   * `[:oban, :engine, :init, :start | :stop | :exception]`
-
-  | event        | measures       | metadata           |
-  | ------------ | -------------- | ------------------ |
-  | `:start`     | `:system_time` | `:conf`, `engine`  |
-  | `:stop`      | `:duration`    | `:conf`, `engine`  |
-  | `:exception` | `:duration`    | `:conf`, `engine`  |
-
   * `[:oban, :engine, :refresh, :start | :stop | :exception]`
-
-  | event        | measures       | metadata           |
-  | ------------ | -------------- | ------------------ |
-  | `:start`     | `:system_time` | `:conf`, `engine`  |
-  | `:stop`      | `:duration`    | `:conf`, `engine`  |
-  | `:exception` | `:duration`    | `:conf`, `engine`  |
-
   * `[:oban, :engine, :put_meta, :start | :stop | :exception]`
-
-  | event        | measures       | metadata           |
-  | ------------ | -------------- | ------------------ |
-  | `:start`     | `:system_time` | `:conf`, `engine`  |
-  | `:stop`      | `:duration`    | `:conf`, `engine`  |
-  | `:exception` | `:duration`    | `:conf`, `engine`  |
-
+  * `[:oban, :engine, :insert_job, :start | :stop | :exception]`
+  * `[:oban, :engine, :insert_all_job, :start | :stop | :exception]`
   * `[:oban, :engine, :fetch_jobs, :start | :stop | :exception]`
+  * `[:oban, :engine, :cancel_all_jobs, :start | :stop | :exception]`
+  * `[:oban, :engine, :retry_all_jobs, :start | :stop | :exception]`
 
-  | event        | measures       | metadata           |
-  | ------------ | -------------- | ------------------ |
-  | `:start`     | `:system_time` | `:conf`, `engine`  |
-  | `:stop`      | `:duration`    | `:conf`, `engine`  |
-  | `:exception` | `:duration`    | `:conf`, `engine`  |
+  | event        | measures       | metadata                                              |
+  | ------------ | -------------- | ----------------------------------------------------- |
+  | `:start`     | `:system_time` | `:conf`, `:engine`                                    |
+  | `:stop`      | `:duration`    | `:conf`, `:engine`                                    |
+  | `:exception` | `:duration`    | `:conf`, `:engine`, `:kind`, `:reason`, `:stacktrace` |
 
+  Events for job-level Engine operations also include the `job`
 
   * `[:oban, :engine, :complete_job, :start | :stop | :exception]`
-
-  | event        | measures       | metadata                                                 |
-  | ------------ | -------------- | -------------------------------------------------------  |
-  | `:start`     | `:system_time` | `:conf`, `engine`, `job`                                 |
-  | `:stop`      | `:duration`    | `:conf`, `engine`, `job`                                 |
-  | `:exception` | `:duration`    | `:conf`, `engine`, `job`, `kind`, `reason`, `stacktrace` |
-
   * `[:oban, :engine, :discard_job, :start | :stop | :exception]`
-
-  | event        | measures       | metadata                                                 |
-  | ------------ | -------------- | -------------------------------------------------------  |
-  | `:start`     | `:system_time` | `:conf`, `engine`, `job`                                 |
-  | `:stop`      | `:duration`    | `:conf`, `engine`, `job`                                 |
-  | `:exception` | `:duration`    | `:conf`, `engine`, `job`, `kind`, `reason`, `stacktrace` |
-
   * `[:oban, :engine, :error_job, :start | :stop | :exception]`
-
-  | event        | measures       | metadata                                                 |
-  | ------------ | -------------- | -------------------------------------------------------  |
-  | `:start`     | `:system_time` | `:conf`, `engine`, `job`                                 |
-  | `:stop`      | `:duration`    | `:conf`, `engine`, `job`                                 |
-  | `:exception` | `:duration`    | `:conf`, `engine`, `job`, `kind`, `reason`, `stacktrace` |
-
   * `[:oban, :engine, :snooze_job, :start | :stop | :exception]`
-
-  | event        | measures       | metadata                                                 |
-  | ------------ | -------------- | -------------------------------------------------------  |
-  | `:start`     | `:system_time` | `:conf`, `engine`, `job`                                 |
-  | `:stop`      | `:duration`    | `:conf`, `engine`, `job`                                 |
-  | `:exception` | `:duration`    | `:conf`, `engine`, `job`, `kind`, `reason`, `stacktrace` |
-
   * `[:oban, :engine, :cancel_job, :start | :stop | :exception]`
+  * `[:oban, :engine, :retry_job, :start | :stop | :exception]`
 
-  | event        | measures       | metadata                                                 |
-  | ------------ | -------------- | -------------------------------------------------------  |
-  | `:start`     | `:system_time` | `:conf`, `engine`, `job`                                 |
-  | `:stop`      | `:duration`    | `:conf`, `engine`, `job`                                 |
-  | `:exception` | `:duration`    | `:conf`, `engine`, `job`, `kind`, `reason`, `stacktrace` |
+  | event        | measures       | metadata                                                      |
+  | ------------ | -------------- | ------------------------------------------------------------- |
+  | `:start`     | `:system_time` | `:conf`, `:engine`, `:job`                                    |
+  | `:stop`      | `:duration`    | `:conf`, `:engine`, `:job`                                    |
+  | `:exception` | `:duration`    | `:conf`, `:engine`, `:job`, `:kind`, `:reason`, `:stacktrace` |
 
-  * `[:oban, :engine, :cancel_all_jobs, :start | :stop | :exception]`
+  #### Metadata
 
-  | event        | measures       | metadata                                                 |
-  | ------------ | -------------- | ------------------------------------------------- |
-  | `:start`     | `:system_time` | `:conf`, `engine`                                 |
-  | `:stop`      | `:duration`    | `:conf`, `engine`                                 |
-  | `:exception` | `:duration`    | `:conf`, `engine`, `kind`, `reason`, `stacktrace` |
-
-  Metadata
-
-  * `:conf` — the config of the Oban supervised producer
+  * `:conf` — the Oban supervisor's config
   * `:engine` — the module of the engine used
   * `:job` - the `Oban.Job` in question
+  * `:kind`, `:reason`, `:stacktrace` — see the explanation in job metadata above
 
   ### Notifier Events
 
@@ -166,25 +98,26 @@ defmodule Oban.Telemetry do
 
   * `[:oban, :notifier, :notify, :start | :stop | :exception]`
 
-  | event        | measures       | metadata                                                       |
-  | ------------ | -------------- | -------------------------------------------------------------- |
-  | `:start`     | `:system_time` | `:conf`, `channel`, `payload`                                  |
-  | `:stop`      | `:duration`    | `:conf`, `channel`, `payload`                                  |
-  | `:exception` | `:duration`    | `:conf`, `channel`, `payload`, `kind`, `reason`, `stacktrace`  |
+  | event        | measures       | metadata                                                            |
+  | ------------ | -------------- | ------------------------------------------------------------------- |
+  | `:start`     | `:system_time` | `:conf`, `:channel`, `:payload`                                     |
+  | `:stop`      | `:duration`    | `:conf`, `:channel`, `:payload`                                     |
+  | `:exception` | `:duration`    | `:conf`, `:channel`, `:payload`, `:kind`, `:reason`, `:stacktrace`  |
 
-  * `:conf` — the config of the Oban supervised producer
+  #### Metadata
+
+  * `:conf` — the Oban supervisor's config
   * `:channel` — the channel on which the notification was sent
-  * `:payload` - the payload that was sent
-  * `kind`, `reason`, `stacktrace`, see the explanation above.
+  * `:payload` - the decoded payload that was sent
+  * `:kind`, `:reason`, `:stacktrace` — see the explanation in job metadata above
 
   ### Plugin Events
 
   All the Oban plugins emit telemetry events under the `[:oban, :plugin, *]` pattern (where `*` is
   either `:start`, `:stop`, or `:exception`). You can filter out for plugin events by looking into
-  the metadata of the event and checking the value of `:plugin`. The `:plugin` key will contain the
-  module name of the plugin module that emitted the event. For example, to get `Oban.Plugins.Cron`
-  specific events, you can filter for telemetry events with a metadata key/value of
-  `plugin: Oban.Plugins.Cron`.
+  the metadata of the event and checking the value of `:plugin`. The `:plugin` field is the plugin
+  module that emitted the event. For example, to get `Oban.Plugins.Cron` specific events, you can
+  filter for telemetry events with a metadata key/value of `plugin: Oban.Plugins.Cron`.
 
   Oban emits the following telemetry event whenever a plugin executes (be sure to check the
   documentation for each plugin as each plugin can also add additional metadata specific to
@@ -196,11 +129,11 @@ defmodule Oban.Telemetry do
 
   The following chart shows which metadata you can expect for each event:
 
-  | event        | measures       | metadata                                      |
-  | ------------ | ---------------| --------------------------------------------- |
-  | `:start`     | `:system_time` | `:conf, :plugin`                              |
-  | `:stop`      | `:duration`    | `:conf, :plugin`                              |
-  | `:exception` | `:duration`    | `:kind, :reason, :stacktrace, :conf, :plugin` |
+  | event        | measures        | metadata                                              |
+  | ------------ | --------------- | ----------------------------------------------------- |
+  | `:start`     | `:system_time`  | `:conf`, `:plugin`                                    |
+  | `:stop`      | `:duration`     | `:conf`, `:plugin`                                    |
+  | `:exception` | `:duration`     | `:conf`, `:plugin`, `:kind`, `:reason`, `:stacktrace` |
 
   ## Default Logger
 

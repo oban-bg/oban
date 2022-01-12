@@ -134,28 +134,28 @@ defmodule Oban.Queue.Engine do
 
   @doc false
   def insert_job(%Config{} = conf, %Changeset{} = changeset) do
-    with_span(:insert_job, conf, fn ->
+    with_span(:insert_job, conf, %{changeset: changeset}, fn ->
       conf.engine.insert_job(conf, changeset)
     end)
   end
 
   @doc false
   def insert_job(%Config{} = conf, %Multi{} = multi, name, changeset) do
-    with_span(:insert_job, conf, fn ->
+    with_span(:insert_job, conf, %{changeset: changeset}, fn ->
       conf.engine.insert_job(conf, multi, name, changeset)
     end)
   end
 
   @doc false
   def insert_all_jobs(%Config{} = conf, changesets) do
-    with_span(:insert_all_jobs, conf, fn ->
+    with_span(:insert_all_jobs, conf, %{changesets: changesets}, fn ->
       conf.engine.insert_all_jobs(conf, changesets)
     end)
   end
 
   @doc false
   def insert_all_jobs(%Config{} = conf, %Multi{} = multi, name, changesets) do
-    with_span(:insert_all_jobs, conf, fn ->
+    with_span(:insert_all_jobs, conf, %{changesets: changesets}, fn ->
       conf.engine.insert_all_jobs(conf, multi, name, changesets)
     end)
   end
@@ -211,7 +211,7 @@ defmodule Oban.Queue.Engine do
 
   @doc false
   def retry_job(%Config{} = conf, %Job{} = job) do
-    with_span(:retry_job, conf, fn ->
+    with_span(:retry_job, conf, %{job: job}, fn ->
       conf.engine.retry_job(conf, job)
     end)
   end
