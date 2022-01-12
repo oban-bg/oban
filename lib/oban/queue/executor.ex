@@ -157,7 +157,7 @@ defmodule Oban.Queue.Executor do
 
   @spec normalize_state(t()) :: t()
   def normalize_state(%__MODULE__{state: :failure, job: job} = exec)
-       when job.attempt >= job.max_attempts do
+      when job.attempt >= job.max_attempts do
     %{exec | state: :exhausted}
   end
 

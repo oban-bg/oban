@@ -146,11 +146,17 @@ defmodule Oban.Telemetry do
   ```json
   {
     "args":{"action":"OK","ref":1},
+    "attempt":1,
     "duration":4327295,
     "event":"job:stop",
+    "id":123,
+    "max_attempts":20,
+    "meta":{},
     "queue":"alpha",
     "queue_time":3127905,
     "source":"oban",
+    "state":"success",
+    "tags":[],
     "worker":"Oban.Integration.Worker"
   }
   ```
@@ -202,11 +208,16 @@ defmodule Oban.Telemetry do
   This function attaches a handler that outputs logs with the following fields:
 
   * `args` — a map of the job's raw arguments
+  * `attempt` — the job's execution atttempt
   * `duration` — the job's runtime duration, in the native time unit
-  * `event` — either `:success` or `:failure` depending on whether the job succeeded or errored
+  * `event` — either `job:stop` or `job:exception` depending on reporting telemetry event
+  * `id` — the job's id
+  * `meta` — a map of the job's raw metadata
   * `queue` — the job's queue
   * `source` — always "oban"
+  * `state` — the execution state, one of "success", "failure", "discard", or "snoozed"
   * `system_time` — when the job started, in microseconds
+  * `tags` — the job's tags
   * `worker` — the job's worker module
 
   ## Examples
@@ -282,23 +293,24 @@ defmodule Oban.Telemetry do
   @doc false
   @spec handle_event([atom()], map(), map(), Logger.level()) :: :ok
   def handle_event([:oban, :job, event], measure, meta, level) do
-    meta
-    |> Map.take([:args, :worker, :queue])
-    |> Map.merge(converted_measurements(measure))
-    |> log_message("job:#{event}", level)
-  end
-
-  defp converted_measurements(measure) do
-    for {key, val} <- measure, key in [:duration, :queue_time], into: %{} do
-      {key, System.convert_time_unit(val, :native, :microsecond)}
-    end
-  end
-
-  defp log_message(message, event, level) do
     Logger.log(level, fn ->
-      message
-      |> Map.put(:event, event)
-      |> Map.put(:source, "oban")
+      details = Map.take(meta.job, ~w(attempt args id max_attempts meta queue tags worker)a)
+
+      timing =
+        if event == :start do
+          %{event: "job:start", source: "oban", system_time: measure.system_time}
+        else
+          %{
+            event: "job:#{event}",
+            duration: System.convert_time_unit(measure.duration, :native, :microsecond),
+            queue_time: System.convert_time_unit(measure.queue_time, :native, :microsecond),
+            source: "oban",
+            state: meta.state
+          }
+        end
+
+      details
+      |> Map.merge(timing)
       |> Jason.encode_to_iodata!()
     end)
   end

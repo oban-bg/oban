@@ -84,11 +84,15 @@ defmodule Oban.Integration.TelemetryTest do
     logged =
       capture_log(fn ->
         insert!(ref: 1, action: "OK")
+        insert!(ref: 2, action: "ERROR")
 
         assert_receive {:ok, 1}
+        assert_receive {:error, 2}
 
         Process.sleep(50)
       end)
+
+    Logger.flush()
 
     # Start
 
@@ -97,13 +101,22 @@ defmodule Oban.Integration.TelemetryTest do
 
     # Stop
 
-    assert logged =~ ~s("source":"oban")
     assert logged =~ ~s("event":"job:stop")
-    assert logged =~ ~s("args":)
-    assert logged =~ ~s("worker":"Oban.Integration.Worker")
+    assert logged =~ ~s("args":{)
+    assert logged =~ ~s("attempt":1)
+    assert logged =~ ~s("id":)
+    assert logged =~ ~s("max_attempts":20)
+    assert logged =~ ~s("meta":{)
     assert logged =~ ~s("queue":"alpha")
+    assert logged =~ ~s("state":"success")
+    assert logged =~ ~s("tags":[])
+    assert logged =~ ~s("worker":"Oban.Integration.Worker")
     assert logged =~ ~r|"duration":\d{2,5},|
     assert logged =~ ~r|"queue_time":\d{2,},|
+
+    # Exception
+    assert logged =~ ~s("event":"job:exception")
+    assert logged =~ ~s("state":"failure")
   after
     :telemetry.detach("oban-default-logger")
   end
