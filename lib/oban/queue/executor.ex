@@ -1,23 +1,11 @@
 defmodule Oban.Queue.Executor do
   @moduledoc false
 
-  alias Oban.{
-    Backoff,
-    Config,
-    CrashError,
-    Job,
-    PerformError,
-    Telemetry,
-    TimeoutError,
-    Worker
-  }
+  alias Oban.{Backoff, Config, CrashError, Job, PerformError, Telemetry, TimeoutError, Worker}
 
   alias Oban.Queue.Engine
 
   require Logger
-
-  @type success :: {:success, Job.t()}
-  @type failure :: {:failure, Job.t(), Worker.t(), atom(), term()}
 
   @type t :: %__MODULE__{
           conf: Config.t(),
@@ -125,7 +113,46 @@ defmodule Oban.Queue.Executor do
 
   @spec perform(t()) :: t()
   def perform(%__MODULE__{state: :unset} = exec) do
-    perform_inline(exec, exec.safe)
+    perform(exec, exec.safe)
+  end
+
+  defp perform(exec, true = _safe) do
+    perform(exec, false)
+  rescue
+    error ->
+      %{exec | state: :failure, error: error, stacktrace: __STACKTRACE__}
+  catch
+    kind, reason ->
+      error = CrashError.exception({kind, reason, __STACKTRACE__})
+
+      %{exec | state: :failure, error: error, stacktrace: __STACKTRACE__}
+  end
+
+  defp perform(%{worker: worker, job: job} = exec, _safe) do
+    case worker.perform(job) do
+      :ok ->
+        %{exec | state: :success, result: :ok}
+
+      {:ok, _value} = result ->
+        %{exec | state: :success, result: result}
+
+      :discard = result ->
+        %{exec | result: result, state: :discard, error: perform_error(worker, result)}
+
+      {:discard, _reason} = result ->
+        %{exec | result: result, state: :discard, error: perform_error(worker, result)}
+
+      {:error, _reason} = result ->
+        %{exec | result: result, state: :failure, error: perform_error(worker, result)}
+
+      {:snooze, seconds} = result when is_integer(seconds) and seconds > 0 ->
+        %{exec | result: result, state: :snoozed, snooze: seconds}
+
+      returned ->
+        log_warning(exec, returned)
+
+        %{exec | state: :success, result: returned}
+    end
   end
 
   @spec normalize_state(t()) :: t()
@@ -231,44 +258,7 @@ defmodule Oban.Queue.Executor do
     exec
   end
 
-  defp perform_inline(exec, true = _safe) do
-    perform_inline(exec, false)
-  rescue
-    error ->
-      %{exec | state: :failure, error: error, stacktrace: __STACKTRACE__}
-  catch
-    kind, reason ->
-      error = CrashError.exception({kind, reason, __STACKTRACE__})
-
-      %{exec | state: :failure, error: error, stacktrace: __STACKTRACE__}
-  end
-
-  defp perform_inline(%{worker: worker, job: job} = exec, _safe) do
-    case worker.perform(job) do
-      :ok ->
-        %{exec | state: :success, result: :ok}
-
-      {:ok, _value} = result ->
-        %{exec | state: :success, result: result}
-
-      :discard = result ->
-        %{exec | result: result, state: :discard, error: perform_error(worker, result)}
-
-      {:discard, _reason} = result ->
-        %{exec | result: result, state: :discard, error: perform_error(worker, result)}
-
-      {:error, _reason} = result ->
-        %{exec | result: result, state: :failure, error: perform_error(worker, result)}
-
-      {:snooze, seconds} = result when is_integer(seconds) and seconds > 0 ->
-        %{exec | result: result, state: :snoozed, snooze: seconds}
-
-      returned ->
-        maybe_log_warning(exec, returned)
-
-        %{exec | state: :success, result: returned}
-    end
-  end
+  # Helpers
 
   defp perform_error(worker, result), do: PerformError.exception({worker, result})
 
@@ -284,10 +274,7 @@ defmodule Oban.Queue.Executor do
     %{exec.job | unsaved_error: unsaved_error}
   end
 
-  defp maybe_log_warning(exec, returned)
-  defp maybe_log_warning(%__MODULE__{safe: false}, _returned), do: :noop
-
-  defp maybe_log_warning(%__MODULE__{worker: worker}, returned) do
+  defp log_warning(%__MODULE__{safe: true, worker: worker}, returned) do
     Logger.warn(fn ->
       """
       Expected #{worker}.perform/1 to return:
@@ -307,4 +294,6 @@ defmodule Oban.Queue.Executor do
       """
     end)
   end
+
+  defp log_warning(_exec, _returned), do: :noop
 end
