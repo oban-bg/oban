@@ -15,7 +15,9 @@ defmodule Oban.Plugins.StagerTest do
     job_2 = insert!([ref: 2, action: "OK"], inserted_at: then, schedule_in: -5, queue: :alpha)
     job_3 = insert!([ref: 3, action: "OK"], inserted_at: then, schedule_in: 10, queue: :alpha)
 
-    start_supervised_oban!(plugins: [{Stager, interval: 10}])
+    name = start_supervised_oban!(plugins: [Stager])
+
+    stage(name)
 
     with_backoff(fn ->
       assert %{state: "available"} = Repo.reload(job_1)
@@ -34,7 +36,9 @@ defmodule Oban.Plugins.StagerTest do
     job_2 = insert!([ref: 2, action: "OK"], schedule_in: -60)
     job_3 = insert!([ref: 3, action: "OK"], schedule_in: -60)
 
-    start_supervised_oban!(plugins: [{Stager, interval: 10, limit: 1}])
+    name = start_supervised_oban!(plugins: [{Stager, limit: 1}])
+
+    stage(name)
 
     with_backoff(fn ->
       assert %{state: "available"} = Repo.reload(job_1)
@@ -55,5 +59,11 @@ defmodule Oban.Plugins.StagerTest do
     refute [plugins: false, poll_interval: 2000]
            |> start_supervised_oban!()
            |> Registry.whereis({:plugin, Stager})
+  end
+
+  defp stage(name) do
+    name
+    |> Registry.whereis({:plugin, Stager})
+    |> send(:stage)
   end
 end
