@@ -26,7 +26,7 @@ defmodule Oban.Config do
   @enforce_keys [:node, :repo]
   defstruct dispatch_cooldown: 5,
             engine: Oban.Queue.BasicEngine,
-            notifier: Oban.PostgresNotifier,
+            notifier: Oban.Notifiers.Postgres,
             name: Oban,
             node: nil,
             plugins: [],
@@ -47,6 +47,7 @@ defmodule Oban.Config do
       |> crontab_to_plugin()
       |> poll_interval_to_plugin()
       |> Keyword.put_new(:node, node_name())
+      |> Keyword.reject(&(&1 == {:notifier, Oban.PostgresNotifier}))
       |> Keyword.update(:plugins, [], &(&1 || []))
       |> Keyword.update(:queues, [], &(&1 || []))
       |> Keyword.delete(:circuit_backoff)

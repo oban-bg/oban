@@ -1,4 +1,4 @@
-defmodule Oban.PostgresNotifier do
+defmodule Oban.Notifiers.Postgres do
   @doc """
   Postgres Listen/Notify based Notifier
 

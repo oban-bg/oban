@@ -20,7 +20,9 @@ defmodule Oban.ConfigTest do
       refute_valid(notifier: nil)
       refute_valid(notifier: Repo)
 
-      assert_valid(notifier: Oban.PostgresNotifier)
+      assert_valid(notifier: Oban.Notifiers.Postgres)
+
+      assert %Config{notifier: Oban.Notifiers.Postgres} = conf(notifier: Oban.PostgresNotifier)
     end
 
     test ":node is validated as a binary" do

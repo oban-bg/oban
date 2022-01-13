@@ -3,7 +3,7 @@ defmodule Oban.NotifierTest do
 
   alias Oban.Notifier
 
-  @opts [notifier: Oban.PostgresNotifier]
+  @opts [notifier: Oban.Notifiers.Postgres]
 
   describe "listen/notify" do
     test "notifying with complex types" do
