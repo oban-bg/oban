@@ -1,6 +1,13 @@
 defmodule Oban.Notifiers.Postgres do
-  @doc """
-  Postgres Listen/Notify based Notifier
+  @moduledoc """
+  Postgres Listen/Notify based Notifier.
+
+  ## Usage
+
+  Specify the `Postgres` notifier in your Oban configuration:
+
+      config :my_app, Oban,
+        notifier: Oban.Notifiers.Postgres
 
   ## Caveats
 
@@ -10,7 +17,8 @@ defmodule Oban.Notifiers.Postgres do
   in a separate transaction that's rolled back after the test completes. That means the
   transaction is never committed, which prevents delivering any notifications.
 
-  To test using notifications you must run Ecto without sandbox mode enabled.
+  To test using notifications you must run Ecto without sandbox mode enabled, or use
+  `Oban.Notifiers.PG` instead.
   """
 
   @behaviour Oban.Notifier
