@@ -102,7 +102,7 @@ defmodule Oban.Worker do
   When jobs fail they may be retried again in the future using a backoff algorithm. By default the
   backoff is exponential with a fixed padding of 15 seconds and a small amount of jitter. The
   jitter helps to prevent jobs that fail simultaneously from consistently retrying at the same
-  time. The default backoff is clamped to a maximum of 24 days, the equivalent of the 20th
+  time. The default backoff is clamped to a maximum of 12 days, the equivalent of the 20th
   attempt.
 
   If the default strategy is too aggressive or otherwise unsuited to your app's workload you can
