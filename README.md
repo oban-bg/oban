@@ -776,13 +776,12 @@ assert {:error, _} = perform_job(MyWorker, %{bad: :arg})
 See the `Oban.Testing` module for more details.
 
 ### Isolation
-If you are using isolation with namespaces through PostgreSQL schemas (Ecto "prefixes"), you can also specify this prefix when using `Oban.Testing`:
+
+If you are using isolation with namespaces through PostgreSQL schemas (Ecto "prefixes"), you can
+also specify this prefix when using `Oban.Testing`:
+
 ```elixir
 use Oban.Testing, repo: MyApp.Repo, prefix: "private"
-```
-
-More details on isolating Oban through PostgreSQL prefixes in [Isolation Section](#isolation).
-
 #### Caveats & Guidelines
 
 As noted in [Usage](#Usage), there are some guidelines for running tests:
