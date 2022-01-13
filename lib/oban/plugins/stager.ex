@@ -27,6 +27,7 @@ defmodule Oban.Plugins.Stager do
       distinct: 2,
       join: 5,
       limit: 2,
+      order_by: 2,
       select: 3,
       where: 3
     ]
@@ -109,6 +110,7 @@ defmodule Oban.Plugins.Stager do
       |> where([j], j.state in ["scheduled", "retryable"])
       |> where([j], not is_nil(j.queue))
       |> where([j], j.scheduled_at <= ^DateTime.utc_now())
+      |> order_by(asc: :id)
       |> limit(^state.limit)
 
     Repo.update_all(
