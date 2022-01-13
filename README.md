@@ -782,6 +782,8 @@ also specify this prefix when using `Oban.Testing`:
 
 ```elixir
 use Oban.Testing, repo: MyApp.Repo, prefix: "private"
+```
+
 #### Caveats & Guidelines
 
 As noted in [Usage](#Usage), there are some guidelines for running tests:
