@@ -296,21 +296,33 @@ defmodule Oban.Telemetry do
       details = Map.take(meta.job, ~w(attempt args id max_attempts meta queue tags worker)a)
 
       timing =
-        if event == :start do
-          %{event: "job:start", source: "oban", system_time: measure.system_time}
-        else
-          %{
-            event: "job:#{event}",
-            duration: System.convert_time_unit(measure.duration, :native, :microsecond),
-            queue_time: System.convert_time_unit(measure.queue_time, :native, :microsecond),
-            source: "oban",
-            state: meta.state
-          }
+        case event do
+          :start ->
+            %{system_time: measure.system_time}
+
+          :stop ->
+            %{
+              duration: convert(measure.duration),
+              queue_time: convert(measure.queue_time),
+              state: meta.state
+            }
+
+          :exception ->
+            %{
+              error: Exception.format_banner(meta.kind, meta.reason, meta.stacktrace),
+              duration: convert(measure.duration),
+              queue_time: convert(measure.queue_time),
+              state: meta.state
+            }
         end
 
       details
+      |> Map.put(:event, "job:#{event}")
+      |> Map.put(:source, "oban")
       |> Map.merge(timing)
       |> Jason.encode_to_iodata!()
     end)
   end
+
+  defp convert(value), do: System.convert_time_unit(value, :native, :microsecond)
 end

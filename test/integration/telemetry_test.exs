@@ -117,6 +117,7 @@ defmodule Oban.Integration.TelemetryTest do
     # Exception
     assert logged =~ ~s("event":"job:exception")
     assert logged =~ ~s("state":"failure")
+    assert logged =~ ~s|"error":"** (Oban.PerformError)|
   after
     :telemetry.detach("oban-default-logger")
   end
