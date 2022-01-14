@@ -17,7 +17,7 @@ defmodule Oban.Migrations.V08 do
 
     drop_if_exists index(:oban_jobs, [:queue, :state, :scheduled_at, :id], prefix: prefix)
 
-    create_if_not_exists index(:oban_jobs, [:queue, :state, :priority, :scheduled_at, :id],
+    create_if_not_exists index(:oban_jobs, [:state, :queue, :priority, :scheduled_at, :id],
                            prefix: prefix
                          )
 

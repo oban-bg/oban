@@ -46,7 +46,7 @@ defmodule Oban.Migrations.V09 do
     END$$;
     """
 
-    create_if_not_exists index(:oban_jobs, [:queue, :state, :priority, :scheduled_at, :id],
+    create_if_not_exists index(:oban_jobs, [:state, :queue, :priority, :scheduled_at, :id],
                            prefix: prefix
                          )
   end
