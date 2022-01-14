@@ -49,7 +49,9 @@ defmodule Oban.Integration.DrainingTest do
 
       insert!(ref: 1, action: "EXIT")
 
-      assert catch_exit(Oban.drain_queue(name, queue: :alpha, with_safety: false))
+      assert_raise Oban.CrashError, fn ->
+        Oban.drain_queue(name, queue: :alpha, with_safety: false)
+      end
 
       assert_received {:exit, 1}
     end

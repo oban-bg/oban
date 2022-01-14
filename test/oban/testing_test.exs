@@ -145,12 +145,18 @@ defmodule Oban.TestingTest do
 
     test "emitting appropriate telemetry events" do
       TelemetryHandler.attach_events("perform-job-handler")
-      assert :ok = perform_job(Worker, %{ref: 1, action: "OK"})
 
-      assert_receive {:event, :start, _measurements, %{args: args} = _meta}
-      assert %{"action" => "OK", "ref" => 1} = args
-      assert_receive {:event, :stop, _measurements, %{args: args} = _meta}
-      assert %{"action" => "OK", "ref" => 1} = args
+      assert :ok = perform_job(Worker, %{ref: 1, action: "OK"})
+      assert_receive {:event, :stop, _, %{job: %{args: %{"ref" => 1}}, state: :success}}
+
+      assert {:error, _} = perform_job(Worker, %{ref: 2, action: "ERROR"})
+      assert_receive {:event, :exception, _, %{job: %{args: %{"ref" => 2}}, state: :failure}}
+
+      assert_raise RuntimeError, fn ->
+        perform_job(Worker, %{ref: 3, action: "FAIL"})
+      end
+
+      assert_receive {:event, :exception, _, %{job: %{args: %{"ref" => 3}}, state: :failure}}
     after
       :telemetry.detach("perform-job-handler")
     end

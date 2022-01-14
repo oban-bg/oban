@@ -7,6 +7,8 @@ defmodule Oban.Queue.Executor do
 
   require Logger
 
+  @type state :: :discard | :failure | :success | :snoozed
+
   @type t :: %__MODULE__{
           conf: Config.t(),
           duration: pos_integer(),
@@ -21,7 +23,7 @@ defmodule Oban.Queue.Executor do
           safe: boolean(),
           snooze: pos_integer(),
           stacktrace: Exception.stacktrace(),
-          state: :unset | :discard | :exhausted | :failure | :success | :snoozed,
+          state: :unset | :exhausted | state(),
           timer: reference(),
           worker: Worker.t()
         }
@@ -63,7 +65,7 @@ defmodule Oban.Queue.Executor do
     %{exec | safe: value}
   end
 
-  @spec call(t()) :: t()
+  @spec call(t()) :: state()
   def call(%__MODULE__{} = exec) do
     exec =
       exec
@@ -75,7 +77,19 @@ defmodule Oban.Queue.Executor do
       |> record_finished()
       |> cancel_timeout()
 
-    Backoff.with_retry(fn -> report_finished(exec).state end)
+    complete = fn ->
+      exec
+      |> report_finished()
+      |> reraise_unsafe()
+
+      exec.state
+    end
+
+    if exec.safe do
+      Backoff.with_retry(complete)
+    else
+      complete.()
+    end
   end
 
   @spec record_started(t()) :: t()
@@ -112,23 +126,7 @@ defmodule Oban.Queue.Executor do
   end
 
   @spec perform(t()) :: t()
-  def perform(%__MODULE__{state: :unset} = exec) do
-    perform(exec, exec.safe)
-  end
-
-  defp perform(exec, true = _safe) do
-    perform(exec, false)
-  rescue
-    error ->
-      %{exec | state: :failure, error: error, stacktrace: __STACKTRACE__}
-  catch
-    kind, reason ->
-      error = CrashError.exception({kind, reason, __STACKTRACE__})
-
-      %{exec | state: :failure, error: error, stacktrace: __STACKTRACE__}
-  end
-
-  defp perform(%{worker: worker, job: job} = exec, _safe) do
+  def perform(%__MODULE__{job: job, state: :unset, worker: worker} = exec) do
     case worker.perform(job) do
       :ok ->
         %{exec | state: :success, result: :ok}
@@ -153,6 +151,14 @@ defmodule Oban.Queue.Executor do
 
         %{exec | state: :success, result: returned}
     end
+  rescue
+    error ->
+      %{exec | state: :failure, error: error, stacktrace: __STACKTRACE__}
+  catch
+    kind, reason ->
+      error = CrashError.exception({kind, reason, __STACKTRACE__})
+
+      %{exec | state: :failure, error: error, stacktrace: __STACKTRACE__}
   end
 
   @spec normalize_state(t()) :: t()
@@ -178,6 +184,13 @@ defmodule Oban.Queue.Executor do
 
     exec
   end
+
+  @spec reraise_unsafe(t()) :: t()
+  def reraise_unsafe(%__MODULE__{safe: false, stacktrace: [_ | _]} = exec) do
+    reraise exec.error, exec.stacktrace
+  end
+
+  def reraise_unsafe(exec), do: exec
 
   @spec report_finished(t()) :: t()
   def report_finished(%__MODULE__{} = exec) do

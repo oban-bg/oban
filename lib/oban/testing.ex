@@ -234,6 +234,7 @@ defmodule Oban.Testing do
       |> Executor.cancel_timeout()
       |> Executor.record_finished()
       |> Executor.emit_event()
+      |> Executor.reraise_unsafe()
       |> Map.fetch!(:result)
 
     assert_valid_result(result)
