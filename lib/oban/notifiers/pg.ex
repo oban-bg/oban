@@ -38,8 +38,6 @@ defmodule Oban.Notifiers.PG do
 
   alias Oban.Config
 
-  @pg_name Oban.Notifier
-
   defmodule State do
     @moduledoc false
 
@@ -132,15 +130,15 @@ defmodule Oban.Notifiers.PG do
 
   if Code.ensure_loaded?(:pg) do
     defp start_pg do
-      :pg.start_link(@pg_name)
+      :pg.start_link(__MODULE__)
     end
 
     defp members(prefix) do
-      :pg.get_members(@pg_name, prefix)
+      :pg.get_members(__MODULE__, prefix)
     end
 
     defp join(prefix) do
-      :ok = :pg.join(@pg_name, prefix, self())
+      :ok = :pg.join(__MODULE__, prefix, self())
     end
   else
     defp start_pg, do: :ok
@@ -154,7 +152,6 @@ defmodule Oban.Notifiers.PG do
 
       :ok = :pg2.create(namespace)
       :ok = :pg2.join(namespace, self())
-      :ok
     end
 
     defp namespace(prefix), do: {:oban, prefix}

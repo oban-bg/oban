@@ -1,7 +1,7 @@
 defmodule Oban.Integration.ControllingTest do
   use Oban.Case
 
-  alias Oban.{Connection, Registry}
+  alias Oban.Registry
 
   @moduletag :integration
 
@@ -19,8 +19,6 @@ defmodule Oban.Integration.ControllingTest do
     test "starting individual queues dynamically" do
       name = start_supervised_oban!(queues: [alpha: 9])
 
-      wait_for_notifier(name)
-
       assert :ok = Oban.start_queue(name, queue: :gamma, limit: 5, refresh_interval: 10)
       assert :ok = Oban.start_queue(name, queue: :delta, limit: 6, paused: true)
       assert :ok = Oban.start_queue(name, queue: :alpha, limit: 5)
@@ -35,9 +33,6 @@ defmodule Oban.Integration.ControllingTest do
     test "starting individual queues only on the local node" do
       name1 = start_supervised_oban!(queues: [])
       name2 = start_supervised_oban!(queues: [])
-
-      wait_for_notifier(name1)
-      wait_for_notifier(name2)
 
       assert :ok = Oban.start_queue(name1, queue: :alpha, limit: 1, local_only: true)
 
@@ -59,8 +54,6 @@ defmodule Oban.Integration.ControllingTest do
     test "stopping individual queues" do
       name = start_supervised_oban!(queues: [alpha: 5, delta: 5, gamma: 5])
 
-      wait_for_notifier(name)
-
       assert supervised_queue?(name, "delta")
       assert supervised_queue?(name, "gamma")
 
@@ -77,8 +70,6 @@ defmodule Oban.Integration.ControllingTest do
     test "stopping individual queues only on the local node" do
       name1 = start_supervised_oban!(queues: [alpha: 1])
       name2 = start_supervised_oban!(queues: [alpha: 1])
-
-      wait_for_notifier(name2)
 
       assert :ok = Oban.stop_queue(name2, queue: :alpha, local_only: true)
 
@@ -113,8 +104,6 @@ defmodule Oban.Integration.ControllingTest do
     test "pausing and resuming individual queues" do
       name = start_supervised_oban!(queues: [alpha: 5])
 
-      wait_for_notifier(name)
-
       assert :ok = Oban.pause_queue(name, queue: :alpha)
 
       with_backoff(fn ->
@@ -132,9 +121,6 @@ defmodule Oban.Integration.ControllingTest do
       name1 = start_supervised_oban!(queues: [alpha: 1])
       name2 = start_supervised_oban!(queues: [alpha: 1])
 
-      wait_for_notifier(name1)
-      wait_for_notifier(name2)
-
       assert :ok = Oban.pause_queue(name2, queue: :alpha, local_only: true)
 
       with_backoff(fn ->
@@ -146,9 +132,6 @@ defmodule Oban.Integration.ControllingTest do
     test "resuming queues only on the local node" do
       name1 = start_supervised_oban!(queues: [alpha: 1])
       name2 = start_supervised_oban!(queues: [alpha: 1])
-
-      wait_for_notifier(name1)
-      wait_for_notifier(name2)
 
       assert :ok = Oban.pause_queue(name1, queue: :alpha)
 
@@ -199,8 +182,6 @@ defmodule Oban.Integration.ControllingTest do
     test "scaling queues up" do
       name = start_supervised_oban!(queues: [alpha: 1])
 
-      wait_for_notifier(name)
-
       assert :ok = Oban.scale_queue(name, queue: :alpha, limit: 5)
 
       with_backoff(fn ->
@@ -213,8 +194,6 @@ defmodule Oban.Integration.ControllingTest do
       # `paused` verifies that other options are supported.
       name = start_supervised_oban!(queues: [alpha: 1])
 
-      wait_for_notifier(name)
-
       assert :ok = Oban.scale_queue(name, queue: :alpha, limit: 5, paused: true)
 
       with_backoff(fn ->
@@ -225,9 +204,6 @@ defmodule Oban.Integration.ControllingTest do
     test "scaling queues only on the local node" do
       name1 = start_supervised_oban!(queues: [alpha: 2])
       name2 = start_supervised_oban!(queues: [alpha: 2])
-
-      wait_for_notifier(name1)
-      wait_for_notifier(name2)
 
       assert :ok = Oban.scale_queue(name2, queue: :alpha, limit: 1, local_only: true)
 
@@ -308,9 +284,7 @@ defmodule Oban.Integration.ControllingTest do
   end
 
   test "dispatching jobs from a queue via database trigger" do
-    name = start_supervised_oban!(queues: [alpha: 5])
-
-    wait_for_notifier(name)
+    start_supervised_oban!(notifier: Oban.Notifiers.Postgres, queues: [alpha: 5])
 
     insert!(ref: 1, action: "OK")
 
@@ -366,14 +340,6 @@ defmodule Oban.Integration.ControllingTest do
     oban_name
     |> Registry.whereis({:producer, queue_name})
     |> is_pid()
-  end
-
-  defp wait_for_notifier(oban_name) do
-    with_backoff(fn ->
-      assert oban_name
-             |> Registry.via(Connection)
-             |> Connection.connected?()
-    end)
   end
 
   defp assert_invalid_opts(oban_name, function_name, opts) do

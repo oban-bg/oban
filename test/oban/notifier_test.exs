@@ -1,5 +1,5 @@
 defmodule Oban.NotifierTest do
-  use Oban.Case
+  use Oban.Case, async: true
 
   alias Oban.Notifier
 

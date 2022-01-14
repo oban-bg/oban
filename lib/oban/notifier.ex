@@ -81,8 +81,9 @@ defmodule Oban.Notifier do
   @doc false
   def child_spec(opts) do
     conf = Keyword.fetch!(opts, :conf)
+    opts = Keyword.put_new(opts, :name, conf.notifier)
 
-    %{id: __MODULE__, start: {conf.notifier, :start_link, [opts]}}
+    %{id: opts[:name], start: {conf.notifier, :start_link, [opts]}}
   end
 
   @doc """

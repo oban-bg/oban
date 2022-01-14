@@ -54,6 +54,7 @@ defmodule Oban.Case do
     opts =
       opts
       |> Keyword.put_new(:name, make_ref())
+      |> Keyword.put_new(:notifier, Oban.Notifiers.PG)
       |> Keyword.put_new(:repo, Repo)
       |> Keyword.put_new(:shutdown_grace_period, 1)
 
