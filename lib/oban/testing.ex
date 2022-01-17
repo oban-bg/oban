@@ -541,10 +541,15 @@ defmodule Oban.Testing do
   end
 
   defp create_job(changeset) do
-    now = DateTime.utc_now()
-
     changeset
+    |> default_to_now(:attempted_at)
+    |> default_to_now(:scheduled_at)
     |> Changeset.apply_action!(:insert)
-    |> Map.merge(%{attempted_at: now, scheduled_at: now})
+  end
+
+  defp default_to_now(changeset, field) do
+    value = Changeset.get_change(changeset, field) || DateTime.utc_now()
+
+    Changeset.put_change(changeset, field, value)
   end
 end

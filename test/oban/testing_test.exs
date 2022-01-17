@@ -72,6 +72,15 @@ defmodule Oban.TestingTest do
     end
   end
 
+  defmodule TemporalWorker do
+    use Oban.Worker
+
+    @impl Oban.Worker
+    def perform(%{attempted_at: attempted_at, scheduled_at: scheduled_at}) do
+      {:ok, {attempted_at, scheduled_at}}
+    end
+  end
+
   describe "perform_job/3" do
     test "verifying that the worker implements the Oban.Worker behaviour" do
       message = "worker to be a module that implements"
@@ -141,6 +150,16 @@ defmodule Oban.TestingTest do
     test "defaulting the number of attempts to mimic real execution" do
       assert {:ok, 1} = perform_job(AttemptDrivenWorker, %{})
       assert {:ok, 2} = perform_job(AttemptDrivenWorker, %{}, attempt: 2)
+    end
+
+    test "retaining attempted_at or scheduled_at timestamps" do
+      time = ~U[2020-02-20 00:00:00.000000Z]
+
+      assert {:ok, {attempted, scheduled}} =
+               perform_job(TemporalWorker, %{}, attempted_at: time, scheduled_at: time)
+
+      assert attempted == time
+      assert scheduled == time
     end
 
     test "emitting appropriate telemetry events" do
