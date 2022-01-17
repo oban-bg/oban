@@ -46,7 +46,7 @@ defmodule Oban.Plugins.Cron do
   use GenServer
 
   alias Oban.Cron.Expression
-  alias Oban.{Config, Job, Repo, Senator, Worker}
+  alias Oban.{Config, Job, Peer, Repo, Worker}
 
   @type cron_input :: {binary(), module()} | {binary(), module(), [Job.option()]}
 
@@ -209,7 +209,7 @@ defmodule Oban.Plugins.Cron do
   # Inserting Helpers
 
   defp check_leadership_and_insert_jobs(state) do
-    if Senator.leader?(state.conf) do
+    if Peer.leader?(state.conf) do
       Repo.transaction(state.conf, fn ->
         insert_jobs(state.conf, state.crontab, state.timezone)
       end)

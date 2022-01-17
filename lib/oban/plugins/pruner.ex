@@ -41,7 +41,7 @@ defmodule Oban.Plugins.Pruner do
 
   import Ecto.Query, only: [join: 5, limit: 2, or_where: 3, select: 2]
 
-  alias Oban.{Config, Job, Repo, Senator}
+  alias Oban.{Config, Job, Peer, Repo}
 
   @type option ::
           {:conf, Config.t()}
@@ -107,7 +107,7 @@ defmodule Oban.Plugins.Pruner do
   # Scheduling
 
   defp check_leadership_and_delete_jobs(state) do
-    if Senator.leader?(state.conf) do
+    if Peer.leader?(state.conf) do
       Repo.transaction(state.conf, fn ->
         delete_jobs(state.conf, state.max_age, state.limit)
       end)

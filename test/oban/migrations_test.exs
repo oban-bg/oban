@@ -60,6 +60,7 @@ defmodule Oban.MigrationsTest do
     end
 
     assert table_exists?("oban_jobs")
+    assert table_exists?("oban_peers")
     assert migrated_version() == current_version()
 
     Application.put_env(:oban, :down_version, 2)
@@ -72,6 +73,7 @@ defmodule Oban.MigrationsTest do
     assert :ok = Ecto.Migrator.down(Repo, @base_version + 1, StepMigration)
 
     refute table_exists?("oban_jobs")
+    refute table_exists?("oban_peers")
   after
     clear_migrated()
   end

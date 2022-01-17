@@ -20,4 +20,12 @@ defmodule Oban.Integration.ResiliencyTest do
       assert %{state: "completed"} = Repo.reload(job)
     end)
   end
+
+  defp mangle_jobs_table! do
+    Repo.query!("ALTER TABLE oban_jobs RENAME TO oban_missing")
+  end
+
+  defp reform_jobs_table! do
+    Repo.query!("ALTER TABLE oban_missing RENAME TO oban_jobs")
+  end
 end

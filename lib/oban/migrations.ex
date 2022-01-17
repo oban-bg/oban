@@ -60,9 +60,10 @@ defmodule Oban.Migrations do
     ...
   ```
 
-  In some cases, for example if your "private" schema already exists and your database user in production 
-  doesn't have permissions to create a new schema, trying to create the schema from the migration will result
-  in an error. In such situations, it may be useful to inhibit the creation of the "private" schema:
+  In some cases, for example if your "private" schema already exists and your database user in
+  production doesn't have permissions to create a new schema, trying to create the schema from the
+  migration will result in an error. In such situations, it may be useful to inhibit the creation
+  of the "private" schema:
 
   ```elixir
   defmodule MyApp.Repo.Migrations.AddPrefixedObanJobsTable do
@@ -80,7 +81,7 @@ defmodule Oban.Migrations do
   alias Oban.{Config, Repo}
 
   @initial_version 1
-  @current_version 10
+  @current_version 11
   @default_prefix "public"
 
   @doc """

@@ -24,22 +24,27 @@ defmodule Oban.Case do
       import Oban.Case
 
       alias Oban.Integration.Worker
-      alias Oban.{Config, Job}
+      alias Oban.{Config, Job, Peer}
       alias Repo
     end
   end
+
+  @delete_query """
+  DO $$BEGIN
+  DELETE FROM oban_jobs;
+  DELETE FROM oban_peers;
+  DELETE FROM private.oban_jobs;
+  DELETE FROM private.oban_peers;
+  END$$
+  """
 
   setup tags do
     # We are intentionally avoiding Sandbox mode for testing. Within Sandbox mode everything
     # happens in a transaction, which prevents the use of LISTEN/NOTIFY messages.
     if tags[:integration] do
-      Repo.delete_all(Job)
-      Repo.delete_all(Job, prefix: "private")
+      Repo.query!(@delete_query, [])
 
-      on_exit(fn ->
-        Repo.delete_all(Job)
-        Repo.delete_all(Job, prefix: "private")
-      end)
+      on_exit(fn -> Repo.query!(@delete_query, []) end)
     end
 
     {:ok, %{}}
@@ -105,13 +110,5 @@ defmodule Oban.Case do
       else
         reraise(exception, __STACKTRACE__)
       end
-  end
-
-  def mangle_jobs_table! do
-    Repo.query!("ALTER TABLE oban_jobs RENAME TO oban_missing")
-  end
-
-  def reform_jobs_table! do
-    Repo.query!("ALTER TABLE oban_missing RENAME TO oban_jobs")
   end
 end

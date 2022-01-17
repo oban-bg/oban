@@ -39,7 +39,7 @@ defmodule Oban.Plugins.Reindexer do
 
   use GenServer
 
-  alias Oban.{Config, Repo, Senator}
+  alias Oban.{Config, Peer, Repo}
   alias Oban.Cron.Expression
   alias Oban.Plugins.Cron
 
@@ -104,7 +104,7 @@ defmodule Oban.Plugins.Reindexer do
   # Reindexing
 
   defp check_leadership_and_reindex(state) do
-    if Senator.leader?(state.conf) do
+    if Peer.leader?(state.conf) do
       {:ok, datetime} = DateTime.now(state.timezone)
 
       if Expression.now?(state.schedule, datetime) do

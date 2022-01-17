@@ -47,7 +47,7 @@ defmodule Oban.Plugins.Lifeline do
 
   import Ecto.Query, only: [update: 3, where: 3]
 
-  alias Oban.{Config, Job, Repo, Senator}
+  alias Oban.{Config, Job, Peer, Repo}
 
   @type option ::
           {:conf, Config.t()}
@@ -115,7 +115,7 @@ defmodule Oban.Plugins.Lifeline do
   end
 
   defp check_leadership_and_rescue_jobs(state) do
-    if Senator.leader?(state.conf) do
+    if Peer.leader?(state.conf) do
       Repo.transaction(state.conf, fn ->
         time = DateTime.add(DateTime.utc_now(), -state.rescue_after, :millisecond)
 

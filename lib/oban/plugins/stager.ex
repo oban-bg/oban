@@ -32,7 +32,7 @@ defmodule Oban.Plugins.Stager do
       where: 3
     ]
 
-  alias Oban.{Config, Job, Notifier, Repo, Senator}
+  alias Oban.{Config, Job, Notifier, Peer, Repo}
 
   @type option :: {:conf, Config.t()} | {:name, GenServer.name()} | {:interval, pos_integer()}
 
@@ -91,7 +91,7 @@ defmodule Oban.Plugins.Stager do
   end
 
   defp check_leadership_and_stage(state) do
-    if Senator.leader?(state.conf) do
+    if Peer.leader?(state.conf) do
       Repo.transaction(state.conf, fn ->
         {sched_count, nil} = stage_scheduled(state)
 
