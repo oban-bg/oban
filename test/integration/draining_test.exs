@@ -10,8 +10,9 @@ defmodule Oban.Integration.DrainingTest do
     insert!(ref: 2, action: "FAIL")
     insert!(ref: 3, action: "OK")
     insert!(ref: 4, action: "SNOOZE")
+    insert!(%{ref: 5, action: "FAIL"}, max_attempts: 1)
 
-    assert %{failure: 1, snoozed: 1, success: 2} = Oban.drain_queue(name, queue: :alpha)
+    assert %{failure: 2, snoozed: 1, success: 2} == Oban.drain_queue(name, queue: :alpha)
 
     assert_received {:ok, 3}
     assert_received {:fail, 2}

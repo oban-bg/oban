@@ -8,6 +8,7 @@ defmodule Oban.Queue.Drainer do
 
   @infinite 100_000_000
 
+  @spec drain(Config.t(), [Oban.drain_option()]) :: Oban.drain_result()
   def drain(%Config{} = conf, [_ | _] = opts) do
     conf = %{conf | engine: BasicEngine}
 
@@ -44,6 +45,10 @@ defmodule Oban.Queue.Drainer do
           |> Executor.new(job)
           |> Executor.put(:safe, args.with_safety)
           |> Executor.call()
+          |> case do
+            :exhausted -> :failure
+            value -> value
+          end
 
         Map.update(acc, result, 1, &(&1 + 1))
       end)
