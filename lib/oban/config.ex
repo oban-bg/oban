@@ -47,10 +47,10 @@ defmodule Oban.Config do
       |> crontab_to_plugin()
       |> poll_interval_to_plugin()
       |> Keyword.put_new(:node, node_name())
-      |> Keyword.reject(&(&1 == {:notifier, Oban.PostgresNotifier}))
       |> Keyword.update(:plugins, [], &(&1 || []))
       |> Keyword.update(:queues, [], &(&1 || []))
       |> Keyword.delete(:circuit_backoff)
+      |> Enum.reject(&(&1 == {:notifier, Oban.PostgresNotifier}))
 
     Enum.each(opts, &validate_opt!/1)
 
