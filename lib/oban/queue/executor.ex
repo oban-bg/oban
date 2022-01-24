@@ -7,7 +7,7 @@ defmodule Oban.Queue.Executor do
 
   require Logger
 
-  @type state :: :discard | :failure | :success | :snoozed
+  @type state :: :discard | :exhausted | :failure | :success | :snoozed
 
   @type t :: %__MODULE__{
           conf: Config.t(),
@@ -23,7 +23,7 @@ defmodule Oban.Queue.Executor do
           safe: boolean(),
           snooze: pos_integer(),
           stacktrace: Exception.stacktrace(),
-          state: :unset | :exhausted | state(),
+          state: :unset | state(),
           timer: reference(),
           worker: Worker.t()
         }

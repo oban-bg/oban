@@ -55,6 +55,7 @@ defmodule Oban do
           | {:with_scheduled, boolean()}
 
   @type drain_result :: %{
+          discard: non_neg_integer(),
           failure: non_neg_integer(),
           snoozed: non_neg_integer(),
           success: non_neg_integer()
