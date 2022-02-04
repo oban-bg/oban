@@ -220,10 +220,11 @@ defmodule Oban.Config do
   end
 
   defp valid_plugin?({plugin, opts}) do
-    is_atom(plugin) and
-      Code.ensure_loaded?(plugin) and
-      function_exported?(plugin, :init, 1) and
-      Keyword.keyword?(opts)
+    unless is_atom(plugin) and Code.ensure_loaded?(plugin) do
+      raise ArgumentError, "plugin #{plugin} could not be found"
+    end
+  
+    function_exported?(plugin, :init, 1) and Keyword.keyword?(opts)
   end
 
   defp valid_plugin?(plugin), do: valid_plugin?({plugin, []})
