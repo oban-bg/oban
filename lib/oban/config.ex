@@ -159,11 +159,11 @@ defmodule Oban.Config do
   end
 
   defp validate_opt!({:plugins, plugins}) do
-    unless is_list(plugins) and Enum.all?(plugins, &valid_plugin?/1) do
-      raise ArgumentError,
-            "expected :plugins to be a list of modules or {module, keyword} tuples " <>
-              ", got: #{inspect(plugins)}"
+    unless is_list(plugins) do
+      raise ArgumentError, "expected :plugins to be a list, got #{inspect(plugins)}"
     end
+
+    Enum.each(plugins, &validate_plugin/1)
   end
 
   defp validate_opt!({:prefix, prefix}) do
@@ -219,14 +219,26 @@ defmodule Oban.Config do
     is_pos_integer(opts) or Keyword.keyword?(opts)
   end
 
-  defp valid_plugin?({plugin, opts}) do
-    is_atom(plugin) and
-      Code.ensure_loaded?(plugin) and
-      function_exported?(plugin, :init, 1) and
-      Keyword.keyword?(opts)
-  end
+  defp validate_plugin(plugin) when not is_tuple(plugin), do: validate_plugin({plugin, []})
 
-  defp valid_plugin?(plugin), do: valid_plugin?({plugin, []})
+  defp validate_plugin({plugin, opts}) do
+    unless is_atom(plugin) do
+      raise ArgumentError, "plugin #{inspect(plugin)} is not a valid module"
+    end
+
+    unless Code.ensure_loaded?(plugin) do
+      raise ArgumentError, "plugin #{plugin} could not be found"
+    end
+
+    unless function_exported?(plugin, :init, 1) do
+      raise ArgumentError,
+            "plugin #{plugin} is not a valid plugin because it does not provide an `init/1` function"
+    end
+
+    unless Keyword.keyword?(opts) do
+      raise ArgumentError, "expected options to be a keyword, got #{inspect(opts)}"
+    end
+  end
 
   defp parse_queues(queues) do
     for {name, value} <- queues do
