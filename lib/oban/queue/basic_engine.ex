@@ -382,7 +382,7 @@ defmodule Oban.Queue.BasicEngine do
   defp since_period(query, period) do
     since = DateTime.add(utc_now(), period * -1, :second)
 
-    where(query, [j], j.inserted_at > ^since)
+    where(query, [j], j.inserted_at >= ^since)
   end
 
   defp acquire_lock(conf, base_key) do
