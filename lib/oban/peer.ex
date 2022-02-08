@@ -1,4 +1,42 @@
 defmodule Oban.Peer do
+  @moduledoc """
+  The `Peer` module maintains leadership for a particular Oban instance within a cluster.
+
+  Leadership is used by plugins, primarily, to prevent duplicate work accross nodes. For example,
+  only the leader's `Cron` plugin will insert new jobs. You can use peer leadership to extend Oban
+  with custom plugins, or even within your own application.
+
+  Note a few important details about how peer leadership operates:
+
+  * Each Oban instances supervises a distinct `Oban.Peer` instance. That means that with multiple
+    Oban instances on the same node one instance may be the leader, while the others aren't.
+
+  * Leadership is coordinated through the `oban_peers` table in your database. It doesn't require
+    distributed Erlang or any other interconnectivity.
+
+  * Without leadership some plugins may not run on any node.
+
+  ## Examples
+
+  Check leadership for the default Oban instance:
+
+      Oban.Peer.leader?()
+      # => true
+
+  That is identical to using the name `Oban`:
+
+      Oban.Peer.leader?(Oban)
+      # => true
+
+  Check leadership for a couple of instances:
+
+      Oban.Peer.leader?(Oban.A)
+      # => true
+
+      Oban.Peer.leader?(Oban.B)
+      # => false
+  """
+
   use GenServer
 
   import Ecto.Query, only: [where: 3]
@@ -25,15 +63,37 @@ defmodule Oban.Peer do
     ]
   end
 
+  @doc """
+  Check whether the current instance leads the cluster.
+
+  ## Example
+
+  Check leadership for the default Oban instance:
+
+      Oban.Peer.leader?()
+      # => true
+
+  Check leadership for an alternate instance named `Oban.Private`:
+
+      Oban.Peer.leader?(Oban.Private)
+      # => true
+  """
   @spec leader?(Config.t() | GenServer.server()) :: boolean()
-  def leader?(%Config{name: name}) do
+  def leader?(name \\ Oban)
+
+  def leader?(%Config{name: name}), do: leader?(name)
+
+  def leader?(pid) when is_pid(pid) do
+    GenServer.call(pid, :leader?)
+  end
+
+  def leader?(name) do
     name
-    |> Registry.via(__MODULE__)
+    |> Registry.whereis(__MODULE__)
     |> leader?()
   end
 
-  def leader?(server), do: GenServer.call(server, :leader?)
-
+  @doc false
   @spec child_spec(Keyword.t()) :: Supervisor.child_spec()
   def child_spec(opts) do
     name = Keyword.get(opts, :name, __MODULE__)
@@ -43,6 +103,7 @@ defmodule Oban.Peer do
     |> Supervisor.child_spec(id: name)
   end
 
+  @doc false
   @spec start_link([option]) :: GenServer.on_start()
   def start_link(opts) do
     GenServer.start_link(__MODULE__, opts, name: opts[:name])

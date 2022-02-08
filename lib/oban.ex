@@ -15,7 +15,7 @@ defmodule Oban do
   alias Oban.Queue.{Drainer, Engine, Producer}
   alias Oban.Queue.Supervisor, as: QueueSupervisor
 
-  @type name :: term
+  @type name :: term()
 
   @type queue_name :: atom() | binary()
 
