@@ -7,6 +7,28 @@ defmodule Oban.Integration.TelemetryTest do
 
   @moduletag :integration
 
+  def handle_query(_event, _measure, meta, pid) do
+    send(pid, {:query, meta})
+  end
+
+  test "repo operations include the oban config" do
+    :telemetry.attach(
+      "repo-test",
+      [:oban, :test, :repo, :query],
+      &__MODULE__.handle_query/4,
+      self()
+    )
+
+    name = start_supervised_oban!(queues: [alpha: 2])
+    conf = Oban.config(name)
+
+    Oban.Repo.all(conf, Oban.Job)
+
+    assert_received {:query, %{options: [oban_conf: ^conf]}}
+  after
+    :telemetry.detach("repo-test")
+  end
+
   test "telemetry event is emitted for supervisor initialization" do
     TelemetryHandler.attach_events("init-handler")
 
