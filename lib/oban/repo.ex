@@ -210,6 +210,6 @@ defmodule Oban.Repo do
     opts
     |> Keyword.put(:log, conf.log)
     |> Keyword.put(:prefix, conf.prefix)
-    |> Keyword.put(:telemetry_options, [oban_conf: conf])
+    |> Keyword.put(:telemetry_options, oban_conf: conf)
   end
 end
