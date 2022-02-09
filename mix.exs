@@ -71,6 +71,7 @@ defmodule Oban.MixProject do
       "guides/writing_plugins.md",
       "guides/upgrading/v2.0.md",
       "guides/upgrading/v2.6.md",
+      "guides/upgrading/v2.11.md",
 
       # Recipes
       "guides/recipes/recursive-jobs.md",
