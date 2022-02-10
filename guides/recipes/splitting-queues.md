@@ -31,7 +31,7 @@ config :my_app, Oban,
 
 We will use an `OBAN_QUEUES` environment variable to override the queues at
 runtime. For illustration purposes the queue parsing all happens within the
-application module, but it would work equally well in `releases.exs`.
+application module, but it would work equally well in `releases.exs` (or `runtime.exs`).
 
 ```elixir
 defmodule MyApp.Application do
