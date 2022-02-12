@@ -8,11 +8,14 @@ defmodule Oban.Peer do
 
   Note a few important details about how peer leadership operates:
 
-  * Each Oban instances supervises a distinct `Oban.Peer` instance. That means that with multiple
-    Oban instances on the same node one instance may be the leader, while the others aren't.
-
   * Leadership is coordinated through the `oban_peers` table in your database. It doesn't require
     distributed Erlang or any other interconnectivity.
+
+  * Each peer checks for leadership at a 30 second interval. When the leader exits it broadcasts a
+    message to all other peers to encourage another one to assume leadership.
+
+  * Each Oban instances supervises a distinct `Oban.Peer` instance. That means that with multiple
+    Oban instances on the same node one instance may be the leader, while the others aren't.
 
   * Without leadership some plugins may not run on any node.
 
@@ -39,9 +42,9 @@ defmodule Oban.Peer do
 
   use GenServer
 
-  import Ecto.Query, only: [where: 3]
+  import Ecto.Query, only: [where: 2, where: 3]
 
-  alias Oban.{Backoff, Config, Registry, Repo}
+  alias Oban.{Backoff, Config, Notifier, Registry, Repo}
 
   require Logger
 
@@ -57,7 +60,7 @@ defmodule Oban.Peer do
       :conf,
       :name,
       :timer,
-      interval: :timer.seconds(30),
+      interval: :timer.seconds(15),
       leader?: false,
       leader_boost: 2
     ]
@@ -82,10 +85,7 @@ defmodule Oban.Peer do
   def leader?(name \\ Oban)
 
   def leader?(%Config{name: name}), do: leader?(name)
-
-  def leader?(pid) when is_pid(pid) do
-    GenServer.call(pid, :leader?)
-  end
+  def leader?(pid) when is_pid(pid), do: GenServer.call(pid, :leader?)
 
   def leader?(name) do
     name
@@ -123,23 +123,38 @@ defmodule Oban.Peer do
   end
 
   @impl GenServer
-  def terminate(_reason, %State{timer: timer}) do
+  def terminate(_reason, %State{timer: timer} = state) do
     if is_reference(timer), do: Process.cancel_timer(timer)
+
+    if state.leader? do
+      try do
+        Repo.transaction(state.conf, fn ->
+          delete_self(state)
+          notify_down(state)
+        end)
+      catch
+        :exit, _reason -> :ok
+      end
+    end
 
     :ok
   end
 
   @impl GenServer
   def handle_continue(:start, %State{} = state) do
+    Notifier.listen(state.conf.name, [:leader])
+
     handle_info(:election, state)
   end
 
   @impl GenServer
   def handle_info(:election, %State{} = state) do
-    state =
-      state
-      |> delete_expired_peers()
-      |> upsert_peer()
+    {:ok, state} =
+      Repo.transaction(state.conf, fn ->
+        state
+        |> delete_expired_peers()
+        |> upsert_peer()
+      end)
 
     {:noreply, schedule_election(state)}
   rescue
@@ -154,6 +169,14 @@ defmodule Oban.Peer do
       end
 
       {:noreply, schedule_election(%{state | leader?: false})}
+  end
+
+  def handle_info({:notification, :leader, %{"down" => name}}, %State{conf: conf} = state) do
+    if name == inspect(conf.name) do
+      {:noreply, schedule_election(%{state | interval: 0})}
+    else
+      {:noreply, state}
+    end
   end
 
   @impl GenServer
@@ -179,6 +202,16 @@ defmodule Oban.Peer do
     Repo.delete_all(conf, query)
 
     state
+  end
+
+  defp delete_self(%State{conf: conf}) do
+    query = where("oban_peers", name: ^inspect(conf.name), node: ^conf.node)
+
+    Repo.delete_all(conf, query)
+  end
+
+  defp notify_down(%State{conf: conf}) do
+    Notifier.notify(conf, :leader, %{down: inspect(conf.name)})
   end
 
   defp upsert_peer(%State{conf: conf} = state) do

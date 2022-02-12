@@ -3,29 +3,41 @@ defmodule Oban.PeerTest do
 
   import ExUnit.CaptureLog
 
-  alias Oban.{Config, Peer, Registry}
+  alias Oban.{Peer, Registry}
 
   @moduletag :integration
 
-  @opts [repo: Repo, name: Oban.PeerTest]
+  @opts [name: Oban.PeerTest, notifier: Oban.Notifiers.PG, plugins: false, repo: Repo]
 
-  test "only a single peer is leader" do
-    conf = Config.new(@opts)
+  setup do
+    name = start_supervised_oban!(@opts)
+    conf = Oban.config(name)
 
+    {:ok, conf: %{conf | plugins: [Oban.Plugins.Stager]}}
+  end
+
+  test "a single node acquires leadership" do
+    name =
+      @opts
+      |> Keyword.drop([:name, :plugins])
+      |> start_supervised_oban!()
+
+    assert Peer.leader?(name)
+  end
+
+  test "only a single peer is leader", %{conf: conf} do
     assert [_leader] =
              [A, B, C]
              |> Enum.map(&start_supervised!({Peer, conf: conf, name: &1}))
              |> Enum.filter(&Peer.leader?/1)
   end
 
-  test "leadership transfers to another peer when the leader exits" do
-    conf = Config.new(@opts)
-
-    peer_a = start_supervised!({Peer, conf: conf, interval: 20, name: Peer.A})
+  test "leadership transfers to another peer when the leader exits", %{conf: conf} do
+    peer_a = start_supervised!({Peer, conf: conf, name: Peer.A})
 
     Process.sleep(50)
 
-    peer_b = start_supervised!({Peer, conf: conf, interval: 20, name: Peer.B})
+    peer_b = start_supervised!({Peer, conf: conf, name: Peer.B})
 
     assert Peer.leader?(peer_a)
 
@@ -57,14 +69,6 @@ defmodule Oban.PeerTest do
     assert logged =~ "leadership is disabled"
   after
     reform_peers_table!()
-  end
-
-  test "a single node acquires leadership" do
-    name = start_supervised_oban!(plugins: [])
-
-    assert name
-           |> Oban.config()
-           |> Peer.leader?()
   end
 
   defp mangle_peers_table! do

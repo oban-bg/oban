@@ -10,11 +10,12 @@ defmodule Oban.Notifier do
 
   ## Channels
 
-  The notifier recognizes three predefined channels, each with a distinct responsibility:
+  The notifier recognizes four predefined channels, each with a distinct responsibility:
 
   * `gossip` — arbitrary communication between nodes or jobs are sent on the `gossip` channel
   * `insert` — as jobs are inserted into the database an event is published on the `insert`
     channel. Processes such as queue producers use this as a signal to dispatch new jobs.
+  * `leader` — messages regarding node leadership exchanged between peers
   * `signal` — instructions to take action, such as scale a queue or kill a running job, are sent
     through the `signal` channel.
 
@@ -62,7 +63,7 @@ defmodule Oban.Notifier do
 
   @type server :: GenServer.server()
   @type option :: {:name, module()} | {:conf, Config.t()}
-  @type channel :: :gossip | :insert | :signal
+  @type channel :: :gossip | :insert | :leader | :signal
 
   @doc "Starts a notifier"
   @callback start_link([option]) :: GenServer.on_start()
@@ -76,7 +77,7 @@ defmodule Oban.Notifier do
   @doc "Broadcast a notification in a channel"
   @callback notify(server(), channel :: channel(), payload :: [map()]) :: :ok
 
-  defguardp is_channel(channel) when channel in [:gossip, :insert, :signal]
+  defguardp is_channel(channel) when channel in [:gossip, :insert, :leader, :signal]
 
   @doc false
   def child_spec(opts) do
@@ -103,11 +104,11 @@ defmodule Oban.Notifier do
 
   Listen for messages on all channels:
 
-      Oban.Notifier.listen([:gossip, :insert, :signal])
+      Oban.Notifier.listen([:gossip, :insert, :leader, :signal])
 
   Listen for messages when using a custom Oban name:
 
-      Oban.Notifier.listen(MyApp.MyOban, [:gossip, :insert, :signal])
+      Oban.Notifier.listen(MyApp.MyOban, [:gossip, :signal])
   """
   @spec listen(server(), [channel]) :: :ok
   def listen(server \\ Oban, channels) when is_list(channels) do
