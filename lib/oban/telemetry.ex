@@ -211,6 +211,7 @@ defmodule Oban.Telemetry do
   * `attempt` — the job's execution atttempt
   * `duration` — the job's runtime duration, in the native time unit
   * `event` — either `job:stop` or `job:exception` depending on reporting telemetry event
+  * `error` — a formatted error banner, without the extended stacktrace
   * `id` — the job's id
   * `meta` — a map of the job's raw metadata
   * `queue` — the job's queue

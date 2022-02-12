@@ -142,7 +142,7 @@ Learn more about licensing Oban Web+Pro at [getoban.pro](https://getoban.pro).
 
 ## Requirements
 
-Running Oban requires Elixir 1.10+, Erlang 21+, and PostgreSQL 10.0+.
+Running Oban requires Elixir 1.11+, Erlang 21+, and PostgreSQL 10.0+.
 
 ## Installation
 
