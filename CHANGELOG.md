@@ -3,7 +3,7 @@
 _🌟 Looking for changes to Web or Pro? Check the [Oban.Pro Changelog][opc] or
 the [Oban.Web Changelog][owc]. 🌟_
 
-Oban v2.11 requires Elixir v1.11+ and Postgres v10.0+
+Oban v2.11 requires a v11 migration, Elixir v1.11+ and Postgres v10.0+
 
 [Oban v2.11 Upgrade Guide][upg]
 
@@ -155,7 +155,7 @@ Now, here's an sample where the job has encountered an error:
 }
 ```
 
-## 2.11.0 — Unreleased
+## 2.11.0 — 2022-02-13
 
 ### Enhancements
 
