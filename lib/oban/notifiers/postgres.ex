@@ -60,7 +60,7 @@ defmodule Oban.Notifiers.Postgres do
     conn_opts =
       conf
       |> Repo.config()
-      |> Keyword.put_new(:name, name)
+      |> Keyword.put(:name, name)
       |> Keyword.put_new(:auto_reconnect, true)
       |> Keyword.put_new(:sync_connect, false)
 
