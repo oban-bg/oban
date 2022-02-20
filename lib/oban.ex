@@ -348,7 +348,7 @@ defmodule Oban do
   exceptions and crashes are _not_ bubbled up to the calling process.
 
   If you expect jobs to fail, would like to track failures, or need to check for specific errors
-  you can pass the `with_safety: false` flag.
+  you can pass the `with_safety: false` flag. See the "Options" section below for more details.
 
   ## Scheduled Jobs
 
@@ -359,10 +359,16 @@ defmodule Oban do
   ## Options
 
   * `:queue` - a string or atom specifying the queue to drain, required
+
   * `:with_limit` — the maximum number of jobs to drain at once. When recursion is enabled this is
     how many jobs are processed per-iteration.
+
   * `:with_recursion` — whether to keep draining a queue repeatedly when jobs insert _more_ jobs
-  * `:with_safety` — whether to silently catch errors when draining, default `true`
+
+  * `:with_safety` — whether to silently catch errors when draining, defaults to `true`. When
+  `false`, raised exceptions or unhandled exits are reraised (unhandled exits are wrapped in
+  `Oban.CrashError`). Note that error tuples count as a failure, but they aren't raised.
+
   * `:with_scheduled` — whether to include any scheduled jobs when draining, default `false`
 
   ## Example
