@@ -41,11 +41,12 @@ defmodule Oban.Plugins.Lifeline do
   event:
 
   * `:rescued_count` — the number of jobs transitioned back to `available`
+  * `:discarded_count` — the number of jobs transitioned to `discarded`
   """
 
   use GenServer
 
-  import Ecto.Query, only: [update: 3, where: 3]
+  import Ecto.Query, only: [where: 3]
 
   alias Oban.{Config, Job, Peer, Repo}
 
@@ -65,16 +66,6 @@ defmodule Oban.Plugins.Lifeline do
       interval: :timer.minutes(1),
       rescue_after: :timer.minutes(60)
     ]
-  end
-
-  defmacrop rescued_state(attempt, max_attempts) do
-    quote do
-      fragment(
-        "(CASE WHEN ? < ? THEN 'available' ELSE 'discarded' END)::oban_job_state",
-        unquote(attempt),
-        unquote(max_attempts)
-      )
-    end
   end
 
   @doc false
@@ -103,8 +94,13 @@ defmodule Oban.Plugins.Lifeline do
 
     :telemetry.span([:oban, :plugin], meta, fn ->
       case check_leadership_and_rescue_jobs(state) do
-        {:ok, {rescued_count, _}} when is_integer(rescued_count) ->
-          {:ok, Map.put(meta, :rescued_count, rescued_count)}
+        {:ok, {rescued_count, discarded_count}} when is_integer(rescued_count) ->
+          meta =
+            meta
+            |> Map.put(:rescued_count, rescued_count)
+            |> Map.put(:discarded_count, discarded_count)
+
+          {:ok, meta}
 
         error ->
           {:error, Map.put(meta, :error, error)}
@@ -114,26 +110,43 @@ defmodule Oban.Plugins.Lifeline do
     {:noreply, schedule_rescue(state)}
   end
 
-  defp check_leadership_and_rescue_jobs(state) do
-    if Peer.leader?(state.conf) do
-      Repo.transaction(state.conf, fn ->
-        time = DateTime.add(DateTime.utc_now(), -state.rescue_after, :millisecond)
-
-        query =
-          Job
-          |> where([j], j.state == "executing" and j.attempted_at < ^time)
-          |> update([j], set: [state: rescued_state(j.attempt, j.max_attempts)])
-
-        Repo.update_all(state.conf, query, [])
-      end)
-    else
-      {:ok, 0}
-    end
-  end
+  # Scheduling
 
   defp schedule_rescue(state) do
     timer = Process.send_after(self(), :rescue, state.interval)
 
     %{state | timer: timer}
+  end
+
+  # Rescuing
+
+  defp check_leadership_and_rescue_jobs(state) do
+    if Peer.leader?(state.conf) do
+      Repo.transaction(state.conf, fn ->
+        time = DateTime.add(DateTime.utc_now(), -state.rescue_after, :millisecond)
+        base = where(Job, [j], j.state == "executing" and j.attempted_at < ^time)
+
+        {rescued_count, _} = transition_available(base, state)
+        {discard_count, _} = transition_discarded(base, state)
+
+        {rescued_count, discard_count}
+      end)
+    else
+      {:ok, 0, 0}
+    end
+  end
+
+  defp transition_available(query, state) do
+    Repo.update_all(
+      state.conf,
+      where(query, [j], j.attempt < j.max_attempts),
+      set: [state: "available"]
+    )
+  end
+
+  defp transition_discarded(query, state) do
+    Repo.update_all(state.conf, where(query, [j], j.attempt >= j.max_attempts),
+      set: [state: "discarded", discarded_at: DateTime.utc_now()]
+    )
   end
 end
