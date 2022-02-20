@@ -48,6 +48,8 @@ defmodule Oban.Plugins.Cron do
   alias Oban.Cron.Expression
   alias Oban.{Config, Job, Peer, Repo, Worker}
 
+  @opaque expression :: Expression.t()
+
   @type cron_input :: {binary(), module()} | {binary(), module(), [Job.option()]}
 
   @type option ::
@@ -68,6 +70,7 @@ defmodule Oban.Plugins.Cron do
     ]
   end
 
+  @doc false
   @spec start_link([option()]) :: GenServer.on_start()
   def start_link(opts) do
     validate!(opts)
@@ -79,6 +82,51 @@ defmodule Oban.Plugins.Cron do
   @spec validate!(Keyword.t()) :: :ok
   def validate!(opts) when is_list(opts) do
     Enum.each(opts, &validate_opt!/1)
+  end
+
+  @doc """
+  Parse a crontab expression into a cron struct.
+
+  This is provided as a convenience for validating and testing cron expressions. As such, the cron
+  struct itself is opaque and the internals may change at any time.
+
+  The parser can handle common expressions that use minutes, hours, days, months and weekdays,
+  along with ranges and steps. It also supports common extensions, also called nicknames.
+
+  Returns `{:error, %ArgumentError{}}` with a detailed error if the expression cannot be parsed.
+
+  ## Nicknames
+
+  The following special nicknames are supported in addition to standard cron expressions:
+
+    * `@yearly`—Run once a year, "0 0 1 1 *"
+    * `@annually`—Same as `@yearly`
+    * `@monthly`—Run once a month, "0 0 1 * *"
+    * `@weekly`—Run once a week, "0 0 * * 0"
+    * `@daily`—Run once a day, "0 0 * * *"
+    * `@midnight`—Same as `@daily`
+    * `@hourly`—Run once an hour, "0 * * * *"
+    * `@reboot`—Run once at boot
+
+  ## Examples
+
+      iex> Oban.Plugins.Cron.parse("@hourly")
+      {:ok, #Oban.Cron.Expression<...>}
+
+      iex> Oban.Plugins.Cron.parse("0 * * * *")
+      {:ok, #Oban.Cron.Expression<...>}
+
+      iex> Oban.Plugins.Cron.parse("60 * * * *")
+      {:error, %ArgumentError{message: "expression field 60 is out of range 0..59"}}
+  """
+  @spec parse(input :: binary()) :: {:ok, expression()} | {:error, Exception.t()}
+  def parse(input) when is_binary(input) do
+    expression = Expression.parse!(input)
+
+    {:ok, expression}
+  rescue
+    error in [ArgumentError] ->
+      {:error, error}
   end
 
   @doc false

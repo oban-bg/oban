@@ -1,6 +1,7 @@
 defmodule Oban.Plugins.CronTest do
   use Oban.Case
 
+  alias Oban.Cron.Expression
   alias Oban.Plugins.Cron
   alias Oban.{Job, PluginTelemetryHandler, Registry}
 
@@ -62,6 +63,18 @@ defmodule Oban.Plugins.CronTest do
       assert_valid(timezone: "Etc/UTC")
       assert_valid(timezone: "Europe/Copenhagen")
       assert_valid(timezone: "America/Chicago")
+    end
+  end
+
+  describe "parse/1" do
+    test "returning valid expressions in a success tuple" do
+      {:ok, %Expression{}} = Cron.parse("0 0 1 * *")
+    end
+
+    test "wrapping invalid expressions in an error tuple" do
+      {:error, %ArgumentError{message: message}} = Cron.parse("60 24 13 * *")
+
+      assert message =~ "expression field 60 is out of range 0..59"
     end
   end
 

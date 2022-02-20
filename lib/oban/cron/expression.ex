@@ -37,9 +37,6 @@ defmodule Oban.Cron.Expression do
     "DEC" => "12"
   }
 
-  @doc """
-  Evaluate whether a cron struct overlaps with the current date time.
-  """
   @spec now?(cron :: t(), datetime :: DateTime.t()) :: boolean()
   def now?(cron, datetime \\ DateTime.utc_now())
 
@@ -65,36 +62,6 @@ defmodule Oban.Cron.Expression do
     |> Integer.mod(7)
   end
 
-  @doc """
-  Parses a crontab expression into a %Cron{} struct.
-
-  The parser can handle common expressions that use minutes, hours, days, months and weekdays,
-  along with ranges and steps. It also supports common extensions, also called nicknames.
-
-  Raises an `ArgumentError` if the expression cannot be parsed.
-
-  ## Nicknames
-
-  - @yearly: Run once a year, "0 0 1 1 *".
-  - @annually: same as @yearly
-  - @monthly: Run once a month, "0 0 1 * *".
-  - @weekly: Run once a week, "0 0 * * 0".
-  - @daily: Run once a day, "0 0 * * *".
-  - @midnight: same as @daily
-  - @hourly: Run once an hour, "0 * * * *".
-  - @reboot: Run once at boot
-
-  ## Examples
-
-      iex> parse!("@hourly")
-      %Cron{}
-
-      iex> parse!("0 * * * *")
-      %Cron{}
-
-      iex> parse!("60 * * * *")
-      ** (ArgumentError)
-  """
   @spec parse!(input :: binary()) :: t()
   def parse!("@annually"), do: parse!("0 0 1 1 *")
   def parse!("@yearly"), do: parse!("0 0 1 1 *")
