@@ -2,11 +2,32 @@ defmodule Oban.Plugins.Repeater do
   @moduledoc """
   Repeatedly send inserted messages to all registered producers to simulate polling.
 
-  This plugin is only necessary if you're running Oban in an environment where Postgres
-  notifications don't work, notably one of:
+  ⚠️ This plugin is a **last resort** and only necessary if you're running Oban in an environment
+  where neither Postgres nor PG notifications work. That situation should be rare, and limited to
+  the following conditions:
 
-  * Using a database connection pooler in transaction mode, i.e. pg_bouncer.
-  * Integration testing within the Ecto sandbox, i.e. developing Oban plugins
+  1. Running with a database connection pooler, i.e. pg_bouncer, in transaction mode
+  2. Running without clustering, .i.e. distributed Erlang
+
+  If **both** of those criteria apply and PubSub notifications won't work at all, then the
+  Repeater will force local queues to poll for jobs.
+
+  Note that the Repeater plugin won't enable other PubSub based functionality like pausing,
+  scaling, starting, and stopping queues.
+
+  ## Using the Plugin
+
+  Tell all local, idle queues to poll for jobs every one second:
+
+      config :my_app, Oban,
+        plugins: [Oban.Plugins.Repeater],
+        ...
+
+  Override the default interval and poll every 30 seconds:
+
+      config :my_app, Oban,
+        plugins: [{Oban.Plugins.Repeater, interval: :timer.seconds(30)],
+        ...
 
   ## Options
 

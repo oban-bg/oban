@@ -8,20 +8,29 @@ Using PG Bouncer's "Transaction Pooling" setup disables all of PostgreSQL's
 `LISTEN` and `NOTIFY` activity. Some functionality, such as triggering job
 execution, scaling queues, canceling jobs, etc. rely on those notifications.
 
-To ensure full functionality you must use a Repo that connects directly to the
-database, or use another mode like "Session Pooling" if possible.
+There are several options available to ensure functional notifications:
 
-If you **must** use "Transaction Pooling" you can use the [Repeater][repe]
-plugin to ensure that queues keep processing jobs:
+1. Switch to the `Oban.Notifiers.PG` notifier. This alternative notifier relies
+   on Distributed Erlang and exchanges messages within a cluster. The only
+   drawback to the PG notifier is that it doesn't trigger job insertion events.
+
+2. Switch `pg_bouncer` to "Session Pooling". Session pooling isn't as resource
+   efficient as transaction pooling, but it retains all Postgres functionality.
+
+3. Use a dedicated Repo that connects directly to the database, bypassing
+   `pg_bouncer`.
+
+If none of those options work, you can use the [Repeater][repe] plugin to ensure
+that queues keep processing jobs:
 
 ```elixir
 config :my_app, Oban,
-  plugins: [Oban.Plugins.Pruner, Oban.Plugins.Stager, Oban.Plugins.Repeater],
+  plugins: [Oban.Plugins.Repeater],
   ...
 ```
 
 _Note: The Repeater plugin keeps jobs processing, it will not facilitate other
-notification based functionality, e.g. scaling queues._
+notification based functionality, e.g. pausing, scaling, or starting queues._
 
 [repe]: Oban.Plugins.Repeater.html
 
