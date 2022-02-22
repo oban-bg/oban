@@ -182,7 +182,7 @@ defmodule Oban.Config do
   end
 
   defp validate_opt!({:repo, repo}) do
-    unless Code.ensure_loaded?(repo) and function_exported?(repo, :__adapter__, 0) do
+    unless Code.ensure_loaded?(repo) and function_exported?(repo, :config, 0) do
       raise ArgumentError,
             "expected :repo to be an Ecto.Repo, got: #{inspect(repo)}"
     end
