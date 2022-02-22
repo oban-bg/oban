@@ -42,7 +42,7 @@ defmodule Oban.MixProject do
         source_url: @source_url,
         extra_section: "GUIDES",
         formatters: ["html"],
-        extras: extras() ++ pro_extras() ++ web_extras(),
+        extras: extras(),
         groups_for_extras: groups_for_extras(),
         groups_for_modules: groups_for_modules(),
         skip_undefined_reference_warnings_on: ["CHANGELOG.md"]
@@ -82,51 +82,11 @@ defmodule Oban.MixProject do
     ]
   end
 
-  defp pro_extras do
-    if File.exists?("../oban_pro") do
-      [
-        "../oban_pro/guides/pro/overview.md": [filename: "pro_overview"],
-        "../oban_pro/CHANGELOG.md": [filename: "pro-changelog", title: "Changelog"],
-        "../oban_pro/guides/pro/installation.md": [filename: "pro_installation"],
-        "../oban_pro/guides/queue/smart_engine.md": [title: "Smart Engine"],
-        "../oban_pro/guides/pro/worker.md": [filename: "pro_worker"],
-        "../oban_pro/guides/plugins/dynamic_cron.md": [title: "Dynamic Cron Plugin"],
-        "../oban_pro/guides/plugins/dynamic_pruner.md": [title: "Dynamic Pruner Plugin"],
-        "../oban_pro/guides/plugins/dynamic_queues.md": [title: "Dynamic Queues Plugin"],
-        "../oban_pro/guides/plugins/dynamic_lifeline.md": [title: "Dynamic Lifeline Plugin"],
-        "../oban_pro/guides/plugins/relay.md": [title: "Relay Plugin"],
-        "../oban_pro/guides/plugins/reprioritizer.md": [title: "Reprioritizer Plugin"],
-        "../oban_pro/guides/workers/batch.md": [title: "Batch Worker"],
-        "../oban_pro/guides/workers/chunk.md": [title: "Chunk Worker"],
-        "../oban_pro/guides/workers/workflow.md": [title: "Workflow Worker"]
-      ]
-    else
-      []
-    end
-  end
-
-  defp web_extras do
-    if File.exists?("../oban_web") do
-      [
-        "../oban_web/guides/web/overview.md": [filename: "web_overview"],
-        "../oban_web/CHANGELOG.md": [filename: "web-changelog", title: "Changelog"],
-        "../oban_web/guides/web/installation.md": [filename: "web_installation"],
-        "../oban_web/guides/web/customizing.md": [filename: "web_customizing"],
-        "../oban_web/guides/web/searching.md": [filename: "searching"],
-        "../oban_web/guides/web/telemetry.md": [filename: "web_telemetry"]
-      ]
-    else
-      []
-    end
-  end
-
   defp groups_for_extras do
     [
       Guides: ~r{guides/[^\/]+\.md},
       Recipes: ~r{guides/recipes/.?},
-      "Upgrade Guides": ~r{guides/upgrading/.*},
-      "🌟 Oban Pro": ~r{oban_pro/.?},
-      "🧭 Oban Web": ~r{oban_web/.?}
+      "Upgrade Guides": ~r{guides/upgrading/.*}
     ]
   end
 
@@ -179,7 +139,7 @@ defmodule Oban.MixProject do
       {:benchee, "~> 1.0", only: [:test, :dev], runtime: false},
       {:credo, "~> 1.6", only: [:test, :dev], runtime: false},
       {:dialyxir, "~> 1.0", only: [:test, :dev], runtime: false},
-      {:ex_doc, "~> 0.20", only: [:test, :dev], runtime: false, github: "elixir-lang/ex_doc"}
+      {:ex_doc, "~> 0.28", only: [:test, :dev], runtime: false}
     ]
   end
 
