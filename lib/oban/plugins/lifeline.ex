@@ -10,11 +10,11 @@ defmodule Oban.Plugins.Lifeline do
   If an executing job has exhausted all attempts, the Lifeline plugin will mark it `discarded`
   rather than `available`.
 
-  _🌟 This plugin may transition jobs that are genuinely `executing` and cause duplicate
-  execution. For more accurate rescuing or to rescue jobs that have exhausted retry attempts see
-  the `DynamicLifeline` plugin in [Oban Pro][pro]._
-
-  [pro]: dynamic_lifeline.html
+  > #### 🌟 DynamicLifeline {: .info}
+  >
+  > This plugin may transition jobs that are genuinely `executing` and cause duplicate execution.
+  > For more accurate rescuing or to rescue jobs that have exhausted retry attempts see the
+  > `DynamicLifeline` plugin in [Oban Pro](dynamic_lifeline.html).
 
   ## Using the Plugin
 

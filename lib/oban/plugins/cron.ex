@@ -2,6 +2,15 @@ defmodule Oban.Plugins.Cron do
   @moduledoc """
   Periodically enqueue jobs through CRON based scheduling.
 
+  This plugin registers workers a cron-like schedule and enqueues jobs automatically. Periodic
+  jobs are declared as a list of `{cron, worker}` or `{cron, worker, options}` tuples.
+
+  > #### 🌟 DynamicCron {: .info}
+  >
+  > This plugin only loads the crontab statically, at boot time. To configure cron schedules
+  > dynamically at runtime, across your entire cluster, see the `DynamicCron` plugin in [Oban
+  > Pro](dynamic_cron.html).
+
   ## Using the Plugin
 
   Schedule various jobs using `{expr, worker}` and `{expr, worker, opts}` syntaxes:
@@ -17,12 +26,6 @@ defmodule Oban.Plugins.Cron do
              {"@daily", MyApp.AnotherDailyWorker}
            ]}
         ]
-
-  _🌟 This plugin only loads the crontab statically, at boot time. To configure cron schedules
-  dynamically at runtime, across your entire cluster, see the `DynamicCron` plugin in [Oban
-  Pro][pro]._
-
-  [pro]: dynamic_cron.html
 
   ## Options
 
