@@ -34,6 +34,24 @@ notification based functionality, e.g. pausing, scaling, or starting queues._
 
 [repe]: Oban.Plugins.Repeater.html
 
+## Unexpectedly Re-running All Migrations
+
+Without a version comment on the `oban_jobs` table, it will rerun all of the
+migrations. This can happen when comments are stripped when restoring from a
+backup, most commonly during a transition from one database to another.
+
+The fix is to set the latest migrated version as a comment. To start, search
+through your previous migrations and find the last time you ran an Oban
+migration. Once you've found the latest version, e.g. `version: 10`, then you
+can set that as a comment on the `oban_jobs` table:
+
+```sql
+COMMENT ON TABLE public.oban_jobs IS '10'"
+```
+
+Once the comment is in place only the migrations from that version onward will
+run.
+
 ## Heroku
 
 ### Elixir and Erlang Versions
