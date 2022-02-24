@@ -155,6 +155,28 @@ Now, here's an sample where the job has encountered an error:
 }
 ```
 
+## 2.11.1 — 2022-02-24
+
+### Enhancements
+
+- [Oban] Validate the configured `repo` by checking for `config/0`, rather than
+  the more obscure `__adapter__/0` callback. This change improves integration
+  with Repo wrappers such as `fly_postgres`.
+
+- [Cron] Expose `parse/1` to facilitate testing that cron expressions are valid
+  and usable in a crontab.
+
+### Bug Fixes
+
+- [Notifier.Postgres] Overwrite configured repo name when configuring the
+  long-lived Postgres connection.
+
+- [Lifeline] Fix rescuing when using a custom prefix. The previous
+  implementation assumed that there was an `oban_jobs_state` enum in the public
+  prefix.
+
+- [Lifeline] Set `discarded_at` when discarding exhausted jobs.
+
 ## 2.11.0 — 2022-02-13
 
 ### Enhancements
