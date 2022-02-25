@@ -214,7 +214,7 @@ defmodule Oban.Notifiers.Postgres do
 
   @impl Simple
   def handle_result(_results, %State{from: from} = state) do
-    Simple.reply(from, :ok)
+    from && Simple.reply(from, :ok)
 
     {:noreply, %{state | from: nil}}
   end
