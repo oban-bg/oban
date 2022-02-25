@@ -155,6 +155,31 @@ Now, here's an sample where the job has encountered an error:
 }
 ```
 
+## 2.11.2 — 2022-02-25
+
+### Bug Fixes
+
+- [Peer] Retain election schedule timing after a peer shuts down.
+
+  A bug in the Peer module's "down" handler overwrote the election scheduling
+  interval to `0`. As soon as the leader crashed all other peers in the cluster
+  would start trying to acquire leadership as fast as possible. That caused
+  excessive database load and churn.
+
+  In addition to the interval fix, this expands the scheduling interval to 30s,
+  and warns on any unknown messages to aid debugging in the future.
+
+- [Notifier.Postgres] Prevent crashing after reconnect.
+
+  The `handle_result` callback no longer sends an errorneous reply after a
+  disconnection.
+
+- [Job] Guard against typos and unknown options passed to `new/2`. Passing an
+  unrecognized option, such as `:scheduled_in` instead of `:schedule_in`, will
+  make a job invalid with a helpful base error.
+
+  Previously, passing an unknown option was silently ignored without any warning.
+
 ## 2.11.1 — 2022-02-24
 
 ### Enhancements
