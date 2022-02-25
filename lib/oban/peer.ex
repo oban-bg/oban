@@ -60,7 +60,7 @@ defmodule Oban.Peer do
       :conf,
       :name,
       :timer,
-      interval: :timer.seconds(15),
+      interval: :timer.seconds(30),
       leader?: false,
       leader_boost: 2
     ]
@@ -173,10 +173,16 @@ defmodule Oban.Peer do
 
   def handle_info({:notification, :leader, %{"down" => name}}, %State{conf: conf} = state) do
     if name == inspect(conf.name) do
-      {:noreply, schedule_election(%{state | interval: 0})}
+      handle_info(:election, state)
     else
       {:noreply, state}
     end
+  end
+
+  def handle_info(message, state) do
+    Logger.warn("Received unexpected message: #{inspect(message)}")
+
+    {:noreply, state}
   end
 
   @impl GenServer
