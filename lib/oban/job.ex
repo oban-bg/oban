@@ -154,6 +154,8 @@ defmodule Oban.Job do
     worker
   )a
 
+  @virtual_params ~w(replace replace_args schedule_in unique)a
+
   @required_params ~w(worker args)a
 
   @replace_options ~w(args max_attempts meta priority queue scheduled_at tags worker)a
@@ -170,10 +172,10 @@ defmodule Oban.Job do
       other jobs in the same queue. The lower the number, the higher priority the job.
     * `:queue` — a named queue to push the job into. Jobs may be pushed into any queue, regardless
       of whether jobs are currently being processed for the queue.
-    * `:schedule_in` - the number of seconds until the job should be executed or a tuple containing
-      a number and unit
     * `:replace` - a list of keys to replace on a unique conflict
     * `:scheduled_at` - a time in the future after which the job should be executed
+    * `:schedule_in` - the number of seconds until the job should be executed or a tuple containing
+      a number and unit
     * `:tags` — a list of tags to group and organize related jobs, i.e. to identify scheduled jobs
     * `:unique` — a keyword list of options specifying how uniqueness will be calculated. The
       options define which fields will be used, for how long, with which keys, and for which states.
@@ -242,6 +244,7 @@ defmodule Oban.Job do
 
     %__MODULE__{}
     |> cast(params, @permitted_params)
+    |> validate_keys(params, @permitted_params ++ @virtual_params)
     |> validate_required(@required_params)
     |> put_scheduling(params[:schedule_in])
     |> put_uniqueness(params[:unique])
@@ -420,6 +423,18 @@ defmodule Oban.Job do
   end
 
   defp normalize_tags(params), do: params
+
+  def validate_keys(changeset, params, keys) do
+    keys = Enum.map(keys, &to_string/1)
+
+    Enum.reduce(params, changeset, fn {key, _val}, acc ->
+      if to_string(key) in keys do
+        acc
+      else
+        add_error(acc, :base, "unknown option #{inspect(key)} provided")
+      end
+    end)
+  end
 
   defp to_timestamp(seconds) when is_integer(seconds) do
     DateTime.add(DateTime.utc_now(), seconds, :second)

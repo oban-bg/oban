@@ -4,6 +4,15 @@ defmodule Oban.JobTest do
 
   doctest Oban.Job
 
+  describe "new/2" do
+    test "preventing the use of unknown options" do
+      changeset = Job.new(%{}, workr: Fake)
+
+      refute changeset.valid?
+      assert {"unknown option :workr provided", _} = changeset.errors[:base]
+    end
+  end
+
   describe "scheduling with new/2" do
     test "scheduling a job for the future using :schedule_in" do
       changeset = Job.new(%{}, worker: Fake, schedule_in: 10)
