@@ -14,6 +14,7 @@ defmodule Oban.Config do
           name: Oban.name(),
           node: String.t(),
           notifier: module(),
+          peer: false | module(),
           plugins: false | [module() | {module() | Keyword.t()}],
           prefix: String.t(),
           queues: false | [{atom() | binary(), pos_integer() | Keyword.t()}],
@@ -27,6 +28,7 @@ defmodule Oban.Config do
             notifier: Oban.Notifiers.Postgres,
             name: Oban,
             node: nil,
+            peer: Oban.Peer,
             plugins: [],
             prefix: "public",
             queues: [],
@@ -153,6 +155,13 @@ defmodule Oban.Config do
     unless is_binary(node) and String.trim(node) != "" do
       raise ArgumentError,
             "expected :node to be a non-empty binary, got: #{inspect(node)}"
+    end
+  end
+
+  defp validate_opt!({:peer, peer}) do
+    unless peer == false or Code.ensure_loaded?(peer) do
+      raise ArgumentError,
+            "expected :peer to be false or Oban.Peer, got: #{inspect(peer)}"
     end
   end
 

@@ -43,6 +43,7 @@ defmodule Oban do
           | {:name, name()}
           | {:node, binary()}
           | {:notifier, module()}
+          | {:peer, false | module()}
           | {:plugins, false | [module() | {module() | Keyword.t()}]}
           | {:prefix, binary()}
           | {:queues, false | [{queue_name(), pos_integer() | Keyword.t()}]}
@@ -90,6 +91,11 @@ defmodule Oban do
   * `:node` — used to identify the node that the supervision tree is running in. If no value is
     provided it will use the `node` name in a distributed system, or the `hostname` in an isolated
     node. See "Node Name" below.
+
+  * `:peer` — used to specify which peer module to use for cluster leadership. Defaults to
+    `Oban.Peer`, which uses table-based leadership through the `oban_peers` table. Leadership can
+    be disabled by setting `peer: false`, but note that centralized plugins like `Cron` won't run
+    without leadership.
 
   * `:plugins` — a list or modules or module/option tuples that are started as children of an Oban
     supervisor. Any supervisable module is a valid plugin, i.e. a `GenServer` or an `Agent`.
@@ -185,13 +191,13 @@ defmodule Oban do
   def init(%Config{plugins: plugins, queues: queues} = conf) do
     children = [
       {Notifier, conf: conf, name: Registry.via(conf.name, Notifier)},
-      {Midwife, conf: conf, name: Registry.via(conf.name, Midwife)},
-      {Peer, conf: conf, name: Registry.via(conf.name, Peer)}
+      {Midwife, conf: conf, name: Registry.via(conf.name, Midwife)}
     ]
 
+    children = children ++ peer_child_spec(conf)
     children = children ++ Enum.map(plugins, &plugin_child_spec(&1, conf))
     children = children ++ Enum.map(queues, &QueueSupervisor.child_spec(&1, conf))
-    children = children ++ [event_child_spec(conf)]
+    children = children ++ event_child_spec(conf)
 
     Supervisor.init(children, strategy: :one_for_one)
   end
@@ -777,6 +783,14 @@ defmodule Oban do
 
   ## Child Spec Helpers
 
+  defp peer_child_spec(conf) do
+    case conf do
+      %{peer: false} -> []
+      %{plugins: []} -> []
+      _ -> [{Peer, conf: conf, name: Registry.via(conf.name, Peer)}]
+    end
+  end
+
   defp plugin_child_spec({module, opts}, conf) do
     name = Registry.via(conf.name, {:plugin, module})
 
@@ -798,7 +812,7 @@ defmodule Oban do
 
     init_task = fn -> Telemetry.execute([:oban, :supervisor, :init], time, meta) end
 
-    Supervisor.child_spec({Task, init_task}, restart: :temporary)
+    [Supervisor.child_spec({Task, init_task}, restart: :temporary)]
   end
 
   ## Signal Helper
