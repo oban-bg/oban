@@ -27,14 +27,6 @@ defmodule Oban.ConfigTest do
       assert %Config{notifier: Oban.Notifiers.Postgres} = conf(notifier: Oban.PostgresNotifier)
     end
 
-    test ":peer is validated as false or a peer module" do
-      refute_valid(peer: nil)
-      refute_valid(peer: Fake)
-
-      assert_valid(peer: false)
-      assert_valid(peer: Oban.Peer)
-    end
-
     test ":node is validated as a binary" do
       refute_valid(node: nil)
       refute_valid(node: '')
@@ -43,6 +35,15 @@ defmodule Oban.ConfigTest do
       refute_valid(node: MyNode)
 
       assert_valid(node: "MyNode")
+    end
+
+    test ":peer is validated as false or a peer module" do
+      refute_valid(peer: nil)
+      refute_valid(peer: Fake)
+
+      assert_valid(peer: false)
+      assert_valid(peer: Oban.Peers.Global)
+      assert_valid(peer: Oban.Peers.Postgres)
     end
 
     test ":plugins are validated as complete plugins with possible options" do

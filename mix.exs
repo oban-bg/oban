@@ -112,6 +112,10 @@ defmodule Oban.MixProject do
       Notifiers: [
         Oban.Notifiers.Postgres,
         Oban.Notifiers.PG
+      ],
+      Peers: [
+        Oban.Peers.Postgres,
+        Oban.Peers.Global
       ]
     ]
   end

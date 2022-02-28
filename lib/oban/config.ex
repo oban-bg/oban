@@ -32,7 +32,7 @@ defmodule Oban.Config do
             notifier: Oban.Notifiers.Postgres,
             name: Oban,
             node: nil,
-            peer: Oban.Peer,
+            peer: Oban.Peers.Postgres,
             plugins: [],
             prefix: "public",
             queues: [],

@@ -92,10 +92,21 @@ defmodule Oban do
     provided it will use the `node` name in a distributed system, or the `hostname` in an isolated
     node. See "Node Name" below.
 
-  * `:peer` — used to specify which peer module to use for cluster leadership. Defaults to
-    `Oban.Peer`, which uses table-based leadership through the `oban_peers` table. Leadership can
-    be disabled by setting `peer: false`, but note that centralized plugins like `Cron` won't run
-    without leadership.
+  * `:notifier` — used to relay messages between processes, nodes, and the Postgres database.
+
+    There are two built-in notifiers: `Oban.Notifiers.Postgres`, which uses Postgres PubSub; and
+    `Oban.Notifiers.PG`, which uses process groups with distributed erlang. Defaults to the
+    Postgres notifier.
+
+  * `:peer` — used to specify which peer module to use for cluster leadership.
+
+    There are two built-in peers: `Oban.Peers.Postgres`, which uses table-based leadership through
+    the `oban_peers` table; and `Oban.Peers.Global`, which uses global locks through distributed Erlang.
+
+    Leadership can be disabled by setting `peer: false`, but note that centralized plugins like
+    `Cron` won't run without leadership.
+
+    Defaults to the Postgres peer.
 
   * `:plugins` — a list or modules or module/option tuples that are started as children of an Oban
     supervisor. Any supervisable module is a valid plugin, i.e. a `GenServer` or an `Agent`.
