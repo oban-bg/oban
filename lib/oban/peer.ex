@@ -113,13 +113,7 @@ defmodule Oban.Peer do
   def init(opts) do
     Process.flag(:trap_exit, true)
 
-    case Keyword.fetch!(opts, :conf) do
-      %{plugins: []} ->
-        :ignore
-
-      _ ->
-        {:ok, struct!(State, opts), {:continue, :start}}
-    end
+    {:ok, struct!(State, opts), {:continue, :start}}
   end
 
   @impl GenServer

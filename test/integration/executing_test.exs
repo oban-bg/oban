@@ -43,6 +43,7 @@ defmodule Oban.Integration.ExecutingTest do
                   assert DateTime.compare(job.scheduled_at, DateTime.utc_now()) == :gt
                   assert length(job.errors) > 0
                   assert [%{"attempt" => 1, "at" => _, "error" => _} | _] = job.errors
+                  assert job.attempt < job.max_attempts
 
                 "scheduled" ->
                   refute job.completed_at
