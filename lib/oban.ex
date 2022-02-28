@@ -37,10 +37,12 @@ defmodule Oban do
 
   @type option ::
           {:dispatch_cooldown, pos_integer()}
+          | {:engine, module()}
           | {:get_dynamic_repo, nil | (() -> pid() | atom())}
           | {:log, false | Logger.level()}
           | {:name, name()}
           | {:node, binary()}
+          | {:notifier, module()}
           | {:plugins, false | [module() | {module() | Keyword.t()}]}
           | {:prefix, binary()}
           | {:queues, false | [{queue_name(), pos_integer() | Keyword.t()}]}

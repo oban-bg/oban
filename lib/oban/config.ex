@@ -9,19 +9,17 @@ defmodule Oban.Config do
   @type t :: %__MODULE__{
           dispatch_cooldown: pos_integer(),
           engine: module(),
-          notifier: module(),
-          name: Oban.name(),
-          node: binary(),
-          plugins: [module() | {module() | Keyword.t()}],
-          prefix: binary(),
-          queues: [{atom(), Keyword.t()}],
-          repo: module(),
-          shutdown_grace_period: timeout(),
+          get_dynamic_repo: nil | (() -> pid() | atom()),
           log: false | Logger.level(),
-          get_dynamic_repo: nil | (() -> pid() | atom())
+          name: Oban.name(),
+          node: String.t(),
+          notifier: module(),
+          plugins: false | [module() | {module() | Keyword.t()}],
+          prefix: String.t(),
+          queues: false | [{atom() | binary(), pos_integer() | Keyword.t()}],
+          repo: module(),
+          shutdown_grace_period: timeout()
         }
-
-  @type option :: {:name, module()} | {:conf, t()}
 
   @enforce_keys [:node, :repo]
   defstruct dispatch_cooldown: 5,
@@ -40,7 +38,7 @@ defmodule Oban.Config do
   defguardp is_pos_integer(interval) when is_integer(interval) and interval > 0
 
   @doc false
-  @spec new(Keyword.t()) :: t()
+  @spec new([Oban.option()]) :: t()
   def new(opts) when is_list(opts) do
     opts =
       opts
