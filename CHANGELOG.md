@@ -278,7 +278,7 @@ Now, here's an sample where the job has encountered an error:
 
 For changes prior to v2.11 see the [v2.10][prv] docs.
 
+[opc]: https://getoban.pro/docs/pro/changelog.html
+[owc]: https://getoban.pro/docs/web/changelog.html
 [prv]: https://hexdocs.pm/oban/2.10.1/changelog.html
-[opc]: https://hexdocs.pm/oban/pro-changelog.html
-[owc]: https://hexdocs.pm/oban/web-changelog.html
 [upg]: https://hexdocs.pm/oban/v2-11.html

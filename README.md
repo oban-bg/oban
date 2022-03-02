@@ -132,13 +132,14 @@ orphaned due to crashes.
 
 ## Oban Web+Pro
 
-A web dashboard for managing Oban, along with an official set of plugins and
-workers are available as private packages.
+A web dashboard for managing Oban, along with an official set of extensions,
+plugins, and workers are available as licensed packages:
 
-* [🧭 Web Overview](https://hexdocs.pm/oban/web_overview.html#content)
-* [🌟 Pro Overview](https://hexdocs.pm/oban/pro_overview.html#content)
+* [🧭 Web Overview](https://getoban.pro#oban-web)
+* [🌟 Pro Overview](https://getoban.pro#oban-pro)
 
-Learn more about licensing Oban Web+Pro at [getoban.pro](https://getoban.pro).
+Learn more about prices and licensing Oban Web+Pro at
+[getoban.pro](https://getoban.pro).
 
 ## Requirements
 
