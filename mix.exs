@@ -105,6 +105,7 @@ defmodule Oban.MixProject do
         Oban.Config,
         Oban.Notifier,
         Oban.Peer,
+        Oban.Plugin,
         Oban.Registry,
         Oban.Repo
       ],
