@@ -87,10 +87,10 @@ defmodule Oban.Plugins.Pruner do
   def validate(opts) do
     Plugin.validate(opts, fn
       {:conf, _} -> :ok
+      {:name, _} -> :ok
       {:interval, interval} -> validate_integer(:interval, interval)
       {:limit, limit} -> validate_integer(:limit, limit)
       {:max_age, max_age} -> validate_integer(:max_age, max_age)
-      {:name, _} -> :ok
       option -> {:error, "unknown option provided: #{inspect(option)}"}
     end)
   end

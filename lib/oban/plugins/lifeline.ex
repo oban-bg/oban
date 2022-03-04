@@ -92,8 +92,8 @@ defmodule Oban.Plugins.Lifeline do
   def validate(opts) do
     Plugin.validate(opts, fn
       {:conf, _} -> :ok
-      {:interval, interval} -> validate_timeout(interval)
       {:name, _} -> :ok
+      {:interval, interval} -> validate_timeout(interval)
       {:rescue_after, interval} -> validate_timeout(interval)
       option -> {:error, "unknown option provided: #{inspect(option)}"}
     end)

@@ -223,7 +223,7 @@ defmodule Oban.Plugins.Cron do
     if is_binary(timezone) and match?({:ok, _}, DateTime.now(timezone)) do
       :ok
     else
-      {:error, "expected :timezone to be a known timezone"}
+      {:error, "expected :timezone to be a known timezone, got: #{inspect(timezone)}"}
     end
   end
 
