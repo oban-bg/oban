@@ -567,6 +567,10 @@ with {:ok, %Job{conflict?: true}} <- Oban.insert(changeset) do
 end
 ```
 
+Note that conflicts are only detected for jobs enqueued through `Oban.insert/2,3`.
+Jobs enqueued through `Oban.insert_all/2` _do not_ use per-job unique
+configuration.
+
 #### Replacing Values
 
 In addition to detecting unique conflicts, passing options to `replace` can
