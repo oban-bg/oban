@@ -6,28 +6,42 @@ defmodule Oban.Plugins.PrunerTest do
   alias Oban.Plugins.Pruner
   alias Oban.PluginTelemetryHandler
 
-  @moduletag :integration
+  describe "validate/1" do
+    test "validating numerical values" do
+      assert {:error, _} = Pruner.validate(interval: 0)
+      assert {:error, _} = Pruner.validate(max_age: 0)
+      assert {:error, _} = Pruner.validate(limit: 0)
 
-  test "historic jobs are pruned when they are older than the configured age" do
-    PluginTelemetryHandler.attach_plugin_events("plugin-pruner-handler")
+      assert :ok = Pruner.validate(interval: :timer.seconds(30))
+      assert :ok = Pruner.validate(max_age: 60)
+      assert :ok = Pruner.validate(limit: 1_000)
+    end
+  end
 
-    %Job{id: _id_} = insert!(%{}, state: "completed", attempted_at: seconds_ago(62))
-    %Job{id: _id_} = insert!(%{}, state: "completed", attempted_at: seconds_ago(61))
-    %Job{id: _id_} = insert!(%{}, state: "cancelled", cancelled_at: seconds_ago(61))
-    %Job{id: _id_} = insert!(%{}, state: "discarded", discarded_at: seconds_ago(61))
-    %Job{id: id_1} = insert!(%{}, state: "completed", attempted_at: seconds_ago(59))
-    %Job{id: id_2} = insert!(%{}, state: "completed", attempted_at: seconds_ago(10))
+  describe "integration" do
+    @describetag :integration
 
-    name = start_supervised_oban!(plugins: [{Pruner, interval: 10, max_age: 60}])
+    test "historic jobs are pruned when they are older than the configured age" do
+      PluginTelemetryHandler.attach_plugin_events("plugin-pruner-handler")
 
-    with_backoff(fn -> assert retained_ids() == [id_1, id_2] end)
+      %Job{id: _id_} = insert!(%{}, state: "completed", attempted_at: seconds_ago(62))
+      %Job{id: _id_} = insert!(%{}, state: "completed", attempted_at: seconds_ago(61))
+      %Job{id: _id_} = insert!(%{}, state: "cancelled", cancelled_at: seconds_ago(61))
+      %Job{id: _id_} = insert!(%{}, state: "discarded", discarded_at: seconds_ago(61))
+      %Job{id: id_1} = insert!(%{}, state: "completed", attempted_at: seconds_ago(59))
+      %Job{id: id_2} = insert!(%{}, state: "completed", attempted_at: seconds_ago(10))
 
-    assert_receive {:event, :start, %{system_time: _}, %{conf: _, plugin: Pruner}}
-    assert_receive {:event, :stop, %{duration: _}, %{conf: _, plugin: Pruner, pruned_count: 4}}
+      name = start_supervised_oban!(plugins: [{Pruner, interval: 10, max_age: 60}])
 
-    stop_supervised(name)
-  after
-    :telemetry.detach("plugin-pruner-handler")
+      with_backoff(fn -> assert retained_ids() == [id_1, id_2] end)
+
+      assert_receive {:event, :start, %{system_time: _}, %{conf: _, plugin: Pruner}}
+      assert_receive {:event, :stop, %{duration: _}, %{conf: _, plugin: Pruner, pruned_count: 4}}
+
+      stop_supervised(name)
+    after
+      :telemetry.detach("plugin-pruner-handler")
+    end
   end
 
   defp retained_ids do
