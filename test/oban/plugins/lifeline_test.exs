@@ -4,51 +4,63 @@ defmodule Oban.Plugins.LifelineTest do
   alias Oban.Plugins.Lifeline
   alias Oban.PluginTelemetryHandler
 
-  @moduletag :integration
+  describe "validate/1" do
+    test "validating interval options" do
+      assert {:error, _} = Lifeline.validate(interval: 0)
+      assert {:error, _} = Lifeline.validate(rescue_after: 0)
 
-  setup do
-    PluginTelemetryHandler.attach_plugin_events("plugin-lifeline-handler")
-
-    on_exit(fn ->
-      :telemetry.detach("plugin-lifeline-handler")
-    end)
+      assert :ok = Lifeline.validate(interval: :timer.seconds(30))
+      assert :ok = Lifeline.validate(rescue_after: :timer.minutes(30))
+    end
   end
 
-  test "rescuing executing jobs older than the rescue window" do
-    name = start_supervised_oban!(plugins: [{Lifeline, rescue_after: 5_000}])
+  describe "integration" do
+    @describetag :integration
 
-    job_a = insert!(%{}, state: "executing", attempted_at: seconds_ago(3))
-    job_b = insert!(%{}, state: "executing", attempted_at: seconds_ago(7))
-    job_c = insert!(%{}, state: "executing", attempted_at: seconds_ago(8), attempt: 20)
+    setup do
+      PluginTelemetryHandler.attach_plugin_events("plugin-lifeline-handler")
 
-    send_rescue(name)
+      on_exit(fn ->
+        :telemetry.detach("plugin-lifeline-handler")
+      end)
+    end
 
-    assert_receive {:event, :start, _meta, %{plugin: Lifeline}}
+    test "rescuing executing jobs older than the rescue window" do
+      name = start_supervised_oban!(plugins: [{Lifeline, rescue_after: 5_000}])
 
-    assert_receive {:event, :stop, _meta,
-                    %{plugin: Lifeline, rescued_count: 1, discarded_count: 1}}
+      job_a = insert!(%{}, state: "executing", attempted_at: seconds_ago(3))
+      job_b = insert!(%{}, state: "executing", attempted_at: seconds_ago(7))
+      job_c = insert!(%{}, state: "executing", attempted_at: seconds_ago(8), attempt: 20)
 
-    assert %{state: "executing"} = Repo.reload(job_a)
-    assert %{state: "available"} = Repo.reload(job_b)
-    assert %{state: "discarded"} = Repo.reload(job_c)
+      send_rescue(name)
 
-    stop_supervised(name)
-  end
+      assert_receive {:event, :start, _meta, %{plugin: Lifeline}}
 
-  test "rescuing jobs within a custom prefix" do
-    name = start_supervised_oban!(prefix: "private", plugins: [{Lifeline, rescue_after: 5_000}])
+      assert_receive {:event, :stop, _meta,
+                      %{plugin: Lifeline, rescued_count: 1, discarded_count: 1}}
 
-    job_a = insert!(name, %{}, state: "executing", attempted_at: seconds_ago(1))
-    job_b = insert!(name, %{}, state: "executing", attempted_at: seconds_ago(7))
+      assert %{state: "executing"} = Repo.reload(job_a)
+      assert %{state: "available"} = Repo.reload(job_b)
+      assert %{state: "discarded"} = Repo.reload(job_c)
 
-    send_rescue(name)
+      stop_supervised(name)
+    end
 
-    assert_receive {:event, :stop, _meta, %{plugin: Lifeline, rescued_count: 1}}
+    test "rescuing jobs within a custom prefix" do
+      name = start_supervised_oban!(prefix: "private", plugins: [{Lifeline, rescue_after: 5_000}])
 
-    assert %{state: "executing"} = Repo.reload(job_a)
-    assert %{state: "available"} = Repo.reload(job_b)
+      job_a = insert!(name, %{}, state: "executing", attempted_at: seconds_ago(1))
+      job_b = insert!(name, %{}, state: "executing", attempted_at: seconds_ago(7))
 
-    stop_supervised(name)
+      send_rescue(name)
+
+      assert_receive {:event, :stop, _meta, %{plugin: Lifeline, rescued_count: 1}}
+
+      assert %{state: "executing"} = Repo.reload(job_a)
+      assert %{state: "available"} = Repo.reload(job_b)
+
+      stop_supervised(name)
+    end
   end
 
   defp send_rescue(name) do

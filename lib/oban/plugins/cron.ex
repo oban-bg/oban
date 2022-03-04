@@ -74,16 +74,9 @@ defmodule Oban.Plugins.Cron do
     ]
   end
 
-  @doc false
-  def child_spec(init_arg) do
-    super(init_arg)
-  end
-
   @impl Plugin
   @spec start_link([option()]) :: GenServer.on_start()
   def start_link(opts) do
-    with {:error, reason} <- validate(opts), do: raise(ArgumentError, reason)
-
     GenServer.start_link(__MODULE__, opts, name: opts[:name])
   end
 
@@ -150,6 +143,8 @@ defmodule Oban.Plugins.Cron do
 
   @impl GenServer
   def init(opts) do
+    Plugin.validate!(opts, &validate/1)
+
     Process.flag(:trap_exit, true)
 
     state =

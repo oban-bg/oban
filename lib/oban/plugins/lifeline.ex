@@ -32,6 +32,7 @@ defmodule Oban.Plugins.Lifeline do
 
   ## Options
 
+  * `:interval` — the number of milliseconds between rescue attempts. The default is `60_000ms`.
   * `:rescue_after` — the maximum amount of time, in milliseconds, that a job may execute before
   being rescued. 60 minutes by default, and rescuing is performed once a minute.
 
@@ -44,16 +45,17 @@ defmodule Oban.Plugins.Lifeline do
   * `:discarded_count` — the number of jobs transitioned to `discarded`
   """
 
+  @behaviour Oban.Plugin
+
   use GenServer
 
   import Ecto.Query, only: [where: 3]
 
-  alias Oban.{Config, Job, Peer, Repo}
+  alias Oban.{Job, Peer, Plugin, Repo}
 
   @type option ::
-          {:conf, Config.t()}
+          Plugin.option()
           | {:interval, timeout()}
-          | {:name, GenServer.name()}
           | {:rescue_after, pos_integer()}
 
   defmodule State do
@@ -68,7 +70,7 @@ defmodule Oban.Plugins.Lifeline do
     ]
   end
 
-  @doc false
+  @impl Plugin
   @spec start_link([option()]) :: GenServer.on_start()
   def start_link(opts) do
     GenServer.start_link(__MODULE__, opts, name: opts[:name])
@@ -76,9 +78,25 @@ defmodule Oban.Plugins.Lifeline do
 
   @impl GenServer
   def init(opts) do
-    state = struct!(State, opts)
+    Plugin.validate!(opts, &validate/1)
 
-    {:ok, schedule_rescue(state)}
+    state =
+      State
+      |> struct!(opts)
+      |> schedule_rescue()
+
+    {:ok, state}
+  end
+
+  @impl Plugin
+  def validate(opts) do
+    Plugin.validate(opts, fn
+      {:conf, _} -> :ok
+      {:interval, interval} -> validate_timeout(interval)
+      {:name, _} -> :ok
+      {:rescue_after, interval} -> validate_timeout(interval)
+      option -> {:error, "unknown option provided: #{inspect(option)}"}
+    end)
   end
 
   @impl GenServer
@@ -108,6 +126,16 @@ defmodule Oban.Plugins.Lifeline do
     end)
 
     {:noreply, schedule_rescue(state)}
+  end
+
+  # Validation
+
+  defp validate_timeout(interval) do
+    if (is_integer(interval) and interval > 0) or interval == :infinity do
+      :ok
+    else
+      {:error, "expected interval to be a positive integer or :infinity, got: #{interval}"}
+    end
   end
 
   # Scheduling

@@ -35,11 +35,13 @@ defmodule Oban.Plugins.Gossip do
   * `:gossip_count` - the number of queues that had activity broadcasted
   """
 
+  @behaviour Oban.Plugin
+
   use GenServer
 
-  alias Oban.{Config, Notifier}
+  alias Oban.{Notifier, Plugin}
 
-  @type option :: {:conf, Config.t()} | {:name, GenServer.name()} | {:interval, pos_integer()}
+  @type option :: Plugin.option() | {:interval, pos_integer()}
 
   defmodule State do
     @moduledoc false
@@ -47,7 +49,7 @@ defmodule Oban.Plugins.Gossip do
     defstruct [:conf, :name, :timer, interval: :timer.seconds(1)]
   end
 
-  @doc false
+  @impl Plugin
   @spec start_link([option()]) :: GenServer.on_start()
   def start_link(opts) do
     GenServer.start_link(__MODULE__, opts, name: opts[:name])
@@ -63,6 +65,11 @@ defmodule Oban.Plugins.Gossip do
       |> schedule_gossip()
 
     {:ok, state}
+  end
+
+  @impl Plugin
+  def validate(_opts) do
+    :ok
   end
 
   @impl GenServer

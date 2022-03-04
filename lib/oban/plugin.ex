@@ -41,6 +41,7 @@ defmodule Oban.Plugin do
   alias Oban.Config
 
   @type option :: {:conf, Config.t()} | {:name, GenServer.name()} | {atom(), term()}
+  @type validator :: (option() -> :ok | {:error, term()})
 
   @doc """
   Starts a Plugin process linked to the current process.
@@ -68,7 +69,7 @@ defmodule Oban.Plugin do
         opt -> {:error, "unknown option: " <> inspect(opt)}
       end)
   """
-  @spec validate([option()], (option() -> :ok | {:error, term()})) :: :ok | {:error, term()}
+  @spec validate([option()], validator()) :: :ok | {:error, term()}
   def validate(opts, validator) do
     Enum.reduce_while(opts, :ok, fn opt, acc ->
       case validator.(opt) do
@@ -76,5 +77,11 @@ defmodule Oban.Plugin do
         {:error, _reason} = error -> {:halt, error}
       end
     end)
+  end
+
+  @doc false
+  @spec validate!([option()], ([option()] -> :ok | {:error, term()})) :: :ok
+  def validate!(opts, validate) do
+    with {:error, reason} <- validate.(opts), do: raise(ArgumentError, reason)
   end
 end
