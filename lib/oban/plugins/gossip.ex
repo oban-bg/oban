@@ -56,12 +56,19 @@ defmodule Oban.Plugins.Gossip do
   end
 
   @impl Plugin
-  def validate(_opts) do
-    :ok
+  def validate(opts) do
+    Plugin.validate(opts, fn
+      {:conf, _} -> :ok
+      {:name, _} -> :ok
+      {:interval, interval} -> validate_integer(:interval, interval)
+      option -> {:error, "unknown option provided: #{inspect(option)}"}
+    end)
   end
 
   @impl GenServer
   def init(opts) do
+    Plugin.validate!(opts, &validate/1)
+
     Process.flag(:trap_exit, true)
 
     state =
@@ -105,9 +112,23 @@ defmodule Oban.Plugins.Gossip do
     {:noreply, state}
   end
 
+  # Validation
+
+  defp validate_integer(key, value) do
+    if is_integer(value) and value > 0 do
+      :ok
+    else
+      {:error, "expected #{inspect(key)} to be a positive integer, got: #{inspect(value)}"}
+    end
+  end
+
+  # Scheduling
+
   defp schedule_gossip(state) do
     %{state | timer: Process.send_after(self(), :gossip, state.interval)}
   end
+
+  # Checking
 
   defp safe_check(pid, state) do
     if Process.alive?(pid), do: GenServer.call(pid, :check, state.interval)
