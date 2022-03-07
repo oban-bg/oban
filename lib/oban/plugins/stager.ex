@@ -62,6 +62,7 @@ defmodule Oban.Plugins.Stager do
       {:conf, _} -> :ok
       {:name, _} -> :ok
       {:interval, interval} -> validate_integer(:interval, interval)
+      {:limit, limit} -> validate_integer(:limit, limit)
       option -> {:error, "unknown option provided: #{inspect(option)}"}
     end)
   end
