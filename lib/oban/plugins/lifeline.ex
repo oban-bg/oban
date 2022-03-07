@@ -76,6 +76,17 @@ defmodule Oban.Plugins.Lifeline do
     GenServer.start_link(__MODULE__, opts, name: opts[:name])
   end
 
+  @impl Plugin
+  def validate(opts) do
+    Plugin.validate(opts, fn
+      {:conf, _} -> :ok
+      {:name, _} -> :ok
+      {:interval, interval} -> validate_timeout(interval)
+      {:rescue_after, interval} -> validate_timeout(interval)
+      option -> {:error, "unknown option provided: #{inspect(option)}"}
+    end)
+  end
+
   @impl GenServer
   def init(opts) do
     Plugin.validate!(opts, &validate/1)
@@ -86,17 +97,6 @@ defmodule Oban.Plugins.Lifeline do
       |> schedule_rescue()
 
     {:ok, state}
-  end
-
-  @impl Plugin
-  def validate(opts) do
-    Plugin.validate(opts, fn
-      {:conf, _} -> :ok
-      {:name, _} -> :ok
-      {:interval, interval} -> validate_timeout(interval)
-      {:rescue_after, interval} -> validate_timeout(interval)
-      option -> {:error, "unknown option provided: #{inspect(option)}"}
-    end)
   end
 
   @impl GenServer

@@ -59,6 +59,17 @@ defmodule Oban.Plugins.Reindexer do
     GenServer.start_link(__MODULE__, opts, name: opts[:name])
   end
 
+  @impl Plugin
+  def validate(opts) do
+    Plugin.validate(opts, fn
+      {:conf, _} -> :ok
+      {:name, _} -> :ok
+      {:schedule, schedule} -> validate_schedule(schedule)
+      {:timezone, timezone} -> validate_timezone(timezone)
+      option -> {:error, "unknown option provided: #{inspect(option)}"}
+    end)
+  end
+
   @impl GenServer
   def init(opts) do
     Plugin.validate!(opts, &validate/1)
@@ -73,17 +84,6 @@ defmodule Oban.Plugins.Reindexer do
     state = struct!(State, opts)
 
     {:ok, schedule_reindex(state)}
-  end
-
-  @impl Plugin
-  def validate(opts) do
-    Plugin.validate(opts, fn
-      {:conf, _} -> :ok
-      {:name, _} -> :ok
-      {:schedule, schedule} -> validate_schedule(schedule)
-      {:timezone, timezone} -> validate_timezone(timezone)
-      option -> {:error, "unknown option provided: #{inspect(option)}"}
-    end)
   end
 
   @impl GenServer

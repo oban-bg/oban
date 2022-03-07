@@ -19,20 +19,20 @@ defmodule Oban.Plugin do
           GenServer.start_link(__MODULE__, opts, name: opts[:name])
         end
 
-        @impl GenServer
-        def init(opts) do
-          case validate(opts) do
-            :ok -> {:ok, opts}
-            {:error, reason} -> {:stop, reason}
-          end
-        end
-
         @impl Oban.Plugin
         def validate(opts) do
           if is_atom(opts[:mode])
             :ok
           else
             {:error, "expected opts to have a :mode key"}
+          end
+        end
+
+        @impl GenServer
+        def init(opts) do
+          case validate(opts) do
+            :ok -> {:ok, opts}
+            {:error, reason} -> {:stop, reason}
           end
         end
       end

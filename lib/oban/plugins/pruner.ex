@@ -69,6 +69,18 @@ defmodule Oban.Plugins.Pruner do
     GenServer.start_link(__MODULE__, opts, name: opts[:name])
   end
 
+  @impl Plugin
+  def validate(opts) do
+    Plugin.validate(opts, fn
+      {:conf, _} -> :ok
+      {:name, _} -> :ok
+      {:interval, interval} -> validate_integer(:interval, interval)
+      {:limit, limit} -> validate_integer(:limit, limit)
+      {:max_age, max_age} -> validate_integer(:max_age, max_age)
+      option -> {:error, "unknown option provided: #{inspect(option)}"}
+    end)
+  end
+
   @impl GenServer
   def init(opts) do
     Plugin.validate!(opts, &validate/1)
@@ -81,18 +93,6 @@ defmodule Oban.Plugins.Pruner do
       |> schedule_prune()
 
     {:ok, state}
-  end
-
-  @impl Plugin
-  def validate(opts) do
-    Plugin.validate(opts, fn
-      {:conf, _} -> :ok
-      {:name, _} -> :ok
-      {:interval, interval} -> validate_integer(:interval, interval)
-      {:limit, limit} -> validate_integer(:limit, limit)
-      {:max_age, max_age} -> validate_integer(:max_age, max_age)
-      option -> {:error, "unknown option provided: #{inspect(option)}"}
-    end)
   end
 
   @impl GenServer

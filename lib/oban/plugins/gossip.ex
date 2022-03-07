@@ -55,6 +55,11 @@ defmodule Oban.Plugins.Gossip do
     GenServer.start_link(__MODULE__, opts, name: opts[:name])
   end
 
+  @impl Plugin
+  def validate(_opts) do
+    :ok
+  end
+
   @impl GenServer
   def init(opts) do
     Process.flag(:trap_exit, true)
@@ -65,11 +70,6 @@ defmodule Oban.Plugins.Gossip do
       |> schedule_gossip()
 
     {:ok, state}
-  end
-
-  @impl Plugin
-  def validate(_opts) do
-    :ok
   end
 
   @impl GenServer
