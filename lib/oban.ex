@@ -285,8 +285,10 @@ defmodule Oban do
   @doc """
   Insert multiple jobs into the database for execution.
 
-  Insertion respects `prefix` and `log` settings, but it *does not use* per-job unique
-  configuration. You must use `insert/2,4` or `insert!/2` for per-job unique support.
+  Insertion respects `prefix` and `log` settings.
+  
+  **Disclaimer:** Does not use per-job **unique** configuration. You must use `insert/2,4` or 
+  `insert!/2` for per-job unique support.
 
   There are a few important differences between this function and `c:Ecto.Repo.insert_all/3`:
 
