@@ -24,19 +24,31 @@ defmodule Oban.Plugins.RepeaterTest do
     end
   end
 
-  test "broadcasting insert messages to producers to trigger dispatch" do
-    PluginTelemetryHandler.attach_plugin_events("plugin-repeater-handler")
+  describe "validate/1" do
+    test "validating numerical values" do
+      assert {:error, _} = Repeater.validate(interval: nil)
+      assert {:error, _} = Repeater.validate(interval: 0)
 
-    oban_name = start_supervised_oban!(plugins: [{Repeater, interval: 10}])
-    prod_name = Registry.via(oban_name, {:producer, "default"})
+      assert :ok = Repeater.validate(interval: 1)
+      assert :ok = Repeater.validate(interval: :timer.seconds(30))
+    end
+  end
 
-    start_supervised({RepeaterRelay, name: prod_name, test: self()})
+  describe "integration" do
+    test "broadcasting insert messages to producers to trigger dispatch" do
+      PluginTelemetryHandler.attach_plugin_events("plugin-repeater-handler")
 
-    assert_receive {:notification, :insert, %{"queue" => "default"}}
+      oban_name = start_supervised_oban!(plugins: [{Repeater, interval: 10}])
+      prod_name = Registry.via(oban_name, {:producer, "default"})
 
-    assert_receive {:event, :start, %{system_time: _}, %{conf: _, plugin: Repeater}}
-    assert_receive {:event, :stop, %{duration: _}, %{conf: _, plugin: Repeater}}
-  after
-    :telemetry.detach("plugin-repeater-handler")
+      start_supervised({RepeaterRelay, name: prod_name, test: self()})
+
+      assert_receive {:notification, :insert, %{"queue" => "default"}}
+
+      assert_receive {:event, :start, %{system_time: _}, %{conf: _, plugin: Repeater}}
+      assert_receive {:event, :stop, %{duration: _}, %{conf: _, plugin: Repeater}}
+    after
+      :telemetry.detach("plugin-repeater-handler")
+    end
   end
 end

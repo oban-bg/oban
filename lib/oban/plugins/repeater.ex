@@ -34,11 +34,13 @@ defmodule Oban.Plugins.Repeater do
   * `:interval` — the number of milliseconds between notifications. The default is `1_000ms`.
   """
 
+  @behaviour Oban.Plugin
+
   use GenServer
 
-  alias Oban.Config
+  alias Oban.Plugin
 
-  @type option :: {:conf, Config.t()} | {:name, GenServer.name()} | {:interval, pos_integer()}
+  @type option :: Plugin.opts() | {:interval, pos_integer()}
 
   defmodule State do
     @moduledoc false
@@ -46,10 +48,20 @@ defmodule Oban.Plugins.Repeater do
     defstruct [:conf, :name, :timer, interval: :timer.seconds(1)]
   end
 
-  @doc false
+  @impl Plugin
   @spec start_link([option()]) :: GenServer.on_start()
   def start_link(opts) do
     GenServer.start_link(__MODULE__, opts, name: opts[:name])
+  end
+
+  @impl Plugin
+  def validate(opts) do
+    Plugin.validate(opts, fn
+      {:conf, _} -> :ok
+      {:name, _} -> :ok
+      {:interval, interval} -> validate_integer(:interval, interval)
+      option -> {:error, "unknown option provided: #{inspect(option)}"}
+    end)
   end
 
   @impl GenServer
@@ -83,6 +95,18 @@ defmodule Oban.Plugins.Repeater do
 
     {:noreply, schedule_notify(state)}
   end
+
+  # Validation
+
+  defp validate_integer(key, value) do
+    if is_integer(value) and value > 0 do
+      :ok
+    else
+      {:error, "expected #{inspect(key)} to be a positive integer, got: #{inspect(value)}"}
+    end
+  end
+
+  # Scheduling
 
   defp schedule_notify(state) do
     timer = Process.send_after(self(), :notify, state.interval)
