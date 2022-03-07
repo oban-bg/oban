@@ -2,7 +2,7 @@ defmodule Oban.Plugin do
   @moduledoc """
   Defines a shared behaviour for Oban plugins.
 
-  In addition to implementing the Plugin behaviour, all plugins **must** be a GenServer, Agent, or
+  In addition to implementing the Plugin behaviour, all plugins **must** be a `GenServer`, `Agent`, or
   another OTP compliant module.
 
   ## Example
