@@ -20,6 +20,8 @@ defmodule Oban.Plugins.Stager do
   * :staged_count - the number of jobs that were staged in the database
   """
 
+  @behaviour Oban.Plugin
+
   use GenServer
 
   import Ecto.Query,
@@ -32,9 +34,9 @@ defmodule Oban.Plugins.Stager do
       where: 3
     ]
 
-  alias Oban.{Config, Job, Notifier, Peer, Repo}
+  alias Oban.{Job, Notifier, Peer, Plugin, Repo}
 
-  @type option :: {:conf, Config.t()} | {:name, GenServer.name()} | {:interval, pos_integer()}
+  @type option :: Plugin.opts() | {:interval, pos_integer()}
 
   defmodule State do
     @moduledoc false
@@ -48,14 +50,26 @@ defmodule Oban.Plugins.Stager do
     ]
   end
 
-  @doc false
+  @impl Plugin
   @spec start_link([option()]) :: GenServer.on_start()
   def start_link(opts) do
     GenServer.start_link(__MODULE__, opts, name: opts[:name])
   end
 
+  @impl Plugin
+  def validate(opts) do
+    Plugin.validate(opts, fn
+      {:conf, _} -> :ok
+      {:name, _} -> :ok
+      {:interval, interval} -> validate_integer(:interval, interval)
+      option -> {:error, "unknown option provided: #{inspect(option)}"}
+    end)
+  end
+
   @impl GenServer
   def init(opts) do
+    Plugin.validate!(opts, &validate/1)
+
     Process.flag(:trap_exit, true)
 
     state =
@@ -132,6 +146,18 @@ defmodule Oban.Plugins.Stager do
 
     Notifier.notify(state.conf, :insert, payload)
   end
+
+  # Validation
+
+  defp validate_integer(key, value) do
+    if is_integer(value) and value > 0 do
+      :ok
+    else
+      {:error, "expected #{inspect(key)} to be a positive integer, got: #{inspect(value)}"}
+    end
+  end
+
+  # Scheduling
 
   defp schedule_staging(state) do
     timer = Process.send_after(self(), :stage, state.interval)

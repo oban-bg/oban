@@ -237,9 +237,14 @@ defmodule Oban.Config do
       raise ArgumentError, "plugin #{plugin} could not be found"
     end
 
+    unless function_exported?(plugin, :validate, 1) do
+      raise ArgumentError,
+            "plugin #{plugin} is invalid because it's missing a `validate/1` function"
+    end
+
     unless function_exported?(plugin, :init, 1) do
       raise ArgumentError,
-            "plugin #{plugin} is not a valid plugin because it does not provide an `init/1` function"
+            "plugin #{plugin} is invalid because it's missing an `init/1` function"
     end
 
     unless Keyword.keyword?(opts) do

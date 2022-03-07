@@ -66,6 +66,8 @@ defmodule Oban.Plugins.Repeater do
 
   @impl GenServer
   def init(opts) do
+    Plugin.validate!(opts, &validate/1)
+
     Process.flag(:trap_exit, true)
 
     state = struct!(State, opts)

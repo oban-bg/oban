@@ -25,6 +25,7 @@ defmodule Oban.Plugins.Pruner do
 
   ## Options
 
+  * `:interval` — the number of milliseconds between pruning attempts. The default is `30_000ms`.
   * `:limit` — the maximum number of jobs to prune at one time. The default is 10,000 to prevent
     request timeouts. Applications that steadily generate more than 10k jobs a minute should increase
     this value.
