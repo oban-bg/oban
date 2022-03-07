@@ -37,13 +37,15 @@ defmodule Oban.Plugins.Reindexer do
   [tzdata]: https://hexdocs.pm/tzdata
   """
 
+  @behaviour Oban.Plugin
+
   use GenServer
 
-  alias Oban.{Config, Peer, Repo}
   alias Oban.Cron.Expression
   alias Oban.Plugins.Cron
+  alias Oban.{Peer, Plugin, Repo}
 
-  @type option :: {:conf, Config.t()} | {:name, GenServer.name()} | {:schedule, binary()}
+  @type option :: Plugin.option() | {:schedule, binary()}
 
   defmodule State do
     @moduledoc false
@@ -51,14 +53,29 @@ defmodule Oban.Plugins.Reindexer do
     defstruct [:conf, :name, :schedule, :timer, timezone: "Etc/UTC"]
   end
 
-  @doc false
+  @impl Plugin
   @spec start_link([option()]) :: GenServer.on_start()
   def start_link(opts) do
     GenServer.start_link(__MODULE__, opts, name: opts[:name])
   end
 
+  @impl Plugin
+  def validate(opts) do
+    Plugin.validate(opts, fn
+      {:conf, _} -> :ok
+      {:name, _} -> :ok
+      {:schedule, schedule} -> validate_schedule(schedule)
+      {:timezone, timezone} -> validate_timezone(timezone)
+      option -> {:error, "unknown option provided: #{inspect(option)}"}
+    end)
+  end
+
   @impl GenServer
   def init(opts) do
+    Plugin.validate!(opts, &validate/1)
+
+    Process.flag(:trap_exit, true)
+
     opts =
       opts
       |> Keyword.put_new(:schedule, "@midnight")
@@ -91,6 +108,24 @@ defmodule Oban.Plugins.Reindexer do
     end)
 
     {:noreply, schedule_reindex(state)}
+  end
+
+  # Validation
+
+  defp validate_schedule(schedule) do
+    Expression.parse!(schedule)
+
+    :ok
+  rescue
+    error in [ArgumentError] -> {:error, error}
+  end
+
+  defp validate_timezone(timezone) do
+    if is_binary(timezone) and match?({:ok, _}, DateTime.now(timezone)) do
+      :ok
+    else
+      {:error, "expected :timezone to be a known timezone, got: #{inspect(timezone)}"}
+    end
   end
 
   # Scheduling

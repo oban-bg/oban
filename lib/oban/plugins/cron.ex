@@ -46,18 +46,19 @@ defmodule Oban.Plugins.Cron do
   * :jobs - a list of jobs that were inserted into the database
   """
 
+  @behaviour Oban.Plugin
+
   use GenServer
 
   alias Oban.Cron.Expression
-  alias Oban.{Config, Job, Peer, Repo, Worker}
+  alias Oban.{Job, Peer, Plugin, Repo, Worker}
 
   @opaque expression :: Expression.t()
 
   @type cron_input :: {binary(), module()} | {binary(), module(), [Job.option()]}
 
   @type option ::
-          {:conf, Config.t()}
-          | {:name, GenServer.name()}
+          Plugin.option()
           | {:crontab, [cron_input()]}
           | {:timezone, Calendar.time_zone()}
 
@@ -73,18 +74,15 @@ defmodule Oban.Plugins.Cron do
     ]
   end
 
-  @doc false
+  @impl Plugin
   @spec start_link([option()]) :: GenServer.on_start()
   def start_link(opts) do
-    validate!(opts)
-
     GenServer.start_link(__MODULE__, opts, name: opts[:name])
   end
 
-  @doc false
-  @spec validate!(Keyword.t()) :: :ok
-  def validate!(opts) when is_list(opts) do
-    Enum.each(opts, &validate_opt!/1)
+  @impl Plugin
+  def validate(opts) when is_list(opts) do
+    Plugin.validate(opts, &validate_opt/1)
   end
 
   @doc """
@@ -145,6 +143,8 @@ defmodule Oban.Plugins.Cron do
 
   @impl GenServer
   def init(opts) do
+    Plugin.validate!(opts, &validate/1)
+
     Process.flag(:trap_exit, true)
 
     state =
@@ -211,50 +211,53 @@ defmodule Oban.Plugins.Cron do
     %{state | crontab: parsed}
   end
 
-  defp validate_opt!({:crontab, crontab}) do
-    unless is_list(crontab) do
-      raise ArgumentError, "expected :crontab to be a list, got: #{inspect(crontab)}"
-    end
-
-    Enum.each(crontab, &validate_crontab!/1)
+  defp validate_opt({:crontab, crontab}) when is_list(crontab) do
+    Plugin.validate(crontab, &validate_crontab/1)
   end
 
-  defp validate_opt!({:timezone, timezone}) do
-    unless is_binary(timezone) and match?({:ok, _}, DateTime.now(timezone)) do
-      raise ArgumentError, "expected :timezone to be a known timezone"
-    end
+  defp validate_opt({:crontab, crontab}) do
+    {:error, "expected :crontab to be a list, got: #{inspect(crontab)}"}
   end
 
-  defp validate_opt!(_opt), do: :ok
-
-  defp validate_crontab!({expression, worker, opts}) do
-    %Expression{} = Expression.parse!(expression)
-
-    unless Code.ensure_loaded?(worker) do
-      raise ArgumentError, "#{inspect(worker)} not found or can't be loaded"
-    end
-
-    unless function_exported?(worker, :perform, 1) do
-      raise ArgumentError, "#{inspect(worker)} does not implement `perform/1` callback"
-    end
-
-    unless Keyword.keyword?(opts) do
-      raise ArgumentError, "options must be a keyword list, got: #{inspect(opts)}"
-    end
-
-    unless build_changeset(worker, opts).valid? do
-      raise ArgumentError, "expected valid job options, got: #{inspect(opts)}"
+  defp validate_opt({:timezone, timezone}) do
+    if is_binary(timezone) and match?({:ok, _}, DateTime.now(timezone)) do
+      :ok
+    else
+      {:error, "expected :timezone to be a known timezone, got: #{inspect(timezone)}"}
     end
   end
 
-  defp validate_crontab!({expression, worker}) do
-    validate_crontab!({expression, worker, []})
+  defp validate_opt(_opt), do: :ok
+
+  defp validate_crontab({expression, worker, opts}) do
+    with {:ok, _} <- parse(expression) do
+      cond do
+        not Code.ensure_loaded?(worker) ->
+          {:error, "#{inspect(worker)} not found or can't be loaded"}
+
+        not function_exported?(worker, :perform, 1) ->
+          {:error, "#{inspect(worker)} does not implement `perform/1` callback"}
+
+        not Keyword.keyword?(opts) ->
+          {:error, "options must be a keyword list, got: #{inspect(opts)}"}
+
+        not build_changeset(worker, opts).valid? ->
+          {:error, "expected valid job options, got: #{inspect(opts)}"}
+
+        true ->
+          :ok
+      end
+    end
   end
 
-  defp validate_crontab!(invalid) do
-    raise ArgumentError,
-          "expected crontab entry to be an {expression, worker} or " <>
-            "{expression, worker, options} tuple, got: #{inspect(invalid)}"
+  defp validate_crontab({expression, worker}) do
+    validate_crontab({expression, worker, []})
+  end
+
+  defp validate_crontab(invalid) do
+    {:error,
+     "expected crontab entry to be an {expression, worker} or " <>
+       "{expression, worker, options} tuple, got: #{inspect(invalid)}"}
   end
 
   # Inserting Helpers

@@ -25,6 +25,7 @@ defmodule Oban.Plugins.Pruner do
 
   ## Options
 
+  * `:interval` — the number of milliseconds between pruning attempts. The default is `30_000ms`.
   * `:limit` — the maximum number of jobs to prune at one time. The default is 10,000 to prevent
     request timeouts. Applications that steadily generate more than 10k jobs a minute should increase
     this value.
@@ -37,15 +38,16 @@ defmodule Oban.Plugins.Pruner do
   * `:pruned_count` - the number of jobs that were pruned from the database
   """
 
+  @behaviour Oban.Plugin
+
   use GenServer
 
   import Ecto.Query, only: [join: 5, limit: 2, or_where: 3, select: 2]
 
-  alias Oban.{Config, Job, Peer, Repo}
+  alias Oban.{Job, Peer, Plugin, Repo}
 
   @type option ::
-          {:conf, Config.t()}
-          | {:name, GenServer.name()}
+          Plugin.option()
           | {:limit, pos_integer()}
           | {:max_age, pos_integer()}
 
@@ -56,20 +58,34 @@ defmodule Oban.Plugins.Pruner do
       :conf,
       :name,
       :timer,
-      max_age: 60,
       interval: :timer.seconds(30),
+      max_age: 60,
       limit: 10_000
     ]
   end
 
-  @doc false
+  @impl Plugin
   @spec start_link([option()]) :: GenServer.on_start()
   def start_link(opts) do
     GenServer.start_link(__MODULE__, opts, name: opts[:name])
   end
 
+  @impl Plugin
+  def validate(opts) do
+    Plugin.validate(opts, fn
+      {:conf, _} -> :ok
+      {:name, _} -> :ok
+      {:interval, interval} -> validate_integer(:interval, interval)
+      {:limit, limit} -> validate_integer(:limit, limit)
+      {:max_age, max_age} -> validate_integer(:max_age, max_age)
+      option -> {:error, "unknown option provided: #{inspect(option)}"}
+    end)
+  end
+
   @impl GenServer
   def init(opts) do
+    Plugin.validate!(opts, &validate/1)
+
     Process.flag(:trap_exit, true)
 
     state =
@@ -102,6 +118,16 @@ defmodule Oban.Plugins.Pruner do
     end)
 
     {:noreply, schedule_prune(state)}
+  end
+
+  # Validation
+
+  defp validate_integer(key, value) do
+    if is_integer(value) and value > 0 do
+      :ok
+    else
+      {:error, "expected #{inspect(key)} to be a positive integer, got: #{inspect(value)}"}
+    end
   end
 
   # Scheduling

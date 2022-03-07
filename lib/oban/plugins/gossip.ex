@@ -35,11 +35,13 @@ defmodule Oban.Plugins.Gossip do
   * `:gossip_count` - the number of queues that had activity broadcasted
   """
 
+  @behaviour Oban.Plugin
+
   use GenServer
 
-  alias Oban.{Config, Notifier}
+  alias Oban.{Notifier, Plugin}
 
-  @type option :: {:conf, Config.t()} | {:name, GenServer.name()} | {:interval, pos_integer()}
+  @type option :: Plugin.option() | {:interval, pos_integer()}
 
   defmodule State do
     @moduledoc false
@@ -47,14 +49,26 @@ defmodule Oban.Plugins.Gossip do
     defstruct [:conf, :name, :timer, interval: :timer.seconds(1)]
   end
 
-  @doc false
+  @impl Plugin
   @spec start_link([option()]) :: GenServer.on_start()
   def start_link(opts) do
     GenServer.start_link(__MODULE__, opts, name: opts[:name])
   end
 
+  @impl Plugin
+  def validate(opts) do
+    Plugin.validate(opts, fn
+      {:conf, _} -> :ok
+      {:name, _} -> :ok
+      {:interval, interval} -> validate_integer(:interval, interval)
+      option -> {:error, "unknown option provided: #{inspect(option)}"}
+    end)
+  end
+
   @impl GenServer
   def init(opts) do
+    Plugin.validate!(opts, &validate/1)
+
     Process.flag(:trap_exit, true)
 
     state =
@@ -98,9 +112,23 @@ defmodule Oban.Plugins.Gossip do
     {:noreply, state}
   end
 
+  # Validation
+
+  defp validate_integer(key, value) do
+    if is_integer(value) and value > 0 do
+      :ok
+    else
+      {:error, "expected #{inspect(key)} to be a positive integer, got: #{inspect(value)}"}
+    end
+  end
+
+  # Scheduling
+
   defp schedule_gossip(state) do
     %{state | timer: Process.send_after(self(), :gossip, state.interval)}
   end
+
+  # Checking
 
   defp safe_check(pid, state) do
     if Process.alive?(pid), do: GenServer.call(pid, :check, state.interval)

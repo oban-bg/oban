@@ -27,14 +27,31 @@ useful plugin, but it demonstrates how to handle options, work with the
 
 ```elixir
 defmodule MyApp.Plugins.Breakdown do
+  @behaviour Oban.Plugin
+
   use GenServer
 
   import Ecto.Query, only: [group_by: 3, select: 3]
 
+  @impl Oban.Plugin
   def start_link(opts) do
     name = Keyword.get(opts, :name, __MODULE__)
 
     GenServer.start_link(__MODULE__, opts, name: name)
+  end
+
+  @impl Oban.Plugin
+  def validate(opts) do
+    Oban.Plugin.valdate(opts,
+      {:conf, _} -> :ok
+      {:name, _} -> :ok
+      {:interval, _} ->
+        if is_integer(interval) do
+          :ok
+        else
+          {:error, "expected interval to be an integer"}
+        end
+    end)
   end
 
   @impl GenServer
