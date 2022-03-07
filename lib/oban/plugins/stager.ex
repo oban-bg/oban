@@ -36,7 +36,7 @@ defmodule Oban.Plugins.Stager do
 
   alias Oban.{Job, Notifier, Peer, Plugin, Repo}
 
-  @type option :: Plugin.opts() | {:interval, pos_integer()}
+  @type option :: Plugin.option() | {:interval, pos_integer()}
 
   defmodule State do
     @moduledoc false

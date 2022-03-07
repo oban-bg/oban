@@ -40,7 +40,7 @@ defmodule Oban.Plugins.Repeater do
 
   alias Oban.Plugin
 
-  @type option :: Plugin.opts() | {:interval, pos_integer()}
+  @type option :: Plugin.option() | {:interval, pos_integer()}
 
   defmodule State do
     @moduledoc false
