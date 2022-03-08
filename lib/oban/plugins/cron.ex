@@ -51,7 +51,7 @@ defmodule Oban.Plugins.Cron do
   use GenServer
 
   alias Oban.Cron.Expression
-  alias Oban.{Job, Peer, Plugin, Repo, Worker}
+  alias Oban.{Job, Peer, Plugin, Repo, Validation, Worker}
 
   @opaque expression :: Expression.t()
 
@@ -82,7 +82,13 @@ defmodule Oban.Plugins.Cron do
 
   @impl Plugin
   def validate(opts) when is_list(opts) do
-    Plugin.validate(opts, &validate_opt/1)
+    Validation.validate(opts, fn
+      {:conf, _} -> :ok
+      {:crontab, crontab} -> Validation.validate(crontab, &validate_crontab/1)
+      {:name, _} -> :ok
+      {:timezone, timezone} -> Validation.validate_timezone(:timezone, timezone)
+      option -> {:error, "unknown option provided: #{inspect(option)}"}
+    end)
   end
 
   @doc """
@@ -143,7 +149,7 @@ defmodule Oban.Plugins.Cron do
 
   @impl GenServer
   def init(opts) do
-    Plugin.validate!(opts, &validate/1)
+    Validation.validate!(opts, &validate/1)
 
     Process.flag(:trap_exit, true)
 
@@ -210,24 +216,6 @@ defmodule Oban.Plugins.Cron do
 
     %{state | crontab: parsed}
   end
-
-  defp validate_opt({:crontab, crontab}) when is_list(crontab) do
-    Plugin.validate(crontab, &validate_crontab/1)
-  end
-
-  defp validate_opt({:crontab, crontab}) do
-    {:error, "expected :crontab to be a list, got: #{inspect(crontab)}"}
-  end
-
-  defp validate_opt({:timezone, timezone}) do
-    if is_binary(timezone) and match?({:ok, _}, DateTime.now(timezone)) do
-      :ok
-    else
-      {:error, "expected :timezone to be a known timezone, got: #{inspect(timezone)}"}
-    end
-  end
-
-  defp validate_opt(_opt), do: :ok
 
   defp validate_crontab({expression, worker, opts}) do
     with {:ok, _} <- parse(expression) do

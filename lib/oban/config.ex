@@ -56,7 +56,7 @@ defmodule Oban.Config do
   def new(opts) when is_list(opts) do
     opts = normalize(opts)
 
-    Validation.validate!(opts, &validate_option/1)
+    Validation.validate!(opts, &validate/1)
 
     opts =
       opts
@@ -101,7 +101,7 @@ defmodule Oban.Config do
   def validate(opts) when is_list(opts) do
     opts
     |> normalize()
-    |> Validation.validate(&validate_option/1)
+    |> Validation.validate(&validate_opt/1)
   end
 
   @doc false
@@ -135,17 +135,11 @@ defmodule Oban.Config do
 
   # Validation
 
-  defp is_pos_integer(interval), do: is_integer(interval) and interval > 0
-
-  defp validate_option({:dispatch_cooldown, cooldown}) do
-    if is_pos_integer(cooldown) do
-      :ok
-    else
-      {:error, "expected :dispatch_cooldown to be a positive integer, got: #{inspect(cooldown)}"}
-    end
+  defp validate_opt({:dispatch_cooldown, cooldown}) do
+    Validation.validate_integer(:dispatch_cooldown, cooldown)
   end
 
-  defp validate_option({:engine, engine}) do
+  defp validate_opt({:engine, engine}) do
     if Code.ensure_loaded?(engine) and function_exported?(engine, :init, 2) do
       :ok
     else
@@ -153,7 +147,7 @@ defmodule Oban.Config do
     end
   end
 
-  defp validate_option({:notifier, notifier}) do
+  defp validate_opt({:notifier, notifier}) do
     if Code.ensure_loaded?(notifier) and function_exported?(notifier, :listen, 2) do
       :ok
     else
@@ -161,9 +155,9 @@ defmodule Oban.Config do
     end
   end
 
-  defp validate_option({:name, _}), do: :ok
+  defp validate_opt({:name, _}), do: :ok
 
-  defp validate_option({:node, node}) do
+  defp validate_opt({:node, node}) do
     if is_binary(node) and String.trim(node) != "" do
       :ok
     else
@@ -171,7 +165,7 @@ defmodule Oban.Config do
     end
   end
 
-  defp validate_option({:peer, peer}) do
+  defp validate_opt({:peer, peer}) do
     if peer == false or Code.ensure_loaded?(peer) do
       :ok
     else
@@ -179,7 +173,7 @@ defmodule Oban.Config do
     end
   end
 
-  defp validate_option({:plugins, plugins}) do
+  defp validate_opt({:plugins, plugins}) do
     if is_list(plugins) do
       Validation.validate(plugins, &validate_plugin/1)
     else
@@ -187,7 +181,7 @@ defmodule Oban.Config do
     end
   end
 
-  defp validate_option({:prefix, prefix}) do
+  defp validate_opt({:prefix, prefix}) do
     if is_binary(prefix) and Regex.match?(~r/^[a-z0-9_]+$/i, prefix) do
       :ok
     else
@@ -195,7 +189,7 @@ defmodule Oban.Config do
     end
   end
 
-  defp validate_option({:queues, queues}) do
+  defp validate_opt({:queues, queues}) do
     if Keyword.keyword?(queues) do
       Validation.validate(queues, &validate_queue/1)
     else
@@ -203,7 +197,7 @@ defmodule Oban.Config do
     end
   end
 
-  defp validate_option({:repo, repo}) do
+  defp validate_opt({:repo, repo}) do
     if Code.ensure_loaded?(repo) and function_exported?(repo, :config, 0) do
       :ok
     else
@@ -211,18 +205,13 @@ defmodule Oban.Config do
     end
   end
 
-  defp validate_option({:shutdown_grace_period, period}) do
-    if is_pos_integer(period) do
-      :ok
-    else
-      {:error,
-       "expected :shutdown_grace_period to be a positive integer, got: #{inspect(period)}"}
-    end
+  defp validate_opt({:shutdown_grace_period, period}) do
+    Validation.validate_integer(:shutdown_grace_period, period)
   end
 
   @log_levels ~w(false emergency alert critical error warning warn notice info debug)a
 
-  defp validate_option({:log, log}) do
+  defp validate_opt({:log, log}) do
     if log in @log_levels do
       :ok
     else
@@ -230,7 +219,7 @@ defmodule Oban.Config do
     end
   end
 
-  defp validate_option({:get_dynamic_repo, fun}) do
+  defp validate_opt({:get_dynamic_repo, fun}) do
     if is_nil(fun) or is_function(fun, 0) do
       :ok
     else
@@ -239,7 +228,7 @@ defmodule Oban.Config do
     end
   end
 
-  defp validate_option(option) do
+  defp validate_opt(option) do
     {:error, "unknown option provided #{inspect(option)}"}
   end
 
@@ -268,7 +257,7 @@ defmodule Oban.Config do
   end
 
   defp validate_queue({name, opts}) do
-    if is_pos_integer(opts) or Keyword.keyword?(opts) do
+    if (is_integer(opts) and opts > 0) or Keyword.keyword?(opts) do
       :ok
     else
       {:error,

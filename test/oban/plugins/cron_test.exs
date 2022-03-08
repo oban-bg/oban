@@ -11,33 +11,29 @@ defmodule Oban.Plugins.CronTest do
   end
 
   describe "validate/1" do
-    test ":crontab is validated as a list of cron job expressions" do
-      refute_valid("expected :crontab to be a list", crontab: %{worker1: "foo"})
-    end
-
-    test "job format is validated" do
+    test ":crontab job format is validated" do
       refute_valid("expected crontab entry to be", crontab: ["* * * * *"])
       assert_valid(crontab: [{"* * * * *", Worker}])
       assert_valid(crontab: [{"* * * * *", Worker, queue: "special"}])
     end
 
-    test "worker existence is validated" do
+    test ":crontab worker existence is validated" do
       refute_valid("Fake not found", crontab: [{"* * * * *", Worker}, {"* * * * *", Fake}])
     end
 
-    test "worker perform/1 callback is validated" do
+    test ":crontab worker perform/1 callback is validated" do
       refute_valid("WorkerWithoutPerform does not implement `perform/1`",
         crontab: [{"* * * * *", WorkerWithoutPerform}]
       )
     end
 
-    test "worker options format is validated" do
+    test ":crontab worker options format is validated" do
       refute_valid("options must be a keyword list",
         crontab: [{"* * * * *", Worker, %{foo: "bar"}}]
       )
     end
 
-    test "worker options are validated" do
+    test ":crontab worker options are validated" do
       refute_valid("expected valid job options", crontab: [{"* * * * *", Worker, priority: -1}])
       refute_valid("expected valid job options", crontab: [{"* * * * *", Worker, unique: []}])
     end

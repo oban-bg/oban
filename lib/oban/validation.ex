@@ -10,11 +10,13 @@ defmodule Oban.Validation do
 
   Ensure all keys are known and the correct type:
 
-      validate(opts, fn
-        {:conf, conf} when is_struct(conf) -> :ok
-        {:name, name} when is_atom(name) -> :ok
-        opt -> {:error, "unknown option: " <> inspect(opt)}
-      end)
+      iex> validate(opts, fn
+      ...>   {:conf, conf} when is_struct(conf) -> :ok
+      ...>   {:name, name} when is_atom(name) -> :ok
+      ...>   opt -> {:error, "unknown option: " <> inspect(opt)}
+      ...> end)
+      ...> Oban.Validation.validate(name: Oban)
+      :ok
   """
   @spec validate(Keyword.t(), validator()) :: :ok | {:error, String.t()}
   def validate(opts, validator) do
@@ -26,9 +28,41 @@ defmodule Oban.Validation do
     end)
   end
 
-  @doc false
+  @doc """
+  Similar to `validate/2`, but it will raise an `ArgumentError` for any errors.
+  """
   @spec validate!(opts :: Keyword.t(), validator()) :: :ok
   def validate!(opts, validator) do
-    with {:error, reason} <- validate(opts, validator), do: raise(ArgumentError, reason)
+    with {:error, reason} <- validator.(opts), do: raise(ArgumentError, reason)
+  end
+
+  # Shared Validations
+
+  @doc false
+  def validate_integer(key, value) do
+    if is_integer(value) and value > 0 do
+      :ok
+    else
+      {:error, "expected #{inspect(key)} to be a positive integer, got: #{inspect(value)}"}
+    end
+  end
+
+  @doc false
+  def validate_timezone(key, value) do
+    if is_binary(value) and match?({:ok, _}, DateTime.now(value)) do
+      :ok
+    else
+      {:error, "expected #{inspect(key)} to be a known timezone, got: #{inspect(value)}"}
+    end
+  end
+
+  @doc false
+  def validate_timeout(key, value) do
+    if (is_integer(value) and value > 0) or value == :infinity do
+      :ok
+    else
+      {:error,
+       "expected #{inspect(key)} to be a positive integer or :infinity, got: #{inspect(value)}"}
+    end
   end
 end

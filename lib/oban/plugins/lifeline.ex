@@ -51,7 +51,7 @@ defmodule Oban.Plugins.Lifeline do
 
   import Ecto.Query, only: [where: 3]
 
-  alias Oban.{Job, Peer, Plugin, Repo}
+  alias Oban.{Job, Peer, Plugin, Repo, Validation}
 
   @type option ::
           Plugin.option()
@@ -78,18 +78,18 @@ defmodule Oban.Plugins.Lifeline do
 
   @impl Plugin
   def validate(opts) do
-    Plugin.validate(opts, fn
+    Validation.validate(opts, fn
       {:conf, _} -> :ok
       {:name, _} -> :ok
-      {:interval, interval} -> validate_timeout(interval)
-      {:rescue_after, interval} -> validate_timeout(interval)
+      {:interval, interval} -> Validation.validate_timeout(:interval, interval)
+      {:rescue_after, interval} -> Validation.validate_timeout(:rescue_after, interval)
       option -> {:error, "unknown option provided: #{inspect(option)}"}
     end)
   end
 
   @impl GenServer
   def init(opts) do
-    Plugin.validate!(opts, &validate/1)
+    Validation.validate!(opts, &validate/1)
 
     state =
       State
@@ -126,16 +126,6 @@ defmodule Oban.Plugins.Lifeline do
     end)
 
     {:noreply, schedule_rescue(state)}
-  end
-
-  # Validation
-
-  defp validate_timeout(interval) do
-    if (is_integer(interval) and interval > 0) or interval == :infinity do
-      :ok
-    else
-      {:error, "expected interval to be a positive integer or :infinity, got: #{interval}"}
-    end
   end
 
   # Scheduling

@@ -43,7 +43,7 @@ defmodule Oban.Plugins.Reindexer do
 
   alias Oban.Cron.Expression
   alias Oban.Plugins.Cron
-  alias Oban.{Peer, Plugin, Repo}
+  alias Oban.{Peer, Plugin, Repo, Validation}
 
   @type option :: Plugin.option() | {:schedule, binary()}
 
@@ -61,18 +61,18 @@ defmodule Oban.Plugins.Reindexer do
 
   @impl Plugin
   def validate(opts) do
-    Plugin.validate(opts, fn
+    Validation.validate(opts, fn
       {:conf, _} -> :ok
       {:name, _} -> :ok
       {:schedule, schedule} -> validate_schedule(schedule)
-      {:timezone, timezone} -> validate_timezone(timezone)
+      {:timezone, timezone} -> Validation.validate_timezone(:timezone, timezone)
       option -> {:error, "unknown option provided: #{inspect(option)}"}
     end)
   end
 
   @impl GenServer
   def init(opts) do
-    Plugin.validate!(opts, &validate/1)
+    Validation.validate!(opts, &validate/1)
 
     Process.flag(:trap_exit, true)
 
@@ -118,14 +118,6 @@ defmodule Oban.Plugins.Reindexer do
     :ok
   rescue
     error in [ArgumentError] -> {:error, error}
-  end
-
-  defp validate_timezone(timezone) do
-    if is_binary(timezone) and match?({:ok, _}, DateTime.now(timezone)) do
-      :ok
-    else
-      {:error, "expected :timezone to be a known timezone, got: #{inspect(timezone)}"}
-    end
   end
 
   # Scheduling
