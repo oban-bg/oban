@@ -7,7 +7,7 @@ defmodule Oban.Plugin do
 
   ## Example
 
-  Defining a basic plugin that satisfies the minimum:
+  Defining a basic plugin that satisfies the minimum behaviour:
 
       defmodule MyPlugin do
         @behaviour Oban.Plugin

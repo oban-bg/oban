@@ -2,8 +2,10 @@ defmodule Oban.Config do
   @moduledoc """
   The Config struct validates and encapsulates Oban instance state.
 
-  Options passed to `Oban.start_link/1` are validated and stored in a config struct. Internal
-  modules and plugins are always passed the config with a `:conf` key.
+  Typically, you won't use the Config module directly. Oban automatically creates a Config struct
+  on initialization and passes it through to all supervised children with the `:conf` key.
+
+  To fetch a running Oban supervisor's config, see `Oban.config/1`.
   """
 
   alias Oban.Validation
@@ -39,7 +41,17 @@ defmodule Oban.Config do
             log: false,
             get_dynamic_repo: nil
 
-  @doc false
+  @doc """
+  Generate a Config struct after normalizing and verifying Oban options.
+
+  See `Oban.start_link/1` for a comprehensive description of available options.
+
+  ## Example
+
+  Generate a minimal config with only a `:repo`:
+
+      iex> Oban.Config.new(repo: Oban.Test.Repo)
+  """
   @spec new([Oban.option()]) :: t()
   def new(opts) when is_list(opts) do
     opts = normalize(opts)
@@ -55,11 +67,11 @@ defmodule Oban.Config do
   end
 
   @doc """
-  Utility for verifying configuration options.
+  Verify configuration options.
 
-  This helper is used by `new/1`, and therefore by `Oban.init/1`, to verify configuration options
-  when an Oban supervisor starts. It is provided publicly to aid in configuration testing, as
-  `test` config may differ from `prod` config.
+  This helper is used by `new/1`, and therefore by `Oban.start_link/1`, to verify configuration
+  options when an Oban supervisor starts. It is provided publicly to aid in configuration testing,
+  as `test` config may differ from `prod` config.
 
   # Example
 
