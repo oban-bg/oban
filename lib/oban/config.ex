@@ -41,6 +41,9 @@ defmodule Oban.Config do
             log: false,
             get_dynamic_repo: nil
 
+  @cron_keys [:crontab, :timezone]
+  @log_levels ~w(false emergency alert critical error warning warn notice info debug)a
+
   @doc """
   Generate a Config struct after normalizing and verifying Oban options.
 
@@ -209,8 +212,6 @@ defmodule Oban.Config do
     Validation.validate_integer(:shutdown_grace_period, period)
   end
 
-  @log_levels ~w(false emergency alert critical error warning warn notice info debug)a
-
   defp validate_opt({:log, log}) do
     if log in @log_levels do
       :ok
@@ -278,8 +279,6 @@ defmodule Oban.Config do
     |> Keyword.delete(:circuit_backoff)
     |> Enum.reject(&(&1 == {:notifier, Oban.PostgresNotifier}))
   end
-
-  @cron_keys [:crontab, :timezone]
 
   defp crontab_to_plugin(opts) do
     case {opts[:plugins], opts[:crontab]} do
