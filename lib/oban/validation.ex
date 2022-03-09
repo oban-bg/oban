@@ -18,7 +18,7 @@ defmodule Oban.Validation do
       :ok
   """
   @spec validate(Keyword.t(), validator()) :: :ok | {:error, String.t()}
-  def validate(opts, validator) do
+  def validate(opts, validator) when is_list(opts) and is_function(validator, 1) do
     Enum.reduce_while(opts, :ok, fn opt, acc ->
       case validator.(opt) do
         :ok -> {:cont, acc}
