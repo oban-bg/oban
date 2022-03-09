@@ -82,7 +82,7 @@ defmodule Oban.Plugins.Lifeline do
     Validation.validate(opts, fn
       {:conf, _} -> :ok
       {:name, _} -> :ok
-      {:interval, interval} -> Validation.validate_timeout(:interval, interval)
+      {:interval, interval} -> Validation.validate_integer(:interval, interval)
       {:rescue_after, interval} -> Validation.validate_integer(:rescue_after, interval)
       option -> {:error, "unknown option provided: #{inspect(option)}"}
     end)
