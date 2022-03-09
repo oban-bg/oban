@@ -207,7 +207,7 @@ defmodule Oban do
 
   ## Example
 
-  Retreive the default `Oban` instance config:
+  Retrieve the default `Oban` instance config:
 
       %Oban.Config{} = Oban.config()
 
