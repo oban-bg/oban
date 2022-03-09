@@ -177,11 +177,7 @@ defmodule Oban.Config do
   end
 
   defp validate_opt({:plugins, plugins}) do
-    if is_list(plugins) do
-      Validation.validate(plugins, &validate_plugin/1)
-    else
-      {:error, "expected :plugins to be a list, got: #{inspect(plugins)}"}
-    end
+    Validation.validate(:plugins, plugins, &validate_plugin/1)
   end
 
   defp validate_opt({:prefix, prefix}) do
@@ -236,21 +232,23 @@ defmodule Oban.Config do
   defp validate_plugin(plugin) when not is_tuple(plugin), do: validate_plugin({plugin, []})
 
   defp validate_plugin({plugin, opts}) do
+    name = inspect(plugin)
+
     cond do
       not is_atom(plugin) ->
-        {:error, "plugin #{inspect(plugin)} is not a valid module"}
+        {:error, "plugin #{name} is not a valid module"}
 
       not Code.ensure_loaded?(plugin) ->
-        {:error, "plugin #{plugin} could not be loaded"}
+        {:error, "plugin #{name} could not be loaded"}
 
       not function_exported?(plugin, :validate, 1) ->
-        {:error, "plugin #{plugin} is invalid because it's missing a `validate/1` function"}
+        {:error, "plugin #{name} is invalid because it's missing a `validate/1` function"}
 
       not function_exported?(plugin, :init, 1) ->
-        {:error, "plugin #{plugin} is invalid because it's missing an `init/1` function"}
+        {:error, "plugin #{name} is invalid because it's missing an `init/1` function"}
 
       not Keyword.keyword?(opts) ->
-        {:error, "expected options to be a keyword, got: #{inspect(opts)}"}
+        {:error, "expected #{name} options to be a keyword list, got: #{inspect(opts)}"}
 
       true ->
         plugin.validate(opts)

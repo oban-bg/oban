@@ -11,6 +11,10 @@ defmodule Oban.Plugins.CronTest do
   end
 
   describe "validate/1" do
+    test ":crontab is validated as a list" do
+      refute_valid("expected :crontab to be", crontab: %{})
+    end
+
     test ":crontab job format is validated" do
       refute_valid("expected crontab entry to be", crontab: ["* * * * *"])
       assert_valid(crontab: [{"* * * * *", Worker}])

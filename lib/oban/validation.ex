@@ -17,14 +17,20 @@ defmodule Oban.Validation do
       ...> end)
       :ok
   """
-  @spec validate(Keyword.t(), validator()) :: :ok | {:error, String.t()}
-  def validate(opts, validator) when is_list(opts) and is_function(validator, 1) do
+  @spec validate(atom(), Keyword.t(), validator()) :: :ok | {:error, String.t()}
+  def validate(parent_key \\ nil, opts, validator)
+
+  def validate(_parent_key, opts, validator) when is_list(opts) and is_function(validator, 1) do
     Enum.reduce_while(opts, :ok, fn opt, acc ->
       case validator.(opt) do
         :ok -> {:cont, acc}
         {:error, _reason} = error -> {:halt, error}
       end
     end)
+  end
+
+  def validate(parent_key, opts, _validator) do
+    {:error, "expected #{inspect(parent_key)} to be a list, got: #{inspect(opts)}"}
   end
 
   @doc """
