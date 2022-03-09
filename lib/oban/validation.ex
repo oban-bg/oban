@@ -10,12 +10,11 @@ defmodule Oban.Validation do
 
   Ensure all keys are known and the correct type:
 
-      iex> validate(opts, fn
+      iex> Oban.Validation.validate(name: Oban, fn
       ...>   {:conf, conf} when is_struct(conf) -> :ok
       ...>   {:name, name} when is_atom(name) -> :ok
       ...>   opt -> {:error, "unknown option: " <> inspect(opt)}
       ...> end)
-      ...> Oban.Validation.validate(name: Oban)
       :ok
   """
   @spec validate(Keyword.t(), validator()) :: :ok | {:error, String.t()}
