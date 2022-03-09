@@ -33,6 +33,7 @@ defmodule Oban.Plugins.Lifeline do
   ## Options
 
   * `:interval` — the number of milliseconds between rescue attempts. The default is `60_000ms`.
+
   * `:rescue_after` — the maximum amount of time, in milliseconds, that a job may execute before
   being rescued. 60 minutes by default, and rescuing is performed once a minute.
 
@@ -82,7 +83,7 @@ defmodule Oban.Plugins.Lifeline do
       {:conf, _} -> :ok
       {:name, _} -> :ok
       {:interval, interval} -> Validation.validate_timeout(:interval, interval)
-      {:rescue_after, interval} -> Validation.validate_timeout(:rescue_after, interval)
+      {:rescue_after, interval} -> Validation.validate_integer(:rescue_after, interval)
       option -> {:error, "unknown option provided: #{inspect(option)}"}
     end)
   end

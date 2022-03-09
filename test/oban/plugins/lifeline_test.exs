@@ -8,8 +8,10 @@ defmodule Oban.Plugins.LifelineTest do
     test "validating interval options" do
       assert {:error, _} = Lifeline.validate(interval: 0)
       assert {:error, _} = Lifeline.validate(rescue_after: 0)
+      assert {:error, _} = Lifeline.validate(rescue_after: :infinity)
 
       assert :ok = Lifeline.validate(interval: :timer.seconds(30))
+      assert :ok = Lifeline.validate(interval: :infinity)
       assert :ok = Lifeline.validate(rescue_after: :timer.minutes(30))
     end
   end
