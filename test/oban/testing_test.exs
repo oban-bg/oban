@@ -185,11 +185,12 @@ defmodule Oban.TestingTest do
     test "retrieving a filtered list of enqueued jobs" do
       insert!(%{id: 1, ref: "a"}, worker: Ping, queue: :alpha)
       insert!(%{id: 2, ref: "b"}, worker: Ping, queue: :alpha)
-      insert!(%{id: 3, ref: "c"}, worker: Pong, queue: :gamma)
+      insert!(%{id: 3, ref: "c"}, worker: Pong, queue: :gamma, unique: [period: 60], max_attempts: 5)
 
       assert [%{args: %{"id" => 2}} | _] = all_enqueued(worker: Ping)
       assert [%Job{}] = all_enqueued(worker: Pong, queue: :gamma)
-      assert [%Job{}, %Job{}, %Job{}] = all_enqueued()
+      assert [%Job{unique: unique, max_attempts: 5}, %Job{}, %Job{}] = all_enqueued()
+      refute is_nil(unique)
     end
   end
 
