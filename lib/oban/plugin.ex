@@ -7,7 +7,7 @@ defmodule Oban.Plugin do
 
   ## Example
 
-  Defining a basic plugin that satisfies the minimum:
+  Defining a basic plugin that satisfies the minimum behaviour:
 
       defmodule MyPlugin do
         @behaviour Oban.Plugin
@@ -41,7 +41,6 @@ defmodule Oban.Plugin do
   alias Oban.Config
 
   @type option :: {:conf, Config.t()} | {:name, GenServer.name()} | {atom(), term()}
-  @type validator :: (option() -> :ok | {:error, term()})
 
   @doc """
   Starts a Plugin process linked to the current process.
@@ -54,34 +53,5 @@ defmodule Oban.Plugin do
   @doc """
   Validate the structure, presence, or values of keyword options.
   """
-  @callback validate([option()]) :: :ok | {:error, term()}
-
-  @doc """
-  A utility to help validate options without resorting to `throw` or `raise` for control flow.
-
-  ## Example
-
-  Ensure all keys are known and the correct type:
-
-      validate(opts, fn
-        {:conf, conf} when is_struct(conf) -> :ok
-        {:name, name} when is_atom(name) -> :ok
-        opt -> {:error, "unknown option: " <> inspect(opt)}
-      end)
-  """
-  @spec validate([option()], validator()) :: :ok | {:error, term()}
-  def validate(opts, validator) do
-    Enum.reduce_while(opts, :ok, fn opt, acc ->
-      case validator.(opt) do
-        :ok -> {:cont, acc}
-        {:error, _reason} = error -> {:halt, error}
-      end
-    end)
-  end
-
-  @doc false
-  @spec validate!([option()], ([option()] -> :ok | {:error, term()})) :: :ok
-  def validate!(opts, validate) do
-    with {:error, reason} <- validate.(opts), do: raise(ArgumentError, reason)
-  end
+  @callback validate([option()]) :: :ok | {:error, String.t()}
 end

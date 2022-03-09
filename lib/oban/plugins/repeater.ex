@@ -38,7 +38,7 @@ defmodule Oban.Plugins.Repeater do
 
   use GenServer
 
-  alias Oban.Plugin
+  alias Oban.{Plugin, Validation}
 
   @type option :: Plugin.option() | {:interval, pos_integer()}
 
@@ -56,17 +56,17 @@ defmodule Oban.Plugins.Repeater do
 
   @impl Plugin
   def validate(opts) do
-    Plugin.validate(opts, fn
+    Validation.validate(opts, fn
       {:conf, _} -> :ok
       {:name, _} -> :ok
-      {:interval, interval} -> validate_integer(:interval, interval)
+      {:interval, interval} -> Validation.validate_integer(:interval, interval)
       option -> {:error, "unknown option provided: #{inspect(option)}"}
     end)
   end
 
   @impl GenServer
   def init(opts) do
-    Plugin.validate!(opts, &validate/1)
+    Validation.validate!(opts, &validate/1)
 
     Process.flag(:trap_exit, true)
 
@@ -96,16 +96,6 @@ defmodule Oban.Plugins.Repeater do
     end)
 
     {:noreply, schedule_notify(state)}
-  end
-
-  # Validation
-
-  defp validate_integer(key, value) do
-    if is_integer(value) and value > 0 do
-      :ok
-    else
-      {:error, "expected #{inspect(key)} to be a positive integer, got: #{inspect(value)}"}
-    end
   end
 
   # Scheduling

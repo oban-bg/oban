@@ -4,6 +4,8 @@ defmodule Oban.ConfigTest do
   alias Oban.Config
   alias Oban.Plugins.Pruner
 
+  doctest Config
+
   describe "new/1" do
     test "legacy :circuit_backoff option is ignored" do
       assert_valid(circuit_backoff: 10)
@@ -43,12 +45,13 @@ defmodule Oban.ConfigTest do
       assert_valid(node: "MyNode")
     end
 
-    test ":plugins are validated as modules or module/keyword tuples" do
+    test ":plugins are validated as complete plugins with possible options" do
       refute_valid(plugins: ["Module"])
       refute_valid(plugins: [FakeModule])
       refute_valid(plugins: [Pruner, FakeModule])
       refute_valid(plugins: [{Worker, nil}])
       refute_valid(plugins: [{Worker, %{}}])
+      refute_valid(plugins: [{Pruner, interval: -1}])
 
       assert_valid(plugins: false)
       assert_valid(plugins: [])
@@ -115,11 +118,11 @@ defmodule Oban.ConfigTest do
   end
 
   defp refute_valid(opts) do
-    assert_raise ArgumentError, fn -> conf(opts) end
+    assert {:error, _reason} = Config.validate(opts)
   end
 
   defp assert_valid(opts) do
-    assert %Config{} = conf(opts)
+    assert :ok = Config.validate(opts)
   end
 
   defp conf(opts) do

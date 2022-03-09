@@ -203,7 +203,17 @@ defmodule Oban do
   end
 
   @doc """
-  Retrieve the config struct for a named Oban supervision tree.
+  Retrieve the `Oban.Config` struct for a named Oban supervision tree.
+
+  ## Example
+
+  Retrieve the default `Oban` instance config:
+
+      %Oban.Config{} = Oban.config()
+
+  Retrieve the config for an instance started with a custom name:
+
+      %Oban.Config{} = Oban.config(MyCustomOban)
   """
   @doc since: "0.2.0"
   @spec config(name()) :: Config.t()

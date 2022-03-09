@@ -44,7 +44,7 @@ defmodule Oban.Plugins.Pruner do
 
   import Ecto.Query, only: [join: 5, limit: 2, or_where: 3, select: 2]
 
-  alias Oban.{Job, Peer, Plugin, Repo}
+  alias Oban.{Job, Peer, Plugin, Repo, Validation}
 
   @type option ::
           Plugin.option()
@@ -72,19 +72,19 @@ defmodule Oban.Plugins.Pruner do
 
   @impl Plugin
   def validate(opts) do
-    Plugin.validate(opts, fn
+    Validation.validate(opts, fn
       {:conf, _} -> :ok
       {:name, _} -> :ok
-      {:interval, interval} -> validate_integer(:interval, interval)
-      {:limit, limit} -> validate_integer(:limit, limit)
-      {:max_age, max_age} -> validate_integer(:max_age, max_age)
+      {:interval, interval} -> Validation.validate_integer(:interval, interval)
+      {:limit, limit} -> Validation.validate_integer(:limit, limit)
+      {:max_age, max_age} -> Validation.validate_integer(:max_age, max_age)
       option -> {:error, "unknown option provided: #{inspect(option)}"}
     end)
   end
 
   @impl GenServer
   def init(opts) do
-    Plugin.validate!(opts, &validate/1)
+    Validation.validate!(opts, &validate/1)
 
     Process.flag(:trap_exit, true)
 
@@ -118,16 +118,6 @@ defmodule Oban.Plugins.Pruner do
     end)
 
     {:noreply, schedule_prune(state)}
-  end
-
-  # Validation
-
-  defp validate_integer(key, value) do
-    if is_integer(value) and value > 0 do
-      :ok
-    else
-      {:error, "expected #{inspect(key)} to be a positive integer, got: #{inspect(value)}"}
-    end
   end
 
   # Scheduling
