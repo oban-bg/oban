@@ -241,17 +241,17 @@ defmodule Oban.Config do
       not Code.ensure_loaded?(plugin) ->
         {:error, "plugin #{name} could not be loaded"}
 
-      not function_exported?(plugin, :validate, 1) ->
-        {:error, "plugin #{name} is invalid because it's missing a `validate/1` function"}
-
       not function_exported?(plugin, :init, 1) ->
         {:error, "plugin #{name} is invalid because it's missing an `init/1` function"}
 
       not Keyword.keyword?(opts) ->
         {:error, "expected #{name} options to be a keyword list, got: #{inspect(opts)}"}
 
-      true ->
+      function_exported?(plugin, :validate, 1) ->
         plugin.validate(opts)
+
+      true ->
+        :ok
     end
   end
 
