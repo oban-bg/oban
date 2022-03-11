@@ -125,17 +125,15 @@ defmodule Oban.Migrations do
       Oban.Migrations.up(prefix: "payments", create_schema: false)
   """
   def up(opts \\ []) when is_list(opts) do
-    prefix = Keyword.get(opts, :prefix, @default_prefix)
-    version = Keyword.get(opts, :version, @current_version)
-    create_schema = Keyword.get(opts, :create_schema, prefix != "public")
-    initial = migrated_version(repo(), prefix)
+    opts = with_defaults(opts, @current_version)
+    initial = migrated_version(repo(), opts.prefix)
 
     cond do
       initial == 0 ->
-        change(@initial_version..version, :up, %{prefix: prefix, create_schema: create_schema})
+        change(@initial_version..opts.version, :up, opts)
 
-      initial < version ->
-        change((initial + 1)..version, :up, %{prefix: prefix})
+      initial < opts.version ->
+        change((initial + 1)..opts.version, :up, opts)
 
       true ->
         :ok
@@ -160,13 +158,21 @@ defmodule Oban.Migrations do
       Oban.Migrations.down(prefix: "payments")
   """
   def down(opts \\ []) when is_list(opts) do
-    prefix = Keyword.get(opts, :prefix, @default_prefix)
-    version = Keyword.get(opts, :version, @initial_version)
-    initial = max(migrated_version(repo(), prefix), @initial_version)
+    opts = with_defaults(opts, @initial_version)
+    initial = max(migrated_version(repo(), opts.prefix), @initial_version)
 
-    if initial >= version do
-      change(initial..version, :down, %{prefix: prefix})
+    if initial >= opts.version do
+      change(initial..opts.version, :down, opts)
     end
+  end
+
+  defp with_defaults(opts, version) do
+    opts = Enum.into(opts, %{prefix: @default_prefix, version: version})
+
+    opts
+    |> Map.put_new(:create_schema, opts.prefix != @default_prefix)
+    |> Map.put_new(:quoted_prefix, inspect(opts.prefix))
+    |> Map.put_new(:escaped_prefix, String.replace(opts.prefix, "'", "\\'"))
   end
 
   @doc false
@@ -177,13 +183,15 @@ defmodule Oban.Migrations do
 
   @doc false
   def migrated_version(repo, prefix) do
+    escaped_prefix = String.replace(prefix, "'", "\\'")
+
     query = """
     SELECT description
     FROM pg_class
     LEFT JOIN pg_description ON pg_description.objoid = pg_class.oid
     LEFT JOIN pg_namespace ON pg_namespace.oid = pg_class.relnamespace
     WHERE pg_class.relname = 'oban_jobs'
-    AND pg_namespace.nspname = '#{prefix}'
+    AND pg_namespace.nspname = '#{escaped_prefix}'
     """
 
     conf = Config.new(repo: repo, prefix: prefix)
@@ -212,6 +220,6 @@ defmodule Oban.Migrations do
   defp record_version(_opts, 0), do: :ok
 
   defp record_version(%{prefix: prefix}, version) do
-    execute "COMMENT ON TABLE #{prefix}.oban_jobs IS '#{version}'"
+    execute "COMMENT ON TABLE #{inspect(prefix)}.oban_jobs IS '#{version}'"
   end
 end

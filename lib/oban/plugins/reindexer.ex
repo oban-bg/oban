@@ -159,7 +159,7 @@ defmodule Oban.Plugins.Reindexer do
       {:ok, datetime} = DateTime.now(state.timezone)
 
       if Expression.now?(state.schedule, datetime) do
-        prefix = state.conf.prefix
+        prefix = inspect(state.conf.prefix)
 
         Repo.query(state.conf, deindex_query(state), [])
 

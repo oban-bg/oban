@@ -86,7 +86,6 @@ defmodule Oban.MigrationsTest do
 
     # Migrating once more to replicate multiple migrations that don't specify a version.
     assert :ok = Ecto.Migrator.up(Repo, @base_version + 1, DefaultMigration)
-
     assert :ok = Ecto.Migrator.down(Repo, @base_version + 1, DefaultMigration)
 
     refute table_exists?("oban_jobs")

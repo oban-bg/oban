@@ -3,13 +3,13 @@ defmodule Oban.Migrations.V04 do
 
   use Ecto.Migration
 
-  def up(%{prefix: prefix}) do
-    execute("DROP FUNCTION IF EXISTS #{prefix}.oban_wrap_id(value bigint)")
+  def up(%{quoted_prefix: quoted}) do
+    execute("DROP FUNCTION IF EXISTS #{quoted}.oban_wrap_id(value bigint)")
   end
 
-  def down(%{prefix: prefix}) do
+  def down(%{quoted_prefix: quoted}) do
     execute """
-    CREATE OR REPLACE FUNCTION #{prefix}.oban_wrap_id(value bigint) RETURNS int AS $$
+    CREATE OR REPLACE FUNCTION #{quoted}.oban_wrap_id(value bigint) RETURNS int AS $$
     BEGIN
       RETURN (CASE WHEN value > 2147483647 THEN mod(value, 2147483647) ELSE value END)::int;
     END;
