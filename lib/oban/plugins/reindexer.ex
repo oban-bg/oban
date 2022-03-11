@@ -135,7 +135,7 @@ defmodule Oban.Plugins.Reindexer do
       {:ok, datetime} = DateTime.now(state.timezone)
 
       if Expression.now?(state.schedule, datetime) do
-        table = "#{state.conf.prefix}.oban_jobs"
+        table = "#{inspect(state.conf.prefix)}.oban_jobs"
 
         Repo.query(state.conf, "REINDEX TABLE CONCURRENTLY #{table}", [])
       end

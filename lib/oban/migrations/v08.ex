@@ -4,6 +4,9 @@ defmodule Oban.Migrations.V08 do
   use Ecto.Migration
 
   def up(%{prefix: prefix}) do
+    quoted_prefix = inspect(prefix)
+    escaped_prefix = String.replace(prefix, "'", "\\'")
+
     alter table(:oban_jobs, prefix: prefix) do
       add_if_not_exists(:discarded_at, :utc_datetime_usec)
       add_if_not_exists(:priority, :integer)
@@ -22,13 +25,13 @@ defmodule Oban.Migrations.V08 do
                          )
 
     execute """
-    CREATE OR REPLACE FUNCTION #{prefix}.oban_jobs_notify() RETURNS trigger AS $$
+    CREATE OR REPLACE FUNCTION #{quoted_prefix}.oban_jobs_notify() RETURNS trigger AS $$
     DECLARE
       channel text;
       notice json;
     BEGIN
       IF NEW.state = 'available' THEN
-        channel = '#{prefix}.oban_insert';
+        channel = '#{escaped_prefix}.oban_insert';
         notice = json_build_object('queue', NEW.queue);
 
         PERFORM pg_notify(channel, notice::text);
@@ -39,16 +42,19 @@ defmodule Oban.Migrations.V08 do
     $$ LANGUAGE plpgsql;
     """
 
-    execute "DROP TRIGGER IF EXISTS oban_notify ON #{prefix}.oban_jobs"
+    execute "DROP TRIGGER IF EXISTS oban_notify ON #{quoted_prefix}.oban_jobs"
 
     execute """
     CREATE TRIGGER oban_notify
-    AFTER INSERT ON #{prefix}.oban_jobs
-    FOR EACH ROW EXECUTE PROCEDURE #{prefix}.oban_jobs_notify();
+    AFTER INSERT ON #{quoted_prefix}.oban_jobs
+    FOR EACH ROW EXECUTE PROCEDURE #{quoted_prefix}.oban_jobs_notify();
     """
   end
 
   def down(%{prefix: prefix}) do
+    quoted_prefix = inspect(prefix)
+    escaped_prefix = String.replace(prefix, "'", "\\'")
+
     drop_if_exists index(:oban_jobs, [:queue, :state, :priority, :scheduled_at, :id],
                      prefix: prefix
                    )
@@ -62,13 +68,13 @@ defmodule Oban.Migrations.V08 do
     end
 
     execute """
-    CREATE OR REPLACE FUNCTION #{prefix}.oban_jobs_notify() RETURNS trigger AS $$
+    CREATE OR REPLACE FUNCTION #{quoted_prefix}.oban_jobs_notify() RETURNS trigger AS $$
     DECLARE
       channel text;
       notice json;
     BEGIN
       IF (TG_OP = 'INSERT') THEN
-        channel = '#{prefix}.oban_insert';
+        channel = '#{escaped_prefix}.oban_insert';
         notice = json_build_object('queue', NEW.queue, 'state', NEW.state);
 
         -- No point triggering for a job that isn't scheduled to run now
@@ -76,7 +82,7 @@ defmodule Oban.Migrations.V08 do
           RETURN null;
         END IF;
       ELSE
-        channel = '#{prefix}.oban_update';
+        channel = '#{escaped_prefix}.oban_update';
         notice = json_build_object('queue', NEW.queue, 'new_state', NEW.state, 'old_state', OLD.state);
       END IF;
 
@@ -87,12 +93,12 @@ defmodule Oban.Migrations.V08 do
     $$ LANGUAGE plpgsql;
     """
 
-    execute "DROP TRIGGER IF EXISTS oban_notify ON #{prefix}.oban_jobs"
+    execute "DROP TRIGGER IF EXISTS oban_notify ON #{quoted_prefix}.oban_jobs"
 
     execute """
     CREATE TRIGGER oban_notify
-    AFTER INSERT OR UPDATE OF state ON #{prefix}.oban_jobs
-    FOR EACH ROW EXECUTE PROCEDURE #{prefix}.oban_jobs_notify();
+    AFTER INSERT OR UPDATE OF state ON #{quoted_prefix}.oban_jobs
+    FOR EACH ROW EXECUTE PROCEDURE #{quoted_prefix}.oban_jobs_notify();
     """
   end
 end

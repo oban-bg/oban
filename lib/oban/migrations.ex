@@ -158,13 +158,15 @@ defmodule Oban.Migrations do
 
   @doc false
   def migrated_version(repo, prefix) do
+    escaped_prefix = String.replace(prefix, "'", "\\'")
+
     query = """
     SELECT description
     FROM pg_class
     LEFT JOIN pg_description ON pg_description.objoid = pg_class.oid
     LEFT JOIN pg_namespace ON pg_namespace.oid = pg_class.relnamespace
     WHERE pg_class.relname = 'oban_jobs'
-    AND pg_namespace.nspname = '#{prefix}'
+    AND pg_namespace.nspname = '#{escaped_prefix}'
     """
 
     conf = Config.new(repo: repo, prefix: prefix)
@@ -193,6 +195,6 @@ defmodule Oban.Migrations do
   defp record_version(_opts, 0), do: :ok
 
   defp record_version(%{prefix: prefix}, version) do
-    execute "COMMENT ON TABLE #{prefix}.oban_jobs IS '#{version}'"
+    execute "COMMENT ON TABLE #{inspect(prefix)}.oban_jobs IS '#{version}'"
   end
 end

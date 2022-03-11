@@ -12,9 +12,10 @@ defmodule Oban.Migrations.V05 do
   end
 
   def down(%{prefix: prefix}) do
+    quoted_prefix = inspect(prefix)
     drop_if_exists index(:oban_jobs, [:queue, :state, :scheduled_at, :id], prefix: prefix)
 
-    state = "#{prefix}.oban_job_state"
+    state = "#{quoted_prefix}.oban_job_state"
 
     create_if_not_exists index(:oban_jobs, [:queue], prefix: prefix)
     create_if_not_exists index(:oban_jobs, [:state], prefix: prefix)

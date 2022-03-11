@@ -4,10 +4,11 @@ defmodule Oban.Migrations.V02 do
   use Ecto.Migration
 
   def up(%{prefix: prefix}) do
+    quoted_prefix = inspect(prefix)
     # We only need the scheduled_at index for scheduled and available jobs
     drop_if_exists index(:oban_jobs, [:scheduled_at], prefix: prefix)
 
-    state = "#{prefix}.oban_job_state"
+    state = "#{quoted_prefix}.oban_job_state"
 
     create index(:oban_jobs, [:scheduled_at],
              where: "state in ('available'::#{state}, 'scheduled'::#{state})",
@@ -25,7 +26,7 @@ defmodule Oban.Migrations.V02 do
            )
 
     execute """
-    CREATE OR REPLACE FUNCTION #{prefix}.oban_wrap_id(value bigint) RETURNS int AS $$
+    CREATE OR REPLACE FUNCTION #{quoted_prefix}.oban_wrap_id(value bigint) RETURNS int AS $$
     BEGIN
       RETURN (CASE WHEN value > 2147483647 THEN mod(value, 2147483647) ELSE value END)::int;
     END;
@@ -34,12 +35,13 @@ defmodule Oban.Migrations.V02 do
   end
 
   def down(%{prefix: prefix}) do
+    quoted_prefix = inspect(prefix)
     drop_if_exists constraint(:oban_jobs, :queue_length, prefix: prefix)
     drop_if_exists constraint(:oban_jobs, :worker_length, prefix: prefix)
 
     drop_if_exists index(:oban_jobs, [:scheduled_at], prefix: prefix)
     create index(:oban_jobs, [:scheduled_at], prefix: prefix)
 
-    execute("DROP FUNCTION IF EXISTS #{prefix}.oban_wrap_id(value bigint)")
+    execute("DROP FUNCTION IF EXISTS #{quoted_prefix}.oban_wrap_id(value bigint)")
   end
 end
