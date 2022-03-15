@@ -44,8 +44,10 @@ defmodule Oban.Validation do
   # Shared Validations
 
   @doc false
-  def validate_integer(key, value) do
-    if is_integer(value) and value > 0 do
+  def validate_integer(key, value, opts \\ []) do
+    min = Keyword.get(opts, :min, 1)
+
+    if is_integer(value) and value > min - 1 do
       :ok
     else
       {:error, "expected #{inspect(key)} to be a positive integer, got: #{inspect(value)}"}

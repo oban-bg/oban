@@ -205,7 +205,7 @@ defmodule Oban.Config do
   end
 
   defp validate_opt({:shutdown_grace_period, period}) do
-    Validation.validate_integer(:shutdown_grace_period, period)
+    Validation.validate_integer(:shutdown_grace_period, period, min: 0)
   end
 
   defp validate_opt({:log, log}) do

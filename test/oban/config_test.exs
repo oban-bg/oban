@@ -83,10 +83,10 @@ defmodule Oban.ConfigTest do
 
     test ":shutdown_grace_period is validated as an integer" do
       refute_valid(shutdown_grace_period: -1)
-      refute_valid(shutdown_grace_period: 0)
       refute_valid(shutdown_grace_period: "5")
       refute_valid(shutdown_grace_period: 1.0)
 
+      assert_valid(shutdown_grace_period: 0)
       assert_valid(shutdown_grace_period: 10)
     end
 

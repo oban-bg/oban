@@ -14,14 +14,12 @@ defmodule Oban.Queue.Watchman do
   defmodule State do
     @moduledoc false
 
-    defstruct [:foreman, :producer]
+    defstruct [:foreman, :producer, :shutdown]
   end
 
   @spec child_spec([option]) :: Supervisor.child_spec()
   def child_spec(opts) do
-    {down, opts} = Keyword.pop(opts, :shutdown)
-
-    %{id: __MODULE__, start: {__MODULE__, :start_link, [opts]}, shutdown: down}
+    %{id: __MODULE__, start: {__MODULE__, :start_link, [opts]}, shutdown: opts[:shutdown]}
   end
 
   @spec start_link([option]) :: GenServer.on_start()
@@ -39,6 +37,8 @@ defmodule Oban.Queue.Watchman do
   end
 
   @impl GenServer
+  def terminate(_reason, %State{shutdown: 0}), do: :ok
+
   def terminate(_reason, %State{foreman: foreman, producer: producer}) do
     try do
       :ok = Producer.pause(producer)
