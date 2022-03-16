@@ -4,13 +4,11 @@ defmodule Oban.Queue.Drainer do
   import Ecto.Query, only: [where: 3]
 
   alias Oban.{Config, Job, Repo}
-  alias Oban.Queue.{BasicEngine, Executor}
+  alias Oban.Queue.Executor
 
   @infinite 100_000_000
 
   def drain(%Config{} = conf, [_ | _] = opts) do
-    conf = %{conf | engine: BasicEngine}
-
     args =
       opts
       |> Map.new()

@@ -29,17 +29,17 @@ defmodule Oban.Config do
   @enforce_keys [:node, :repo]
   defstruct dispatch_cooldown: 5,
             engine: Oban.Queue.BasicEngine,
-            notifier: Oban.Notifiers.Postgres,
+            get_dynamic_repo: nil,
+            log: false,
             name: Oban,
             node: nil,
+            notifier: Oban.Notifiers.Postgres,
             peer: Oban.Peers.Postgres,
             plugins: [],
             prefix: "public",
             queues: [],
             repo: nil,
-            shutdown_grace_period: :timer.seconds(15),
-            log: false,
-            get_dynamic_repo: nil
+            shutdown_grace_period: :timer.seconds(15)
 
   @cron_keys [:crontab, :timezone]
   @log_levels ~w(false emergency alert critical error warning warn notice info debug)a
