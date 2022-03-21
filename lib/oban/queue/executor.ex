@@ -65,7 +65,7 @@ defmodule Oban.Queue.Executor do
     %{exec | safe: value}
   end
 
-  @spec call(t()) :: state()
+  @spec call(t()) :: t()
   def call(%__MODULE__{} = exec) do
     exec =
       exec
@@ -82,7 +82,7 @@ defmodule Oban.Queue.Executor do
       |> report_finished()
       |> reraise_unsafe()
 
-      exec.state
+      exec
     end
 
     if exec.safe do

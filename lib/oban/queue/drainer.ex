@@ -43,8 +43,8 @@ defmodule Oban.Queue.Drainer do
           |> Executor.put(:safe, args.with_safety)
           |> Executor.call()
           |> case do
-            :exhausted -> :discard
-            value -> value
+            %{state: :exhausted} -> :discard
+            %{state: state} -> state
           end
 
         Map.update(acc, result, 1, &(&1 + 1))
