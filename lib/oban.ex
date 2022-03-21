@@ -395,8 +395,8 @@ defmodule Oban do
   * `:with_recursion` — whether to keep draining a queue repeatedly when jobs insert _more_ jobs
 
   * `:with_safety` — whether to silently catch errors when draining, defaults to `true`. When
-  `false`, raised exceptions or unhandled exits are reraised (unhandled exits are wrapped in
-  `Oban.CrashError`). Note that error tuples count as a failure, but they aren't raised.
+    `false`, raised exceptions or unhandled exits are reraised (unhandled exits are wrapped in
+    `Oban.CrashError`).
 
   * `:with_scheduled` — whether to include any scheduled jobs when draining, default `false`
 
