@@ -166,7 +166,7 @@ defmodule Oban.Testing do
   @doc """
   Construct a job and execute it with a worker module.
 
-  This reduces boiler plate when constructing jobs for unit tests and checks for common pitfalls.
+  This reduces boilerplate when constructing jobs for unit tests and checks for common pitfalls.
   For example, it automatically converts `args` to string keys before calling `perform/1`,
   ensuring that perform clauses aren't erroneously trying to match atom keys.
 
