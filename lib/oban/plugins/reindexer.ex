@@ -81,9 +81,14 @@ defmodule Oban.Plugins.Reindexer do
       |> Keyword.put_new(:schedule, "@midnight")
       |> Keyword.update!(:schedule, &Expression.parse!/1)
 
-    state = struct!(State, opts)
+    state =
+      State
+      |> struct!(opts)
+      |> schedule_reindex()
 
-    {:ok, schedule_reindex(state)}
+    :telemetry.execute([:oban, :plugin, :init], %{}, %{conf: state.conf, plugin: __MODULE__})
+
+    {:ok, state}
   end
 
   @impl GenServer

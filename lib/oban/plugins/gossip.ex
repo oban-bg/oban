@@ -76,6 +76,8 @@ defmodule Oban.Plugins.Gossip do
       |> struct!(opts)
       |> schedule_gossip()
 
+    :telemetry.execute([:oban, :plugin, :init], %{}, %{conf: state.conf, plugin: __MODULE__})
+
     {:ok, state}
   end
 

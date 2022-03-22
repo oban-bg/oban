@@ -97,6 +97,8 @@ defmodule Oban.Plugins.Lifeline do
       |> struct!(opts)
       |> schedule_rescue()
 
+    :telemetry.execute([:oban, :plugin, :init], %{}, %{conf: state.conf, plugin: __MODULE__})
+
     {:ok, state}
   end
 

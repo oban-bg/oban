@@ -114,15 +114,17 @@ defmodule Oban.Telemetry do
   ### Plugin Events
 
   All the Oban plugins emit telemetry events under the `[:oban, :plugin, *]` pattern (where `*` is
-  either `:start`, `:stop`, or `:exception`). You can filter out for plugin events by looking into
-  the metadata of the event and checking the value of `:plugin`. The `:plugin` field is the plugin
-  module that emitted the event. For example, to get `Oban.Plugins.Cron` specific events, you can
-  filter for telemetry events with a metadata key/value of `plugin: Oban.Plugins.Cron`.
+  either `:init`, `:start`, `:stop`, or `:exception`). You can filter out for plugin events by
+  looking into the metadata of the event and checking the value of `:plugin`. The `:plugin` field
+  is the plugin module that emitted the event. For example, to get `Oban.Plugins.Cron` specific
+  events, you can filter for telemetry events with a metadata key/value of `plugin:
+  Oban.Plugins.Cron`.
 
   Oban emits the following telemetry event whenever a plugin executes (be sure to check the
   documentation for each plugin as each plugin can also add additional metadata specific to
   the plugin):
 
+  * `[:oban, :plugin, :init]` — when the plugin first initializes
   * `[:oban, :plugin, :start]` — when the plugin beings performing its work
   * `[:oban, :plugin, :stop]` —  after the plugin completes its work
   * `[:oban, :plugin, :exception]` — when the plugin encounters an error
@@ -131,6 +133,7 @@ defmodule Oban.Telemetry do
 
   | event        | measures        | metadata                                              |
   | ------------ | --------------- | ----------------------------------------------------- |
+  | `:init`      |                 | `:conf`, `:plugin`                                    |
   | `:start`     | `:system_time`  | `:conf`, `:plugin`                                    |
   | `:stop`      | `:duration`     | `:conf`, `:plugin`                                    |
   | `:exception` | `:duration`     | `:conf`, `:plugin`, `:kind`, `:reason`, `:stacktrace` |

@@ -78,6 +78,8 @@ defmodule Oban.Plugins.Stager do
       |> struct!(opts)
       |> schedule_staging()
 
+    :telemetry.execute([:oban, :plugin, :init], %{}, %{conf: state.conf, plugin: __MODULE__})
+
     {:ok, state}
   end
 

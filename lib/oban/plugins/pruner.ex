@@ -93,6 +93,8 @@ defmodule Oban.Plugins.Pruner do
       |> struct!(opts)
       |> schedule_prune()
 
+    :telemetry.execute([:oban, :plugin, :init], %{}, %{conf: state.conf, plugin: __MODULE__})
+
     {:ok, state}
   end
 

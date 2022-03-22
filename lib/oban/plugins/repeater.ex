@@ -70,9 +70,14 @@ defmodule Oban.Plugins.Repeater do
 
     Process.flag(:trap_exit, true)
 
-    state = struct!(State, opts)
+    state =
+      State
+      |> struct!(opts)
+      |> schedule_notify()
 
-    {:ok, schedule_notify(state)}
+    :telemetry.execute([:oban, :plugin, :init], %{}, %{conf: state.conf, plugin: __MODULE__})
+
+    {:ok, state}
   end
 
   @impl GenServer
