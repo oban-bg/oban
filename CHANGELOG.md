@@ -155,6 +155,15 @@ Now, here's an sample where the job has encountered an error:
 }
 ```
 
+## 2.11.3 — 2022-03-23
+
+### Enhancements
+
+- [Peer] Allow disabling local leadership with `peer: false`.
+
+  In some circumstances a node shouldn't have leadership because it doesn't run
+  important plugins, i.e. it only runs `Gossip` or `Stats`.
+
 ## 2.11.2 — 2022-02-25
 
 ### Bug Fixes
