@@ -83,9 +83,13 @@ defmodule Oban.Peer do
   def leader?(conf_or_name \\ Oban)
 
   def leader?(%Config{} = conf) do
-    conf.name
-    |> Registry.whereis(Oban.Peer)
-    |> conf.peer.leader?()
+    case Registry.whereis(conf.name, Oban.Peer) do
+      pid when is_pid(pid) ->
+        conf.peer.leader?(pid)
+
+      nil ->
+        false
+    end
   end
 
   def leader?(name) do

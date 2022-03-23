@@ -10,12 +10,14 @@ defmodule Oban.PeerTest do
       name = start_supervised_oban!(peer: false)
 
       refute Registry.whereis(name, Peer)
+      refute Peer.leader?(name)
     end
 
     test "leadership is disabled along with plugins" do
       name = start_supervised_oban!(plugins: false)
 
       refute Registry.whereis(name, Peer)
+      refute Peer.leader?(name)
     end
   end
 
