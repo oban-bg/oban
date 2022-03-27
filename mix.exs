@@ -78,7 +78,12 @@ defmodule Oban.MixProject do
       "guides/recipes/reliable-scheduling.md",
       "guides/recipes/reporting-progress.md",
       "guides/recipes/expected-failures.md",
-      "guides/recipes/splitting-queues.md"
+      "guides/recipes/splitting-queues.md",
+
+      # Testing
+      "guides/testing/introduction.md",
+      "guides/testing/config.md",
+      "guides/testing/workers.md"
     ]
   end
 
@@ -86,6 +91,7 @@ defmodule Oban.MixProject do
     [
       Guides: ~r{guides/[^\/]+\.md},
       Recipes: ~r{guides/recipes/.?},
+      Testing: ~r{guides/testing/.?},
       "Upgrade Guides": ~r{guides/upgrading/.*}
     ]
   end
