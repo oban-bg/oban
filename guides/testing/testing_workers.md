@@ -1,15 +1,12 @@
 # Testing Workers
 
-Worker modules are the primary "unit" of an Oban system. We can test a worker's
+Worker modules are the primary "unit" of an Oban system. You can test a worker's
 callback functions locally, in-process, without touching the database.
 
 Most worker callback functions take a single argument: an `Oban.Job` struct. A
-job encapsulates arguments, metadata, and other options. You only need to
-construct an `%Oban.Job{}` and call the worker functions directly to test the
-various callbacks.
-
-Creating jobs, and verifying that they're built correctly, requires some
-boilerplate—that's where `Oban.Testing.perform_job/3` comes in!
+job encapsulates arguments, metadata, and other options. Creating jobs, and
+verifying that they're built correctly, requires some boilerplate—that's where
+`Oban.Testing.perform_job/3` comes in!
 
 ## Testing Perform
 

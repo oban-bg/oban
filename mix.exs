@@ -81,9 +81,10 @@ defmodule Oban.MixProject do
       "guides/recipes/splitting-queues.md",
 
       # Testing
-      "guides/testing/introduction.md",
-      "guides/testing/workers.md",
-      "guides/testing/config.md"
+      "guides/testing/testing.md",
+      "guides/testing/testing_workers.md",
+      "guides/testing/testing_queues.md",
+      "guides/testing/testing_config.md"
     ]
   end
 

@@ -737,37 +737,13 @@ a job by assigning a numerical `priority`.
 
 ## Testing
 
-### Integration Testing
+Find testing setup, helpers, and strategies in the [testing guide][tgi].
 
-During integration testing it may be necessary to run jobs because they do work
-essential for the test to complete, i.e. sending an email, processing media,
-etc. You can execute all available jobs in a particular queue by calling
-`Oban.drain_queue/1,2` directly from your tests.
-
-For example, to process all pending jobs in the "mailer" queue while testing
-some business logic:
-
-```elixir
-defmodule MyApp.BusinessTest do
-  use MyApp.DataCase, async: true
-
-  alias MyApp.{Business, Worker}
-
-  test "we stay in the business of doing business" do
-    :ok = Business.schedule_a_meeting(%{email: "monty@brewster.com"})
-
-    assert %{success: 1, failure: 0} = Oban.drain_queue(queue: :mailer)
-
-    # Now, make an assertion about the email delivery
-  end
-end
-```
-
-See `Oban.drain_queue/1,2` for additional details.
+[tgi]: https://hexdocs.pm/oban/testing.html
 
 ## Error Handling
 
-When a job returns an error value, raises an error or exits during execution the
+When a job returns an error value, raises an error, or exits during execution the
 details are recorded within the `errors` array on the job. When the number of
 execution attempts is below the configured `max_attempts` limit, the job will
 automatically be retried in the future.
