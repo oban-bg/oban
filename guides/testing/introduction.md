@@ -4,7 +4,7 @@ Automated testing is an essential component of building reliable, long-lived
 applications. Oban orchestrates your application's background tasks, so naturally,
 testing Oban is highly recommended.
 
-## Prepare for Testing
+## Setup Application Config
 
 Ensure your app is configured for testing before you start running any tests.
 Chances are, you already did this as part of the initial setup, but just to be
@@ -21,7 +21,7 @@ plugin queries and gives you complete control over when jobs run.
 Note that you must use `false` because configuration is deep-merged and using an
 empty list like `queues: []` won't have any effect.
 
-## Helper Setup
+## Setup Testing Helpers
 
 Oban provides some helpers to facilitate testing. These helpers handle the
 boilerplate of making assertions on which jobs are enqueued.

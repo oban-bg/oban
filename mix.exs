@@ -82,8 +82,8 @@ defmodule Oban.MixProject do
 
       # Testing
       "guides/testing/introduction.md",
-      "guides/testing/config.md",
-      "guides/testing/workers.md"
+      "guides/testing/workers.md",
+      "guides/testing/config.md"
     ]
   end
 
