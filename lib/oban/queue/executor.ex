@@ -113,7 +113,7 @@ defmodule Oban.Queue.Executor do
   end
 
   @spec start_timeout(t()) :: t()
-  def start_timeout(%__MODULE__{} = exec) do
+  def start_timeout(%__MODULE__{state: :unset} = exec) do
     case exec.worker.timeout(exec.job) do
       timeout when is_integer(timeout) ->
         {:ok, timer} = :timer.exit_after(timeout, TimeoutError.exception({exec.worker, timeout}))
@@ -124,6 +124,8 @@ defmodule Oban.Queue.Executor do
         exec
     end
   end
+
+  def start_timeout(exec), do: exec
 
   @spec perform(t()) :: t()
   def perform(%__MODULE__{job: job, state: :unset, worker: worker} = exec) do

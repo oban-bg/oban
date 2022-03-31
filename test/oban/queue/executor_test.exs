@@ -53,6 +53,7 @@ defmodule Oban.Queue.ExecutorTest do
                @conf
                |> Executor.new(job)
                |> Executor.resolve_worker()
+               |> Executor.start_timeout()
     end
 
     test "reporting duration and queue_time measurements" do
