@@ -77,7 +77,7 @@ to make additional assertions on.
 
 You may wish to test less-frequently used worker callbacks such as `backoff/1`
 and `timeout/1`, but those callbacks don't have dedicated testing helpers.
-Never fear, it's easy enough to build a job struct and test callbacks directly!
+Never fear, it's enough to build a job struct and test callbacks directly!
 
 Here's a sample test that asserts the backoff value is simply two-times the
 job's `attempt`:
@@ -100,6 +100,6 @@ test "allowing a multiple of the attempt as job timeout" do
 end
 ```
 
-Jobs are just Ecto schemas, and therefore structs. There isn't anything magical
-about them! Explore the `Oban.Job` documentation to see all of the types and
-fields available for testing.
+Jobs are Ecto schemas, and therefore structs. There isn't anything magical about
+them! Explore the `Oban.Job` documentation to see all of the types and fields
+available for testing.

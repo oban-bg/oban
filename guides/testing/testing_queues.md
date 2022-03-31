@@ -11,8 +11,9 @@ more expressive `Oban.Testing` provides a variety of helpers.
 During test runs you don't typically want to execute jobs. Rather, you only need
 to verify that the job was enqueued properly. With the recommended test setup
 queues and plugins are disabled, and jobs won't execute at all. The
-`assert_enqueued/2` and `refute_enqueued/2` helpers simplify running queries to
-check for those `available` or `scheduled` jobs sitting in the database.
+`Oban.Testing.assert_enqueued/2` and `Oban.Testing.refute_enqueued/2` helpers
+simplify running queries to check for those `available` or `scheduled` jobs
+sitting in the database.
 
 Let's look at an example where we want to check that an activation job is
 enqueued after a user signs up:

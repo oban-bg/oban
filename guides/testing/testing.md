@@ -63,4 +63,10 @@ use Oban.Testing, repo: MyApp.Repo, prefix: "private"
 ```
 
 With Oban configured for testing and helpers in the appropriate places, you're
-ready for testing!
+ready for testing. Learn about unit testing with [Testing Workers][tw],
+integration testing with [Testing Queues][tq], or prepare for production with
+[Testing Config][tc].
+
+[tw]: testing_workers.html
+[tq]: testing_queues.html
+[tc]: testing_config.html
