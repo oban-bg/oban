@@ -52,7 +52,7 @@ defmodule MyApp.WorkerTest do
 end
 ```
 
-Either way, using requires the `repo` option because it's injected into many of
+Either way, using `use Oban.Testing` requires the `repo` option because it's injected into many of
 the generated helpers.
 
 If you are using isolation with namespaces through PostgreSQL schemas (Ecto
