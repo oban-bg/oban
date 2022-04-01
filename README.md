@@ -88,7 +88,7 @@ orphaned due to crashes.
   environments like Heroku, without distributed Erlang).
 
 - **Resilient Queues** — Failing queries won't crash the entire supervision tree,
-  instead they trip a circuit breaker and will be retried again in the future.
+  instead a backoff mechanism will safely retry them again in the future.
 
 - **Job Canceling** — Jobs can be canceled in the middle of execution regardless
   of which node they are running on. This stops the job at once and flags it as
