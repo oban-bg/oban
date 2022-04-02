@@ -2,13 +2,13 @@
 
 Where workers are the primary "unit" of an Oban system, queues are the
 "integration" point between the database and your application. That means to
-test queues and the jobs within them your tests will have to interact with the
+test queues and the jobs within them, your tests will have to interact with the
 database. To simplify that interaction, reduce boilerplate, and make assertions
 more expressive `Oban.Testing` provides a variety of helpers.
 
 ## Asserting Enqueued Jobs
 
-During test runs you don't typically want to execute jobs. Rather, you only need
+During test runs you don't typically want to execute jobs. Rather, you need
 to verify that the job was enqueued properly. With the recommended test setup
 queues and plugins are disabled, and jobs won't execute at all. The
 `Oban.Testing.assert_enqueued/2` and `Oban.Testing.refute_enqueued/2` helpers
@@ -47,7 +47,7 @@ Asserting and refuting about a single job isn't always enough. Sometimes you
 need to check for multiple jobs at once, or perform more complex assertions on
 the jobs themselves. In that situation, you can use `all_enqueued` instead.
 
-The first case we'll look at asserts that multiple jobs from the same worker are
+The first example we'll look at asserts that multiple jobs from the same worker are
 enqueued all at once:
 
 ```elixir

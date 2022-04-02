@@ -30,7 +30,7 @@ test "production oban config is valid" do
 end
 ```
 
-When the configuration contains any invalid options, like an invalid engine,
+When the configuration contains **any** invalid options, like an invalid engine,
 you'll see the test fail with an error like this:
 
 ```elixir
@@ -45,7 +45,7 @@ plugins implement the `c:Oban.Plugin.validate/1` callback and we can test them
 in isolation as well as through the top level config.
 
 If your plugins are statically defined, then validating them through
-`Oban.Config` is easy and recommended. However, if your config is dynamic, then
+`Oban.Config` is easy and recommended. If your config is dynamic, then
 you can test the plugin config directly.
 
 Suppose you have a helper function that returns a crontab config at runtime:

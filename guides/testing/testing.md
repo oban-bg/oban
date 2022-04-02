@@ -7,8 +7,8 @@ testing Oban is highly recommended.
 ## Setup Application Config
 
 Ensure your app is configured for testing before you start running any tests.
-Chances are, you already did this as part of the initial setup, but just to be
-sure disable running queues and plugins within `test.exs`:
+Chances are, you already did this as part of the initial setup. To be sure,
+disable running queues and plugins within `test.exs`:
 
 ```elixir
 config :my_app, Oban, queues: false, plugins: false
@@ -23,7 +23,7 @@ empty list like `queues: []` won't have any effect.
 
 ## Setup Testing Helpers
 
-Oban provides some helpers to facilitate testing. These helpers handle the
+Oban provides helpers to facilitate testing. These helpers handle the
 boilerplate of making assertions on which jobs are enqueued.
 
 The most convenient way to use the helpers is to `use` the module within your
@@ -52,8 +52,8 @@ defmodule MyApp.WorkerTest do
 end
 ```
 
-Either way, using `use Oban.Testing` requires the `repo` option because it's injected into many of
-the generated helpers.
+Whichever way you choose, using `use Oban.Testing` requires the `repo` option because
+ it's injected into many of the generated helpers.
 
 If you are using isolation with namespaces through PostgreSQL schemas (Ecto
 "prefixes"), you can also specify this prefix when using `Oban.Testing`:
