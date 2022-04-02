@@ -737,112 +737,13 @@ a job by assigning a numerical `priority`.
 
 ## Testing
 
-Oban provides some helpers to facilitate testing. The helpers handle the
-boilerplate of making assertions on which jobs are enqueued. To use the
-`perform_job/2,3`, `assert_enqueued/1` and `refute_enqueued/1` helpers in your
-tests you must include them in your testing module and specify your app's Ecto
-repo:
+Find testing setup, helpers, and strategies in the [testing guide][tgi].
 
-```elixir
-use Oban.Testing, repo: MyApp.Repo
-```
-
-Now you can assert, refute or list jobs that have been enqueued within your
-integration tests:
-
-```elixir
-assert_enqueued worker: MyWorker, args: %{id: 1}
-
-# or
-
-refute_enqueued queue: :special, args: %{id: 2}
-
-# or
-
-assert [%{args: %{"id" => 1}}] = all_enqueued worker: MyWorker
-```
-
-You can also easily unit test workers with the `perform_job/2,3` function, which
-automates validating job args, options, and worker results from a single
-function call:
-
-```elixir
-assert :ok = perform_job(MyWorker, %{id: 1})
-
-# or
-
-assert :ok = perform_job(MyWorker, %{id: 1}, attempt: 3, max_attempts: 3)
-
-# or
-
-assert {:error, _} = perform_job(MyWorker, %{bad: :arg})
-```
-
-See the `Oban.Testing` module for more details.
-
-### Isolation
-
-If you are using isolation with namespaces through PostgreSQL schemas (Ecto "prefixes"), you can
-also specify this prefix when using `Oban.Testing`:
-
-```elixir
-use Oban.Testing, repo: MyApp.Repo, prefix: "private"
-```
-
-#### Caveats & Guidelines
-
-As noted in [Usage](#Usage), there are some guidelines for running tests:
-
-* Disable all job dispatching by setting `queues: false` or `queues: nil` in
-  your `test.exs` config. Keyword configuration is deep merged, so setting
-  `queues: []` won't have any effect.
-
-* Disable plugins via `plugins: false`. Default plugins, such as the fixed
-  pruner, aren't necessary in testing mode because jobs created within the
-  sandbox are rolled back at the end of the test. Additionally, the periodic
-  pruning queries will raise `DBConnection.OwnershipError` when the application
-  boots.
-
-* Be sure to use the Ecto Sandbox for testing. Oban makes use of database Pub/Sub
-  events to dispatch jobs, but Pub/Sub events never fire within a transaction.
-  Since sandbox tests run within a transaction no events will fire and jobs
-  won't be dispatched.
-
-  ```elixir
-  config :my_app, MyApp.Repo, pool: Ecto.Adapters.SQL.Sandbox
-  ```
-
-### Integration Testing
-
-During integration testing it may be necessary to run jobs because they do work
-essential for the test to complete, i.e. sending an email, processing media,
-etc. You can execute all available jobs in a particular queue by calling
-`Oban.drain_queue/1,2` directly from your tests.
-
-For example, to process all pending jobs in the "mailer" queue while testing
-some business logic:
-
-```elixir
-defmodule MyApp.BusinessTest do
-  use MyApp.DataCase, async: true
-
-  alias MyApp.{Business, Worker}
-
-  test "we stay in the business of doing business" do
-    :ok = Business.schedule_a_meeting(%{email: "monty@brewster.com"})
-
-    assert %{success: 1, failure: 0} = Oban.drain_queue(queue: :mailer)
-
-    # Now, make an assertion about the email delivery
-  end
-end
-```
-
-See `Oban.drain_queue/1,2` for additional details.
+[tgi]: https://hexdocs.pm/oban/testing.html
 
 ## Error Handling
 
-When a job returns an error value, raises an error or exits during execution the
+When a job returns an error value, raises an error, or exits during execution the
 details are recorded within the `errors` array on the job. When the number of
 execution attempts is below the configured `max_attempts` limit, the job will
 automatically be retried in the future.
