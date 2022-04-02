@@ -19,7 +19,16 @@ defmodule Oban.Queue.Watchman do
 
   @spec child_spec([option]) :: Supervisor.child_spec()
   def child_spec(opts) do
-    %{id: __MODULE__, start: {__MODULE__, :start_link, [opts]}, shutdown: opts[:shutdown]}
+    shutdown =
+      case opts[:shutdown] do
+        0 ->
+          :brutal_kill
+
+        value ->
+          value
+      end
+
+    %{id: __MODULE__, start: {__MODULE__, :start_link, [opts]}, shutdown: shutdown}
   end
 
   @spec start_link([option]) :: GenServer.on_start()
@@ -37,8 +46,6 @@ defmodule Oban.Queue.Watchman do
   end
 
   @impl GenServer
-  def terminate(_reason, %State{shutdown: 0}), do: :ok
-
   def terminate(_reason, %State{foreman: foreman, producer: producer}) do
     try do
       :ok = Producer.pause(producer)
