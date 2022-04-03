@@ -132,7 +132,12 @@ defmodule Oban.Testing do
       alias Oban.Testing
 
       def perform_job(worker, args, opts \\ []) do
-        Testing.perform_job(worker, args, Keyword.put(opts, :repo, unquote(repo)))
+        opts =
+          opts
+          |> Keyword.put_new(:repo, unquote(repo))
+          |> Keyword.put_new(:prefix, unquote(prefix))
+
+        Testing.perform_job(worker, args, opts)
       end
 
       def all_enqueued(opts \\ []) do
@@ -209,7 +214,7 @@ defmodule Oban.Testing do
         ) ::
           Worker.result()
   def perform_job(worker, args, opts) when is_atom(worker) do
-    {repo, opts} = Keyword.pop(opts, :repo)
+    {conf_opts, opts} = Keyword.split(opts, [:log, :prefix, :repo])
 
     opts = Keyword.put_new(opts, :attempt, 1)
 
@@ -223,7 +228,7 @@ defmodule Oban.Testing do
     assert_valid_changeset(changeset)
 
     result =
-      [repo: repo]
+      conf_opts
       |> Config.new()
       |> Executor.new(create_job(changeset))
       |> Executor.put(:safe, false)

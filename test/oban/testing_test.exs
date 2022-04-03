@@ -81,6 +81,13 @@ defmodule Oban.TestingTest do
     end
   end
 
+  defmodule ConfRelayWorker do
+    use Oban.Worker
+
+    @impl Oban.Worker
+    def perform(%{conf: conf}), do: {:ok, conf}
+  end
+
   describe "perform_job/3" do
     test "verifying that the worker implements the Oban.Worker behaviour" do
       message = "worker to be a module that implements"
@@ -89,6 +96,12 @@ defmodule Oban.TestingTest do
       assert_perform_error(InvalidWorker, message)
 
       :ok = perform_job(DoubleBehaviourWorker, %{})
+    end
+
+    test "injecting a complete conf into the job before execution" do
+      assert {:ok, conf} = perform_job(ConfRelayWorker, %{}, prefix: "private", log: :debug)
+
+      assert %{log: :debug, prefix: "private"} = conf
     end
 
     test "creating a valid job out of the args and options" do
