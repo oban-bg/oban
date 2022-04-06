@@ -8,18 +8,15 @@ testing Oban is highly recommended.
 
 Ensure your app is configured for testing before you start running any tests.
 Chances are, you already did this as part of the initial setup. To be sure,
-disable running queues and plugins within `test.exs`:
+set `testing: true` to disable running queues and plugins within `test.exs`:
 
 ```elixir
-config :my_app, Oban, queues: false, plugins: false
+config :my_app, Oban, testing: true
 ```
 
-Disabling with `false` prevents Oban from running any queries in the background.
-This simultaneously prevents Sandbox errors (`DBConnection.OnwershipError`) from
-plugin queries and gives you complete control over when jobs run.
-
-Note that you must use `false` because configuration is deep-merged and using an
-empty list like `queues: []` won't have any effect.
+Disabling testing prevents Oban from running any database queries in the
+background. This simultaneously prevents Sandbox errors from plugin queries and
+gives you complete control over when jobs run.
 
 ## Setup Testing Helpers
 

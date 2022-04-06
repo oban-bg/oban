@@ -49,6 +49,7 @@ defmodule Oban do
           | {:queues, false | [{queue_name(), pos_integer() | Keyword.t()}]}
           | {:repo, module()}
           | {:shutdown_grace_period, timeout()}
+          | {:testing, boolean()}
 
   @type drain_option ::
           {:queue, queue_name()}
@@ -128,6 +129,9 @@ defmodule Oban do
 
     Queues accept additional override options to customize their behavior, e.g. by setting
     `paused` or `dispatch_cooldown` for a specific queue.
+
+  * `:testing` — a boolean that controls whether an instance is configured for testing. When set
+    to `true`, queues, peer, and plugins are automatically disabled. Defaults to `false`.
 
   ### Twiddly Options
 

@@ -89,7 +89,6 @@ defmodule Oban.ConfigTest do
 
       assert_valid(queues: [default: 1])
       assert_valid(queues: [default: [limit: 1]])
-
     end
 
     test ":shutdown_grace_period is validated as an integer" do
@@ -100,6 +99,13 @@ defmodule Oban.ConfigTest do
       assert_valid(shutdown_grace_period: 0)
       assert_valid(shutdown_grace_period: 10)
     end
+
+    test ":testing is validated as a boolean" do
+      refute_valid(testing: :ok)
+
+      assert_valid(testing: true)
+      assert_valid(testing: false)
+    end
   end
 
   describe "new/1" do
@@ -109,6 +115,11 @@ defmodule Oban.ConfigTest do
 
     test ":queues convert to an empty list when set to false" do
       assert %Config{queues: []} = conf(queues: false)
+    end
+
+    test ":testing disables queues, peer, and plugins" do
+      assert %Config{queues: [], plugins: [], peer: false} =
+               conf(queues: [alpha: 1], plugins: [Pruner], testing: true)
     end
   end
 
