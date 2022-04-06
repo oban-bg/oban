@@ -2,7 +2,7 @@ defmodule Oban.ConfigTest do
   use Oban.Case, async: true
 
   alias Oban.Config
-  alias Oban.Plugins.Pruner
+  alias Oban.Plugins.{Cron, Pruner, Stager}
 
   doctest Config
 
@@ -121,6 +121,22 @@ defmodule Oban.ConfigTest do
       assert %Config{queues: [], plugins: [], peer: false} =
                conf(queues: [alpha: 1], plugins: [Pruner], testing: true)
     end
+
+    test "translating deprecated crontab/timezone config into plugin usage" do
+      assert has_plugin?(Cron, timezone: "America/Chicago", crontab: [{"* * * * *", Worker}])
+      assert has_plugin?(Cron, crontab: [{"* * * * *", Worker}])
+      assert has_plugin?(Cron, plugins: [Pruner], crontab: [{"* * * * *", Worker}])
+
+      refute has_plugin?(Cron, timezone: "America/Chicago")
+      refute has_plugin?(Cron, plugins: false, crontab: [{"* * * * *", Worker}])
+    end
+
+    test "translating poll_interval config into plugin usage" do
+      assert has_plugin?(Stager, [])
+      assert has_plugin?(Stager, poll_interval: 2000)
+
+      refute has_plugin?(Stager, plugins: false, poll_interval: 2000)
+    end
   end
 
   describe "node_name/1" do
@@ -148,5 +164,18 @@ defmodule Oban.ConfigTest do
     opts
     |> Keyword.put(:repo, Repo)
     |> Config.new()
+  end
+
+  def has_plugin?(plugin, opts) do
+    plugins =
+      opts
+      |> conf()
+      |> Map.fetch!(:plugins)
+      |> Enum.map(fn
+        {module, _opts} -> module
+        module -> module
+      end)
+
+    plugin in plugins
   end
 end

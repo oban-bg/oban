@@ -57,20 +57,6 @@ defmodule Oban.Plugins.StagerTest do
         assert %{state: "scheduled"} = Repo.reload(job_3)
       end)
     end
-
-    test "translating poll_interval config into plugin usage" do
-      assert []
-             |> start_supervised_oban!()
-             |> Registry.whereis({:plugin, Stager})
-
-      assert [poll_interval: 2000]
-             |> start_supervised_oban!()
-             |> Registry.whereis({:plugin, Stager})
-
-      refute [plugins: false, poll_interval: 2000]
-             |> start_supervised_oban!()
-             |> Registry.whereis({:plugin, Stager})
-    end
   end
 
   defp stage(name) do
