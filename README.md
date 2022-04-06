@@ -739,7 +739,7 @@ a job by assigning a numerical `priority`.
 
 Find testing setup, helpers, and strategies in the [testing guide][tgi].
 
-[tgi]: https://hexdocs.pm/oban/testing.html
+[tgi]: https://hexdocs.pm/oban/Oban.Testing.html
 
 ## Error Handling
 
