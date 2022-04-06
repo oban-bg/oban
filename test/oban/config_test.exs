@@ -6,7 +6,7 @@ defmodule Oban.ConfigTest do
 
   doctest Config
 
-  describe "new/1" do
+  describe "validate/1" do
     test "legacy :circuit_backoff option is ignored" do
       assert_valid(circuit_backoff: 10)
     end
@@ -18,13 +18,25 @@ defmodule Oban.ConfigTest do
       assert_valid(engine: Oban.Queue.BasicEngine)
     end
 
+    test ":log is validated as `false` or a valid log level" do
+      refute_valid(log: 1)
+      refute_valid(log: "false")
+      refute_valid(log: nil)
+      refute_valid(log: :nothing)
+      refute_valid(log: true)
+
+      assert_valid(log: false)
+      assert_valid(log: :warn)
+      assert_valid(log: :warning)
+      assert_valid(log: :alert)
+      assert_valid(log: :debug)
+    end
+
     test ":notifier is validated as a notifier module" do
       refute_valid(notifier: nil)
       refute_valid(notifier: Repo)
 
       assert_valid(notifier: Oban.Notifiers.Postgres)
-
-      assert %Config{notifier: Oban.Notifiers.Postgres} = conf(notifier: Oban.PostgresNotifier)
     end
 
     test ":node is validated as a binary" do
@@ -78,7 +90,6 @@ defmodule Oban.ConfigTest do
       assert_valid(queues: [default: 1])
       assert_valid(queues: [default: [limit: 1]])
 
-      assert %Config{queues: []} = conf(queues: false)
     end
 
     test ":shutdown_grace_period is validated as an integer" do
@@ -89,19 +100,15 @@ defmodule Oban.ConfigTest do
       assert_valid(shutdown_grace_period: 0)
       assert_valid(shutdown_grace_period: 10)
     end
+  end
 
-    test ":log is validated as `false` or a valid log level" do
-      refute_valid(log: 1)
-      refute_valid(log: "false")
-      refute_valid(log: nil)
-      refute_valid(log: :nothing)
-      refute_valid(log: true)
+  describe "new/1" do
+    test ":notifier translates to the correct postgres module" do
+      assert %Config{notifier: Oban.Notifiers.Postgres} = conf(notifier: Oban.PostgresNotifier)
+    end
 
-      assert_valid(log: false)
-      assert_valid(log: :warn)
-      assert_valid(log: :warning)
-      assert_valid(log: :alert)
-      assert_valid(log: :debug)
+    test ":queues convert to an empty list when set to false" do
+      assert %Config{queues: []} = conf(queues: false)
     end
   end
 
