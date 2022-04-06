@@ -111,9 +111,9 @@ defmodule Oban.Config do
   """
   @spec validate([Oban.option()]) :: :ok | {:error, String.t()}
   def validate(opts) when is_list(opts) do
-    opts
-    |> normalize()
-    |> Validation.validate(&validate_opt/1)
+    opts = normalize(opts)
+
+    Validation.validate(opts, &validate_opt(opts, &1))
   end
 
   @doc false
@@ -147,11 +147,11 @@ defmodule Oban.Config do
 
   # Validation
 
-  defp validate_opt({:dispatch_cooldown, cooldown}) do
+  defp validate_opt(_opts, {:dispatch_cooldown, cooldown}) do
     Validation.validate_integer(:dispatch_cooldown, cooldown)
   end
 
-  defp validate_opt({:engine, engine}) do
+  defp validate_opt(_opts, {:engine, engine}) do
     if Code.ensure_loaded?(engine) and function_exported?(engine, :init, 2) do
       :ok
     else
@@ -159,7 +159,7 @@ defmodule Oban.Config do
     end
   end
 
-  defp validate_opt({:get_dynamic_repo, fun}) do
+  defp validate_opt(_opts, {:get_dynamic_repo, fun}) do
     if is_nil(fun) or is_function(fun, 0) do
       :ok
     else
@@ -168,7 +168,7 @@ defmodule Oban.Config do
     end
   end
 
-  defp validate_opt({:notifier, notifier}) do
+  defp validate_opt(_opts, {:notifier, notifier}) do
     if Code.ensure_loaded?(notifier) and function_exported?(notifier, :listen, 2) do
       :ok
     else
@@ -176,9 +176,9 @@ defmodule Oban.Config do
     end
   end
 
-  defp validate_opt({:name, _}), do: :ok
+  defp validate_opt(_opts, {:name, _}), do: :ok
 
-  defp validate_opt({:node, node}) do
+  defp validate_opt(_opts, {:node, node}) do
     if is_binary(node) and String.trim(node) != "" do
       :ok
     else
@@ -186,7 +186,7 @@ defmodule Oban.Config do
     end
   end
 
-  defp validate_opt({:peer, peer}) do
+  defp validate_opt(_opts, {:peer, peer}) do
     if peer == false or Code.ensure_loaded?(peer) do
       :ok
     else
@@ -194,11 +194,11 @@ defmodule Oban.Config do
     end
   end
 
-  defp validate_opt({:plugins, plugins}) do
+  defp validate_opt(_opts, {:plugins, plugins}) do
     Validation.validate(:plugins, plugins, &validate_plugin/1)
   end
 
-  defp validate_opt({:prefix, prefix}) do
+  defp validate_opt(_opts, {:prefix, prefix}) do
     if is_binary(prefix) and Regex.match?(~r/^[a-z0-9_]+$/i, prefix) do
       :ok
     else
@@ -206,15 +206,25 @@ defmodule Oban.Config do
     end
   end
 
-  defp validate_opt({:queues, queues}) do
+  defp validate_opt(opts, {:queues, queues}) do
     if Keyword.keyword?(queues) do
-      Validation.validate(queues, &validate_queue/1)
+      # Queue validation requires an engine and partial configuration. Only the engine matters,
+      # but the other values are required for the struct.
+      conf_opts =
+        opts
+        |> Keyword.take([:engine, :name, :node, :repo])
+        |> Keyword.put_new(:engine, Oban.Queue.BasicEngine)
+        |> Keyword.put_new(:repo, None)
+
+      conf = struct!(__MODULE__, conf_opts)
+
+      Validation.validate(queues, &validate_queue(conf, &1))
     else
       {:error, "expected :queues to be a keyword list, got: #{inspect(queues)}"}
     end
   end
 
-  defp validate_opt({:repo, repo}) do
+  defp validate_opt(_opts, {:repo, repo}) do
     if Code.ensure_loaded?(repo) and function_exported?(repo, :config, 0) do
       :ok
     else
@@ -222,11 +232,11 @@ defmodule Oban.Config do
     end
   end
 
-  defp validate_opt({:shutdown_grace_period, period}) do
+  defp validate_opt(_opts, {:shutdown_grace_period, period}) do
     Validation.validate_integer(:shutdown_grace_period, period, min: 0)
   end
 
-  defp validate_opt({:testing, testing}) do
+  defp validate_opt(_opts, {:testing, testing}) do
     if is_boolean(testing) do
       :ok
     else
@@ -234,7 +244,7 @@ defmodule Oban.Config do
     end
   end
 
-  defp validate_opt({:log, log}) do
+  defp validate_opt(_opts, {:log, log}) do
     if log in @log_levels do
       :ok
     else
@@ -242,7 +252,7 @@ defmodule Oban.Config do
     end
   end
 
-  defp validate_opt(option) do
+  defp validate_opt(_opts, option) do
     {:error, "unknown option provided #{inspect(option)}"}
   end
 
@@ -272,13 +282,29 @@ defmodule Oban.Config do
     end
   end
 
-  defp validate_queue({name, opts}) do
-    if (is_integer(opts) and opts > 0) or Keyword.keyword?(opts) do
-      :ok
-    else
-      {:error,
-       "expected queue #{inspect(name)} opts to be a positive integer limit or a " <>
-         "keyword list, got: #{inspect(opts)}"}
+  defp validate_queue(conf, {name, opts}) do
+    cond do
+      is_integer(opts) and opts > 0 ->
+        :ok
+
+      Keyword.keyword?(opts) ->
+        opts =
+          opts
+          |> Keyword.delete(:dispatch_cooldown)
+          |> Keyword.put(:validate, true)
+
+        case conf.engine.init(conf, opts) do
+          {:ok, _meta} ->
+            :ok
+
+          {:error, error} ->
+            {:error, "queue #{inspect(name)}, " <> Exception.message(error)}
+        end
+
+      true ->
+        {:error,
+         "expected queue #{inspect(name)} opts to be a positive integer limit or a " <>
+           "keyword list, got: #{inspect(opts)}"}
     end
   end
 
