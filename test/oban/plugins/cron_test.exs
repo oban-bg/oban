@@ -147,28 +147,6 @@ defmodule Oban.Plugins.CronTest do
     assert inserted_refs() == [1]
   end
 
-  test "translating deprecated crontab/timezone config into plugin usage" do
-    assert [timezone: "America/Chicago", crontab: [{"* * * * *", Worker}]]
-           |> start_supervised_oban!()
-           |> Registry.whereis({:plugin, Cron})
-
-    assert [crontab: [{"* * * * *", Worker}]]
-           |> start_supervised_oban!()
-           |> Registry.whereis({:plugin, Cron})
-
-    assert [plugins: [Oban.Plugins.Pruner], crontab: [{"* * * * *", Worker}]]
-           |> start_supervised_oban!()
-           |> Registry.whereis({:plugin, Cron})
-
-    refute [plugins: false, crontab: [{"* * * * *", Worker}]]
-           |> start_supervised_oban!()
-           |> Registry.whereis({:plugin, Cron})
-
-    refute [timezone: "America/Chicago"]
-           |> start_supervised_oban!()
-           |> Registry.whereis({:plugin, Cron})
-  end
-
   defp assert_valid(opts) do
     assert :ok = Cron.validate(opts)
   end
