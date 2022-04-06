@@ -81,14 +81,18 @@ defmodule Oban.ConfigTest do
       assert_valid(prefix: "private")
     end
 
-    test ":queues are validated as atom, integer pairs or atom, keyword pairs" do
+    test ":queues are validated as an initializable keyword list" do
       refute_valid(queues: %{default: 25})
       refute_valid(queues: [{"default", 25}])
       refute_valid(queues: [default: 0])
       refute_valid(queues: [default: 3.5])
+      refute_valid(queues: [default: [lim: 1]])
+      refute_valid(queues: [default: [limit: 1, paused: :yes]])
 
       assert_valid(queues: [default: 1])
       assert_valid(queues: [default: [limit: 1]])
+      assert_valid(queues: [default: [limit: 1, paused: true]])
+      assert_valid(queues: [default: [limit: 1, dispatch_cooldown: 10]])
     end
 
     test ":shutdown_grace_period is validated as an integer" do
