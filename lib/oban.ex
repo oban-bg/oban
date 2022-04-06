@@ -81,12 +81,18 @@ defmodule Oban do
 
   These options are required; without them the supervisor won't start
 
-  * `:name` — used for supervisor registration, defaults to `Oban`
   * `:repo` — specifies the Ecto repo used to insert and retrieve jobs
 
   ### Primary Options
 
   These options determine what the system does at a high level, i.e. which queues to run.
+
+  * `:log` — either `false` to disable logging or a standard log level (`:error`, `:warn`,
+    `:info`, `:debug`). This determines whether queries are logged or not; overriding the repo's
+    configured log level. Defaults to `false`, where no queries are logged.
+
+  * `:name` — used for supervisor registration, it must be unique across an entire VM instance.
+    Defaults to `Oban`
 
   * `:node` — used to identify the node that the supervision tree is running in. If no value is
     provided it will use the `node` name in a distributed system, or the `hostname` in an isolated
@@ -122,13 +128,6 @@ defmodule Oban do
 
     Queues accept additional override options to customize their behavior, e.g. by setting
     `paused` or `dispatch_cooldown` for a specific queue.
-
-    For testing purposes `:queues` may be set to `false` or `nil`, which effectively disables all
-    job dispatching.
-
-  * `:log` — either `false` to disable logging or a standard log level (`:error`, `:warn`,
-    `:info`, `:debug`). This determines whether queries are logged or not; overriding the repo's
-    configured log level. Defaults to `false`, where no queries are logged.
 
   ### Twiddly Options
 
