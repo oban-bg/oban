@@ -23,7 +23,8 @@ defmodule Oban.Config do
           prefix: String.t(),
           queues: false | [{atom() | binary(), pos_integer() | Keyword.t()}],
           repo: module(),
-          shutdown_grace_period: timeout()
+          shutdown_grace_period: timeout(),
+          testing: boolean()
         }
 
   @enforce_keys [:node, :repo]
@@ -39,7 +40,8 @@ defmodule Oban.Config do
             prefix: "public",
             queues: [],
             repo: nil,
-            shutdown_grace_period: :timer.seconds(15)
+            shutdown_grace_period: :timer.seconds(15),
+            testing: false
 
   @cron_keys [:crontab, :timezone]
   @log_levels ~w(false emergency alert critical error warning warn notice info debug)a
@@ -53,7 +55,7 @@ defmodule Oban.Config do
 
   Generate a minimal config with only a `:repo`:
 
-      iex> Oban.Config.new(repo: Oban.Test.Repo)
+      Oban.Config.new(repo: Oban.Test.Repo)
   """
   @spec new([Oban.option()]) :: t()
   def new(opts) when is_list(opts) do
@@ -62,9 +64,16 @@ defmodule Oban.Config do
     Validation.validate!(opts, &validate/1)
 
     opts =
-      opts
-      |> Keyword.update!(:queues, &normalize_queues/1)
-      |> Keyword.update!(:plugins, &normalize_plugins/1)
+      if opts[:testing] do
+        opts
+        |> Keyword.put(:queues, [])
+        |> Keyword.put(:peer, false)
+        |> Keyword.put(:plugins, [])
+      else
+        opts
+        |> Keyword.update!(:queues, &normalize_queues/1)
+        |> Keyword.update!(:plugins, &normalize_plugins/1)
+      end
 
     struct!(__MODULE__, opts)
   end
@@ -150,6 +159,15 @@ defmodule Oban.Config do
     end
   end
 
+  defp validate_opt({:get_dynamic_repo, fun}) do
+    if is_nil(fun) or is_function(fun, 0) do
+      :ok
+    else
+      {:error,
+       "expected :get_dynamic_repo to be nil or a zero arity function, got: #{inspect(fun)}"}
+    end
+  end
+
   defp validate_opt({:notifier, notifier}) do
     if Code.ensure_loaded?(notifier) and function_exported?(notifier, :listen, 2) do
       :ok
@@ -208,20 +226,19 @@ defmodule Oban.Config do
     Validation.validate_integer(:shutdown_grace_period, period, min: 0)
   end
 
+  defp validate_opt({:testing, testing}) do
+    if is_boolean(testing) do
+      :ok
+    else
+      {:error, "expected :testing to be a boolean, got: #{inspect(testing)}"}
+    end
+  end
+
   defp validate_opt({:log, log}) do
     if log in @log_levels do
       :ok
     else
       {:error, "expected :log to be one of #{inspect(@log_levels)}, got: #{inspect(log)}"}
-    end
-  end
-
-  defp validate_opt({:get_dynamic_repo, fun}) do
-    if is_nil(fun) or is_function(fun, 0) do
-      :ok
-    else
-      {:error,
-       "expected :get_dynamic_repo to be nil or a zero arity function, got: #{inspect(fun)}"}
     end
   end
 

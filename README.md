@@ -259,12 +259,12 @@ defmodule MyApp.Application do
 end
 ```
 
-If you are running tests (which you should be) you'll want to disable plugins,
-enqueueing scheduled jobs and job dispatching altogether when testing:
+If you are running tests (which you should be) you'll want to enable `testing`
+mode to disable plugins, and job dispatching altogether when testing:
 
 ```elixir
 # config/test.exs
-config :my_app, Oban, queues: false, plugins: false
+config :my_app, Oban, testing: true
 ```
 
 See the installation instructions in the README or on the Hexdocs guide for details
