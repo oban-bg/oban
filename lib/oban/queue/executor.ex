@@ -28,6 +28,8 @@ defmodule Oban.Queue.Executor do
           worker: Worker.t()
         }
 
+  @type option :: {:safe, boolean()}
+
   @enforce_keys [:conf, :job]
   defstruct [
     :conf,
@@ -49,20 +51,16 @@ defmodule Oban.Queue.Executor do
     state: :unset
   ]
 
-  @spec new(Config.t(), Job.t()) :: t()
-  def new(%Config{} = conf, %Job{} = job) do
+  @spec new(Config.t(), Job.t(), [option()]) :: t()
+  def new(%Config{} = conf, %Job{} = job, opts \\ []) do
     struct!(__MODULE__,
       conf: conf,
       job: %{job | conf: conf},
       meta: event_metadata(conf, job),
+      safe: Keyword.get(opts, :safe, true),
       start_mono: System.monotonic_time(),
       start_time: System.system_time()
     )
-  end
-
-  @spec put(t(), :safe, boolean()) :: t()
-  def put(%__MODULE__{} = exec, :safe, value) when is_boolean(value) do
-    %{exec | safe: value}
   end
 
   @spec call(t()) :: t()

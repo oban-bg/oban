@@ -39,8 +39,7 @@ defmodule Oban.Queue.Drainer do
       |> Enum.reduce(old_acc, fn job, acc ->
         result =
           conf
-          |> Executor.new(job)
-          |> Executor.put(:safe, args.with_safety)
+          |> Executor.new(job, safe: args.with_safety)
           |> Executor.call()
           |> case do
             %{state: :exhausted} -> :discard
