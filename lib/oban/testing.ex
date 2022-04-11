@@ -229,17 +229,10 @@ defmodule Oban.Testing do
 
     result =
       conf_opts
+      |> Keyword.put(:testing, :inline)
       |> Config.new()
-      |> Executor.new(create_job(changeset))
-      |> Executor.put(:safe, false)
-      |> Executor.record_started()
-      |> Executor.resolve_worker()
-      |> Executor.start_timeout()
-      |> Executor.perform()
-      |> Executor.cancel_timeout()
-      |> Executor.record_finished()
-      |> Executor.emit_event()
-      |> Executor.reraise_unsafe()
+      |> Executor.new(create_job(changeset), safe: false)
+      |> Executor.call()
       |> Map.fetch!(:result)
 
     assert_valid_result(result)

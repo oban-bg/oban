@@ -109,10 +109,8 @@ defmodule Oban.Queue.InlineEngine do
     case Changeset.apply_action(changeset, :insert) do
       {:ok, job} ->
         conf
-        |> Executor.new(job)
-        |> Executor.put(:safe, false)
+        |> Executor.new(job, safe: false)
         |> Executor.call()
-        |> tap(&IO.inspect(&1.state))
         |> complete_job()
 
       {:error, changeset} ->
