@@ -109,6 +109,8 @@ defmodule Oban.ConfigTest do
 
       assert_valid(testing: true)
       assert_valid(testing: false)
+      assert_valid(testing: :inline)
+      assert_valid(testing: :manual)
     end
   end
 
@@ -121,7 +123,12 @@ defmodule Oban.ConfigTest do
       assert %Config{queues: []} = conf(queues: false)
     end
 
-    test ":testing disables queues, peer, and plugins" do
+    test ":testing with a boolean convert to :manual or :disabled" do
+      assert %Config{testing: :manual} = conf(testing: true)
+      assert %Config{testing: :disabled} = conf(testing: false)
+    end
+
+    test ":testing in :manual mode disables queues, peer, and plugins" do
       assert %Config{queues: [], plugins: [], peer: false} =
                conf(queues: [alpha: 1], plugins: [Pruner], testing: true)
     end

@@ -24,7 +24,7 @@ defmodule Oban.Config do
           queues: false | [{atom() | binary(), pos_integer() | Keyword.t()}],
           repo: module(),
           shutdown_grace_period: timeout(),
-          testing: boolean()
+          testing: :manual | :inline | :disabled
         }
 
   @enforce_keys [:node, :repo]
@@ -41,10 +41,11 @@ defmodule Oban.Config do
             queues: [],
             repo: nil,
             shutdown_grace_period: :timer.seconds(15),
-            testing: false
+            testing: :disabled
 
-  @cron_keys [:crontab, :timezone]
+  @cron_keys ~w(crontab timezone)a
   @log_levels ~w(false emergency alert critical error warning warn notice info debug)a
+  @testing_modes ~w(manual inline disabled)a
 
   @doc """
   Generate a Config struct after normalizing and verifying Oban options.
@@ -64,7 +65,7 @@ defmodule Oban.Config do
     Validation.validate!(opts, &validate/1)
 
     opts =
-      if opts[:testing] do
+      if opts[:testing] in [:manual, :inline] do
         opts
         |> Keyword.put(:queues, [])
         |> Keyword.put(:peer, false)
@@ -237,7 +238,7 @@ defmodule Oban.Config do
   end
 
   defp validate_opt(_opts, {:testing, testing}) do
-    if is_boolean(testing) do
+    if testing in @testing_modes do
       :ok
     else
       {:error, "expected :testing to be a boolean, got: #{inspect(testing)}"}
@@ -314,9 +315,11 @@ defmodule Oban.Config do
     opts
     |> crontab_to_plugin()
     |> poll_interval_to_plugin()
+    |> testing_to_engine()
     |> Keyword.put_new(:node, node_name())
     |> Keyword.update(:plugins, [], &(&1 || []))
     |> Keyword.update(:queues, [], &(&1 || []))
+    |> Keyword.update(:testing, :disabled, &normalize_testing/1)
     |> Keyword.delete(:circuit_backoff)
     |> Enum.reject(&(&1 == {:notifier, Oban.PostgresNotifier}))
   end
@@ -353,6 +356,18 @@ defmodule Oban.Config do
         Keyword.drop(opts, [:poll_interval])
     end
   end
+
+  defp testing_to_engine(opts) do
+    if opts[:testing] == :inline do
+      Keyword.put(opts, :engine, Oban.Queue.InlineEngine)
+    else
+      opts
+    end
+  end
+
+  defp normalize_testing(true), do: :manual
+  defp normalize_testing(false), do: :disabled
+  defp normalize_testing(mode), do: mode
 
   defp normalize_queues(queues) do
     for {name, value} <- queues do
