@@ -6,21 +6,37 @@ testing Oban is highly recommended.
 
 ## Setup Application Config
 
-Ensure your app is configured for testing before you start running any tests.
-Chances are, you already did this as part of the initial setup. To be sure,
-set `testing: true` to disable running queues and plugins within `test.exs`:
+Ensure your app is configured for testing before you begin running tests.
+
+There are two testing modes available:
+
+* `:inline`—jobs execute immediately within the calling process and without
+  touching the database. This mode is simple and may not be suitable for apps
+  with complex jobs.
+* `:manual`—jobs are inserted into the database where they can be verified and
+  executed when desired. This mode is more advanced and trades simplicity for
+  flexibility.
+
+If you're just starting out, `:inline` mode is recommended:
 
 ```elixir
-config :my_app, Oban, testing: true
+config :my_app, Oban, testing: :inline
 ```
 
-Disabling testing prevents Oban from running any database queries in the
+For more complex applications, or if you'd like complete control over when jobs
+run, then use `:manual` mode instead:
+
+```elixir
+config :my_app, Oban, testing: :manual
+```
+
+Both testing modes prevent Oban from running any database queries in the
 background. This simultaneously prevents Sandbox errors from plugin queries and
-gives you complete control over when jobs run.
+prevents queues from executing jobs unexpectedly.
 
 ## Setup Testing Helpers
 
-Oban provides helpers to facilitate testing. These helpers handle the
+Oban provides helpers to facilitate manual testing. These helpers handle the
 boilerplate of making assertions on which jobs are enqueued.
 
 The most convenient way to use the helpers is to `use` the module within your
