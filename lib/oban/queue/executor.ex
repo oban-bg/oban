@@ -79,8 +79,6 @@ defmodule Oban.Queue.Executor do
       exec
       |> report_finished()
       |> reraise_unsafe()
-
-      exec
     end
 
     if exec.safe do
@@ -195,6 +193,7 @@ defmodule Oban.Queue.Executor do
   @spec report_finished(t()) :: t()
   def report_finished(%__MODULE__{} = exec) do
     exec
+    |> record_unsaved()
     |> ack_event()
     |> emit_event()
   end
@@ -206,13 +205,12 @@ defmodule Oban.Queue.Executor do
     exec
   end
 
-  def ack_event(%__MODULE__{state: :failure, worker: worker} = exec) do
-    job = job_with_unsaved_error(exec)
+  def ack_event(%__MODULE__{job: job, state: :failure, worker: worker} = exec) do
     backoff = if worker, do: worker.backoff(job), else: Worker.backoff(job)
 
     Engine.error_job(exec.conf, job, backoff)
 
-    %{exec | job: job}
+    exec
   end
 
   def ack_event(%__MODULE__{state: :snoozed} = exec) do
@@ -221,12 +219,11 @@ defmodule Oban.Queue.Executor do
     exec
   end
 
-  def ack_event(%__MODULE__{state: state} = exec) when state in [:discard, :exhausted] do
-    job = job_with_unsaved_error(exec)
-
+  def ack_event(%__MODULE__{job: job, state: state} = exec)
+      when state in [:discard, :exhausted] do
     Engine.discard_job(exec.conf, job)
 
-    %{exec | job: job}
+    exec
   end
 
   @spec emit_event(t()) :: t()
@@ -271,6 +268,15 @@ defmodule Oban.Queue.Executor do
     exec
   end
 
+  @spec record_unsaved(t()) :: t()
+  def record_unsaved(%__MODULE__{error: error} = exec) when not is_nil(error) do
+    unsaved_error = %{kind: exec.kind, reason: exec.error, stacktrace: exec.stacktrace}
+
+    put_in(exec.job.unsaved_error, unsaved_error)
+  end
+
+  def record_unsaved(exec), do: exec
+
   # Helpers
 
   defp perform_error(worker, result), do: PerformError.exception({worker, result})
@@ -279,12 +285,6 @@ defmodule Oban.Queue.Executor do
     job
     |> Map.take([:id, :args, :queue, :worker, :attempt, :max_attempts, :tags])
     |> Map.merge(%{conf: conf, job: job, prefix: conf.prefix})
-  end
-
-  defp job_with_unsaved_error(%__MODULE__{} = exec) do
-    unsaved_error = %{kind: exec.kind, reason: exec.error, stacktrace: exec.stacktrace}
-
-    %{exec.job | unsaved_error: unsaved_error}
   end
 
   defp log_warning(%__MODULE__{safe: true, worker: worker}, returned) do
