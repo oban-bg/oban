@@ -1,5 +1,5 @@
 defmodule Oban.Integration.TestingModeTest do
-  use Oban.Case
+  use Oban.Case, async: true
 
   alias Ecto.Multi
 

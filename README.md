@@ -233,6 +233,9 @@ config :my_app, Oban,
   plugins: [Oban.Plugins.Pruner],
   queues: [default: 10, events: 50, media: 20]
 
+# confg/test.exs
+config :my_app, Oban, testing: :inline
+
 # lib/my_app/application.ex
 defmodule MyApp.Application do
   @moduledoc false
@@ -257,14 +260,6 @@ defmodule MyApp.Application do
     Application.fetch_env!(:my_app, Oban)
   end
 end
-```
-
-If you are running tests (which you should be) you'll want to enable `testing`
-mode to disable plugins, and job dispatching altogether when testing:
-
-```elixir
-# config/test.exs
-config :my_app, Oban, testing: true
 ```
 
 See the installation instructions in the README or on the Hexdocs guide for details

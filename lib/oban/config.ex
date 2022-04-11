@@ -24,7 +24,7 @@ defmodule Oban.Config do
           queues: false | [{atom() | binary(), pos_integer() | Keyword.t()}],
           repo: module(),
           shutdown_grace_period: timeout(),
-          testing: :manual | :inline | :disabled
+          testing: :disabled | :inline | :manual
         }
 
   @enforce_keys [:node, :repo]
@@ -241,7 +241,7 @@ defmodule Oban.Config do
     if testing in @testing_modes do
       :ok
     else
-      {:error, "expected :testing to be a boolean, got: #{inspect(testing)}"}
+      {:error, "expected :testing to be a known mode, got: #{inspect(testing)}"}
     end
   end
 

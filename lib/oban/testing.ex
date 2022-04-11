@@ -1,6 +1,7 @@
 defmodule Oban.Testing do
   @moduledoc """
-  This module simplifies testing workers and making assertions about enqueued jobs.
+  This module simplifies testing workers and making assertions about enqueued jobs when testing in
+  `:manual` mode.
 
   Assertions may be made on any property of a job, but you'll typically want to check by `args`,
   `queue` or `worker`. If you're using namespacing through PostgreSQL schemas, also called
