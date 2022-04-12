@@ -739,55 +739,35 @@ a job by assigning a numerical `priority`.
 ### Umbrella Apps
 
 If you need to run Oban from an umbrella application where more than one of
-the child apps need to interact with Oban, you may need to set the :name for
+the child apps need to interact with Oban, you may need to set the `:name` for
 each child application that configures Oban.
 
-#### For example
+For example, your umbrella contains two apps: `MyAppA` and `MyAppB`. `MyAppA` is
+responsible for inserting jobs, while only `MyAppB` actually runs any queues.
 
-`MyAppA` may be the app responsible for inserting Oban Jobs, but never
-processing those jobs.
+Configure Oban with a custom name for `MyAppA`:
 
-Configure Oban in `MyAppA`
-  ```elixir
-  config :my_app_a, Oban,
-    name: MyAppA.Oban,
-    repo: MyApp.Repo,
-    plugins: [],
-    queues: []
-  ```
+```elixir
+config :my_app_a, Oban,
+  name: MyAppA.Oban,
+  repo: MyApp.Repo
 
-`MyAppB` may be the app resonsible for processing Oban jobs.
+Then configure Oban for `MyAppB` with a different name:
 
-Configure Oban in `MyAppB`
-  ```elixir
-  config :my_app_b, Oban,
-    name: MyAppB.Oban,
-    repo: MyApp.Repo,
-    plugins: [...],
-    queues: [:default, :queue_two, :etc]
-  ```
+```elixir
+config :my_app_b, Oban,
+  name: MyAppB.Oban,
+  repo: MyApp.Repo,
+  queues: [default: 10]
 
-Then when scheduling a job use the configured name to reference the named
-Oban process.
+Now, use the configured name when calling functions like `Oban.insert/2`,
+`Oban.insert_all/2`, `Oban.drain_queue/2`, etc., to reference the correct Oban
+process for the current application.
 
-See:
-  - `insert/2`
-  - `insert/4`
-  - `insert!/2`
-  - `insert_all/2`
-  - `insert_all/4`
-
-  ```elixir
-  Oban.insert!(MyAppA.Oban, %Oban.Job{})
-  Oban.insert(MyAppA.Oban, %Oban.Job{})
-  Oban.insert_all(MyAppB.Oban, multi, :multiname, [%Oban.Job{}])
-  ```
-
-For testing the named Oban process, use `drain_queue/2`
-
-  ```elixir
-  Oban.drain_queue(MyAppB.Oban, queue: :queue_two)
-  ```
+```elixir
+Oban.insert(MyAppA.Oban, MyWorker.new(%{}))
+Oban.insert_all(MyAppB.Oban, multi, :multiname, [MyWorker.new(%{})])
+Oban.drain_queue(MyAppB.Oban, queue: :default)
 
 ## Testing
 
