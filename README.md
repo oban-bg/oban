@@ -40,6 +40,7 @@
   - [Unique Jobs](#unique-jobs)
   - [Periodic Jobs](#periodic-jobs)
   - [Prioritizing Jobs](#prioritizing-jobs)
+  - [Umbrella Apps](#umbrella-apps)
 - [Testing](#testing)
 - [Error Handling](#error-handling)
 - [Instrumentation and Logging](#instrumentation-and-logging)
@@ -729,6 +730,39 @@ a job by assigning a numerical `priority`.
 * All jobs with a higher priority will execute before any jobs with a lower
   priority. Within a particular priority jobs are executed in their scheduled
   order.
+
+### Umbrella Apps
+
+If you need to run Oban from an umbrella application where more than one of
+the child apps need to interact with Oban, you may need to set the `:name` for
+each child application that configures Oban.
+
+For example, your umbrella contains two apps: `MyAppA` and `MyAppB`. `MyAppA` is
+responsible for inserting jobs, while only `MyAppB` actually runs any queues.
+
+Configure Oban with a custom name for `MyAppA`:
+
+```elixir
+config :my_app_a, Oban,
+  name: MyAppA.Oban,
+  repo: MyApp.Repo
+
+Then configure Oban for `MyAppB` with a different name:
+
+```elixir
+config :my_app_b, Oban,
+  name: MyAppB.Oban,
+  repo: MyApp.Repo,
+  queues: [default: 10]
+
+Now, use the configured name when calling functions like `Oban.insert/2`,
+`Oban.insert_all/2`, `Oban.drain_queue/2`, etc., to reference the correct Oban
+process for the current application.
+
+```elixir
+Oban.insert(MyAppA.Oban, MyWorker.new(%{}))
+Oban.insert_all(MyAppB.Oban, multi, :multiname, [MyWorker.new(%{})])
+Oban.drain_queue(MyAppB.Oban, queue: :default)
 
 ## Testing
 
