@@ -735,6 +735,73 @@ a job by assigning a numerical `priority`.
   priority. Within a particular priority jobs are executed in their scheduled
   order.
 
+### Oban usage in an umbrella app
+
+If you need to run Oban from an umbrella application where more than one of
+the child apps need to interact with Oban, you may need to set the :name for
+each child application.
+
+#### For example
+
+If `MyAppA` is just responsible for ObanWeb
+
+Configure Oban in `MyAppA`
+  ```elixir
+  config :my_app_a, Oban,
+    name: MyAppA.Oban,
+    repo: MyApp.Repo,
+    plugins: [Oban.Web.Plugins.Stats],
+    queues: []
+  ```
+
+When mounting the `ObanWeb` dashboard reference the named oban.
+
+  `oban_dashboard("/oban", oban_name: MyAppA.Oban)`
+
+`MyAppB` may only be responsible for inserting Oban Jobs, but never processing
+those jobs.
+
+Configure Oban in `MyAppB`
+  ```elixir
+  config :my_app_b, Oban,
+    name: MyAppB.Oban,
+    repo: MyApp.Repo,
+    plugins: [],
+    queues: []
+  ```
+
+`MyAppC` may be the app resonsible for processing Oban jobs.
+
+Configure Oban in `MyAppC`
+  ```elixir
+  config :my_app_c, Oban,
+    name: MyAppC.Oban,
+    repo: MyApp.Repo,
+    plugins: [Oban.Web.Plugins.Stats, {Oban.Plugins.Gossip, interval: :timer.seconds(5)}],
+    queues: [:default, :queue_two, :etc]
+  ```
+
+Then when scheduling a job use the configured name to reference the named Oban process.
+
+See:
+  - `insert/2`
+  - `insert/4`
+  - `insert!/2`
+  - `insert_all/2`
+  - `insert_all/4`
+
+  ```elixir
+  Oban.insert!(MyAppA.Oban, %Oban.Job{})
+  Oban.insert(MyAppB.Oban, %Oban.Job{})
+  Oban.insert_all(MyAppC.Oban, multi, :multiname, [%Oban.Job{}])
+  ```
+
+For testing the named Oban process, use `drain_queue/2`
+
+  ```elixir
+  Oban.drain_queue(MyAppB.Oban, queue: :queue_two)
+  ```
+
 ## Testing
 
 Find testing setup, helpers, and strategies in the [testing guide][tgi].
