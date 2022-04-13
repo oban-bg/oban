@@ -746,6 +746,7 @@ Configure Oban with a custom name for `MyAppA`:
 config :my_app_a, Oban,
   name: MyAppA.Oban,
   repo: MyApp.Repo
+```
 
 Then configure Oban for `MyAppB` with a different name:
 
@@ -754,6 +755,7 @@ config :my_app_b, Oban,
   name: MyAppB.Oban,
   repo: MyApp.Repo,
   queues: [default: 10]
+```
 
 Now, use the configured name when calling functions like `Oban.insert/2`,
 `Oban.insert_all/2`, `Oban.drain_queue/2`, etc., to reference the correct Oban
@@ -763,6 +765,7 @@ process for the current application.
 Oban.insert(MyAppA.Oban, MyWorker.new(%{}))
 Oban.insert_all(MyAppB.Oban, multi, :multiname, [MyWorker.new(%{})])
 Oban.drain_queue(MyAppB.Oban, queue: :default)
+```
 
 ## Testing
 
