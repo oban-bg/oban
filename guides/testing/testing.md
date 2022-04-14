@@ -34,6 +34,33 @@ Both testing modes prevent Oban from running any database queries in the
 background. This simultaneously prevents Sandbox errors from plugin queries and
 prevents queues from executing jobs unexpectedly.
 
+## Changing Testing Modes
+
+Once the application starts in a particular testing mode it can't be changed.
+That's inconvenient if you're running in `:inline` mode and don't want a
+particular job to execute inline! `Oban.Testing` provides a helper to
+temporarily change testing modes within the context of a function.
+
+For example, to switch to `:manual` mode when Oban is configured for `:inline`
+testing:
+
+```elixir
+Oban.Testing.with_testing(:manual, fn ->
+  Oban.insert(MyWorker.new(%{id: 123}))
+
+  assert_enqueued worker: MyWorker, args: %{id: 123}
+end)
+```
+
+Or visa-versa, switch to `:inline` mode when the application is configured for
+`:manual` mode:
+
+```elixir
+Oban.Testing.with_testing(:inline, fn ->
+  {:ok, %Job{state: "completed"}} = Oban.insert(MyWorker.new(%{id: 123}))
+end)
+```
+
 ## Setup Testing Helpers
 
 Oban provides helpers to facilitate manual testing. These helpers handle the
@@ -65,8 +92,8 @@ defmodule MyApp.WorkerTest do
 end
 ```
 
-Whichever way you choose, using `use Oban.Testing` requires the `repo` option because
- it's injected into many of the generated helpers.
+Whichever way you choose, using `use Oban.Testing` requires the `repo` option
+because it's injected into many of the generated helpers.
 
 If you are using isolation with namespaces through PostgreSQL schemas (Ecto
 "prefixes"), you can also specify this prefix when using `Oban.Testing`:

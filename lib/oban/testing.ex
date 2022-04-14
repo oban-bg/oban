@@ -362,6 +362,44 @@ defmodule Oban.Testing do
     refute wait_for_job(repo, opts, timeout), error_message
   end
 
+  @doc """
+  Change the testing mode within the context of a function.
+
+  Only `:manual` and `:inline` mode are supported, as `:disabled` implies that supervised queues
+  and plugins are running and this function won't start any processes.
+
+  ## Examples
+
+  Switch to `:manual` mode when an Oban instance is configured for `:inline` testing:
+
+      Oban.Testing.with_testing(:manual, fn ->
+        Oban.insert(MyWorker.new(%{id: 123}))
+
+        assert_enqueued worker: MyWorker, args: %{id: 123}
+      end)
+
+  Visa-versa, switch to `:inline` mode:
+
+      Oban.Testing.with_testing(:inline, fn ->
+        {:ok, %Job{state: "completed"}} = Oban.insert(MyWorker.new(%{id: 123}))
+      end)
+  """
+  @doc since: "2.12.0"
+  @spec with_testing_mode(:inline | :manual, (() -> any())) :: any()
+  def with_testing_mode(mode, fun) when mode in [:manual, :inline] and is_function(fun, 0) do
+    engine =
+      case mode do
+        :manual -> Oban.Queue.BasicEngine
+        :inline -> Oban.Queue.InlineEngine
+      end
+
+    Process.put(:oban_engine, engine)
+
+    fun.()
+  after
+    Process.delete(:oban_engine)
+  end
+
   # Assert Helpers
 
   defp inspect_opts(opts) do

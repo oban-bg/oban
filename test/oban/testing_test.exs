@@ -3,7 +3,7 @@ defmodule Oban.TestingTest do
 
   use Oban.Testing, repo: Oban.Test.Repo
 
-  alias Oban.TelemetryHandler
+  alias Oban.{TelemetryHandler, Testing}
 
   @moduletag :integration
 
@@ -295,6 +295,30 @@ defmodule Oban.TestingTest do
       end)
 
       refute_enqueued [worker: Ping, args: %{id: 1}], 20
+    end
+  end
+
+  describe "with_testing_mode/2" do
+    test "temporarily running with :inline mode" do
+      name = start_supervised_oban!(testing: :manual)
+
+      Testing.with_testing_mode(:inline, fn ->
+        Oban.insert!(name, Worker.new(%{ref: 1, action: "OK"}))
+
+        assert_received {:ok, 1}
+      end)
+    end
+
+    test "temporarily running with :manual mode" do
+      name = start_supervised_oban!(testing: :inline)
+
+      Testing.with_testing_mode(:manual, fn ->
+        Oban.insert!(name, Worker.new(%{ref: 1, action: "OK"}))
+
+        assert_enqueued worker: Worker
+
+        refute_received {:ok, 1}
+      end)
     end
   end
 
