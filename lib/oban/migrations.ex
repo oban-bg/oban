@@ -24,13 +24,32 @@ defmodule Oban.Migrations do
   end
   ```
 
-  This will run all of Oban's versioned migrations for your database. Migrations between versions
-  are idempotent. As new versions are released you may need to run additional migrations.
+  This will run all of Oban's versioned migrations for your database.
 
   Now, run the migration to create the table:
 
   ```bash
   mix ecto.migrate
+  ```
+
+  Migrations between versions are idempotent. As new versions are released, you
+  may need to run additional migrations. To do this, generate a new migration:
+
+  ```bash
+  mix ecto.gen.migration upgrade_oban_to_v11
+  ```
+
+  Open the generated migration in your editor and call the `up` and `down`
+  functions on `Oban.Migrations`, passing a version number:
+
+  ```elixir
+  defmodule MyApp.Repo.Migrations.UpgradeObanToV11 do
+    use Ecto.Migration
+
+    def up, do: Oban.Migrations.up(version: 11)
+
+    def down, do: Oban.Migrations.down(version: 10)
+  end
   ```
 
   ## Isolation with Prefixes
