@@ -108,118 +108,120 @@ defmodule Oban.Queue.Engine do
 
   @doc false
   def init(%Config{} = conf, [_ | _] = opts) do
-    with_span(:init, conf, fn ->
-      conf.engine.init(conf, opts)
+    with_span(:init, conf, fn engine ->
+      engine.init(conf, opts)
     end)
   end
 
   @doc false
   def refresh(%Config{} = conf, %{} = meta) do
-    with_span(:refresh, conf, fn ->
-      conf.engine.refresh(conf, meta)
+    with_span(:refresh, conf, fn engine ->
+      engine.refresh(conf, meta)
     end)
   end
 
   @doc false
   def put_meta(%Config{} = conf, %{} = meta, key, value) when is_atom(key) do
-    with_span(:put_meta, conf, fn ->
-      conf.engine.put_meta(conf, meta, key, value)
+    with_span(:put_meta, conf, fn engine ->
+      engine.put_meta(conf, meta, key, value)
     end)
   end
 
   @doc false
   def check_meta(%Config{} = conf, %{} = meta, %{} = running) do
-    conf.engine.check_meta(conf, meta, running)
+    with_span(:check_meta, conf, fn engine ->
+      engine.check_meta(conf, meta, running)
+    end)
   end
 
   @doc false
   def insert_job(%Config{} = conf, %Changeset{} = changeset) do
-    with_span(:insert_job, conf, %{changeset: changeset}, fn ->
-      conf.engine.insert_job(conf, changeset)
+    with_span(:insert_job, conf, %{changeset: changeset}, fn engine ->
+      engine.insert_job(conf, changeset)
     end)
   end
 
   @doc false
   def insert_job(%Config{} = conf, %Multi{} = multi, name, changeset) do
-    with_span(:insert_job, conf, %{changeset: changeset}, fn ->
-      conf.engine.insert_job(conf, multi, name, changeset)
+    with_span(:insert_job, conf, %{changeset: changeset}, fn engine ->
+      engine.insert_job(conf, multi, name, changeset)
     end)
   end
 
   @doc false
   def insert_all_jobs(%Config{} = conf, changesets) do
-    with_span(:insert_all_jobs, conf, %{changesets: changesets}, fn ->
-      conf.engine.insert_all_jobs(conf, changesets)
+    with_span(:insert_all_jobs, conf, %{changesets: changesets}, fn engine ->
+      engine.insert_all_jobs(conf, changesets)
     end)
   end
 
   @doc false
   def insert_all_jobs(%Config{} = conf, %Multi{} = multi, name, changesets) do
-    with_span(:insert_all_jobs, conf, %{changesets: changesets}, fn ->
-      conf.engine.insert_all_jobs(conf, multi, name, changesets)
+    with_span(:insert_all_jobs, conf, %{changesets: changesets}, fn engine ->
+      engine.insert_all_jobs(conf, multi, name, changesets)
     end)
   end
 
   @doc false
   def fetch_jobs(%Config{} = conf, %{} = meta, %{} = running) do
-    with_span(:fetch_jobs, conf, fn ->
-      conf.engine.fetch_jobs(conf, meta, running)
+    with_span(:fetch_jobs, conf, fn engine ->
+      engine.fetch_jobs(conf, meta, running)
     end)
   end
 
   @doc false
   def complete_job(%Config{} = conf, %Job{} = job) do
-    with_span(:complete_job, conf, %{job: job}, fn ->
-      conf.engine.complete_job(conf, job)
+    with_span(:complete_job, conf, %{job: job}, fn engine ->
+      engine.complete_job(conf, job)
     end)
   end
 
   @doc false
   def discard_job(%Config{} = conf, %Job{} = job) do
-    with_span(:discard_job, conf, %{job: job}, fn ->
-      conf.engine.discard_job(conf, job)
+    with_span(:discard_job, conf, %{job: job}, fn engine ->
+      engine.discard_job(conf, job)
     end)
   end
 
   @doc false
   def error_job(%Config{} = conf, %Job{} = job, seconds) when is_integer(seconds) do
-    with_span(:error_job, conf, %{job: job}, fn ->
-      conf.engine.error_job(conf, job, seconds)
+    with_span(:error_job, conf, %{job: job}, fn engine ->
+      engine.error_job(conf, job, seconds)
     end)
   end
 
   @doc false
   def snooze_job(%Config{} = conf, %Job{} = job, seconds) when is_integer(seconds) do
-    with_span(:snooze_job, conf, %{job: job}, fn ->
-      conf.engine.snooze_job(conf, job, seconds)
+    with_span(:snooze_job, conf, %{job: job}, fn engine ->
+      engine.snooze_job(conf, job, seconds)
     end)
   end
 
   @doc false
   def cancel_job(%Config{} = conf, %Job{} = job) do
-    with_span(:cancel_job, conf, %{job: job}, fn ->
-      conf.engine.cancel_job(conf, job)
+    with_span(:cancel_job, conf, %{job: job}, fn engine ->
+      engine.cancel_job(conf, job)
     end)
   end
 
   @doc false
   def cancel_all_jobs(%Config{} = conf, queryable) do
-    with_span(:cancel_all_jobs, conf, fn ->
-      conf.engine.cancel_all_jobs(conf, queryable)
+    with_span(:cancel_all_jobs, conf, fn engine ->
+      engine.cancel_all_jobs(conf, queryable)
     end)
   end
 
   @doc false
   def retry_job(%Config{} = conf, %Job{} = job) do
-    with_span(:retry_job, conf, %{job: job}, fn ->
-      conf.engine.retry_job(conf, job)
+    with_span(:retry_job, conf, %{job: job}, fn engine ->
+      engine.retry_job(conf, job)
     end)
   end
 
   @doc false
   def retry_all_jobs(%Config{} = conf, queryable) do
-    with_span(:retry_all_jobs, conf, fn ->
-      conf.engine.retry_all_jobs(conf, queryable)
+    with_span(:retry_all_jobs, conf, fn engine ->
+      engine.retry_all_jobs(conf, queryable)
     end)
   end
 
@@ -227,7 +229,9 @@ defmodule Oban.Queue.Engine do
     tele_meta = Map.merge(tele_meta, %{conf: conf, engine: conf.engine})
 
     :telemetry.span([:oban, :engine, event], tele_meta, fn ->
-      {fun.(), tele_meta}
+      engine = Process.get(:oban_engine, conf.engine)
+
+      {fun.(engine), tele_meta}
     end)
   end
 end
