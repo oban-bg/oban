@@ -151,7 +151,7 @@ defmodule Oban.Migrations do
 
       Oban.Migrations.down()
 
-  Run migrations down to a specified version:
+  Run migrations down to and including a specified version:
 
       Oban.Migrations.down(version: 5)
 
