@@ -771,7 +771,7 @@ Oban.drain_queue(MyAppB.Oban, queue: :default)
 
 Find testing setup, helpers, and strategies in the [testing guide][tgi].
 
-[tgi]: https://hexdocs.pm/oban/testing.html
+[tgi]: https://hexdocs.pm/oban/Oban.html#module-testing
 
 ## Error Handling
 
