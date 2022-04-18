@@ -372,7 +372,7 @@ defmodule Oban.Testing do
 
   Switch to `:manual` mode when an Oban instance is configured for `:inline` testing:
 
-      Oban.Testing.with_testing(:manual, fn ->
+      Oban.Testing.with_testing_mode(:manual, fn ->
         Oban.insert(MyWorker.new(%{id: 123}))
 
         assert_enqueued worker: MyWorker, args: %{id: 123}
@@ -380,7 +380,7 @@ defmodule Oban.Testing do
 
   Visa-versa, switch to `:inline` mode:
 
-      Oban.Testing.with_testing(:inline, fn ->
+      Oban.Testing.with_testing_mode(:inline, fn ->
         {:ok, %Job{state: "completed"}} = Oban.insert(MyWorker.new(%{id: 123}))
       end)
   """

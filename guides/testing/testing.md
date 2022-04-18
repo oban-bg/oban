@@ -45,7 +45,7 @@ For example, to switch to `:manual` mode when Oban is configured for `:inline`
 testing:
 
 ```elixir
-Oban.Testing.with_testing(:manual, fn ->
+Oban.Testing.with_testing_mode(:manual, fn ->
   Oban.insert(MyWorker.new(%{id: 123}))
 
   assert_enqueued worker: MyWorker, args: %{id: 123}
@@ -56,7 +56,7 @@ Or visa-versa, switch to `:inline` mode when the application is configured for
 `:manual` mode:
 
 ```elixir
-Oban.Testing.with_testing(:inline, fn ->
+Oban.Testing.with_testing_mode(:inline, fn ->
   {:ok, %Job{state: "completed"}} = Oban.insert(MyWorker.new(%{id: 123}))
 end)
 ```
