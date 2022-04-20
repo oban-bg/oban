@@ -151,7 +151,8 @@ defmodule Oban.MixProject do
       {:benchee, "~> 1.0", only: [:test, :dev], runtime: false},
       {:credo, "~> 1.6", only: [:test, :dev], runtime: false},
       {:dialyxir, "~> 1.0", only: [:test, :dev], runtime: false},
-      {:ex_doc, "~> 0.28", only: [:test, :dev], runtime: false}
+      {:ex_doc, "~> 0.28", only: [:test, :dev], runtime: false},
+      {:makeup_diff, "~> 0.1", only: [:test, :dev], runtime: false}
     ]
   end
 
