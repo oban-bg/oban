@@ -122,6 +122,8 @@ defmodule Oban.Testing do
 
   alias Oban.{Config, Job, Queue.Executor, Repo, Worker}
 
+  @type testing_mode :: :inline | :manual
+
   @wait_interval 10
 
   @doc false
@@ -211,11 +213,11 @@ defmodule Oban.Testing do
   @spec perform_job(
           worker :: Worker.t(),
           args :: term(),
-          opts :: [Job.option() | {:repo, module()}]
+          opts :: [Job.option() | {:repo, module()} | {:testing, testing_mode()}]
         ) ::
           Worker.result()
   def perform_job(worker, args, opts) when is_atom(worker) do
-    {conf_opts, opts} = Keyword.split(opts, [:log, :prefix, :repo])
+    {conf_opts, opts} = Keyword.split(opts, [:log, :prefix, :repo, :testing])
 
     opts = Keyword.put_new(opts, :attempt, 1)
 
@@ -228,6 +230,14 @@ defmodule Oban.Testing do
 
     assert_valid_changeset(changeset)
 
+    case Keyword.get(conf_opts, :testing) do
+      mode when mode in [:inline, :manual] ->
+        Process.put(:oban_engine, engine_for_testing_mode(mode))
+
+      _ ->
+        nil
+    end
+
     result =
       conf_opts
       |> Keyword.put(:testing, :inline)
@@ -235,6 +245,8 @@ defmodule Oban.Testing do
       |> Executor.new(create_job(changeset), safe: false)
       |> Executor.call()
       |> Map.fetch!(:result)
+
+    Process.delete(:oban_engine)
 
     assert_valid_result(result)
 
@@ -385,15 +397,9 @@ defmodule Oban.Testing do
       end)
   """
   @doc since: "2.12.0"
-  @spec with_testing_mode(:inline | :manual, (() -> any())) :: any()
+  @spec with_testing_mode(testing_mode(), (() -> any())) :: any()
   def with_testing_mode(mode, fun) when mode in [:manual, :inline] and is_function(fun, 0) do
-    engine =
-      case mode do
-        :manual -> Oban.Queue.BasicEngine
-        :inline -> Oban.Queue.InlineEngine
-      end
-
-    Process.put(:oban_engine, engine)
+    Process.put(:oban_engine, engine_for_testing_mode(mode))
 
     fun.()
   after
@@ -589,4 +595,9 @@ defmodule Oban.Testing do
 
     Changeset.put_change(changeset, field, value)
   end
+
+  defp engine_for_testing_mode(mode)
+  defp engine_for_testing_mode(:manual), do: Oban.Queue.BasicEngine
+  defp engine_for_testing_mode(:inline), do: Oban.Queue.InlineEngine
+  defp engine_for_testing_mode(_unsupported), do: nil
 end

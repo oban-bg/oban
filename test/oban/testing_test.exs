@@ -192,6 +192,11 @@ defmodule Oban.TestingTest do
     after
       :telemetry.detach("perform-job-handler")
     end
+
+    test "changing testing mode via opts" do
+      assert :ok = perform_job(Worker, %{ref: 1, action: "OK"}, testing: :inline)
+      assert :ok = perform_job(Worker, %{ref: 1, action: "OK"}, testing: :manual)
+    end
   end
 
   describe "all_enqueued/0,1" do
@@ -318,6 +323,20 @@ defmodule Oban.TestingTest do
         assert_enqueued worker: Worker
 
         refute_received {:ok, 1}
+      end)
+    end
+
+    test "with perform_job" do
+      Testing.with_testing_mode(:manual, fn ->
+        assert :ok = perform_job(Worker, %{ref: 1, action: "OK"})
+        assert :ok = perform_job(Worker, %{ref: 1, action: "OK"}, testing: :manual)
+        assert :ok = perform_job(Worker, %{ref: 1, action: "OK"}, testing: :inline)
+      end)
+
+      Testing.with_testing_mode(:inline, fn ->
+        assert :ok = perform_job(Worker, %{ref: 1, action: "OK"})
+        assert :ok = perform_job(Worker, %{ref: 1, action: "OK"}, testing: :manual)
+        assert :ok = perform_job(Worker, %{ref: 1, action: "OK"}, testing: :inline)
       end)
     end
   end
