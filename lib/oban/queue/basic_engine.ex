@@ -130,6 +130,10 @@ defmodule Oban.Queue.BasicEngine do
   end
 
   @impl Engine
+  def complete_job(%Config{testing: :inline}, %Job{id: nil}) do
+    {0, nil}
+  end
+
   def complete_job(%Config{} = conf, %Job{} = job) do
     Repo.update_all(
       conf,
