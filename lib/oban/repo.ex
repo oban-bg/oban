@@ -125,7 +125,7 @@ defmodule Oban.Repo do
   def transaction(conf, fun_or_multi, opts \\ []) do
     with_dynamic_repo(
       conf,
-      fn -> conf.repo.transaction(fun_or_multi, default_opts(conf, opts)) end
+      fn -> conf.repo.transaction(fun_or_multi, query_opts(conf, opts)) end
     )
   end
 
@@ -201,10 +201,6 @@ defmodule Oban.Repo do
   end
 
   defp in_transaction?(_, _), do: false
-
-  defp default_opts(conf, opts) do
-    Keyword.put(opts, :log, conf.log)
-  end
 
   defp query_opts(conf, opts) do
     opts
