@@ -234,7 +234,7 @@ config :my_app, Oban,
   plugins: [Oban.Plugins.Pruner],
   queues: [default: 10, events: 50, media: 20]
 
-# confg/test.exs
+# config/test.exs
 config :my_app, Oban, testing: :inline
 
 # lib/my_app/application.ex
