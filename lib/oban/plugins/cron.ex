@@ -9,7 +9,7 @@ defmodule Oban.Plugins.Cron do
   >
   > This plugin only loads the crontab statically, at boot time. To configure cron schedules
   > dynamically at runtime, across your entire cluster, see the `DynamicCron` plugin in [Oban
-  > Pro](dynamic_cron.html).
+  > Pro](https://getoban.pro/docs/pro/dynamic_cron.html).
 
   ## Using the Plugin
 

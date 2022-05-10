@@ -21,7 +21,7 @@ defmodule Oban.Plugins.Pruner do
   >
   > This plugin treats all jobs the same and only retains by time. To retain by length or
   > provide custom rules for specific queues, workers and job states see the `DynamicPruner` plugin
-  > in [Oban Pro](dynamic_pruner.html).
+  > in [Oban Pro](https://getoban.pro/docs/pro/dynamic_pruner.html).
 
   ## Options
 
