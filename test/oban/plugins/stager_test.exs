@@ -22,9 +22,9 @@ defmodule Oban.Plugins.StagerTest do
 
       then = DateTime.add(DateTime.utc_now(), -30)
 
-      job_1 = insert!([ref: 1, action: "OK"], inserted_at: then, schedule_in: -9, queue: :alpha)
-      job_2 = insert!([ref: 2, action: "OK"], inserted_at: then, schedule_in: -5, queue: :alpha)
-      job_3 = insert!([ref: 3, action: "OK"], inserted_at: then, schedule_in: 10, queue: :alpha)
+      job_1 = insert!([ref: 1, action: "OK"], inserted_at: then, schedule_in: -9)
+      job_2 = insert!([ref: 2, action: "OK"], inserted_at: then, schedule_in: -5)
+      job_3 = insert!([ref: 3, action: "OK"], inserted_at: then, schedule_in: 10)
 
       name = start_supervised_oban!(plugins: [Stager])
 

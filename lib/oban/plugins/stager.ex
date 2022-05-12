@@ -29,6 +29,7 @@ defmodule Oban.Plugins.Stager do
       distinct: 2,
       join: 5,
       limit: 2,
+      lock: 2,
       order_by: 2,
       select: 3,
       where: 3
@@ -129,6 +130,7 @@ defmodule Oban.Plugins.Stager do
       |> where([j], j.scheduled_at <= ^DateTime.utc_now())
       |> order_by(asc: :id)
       |> limit(^state.limit)
+      |> lock("FOR UPDATE SKIP LOCKED")
 
     Repo.update_all(
       state.conf,

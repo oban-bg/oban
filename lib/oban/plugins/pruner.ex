@@ -42,7 +42,7 @@ defmodule Oban.Plugins.Pruner do
 
   use GenServer
 
-  import Ecto.Query, only: [join: 5, limit: 2, or_where: 3, select: 2]
+  import Ecto.Query, only: [join: 5, limit: 2, lock: 2, or_where: 3, select: 2]
 
   alias Oban.{Job, Peer, Plugin, Repo, Validation}
 
@@ -150,6 +150,7 @@ defmodule Oban.Plugins.Pruner do
       |> or_where([j], j.state == "discarded" and j.discarded_at < ^time)
       |> select([:id])
       |> limit(^limit)
+      |> lock("FOR UPDATE SKIP LOCKED")
 
     Repo.delete_all(
       conf,
