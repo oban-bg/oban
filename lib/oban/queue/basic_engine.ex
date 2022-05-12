@@ -104,6 +104,7 @@ defmodule Oban.Queue.BasicEngine do
       |> select([:id])
       |> where([j], j.state == "available")
       |> where([j], j.queue == ^meta.queue)
+      |> where([j], j.attempt < j.max_attempts)
       |> order_by([j], asc: j.priority, asc: j.scheduled_at, asc: j.id)
       |> limit(^demand)
       |> lock("FOR UPDATE SKIP LOCKED")
