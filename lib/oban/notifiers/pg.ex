@@ -15,7 +15,7 @@ defmodule Oban.Notifiers.PG do
 
   ```elixir
   config :my_app, Oban,
-    notifier: Oban.Pro.Notifiers.PG,
+    notifier: Oban.Notifiers.PG,
     ...
   ```
 
