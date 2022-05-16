@@ -70,6 +70,16 @@ defmodule Oban.Integration.ExecutingTest do
     assert_receive {:ok, 2}
   end
 
+  test "ignoring available jobs that have exceeded max attempts" do
+    start_supervised_oban!(plugins: [{Stager, interval: 25}], queues: [alpha: 3])
+
+    insert!(%{ref: 1, action: "OK"}, queue: "alpha", state: "available", attempt: 19)
+    insert!(%{ref: 2, action: "OK"}, queue: "alpha", state: "available", attempt: 20)
+
+    assert_receive {:ok, 1}
+    refute_receive {:ok, 2}
+  end
+
   defp job do
     gen all queue <- member_of(~w(alpha beta gamma delta)),
             action <- member_of(~w(OK DISCARD ERROR EXIT FAIL KILL SNOOZE TASK_ERROR TASK_EXIT)),
