@@ -63,10 +63,10 @@ in your application's root directory to something like:
 
 ```
 # Elixir version
-elixir_version=1.9.0
+elixir_version=1.13.0
 
 # Erlang version
-erlang_version=22.0.3
+erlang_version=24.2
 ```
 
 Available Erlang versions are available [here][versions].
