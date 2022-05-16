@@ -1,10 +1,32 @@
 # Troubleshooting
 
-## PG Bouncer
+## Jobs Stuck "Available" and Won't Execute
 
-### No Notifications with Transaction Pooling
+In multi-node setups it's possible that queues won't execute jobs as expected
+and they'll be left `available`. Typically this is the result of advanced
+configuration that prevents plugins from running on the leader node. Only the
+leader node will run most plugins, including the `Stager` plugin that is
+responsible for notifying queues that jobs are available.
 
-Using PG Bouncer's "Transaction Pooling" setup disables all of PostgreSQL's
+There are a couple of options to fix this issue and keep jobs executing:
+
+1. Don't use `plugins: false` in your configuration. Simply omit any `plugins`
+   configuration and Oban will inject the `Stager` automatically. You can also
+   set `plugins: [Oban.Plugins.Stager]` to be more explicit.
+
+   Plugins only insert/update jobs and never execute them, leaving little reason
+   to disable them altogether.
+
+2. Set `peer: false` on any node that isn't executing plugins. That guarantees
+   that plugins like `Stager` will only run on the leader node.
+
+3. If plugins aren't disabled and leadership isn't overridden, then there's
+   probably an issue with notifications. See "No Notifications with PgBouncer"
+   for more tips.
+
+## No Notifications with PgBouncer
+
+Using PgBouncer's "Transaction Pooling" setup disables all of PostgreSQL's
 `LISTEN` and `NOTIFY` activity. Some functionality, such as triggering job
 execution, scaling queues, canceling jobs, etc. rely on those notifications.
 
@@ -14,11 +36,11 @@ There are several options available to ensure functional notifications:
    on Distributed Erlang and exchanges messages within a cluster. The only
    drawback to the PG notifier is that it doesn't trigger job insertion events.
 
-2. Switch `pg_bouncer` to "Session Pooling". Session pooling isn't as resource
+2. Switch `PgBouncer` to "Session Pooling". Session pooling isn't as resource
    efficient as transaction pooling, but it retains all Postgres functionality.
 
 3. Use a dedicated Repo that connects directly to the database, bypassing
-   `pg_bouncer`.
+   `PgBouncer`.
 
 If none of those options work, you can use the [Repeater][repe] plugin to ensure
 that queues keep processing jobs:
