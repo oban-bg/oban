@@ -34,7 +34,7 @@ Both testing modes prevent Oban from running any database queries in the
 background. This simultaneously prevents Sandbox errors from plugin queries and
 prevents queues from executing jobs unexpectedly.
 
-## Changing Testing Modes
+### Changing Testing Modes
 
 Once the application starts in a particular testing mode it can't be changed.
 That's inconvenient if you're running in `:inline` mode and don't want a

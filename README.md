@@ -29,13 +29,13 @@
 ## Table of Contents
 
 - [Features](#features)
-- [Requirements](#requirements)
 - [Oban Web+Pro](#oban-webpro)
-- [Installation](#installation)
 - [Usage](#usage)
-  - [Configuring Queues](#configuring-queues)
+  - [Installation](#installation)
+  - [Requirements](#requirements)
   - [Defining Workers](#defining-workers)
   - [Enqueueing Jobs](#enqueueing-jobs)
+  - [Configuring Queues](#configuring-queues)
   - [Pruning Historic Jobs](#pruning-historic-jobs)
   - [Unique Jobs](#unique-jobs)
   - [Periodic Jobs](#periodic-jobs)
@@ -142,79 +142,6 @@ plugins, and workers are available as licensed packages:
 Learn more about prices and licensing Oban Web+Pro at
 [getoban.pro](https://getoban.pro).
 
-## Requirements
-
-Running Oban requires Elixir 1.11+, Erlang 21+, and PostgreSQL 10.0+.
-
-## Installation
-
-Oban is published on [Hex](https://hex.pm/packages/oban). Add it to your list of
-dependencies in `mix.exs`:
-
-```elixir
-def deps do
-  [
-    {:oban, "~> 2.12"}
-  ]
-end
-```
-
-Then run `mix deps.get` to install Oban and its dependencies, including
-[Ecto][ecto], [Jason][jason] and [Postgrex][postgrex].
-
-After the packages are installed you must create a database migration to
-add the `oban_jobs` table to your database:
-
-```bash
-mix ecto.gen.migration add_oban_jobs_table
-```
-
-Open the generated migration in your editor and call the `up` and `down`
-functions on `Oban.Migrations`:
-
-```elixir
-defmodule MyApp.Repo.Migrations.AddObanJobsTable do
-  use Ecto.Migration
-
-  def up do
-    Oban.Migrations.up()
-  end
-
-  # We specify `version: 1` in `down`, ensuring that we'll roll all the way back down if
-  # necessary, regardless of which version we've migrated `up` to.
-  def down do
-    Oban.Migrations.down(version: 1)
-  end
-end
-```
-
-This will run all of Oban's versioned migrations for your database. Migrations
-between versions are idempotent and rarely† change after a release. As new
-versions are released you may need to run additional migrations.
-
-Now, run the migration to create the table:
-
-```bash
-mix ecto.migrate
-```
-
-Next see [Usage](#Usage) for how to integrate Oban into your application and
-start defining jobs!
-
-_† The only exception is the removal of `oban_beats`. That table is no longer
-created or modified in any migrations_
-
-[ecto]: https://hex.pm/packages/ecto
-[jason]: https://hex.pm/packages/jason
-[postgrex]: https://hex.pm/packages/postgrex
-
-#### Note About Releases
-
-If you are using releases you may see Postgrex errors logged during your initial
-deploy (or any deploy requiring an Oban migration). The errors are only
-temporary! After the migration has completed each queue will start producing
-jobs normally.
-
 ## Usage
 
 <!-- MDOC -->
@@ -222,92 +149,14 @@ jobs normally.
 Oban is a robust job processing library which uses PostgreSQL for storage and
 coordination.
 
-Each Oban instance is a supervision tree and _not an application_. That means it
-won't be started automatically and must be included in your application's
-supervision tree. All of your configuration is passed into the supervisor,
-allowing you to configure Oban like the rest of your application:
+### Installation
 
-```elixir
-# config/config.exs
-config :my_app, Oban,
-  repo: MyApp.Repo,
-  plugins: [Oban.Plugins.Pruner],
-  queues: [default: 10, events: 50, media: 20]
+See the [installation guide](installation.md) for details on installing and
+configuring Oban in your application.
 
-# config/test.exs
-config :my_app, Oban, testing: :inline
+### Requirements
 
-# lib/my_app/application.ex
-defmodule MyApp.Application do
-  @moduledoc false
-
-  use Application
-
-  alias MyApp.Repo
-  alias MyAppWeb.Endpoint
-
-  def start(_type, _args) do
-    children = [
-      Repo,
-      Endpoint,
-      {Oban, oban_config()}
-    ]
-
-    Supervisor.start_link(children, strategy: :one_for_one, name: MyApp.Supervisor)
-  end
-
-  # Conditionally disable queues or plugins here.
-  defp oban_config do
-    Application.fetch_env!(:my_app, Oban)
-  end
-end
-```
-
-See the installation instructions in the README or on the Hexdocs guide for details
-on how to migrate your database.
-
-### Configuring Queues
-
-Queues are specified as a keyword list where the key is the name of the queue
-and the value is the maximum number of concurrent jobs. The following
-configuration would start four queues with concurrency ranging from 5 to 50:
-
-```elixir
-queues: [default: 10, mailers: 20, events: 50, media: 5]
-```
-
-You may also use an expanded form to configure queues with individual overrides:
-
-```elixir
-queues: [
-  default: 10,
-  events: [limit: 50, paused: true]
-]
-```
-
-The `events` queue will now start in a paused state, which means it won't
-process anything until `Oban.resume_queue/2` is called to start it.
-
-There isn't a limit to the number of queues or how many jobs may execute
-concurrently in each queue. Some additional guidelines:
-
-#### Caveats & Guidelines
-
-* Each queue will run as many jobs as possible concurrently, up to the
-  configured limit. Make sure your system has enough resources (i.e. database
-  connections) to handle the concurrent load.
-
-* Queue limits are local (per-node), not global (per-cluster). For example,
-  running a queue with a local limit of one on three separate nodes is
-  effectively a global limit of three. If you require a global limit you must
-  restrict the number of nodes running a particular queue.
-
-* Only jobs in the configured queues will execute. Jobs in any other queue will
-  stay in the database untouched.
-
-* Be careful how many concurrent jobs make expensive system calls (i.e. FFMpeg,
-  ImageMagick). The BEAM ensures that the system stays responsive under load,
-  but those guarantees don't apply when using ports or shelling out commands.
+Oban requires Elixir 1.11+, Erlang 21+, and PostgreSQL 10.0+.
 
 ### Defining Workers
 
@@ -461,6 +310,49 @@ Oban's advanced features (i.e., unique jobs). However, you can use your
 application's `Repo.insert/2` function if necessary.
 
 See `Oban.Job.new/2` for a full list of job options.
+
+### Configuring Queues
+
+Queues are specified as a keyword list where the key is the name of the queue
+and the value is the maximum number of concurrent jobs. The following
+configuration would start four queues with concurrency ranging from 5 to 50:
+
+```elixir
+queues: [default: 10, mailers: 20, events: 50, media: 5]
+```
+
+You may also use an expanded form to configure queues with individual overrides:
+
+```elixir
+queues: [
+  default: 10,
+  events: [limit: 50, paused: true]
+]
+```
+
+The `events` queue will now start in a paused state, which means it won't
+process anything until `Oban.resume_queue/2` is called to start it.
+
+There isn't a limit to the number of queues or how many jobs may execute
+concurrently in each queue. Some additional guidelines:
+
+#### Caveats & Guidelines
+
+* Each queue will run as many jobs as possible concurrently, up to the
+  configured limit. Make sure your system has enough resources (i.e. database
+  connections) to handle the concurrent load.
+
+* Queue limits are local (per-node), not global (per-cluster). For example,
+  running a queue with a local limit of one on three separate nodes is
+  effectively a global limit of three. If you require a global limit you must
+  restrict the number of nodes running a particular queue.
+
+* Only jobs in the configured queues will execute. Jobs in any other queue will
+  stay in the database untouched.
+
+* Be careful how many concurrent jobs make expensive system calls (i.e. FFMpeg,
+  ImageMagick). The BEAM ensures that the system stays responsive under load,
+  but those guarantees don't apply when using ports or shelling out commands.
 
 ### Pruning Historic Jobs
 
@@ -769,9 +661,7 @@ Oban.drain_queue(MyAppB.Oban, queue: :default)
 
 ## Testing
 
-Find testing setup, helpers, and strategies in the [testing guide][tgi].
-
-[tgi]: https://hexdocs.pm/oban/testing.html
+Find testing setup, helpers, and strategies in the [testing guide](testing.md).
 
 ## Error Handling
 
