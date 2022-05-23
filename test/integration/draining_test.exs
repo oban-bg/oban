@@ -57,8 +57,7 @@ defmodule Oban.Integration.DrainingTest do
 
       insert!(%{ref: 1, action: "OK"}, scheduled_at: scheduled_at)
 
-      assert %{success: 1, failure: 0} =
-               Oban.drain_queue(name, queue: :alpha, with_scheduled: scheduled_at)
+      assert %{success: 1} = Oban.drain_queue(name, queue: :alpha, with_scheduled: scheduled_at)
     end
   end
 

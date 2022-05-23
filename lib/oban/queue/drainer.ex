@@ -16,7 +16,6 @@ defmodule Oban.Queue.Drainer do
       |> Map.put_new(:with_recursion, false)
       |> Map.put_new(:with_safety, true)
       |> Map.put_new(:with_scheduled, false)
-      |> Map.put_new(:with_scheduled_up_to, nil)
       |> Map.update!(:queue, &to_string/1)
 
     drain(conf, %{discard: 0, failure: 0, snoozed: 0, success: 0}, args)

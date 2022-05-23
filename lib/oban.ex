@@ -421,7 +421,7 @@ defmodule Oban do
 
   Drain a queue including jobs scheduled up to a minute:
 
-      Oban.drain_queue(queue: :default, with_scheduled: DateTime.utc_now() |> DateTime.add(60, :second))
+      Oban.drain_queue(queue: :default, with_scheduled: DateTime.add(DateTime.utc_now(), 60, :second))
 
   Drain a queue and assert an error is raised:
 
