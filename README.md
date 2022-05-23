@@ -391,7 +391,7 @@ duplicate jobs.  Uniqueness is based on a combination of `args`, `queue`,
 level using the following options:
 
 * `:period` — The number of seconds until a job is no longer considered
-  duplicate. You should always specify a period, otherwise Oban will default to 
+  duplicate. You should always specify a period, otherwise Oban will default to
   60 seconds. `:infinity` can be used to indicate the job be considered a
   duplicate as long as jobs are retained.
 
