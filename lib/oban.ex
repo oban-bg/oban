@@ -56,7 +56,7 @@ defmodule Oban do
           | {:with_limit, pos_integer()}
           | {:with_recursion, boolean()}
           | {:with_safety, boolean()}
-          | {:with_scheduled, boolean()}
+          | {:with_scheduled, boolean() | DateTime.t()}
 
   @type drain_result :: %{
           discard: non_neg_integer(),
@@ -386,8 +386,9 @@ defmodule Oban do
   ## Scheduled Jobs
 
   By default, `drain_queue/2` will execute all currently available jobs. In order to execute
-  scheduled jobs, you may pass the `:with_scheduled` flag which will cause scheduled jobs to be
-  marked as `available` beforehand.
+  scheduled jobs, you may pass the `with_scheduled: true` which will cause all scheduled jobs to
+  be marked as `available` beforehand. To run jobs scheduled up to a specific point in time, pass
+  a `DateTime` instead.
 
   ## Options
 
@@ -402,7 +403,9 @@ defmodule Oban do
     `false`, raised exceptions or unhandled exits are reraised (unhandled exits are wrapped in
     `Oban.CrashError`).
 
-  * `:with_scheduled` — whether to include any scheduled jobs when draining, default `false`
+  * `:with_scheduled` — whether to include any scheduled jobs when draining, default `false`.
+     When `true`, drains all scheduled jobs. When a `DateTime` is provided, drains all jobs
+     scheduled up to, and including, that point in time.
 
   ## Example
 
@@ -415,6 +418,10 @@ defmodule Oban do
 
       Oban.drain_queue(queue: :default, with_scheduled: true)
       %{failure: 0, snoozed: 0, success: 1}
+
+  Drain a queue including jobs scheduled up to a minute:
+
+      Oban.drain_queue(queue: :default, with_scheduled: DateTime.utc_now() |> DateTime.add(60, :second))
 
   Drain a queue and assert an error is raised:
 

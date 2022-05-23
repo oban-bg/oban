@@ -16,22 +16,29 @@ defmodule Oban.Queue.Drainer do
       |> Map.put_new(:with_recursion, false)
       |> Map.put_new(:with_safety, true)
       |> Map.put_new(:with_scheduled, false)
+      |> Map.put_new(:with_scheduled_up_to, nil)
       |> Map.update!(:queue, &to_string/1)
 
     drain(conf, %{discard: 0, failure: 0, snoozed: 0, success: 0}, args)
   end
 
-  defp stage_scheduled(conf, queue) do
+  defp stage_scheduled(conf, queue, with_scheduled) do
     query =
       Job
       |> where([j], j.state in ["scheduled", "retryable"])
       |> where([j], j.queue == ^queue)
 
+    query =
+      case with_scheduled do
+        true -> query
+        %DateTime{} -> where(query, [j], j.scheduled_at <= ^with_scheduled)
+      end
+
     Repo.update_all(conf, query, set: [state: "available"])
   end
 
   defp drain(conf, old_acc, %{queue: queue} = args) do
-    if args.with_scheduled, do: stage_scheduled(conf, queue)
+    if args.with_scheduled, do: stage_scheduled(conf, queue, args.with_scheduled)
 
     new_acc =
       conf
