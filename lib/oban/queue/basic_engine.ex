@@ -332,7 +332,6 @@ defmodule Oban.Queue.BasicEngine do
       |> where([j], j.state in ^states)
       |> since_period(period)
       |> where(^dynamic)
-      |> order_by(desc: :id)
       |> limit(1)
 
     {:ok, query, lock_key}

@@ -40,7 +40,9 @@ defmodule Oban.Integration.UniquenessTest do
     assert %Job{id: id_1} = unique_insert!(context.name, %{id: 1}, queue: "default")
     assert %Job{id: id_2} = unique_insert!(context.name, %{id: 2}, queue: "delta")
 
-    assert %Job{id: ^id_2} = unique_insert!(context.name, %{id: 1}, unique: [fields: [:worker]])
+    assert (context.name
+            |> unique_insert!(%{id: 1}, unique: [fields: [:worker]])
+            |> Map.fetch!(:id)) in [id_1, id_2]
 
     assert %Job{id: ^id_1} =
              unique_insert!(context.name, %{id: 3},
@@ -168,17 +170,25 @@ defmodule Oban.Integration.UniquenessTest do
     two_years_ago = Map.put(now, :year, now.year - 2)
     one_year_in_seconds = 365 * 24 * 60 * 60
 
-    assert %Job{id: _id} = unique_insert!(name, %{id: 1}, inserted_at: two_minutes_ago)
-    assert %Job{id: _id} = unique_insert!(name, %{id: 2}, inserted_at: five_minutes_ago)
-    assert %Job{id: _id} = unique_insert!(name, %{id: 3}, inserted_at: two_years_ago)
+    assert job_1 = unique_insert!(name, %{id: 1}, inserted_at: two_minutes_ago)
+    assert job_2 = unique_insert!(name, %{id: 2}, inserted_at: five_minutes_ago)
+    assert job_3 = unique_insert!(name, %{id: 3}, inserted_at: two_years_ago)
 
-    assert %Job{id: id_1} = unique_insert!(name, %{id: 1}, unique: [period: 110])
-    assert %Job{id: id_2} = unique_insert!(name, %{id: 2}, unique: [period: 290])
-    assert %Job{id: id_3} = unique_insert!(name, %{id: 3}, unique: [period: one_year_in_seconds])
+    assert job_4 = unique_insert!(name, %{id: 1}, unique: [period: 110])
+    assert job_5 = unique_insert!(name, %{id: 2}, unique: [period: 290])
+    assert job_6 = unique_insert!(name, %{id: 3}, unique: [period: one_year_in_seconds])
 
-    assert %Job{id: ^id_1} = unique_insert!(name, %{id: 1}, unique: [period: 180])
-    assert %Job{id: ^id_2} = unique_insert!(name, %{id: 2}, unique: [period: 400])
-    assert %Job{id: ^id_3} = unique_insert!(name, %{id: 3}, unique: [period: :infinity])
+    assert job_1.id != job_4.id
+    assert job_2.id != job_5.id
+    assert job_3.id != job_6.id
+
+    assert job_7 = unique_insert!(name, %{id: 1}, unique: [period: 180])
+    assert job_8 = unique_insert!(name, %{id: 2}, unique: [period: 400])
+    assert job_9 = unique_insert!(name, %{id: 3}, unique: [period: :infinity])
+
+    assert job_7.id in [job_1.id, job_4.id]
+    assert job_8.id in [job_2.id, job_5.id]
+    assert job_9.id in [job_3.id, job_6.id]
 
     assert count_jobs() == 6
   end
