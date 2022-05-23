@@ -22,15 +22,42 @@ defmodule Oban.Integration.DrainingTest do
   end
 
   describe ":with_scheduled" do
-    test "scheduled jobs are executed when given the :with_scheduled flag" do
+    test "all scheduled jobs are executed when the :with_scheduled flag is true" do
       name = start_supervised_oban!(queues: false)
 
       insert!(%{ref: 1, action: "OK"}, scheduled_at: seconds_from_now(3600))
+      insert!(%{ref: 2, action: "OK"}, scheduled_at: seconds_from_now(7200))
 
       assert %{success: 0, failure: 0} = Oban.drain_queue(name, queue: :alpha)
 
-      assert %{success: 1, failure: 0} =
+      assert %{success: 2, failure: 0} =
                Oban.drain_queue(name, queue: :alpha, with_scheduled: true)
+    end
+
+    test "when a DateTime is provided, jobs scheduled up to that timestamp are executed" do
+      name = start_supervised_oban!(queues: false)
+
+      insert!(%{ref: 1, action: "OK"}, scheduled_at: seconds_from_now(3600))
+      insert!(%{ref: 2, action: "OK"}, scheduled_at: seconds_from_now(7200))
+
+      assert %{success: 0, failure: 0} =
+               Oban.drain_queue(name, queue: :alpha, with_scheduled: seconds_from_now(1))
+
+      assert %{success: 1, failure: 0} =
+               Oban.drain_queue(name, queue: :alpha, with_scheduled: seconds_from_now(5000))
+
+      assert %{success: 1, failure: 0} =
+               Oban.drain_queue(name, queue: :alpha, with_scheduled: seconds_from_now(9000))
+    end
+
+    test "DateTime range is inclusive" do
+      name = start_supervised_oban!(queues: false)
+
+      scheduled_at = seconds_from_now(3600)
+
+      insert!(%{ref: 1, action: "OK"}, scheduled_at: scheduled_at)
+
+      assert %{success: 1} = Oban.drain_queue(name, queue: :alpha, with_scheduled: scheduled_at)
     end
   end
 
