@@ -61,7 +61,42 @@ config :my_app, Oban,
   ...
 ```
 
-## 2.12.0 — 2022-04-19
+## v2.12.1 — 2022-05-24
+
+### Bug Fixes
+
+- [BasicEngine] Never fetch jobs that have reached max attempts
+
+  This adds a safeguard to the `fetch_jobs` function to prevent ever hitting the
+  `attempt <= max_attempts` check constraint. Hitting the constraint causes the
+  query to fail, which crashes the producer and starts an infinite loop of
+  crashes. The previous commit _should_ prevent this situation from ocurring at
+  the "staging" level, but to be absolutely safe this change prevents it at the
+  "fetching" level too.
+
+  There is a very minor performance hit from this change because the query can
+  no longer run as an index only scan. For systems with a modest number of
+  available jobs the performance impact is indistinguishable.
+
+- [Plugins] Prevent unexpectedly modifying jobs selected by subqueries
+
+  Most applications don't run at a serializable isolation level. That allows
+  subqueries to run within a transaction without having the conditions
+  rechecked—only predicates on `UPDATE` or `DELETE` are re-checked, not on
+  subqueries. That allows a race condition where rows may be updated without
+  another evaluation.
+
+- [Repo] Set `query_opts` in `Repo.transaction` options to prevent logging
+  `begin` and `commit` events in development loggers.
+
+- [BasicEngine] Remove the `ORDER BY` clause from unique queries
+
+  The previous `ORDER BY id DESC` significantly hurts unique query performance
+  when there are a _lot_ of potential jobs to check. The ordering was originally
+  added to make test cases predictable and isn't important for the actual
+  behaviour of the unique check.
+
+## v2.12.0 — 2022-04-19
 
 ### Enhancements
 
