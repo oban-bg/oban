@@ -62,8 +62,6 @@ defmodule Oban.Config do
   def new(opts) when is_list(opts) do
     opts = normalize(opts)
 
-    Validation.validate!(opts, &validate/1)
-
     opts =
       if opts[:testing] in [:manual, :inline] do
         opts
@@ -75,6 +73,8 @@ defmodule Oban.Config do
         |> Keyword.update!(:queues, &normalize_queues/1)
         |> Keyword.update!(:plugins, &normalize_plugins/1)
       end
+
+    Validation.validate!(opts, &validate/1)
 
     struct!(__MODULE__, opts)
   end
