@@ -340,41 +340,42 @@ defmodule Oban.Queue.BasicEngine do
   defp unique_query(_changeset), do: nil
 
   defp unique_field({changeset, :args, keys}, acc) do
-    args =
-      case keys do
-        [] ->
-          Changeset.get_field(changeset, :args)
+    args = unique_map_values(changeset, :args, keys)
 
-        [_ | _] ->
-          changeset
-          |> Changeset.get_field(:args)
-          |> Map.new(fn {key, val} -> {to_string(key), val} end)
-          |> Map.take(keys)
-      end
-
-    dynamic([j], fragment("? @> ?", j.args, ^args) and ^acc)
+    if args == %{} do
+      dynamic([j], fragment("? <@ ?", j.args, ^args) and ^acc)
+    else
+      dynamic([j], fragment("? @> ?", j.args, ^args) and ^acc)
+    end
   end
 
   defp unique_field({changeset, :meta, keys}, acc) do
-    meta =
-      case keys do
-        [] ->
-          Changeset.get_field(changeset, :meta)
+    meta = unique_map_values(changeset, :meta, keys)
 
-        [_ | _] ->
-          changeset
-          |> Changeset.get_field(:meta)
-          |> Map.new(fn {key, val} -> {to_string(key), val} end)
-          |> Map.take(keys)
-      end
-
-    dynamic([j], fragment("? @> ?", j.meta, ^meta) and ^acc)
+    if meta == %{} do
+      dynamic([j], fragment("? <@ ?", j.meta, ^meta) and ^acc)
+    else
+      dynamic([j], fragment("? @> ?", j.meta, ^meta) and ^acc)
+    end
   end
 
   defp unique_field({changeset, field, _}, acc) do
     value = Changeset.get_field(changeset, field)
 
     dynamic([j], field(j, ^field) == ^value and ^acc)
+  end
+
+  defp unique_map_values(changeset, field, keys) do
+    case keys do
+      [] ->
+        Changeset.get_field(changeset, field)
+
+      [_ | _] ->
+        changeset
+        |> Changeset.get_field(field)
+        |> Map.new(fn {key, val} -> {to_string(key), val} end)
+        |> Map.take(keys)
+    end
   end
 
   defp since_period(query, :infinity), do: query
