@@ -26,7 +26,7 @@ defmodule Oban.Notifiers.PG do
 
   * Like the Postgres implementation, notifications are namespaced by `prefix`.
 
-  * For compatbility, message payloads are always serialized to JSON before
+  * For compatibility, message payloads are always serialized to JSON before
     broadcast and deserialized before relay to local processes.
 
   [de]: https://elixir-lang.org/getting-started/mix-otp/distributed-tasks.html#our-first-distributed-code

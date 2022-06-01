@@ -15,9 +15,21 @@ defmodule Oban.Worker do
   * `:queue` — `:default`
   * `:unique` — no uniqueness set
 
-  The following example defines a worker module to process jobs in the `events` queue. It then
-  dials down the priority from 0 to 1, limits retrying on failures to 10, adds a "business" tag,
-  and ensures that duplicate jobs aren't enqueued within a 30 second period:
+  To create a minimum worker using the defaults, including the `default` queue:
+
+      defmodule MyApp.Workers.Basic do
+        use Oban.Worker
+
+        @impl Oban.Worker
+        def perform(%Oban.Job{args: args}) do
+          IO.inspect(args)
+          :ok
+        end
+      end
+
+  The following example defines a complex worker module to process jobs in the `events` queue. 
+  It then dials down the priority from 0 to 1, limits retrying on failures to 10 attempts, adds
+  a "business" tag, and ensures that duplicate jobs aren't enqueued within a 30 second period:
 
       defmodule MyApp.Workers.Business do
         use Oban.Worker,
@@ -37,9 +49,9 @@ defmodule Oban.Worker do
         end
       end
 
-  The `c:perform/1` function receives an `Oban.Job` struct as argument. This allows workers to
-  change the behavior of `c:perform/1` based on attributes of the job, e.g. the number of
-  execution attempts or when it was inserted.
+  The `c:perform/1` function receives an `Oban.Job` struct as an argument. This allows workers to
+  change the behavior of `c:perform/1` based on attributes of the job, e.g. the args, number of
+  execution attempts, or when it was inserted.
 
   The value returned from `c:perform/1` can control whether the job is a success or a failure:
 

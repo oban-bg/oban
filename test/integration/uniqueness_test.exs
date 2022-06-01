@@ -74,6 +74,17 @@ defmodule Oban.Integration.UniquenessTest do
     assert count_jobs() == 2
   end
 
+  test "considering empty args distinct from non-empty args", context do
+    assert %Job{id: id_1} = unique_insert!(context.name, %{id: 1})
+    assert %Job{id: id_2} = unique_insert!(context.name, %{})
+    assert %Job{id: id_3} = unique_insert!(context.name, %{})
+
+    assert count_jobs() == 2
+
+    assert id_1 != id_2
+    assert id_2 == id_3
+  end
+
   test "scoping uniqueness by specific meta keys", %{name: name} do
     unique = [fields: [:meta], keys: [:slug]]
 
