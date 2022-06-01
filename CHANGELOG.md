@@ -3,7 +3,7 @@
 _🌟 Looking for changes to Web or Pro? Check the [Oban.Pro Changelog][opc] or
 the [Oban.Web Changelog][owc]. 🌟_
 
-[Oban v2.12 Upgrade Guide](v2-12.html)
+[Oban v2.12 Upgrade Guide](guides/upgrading/v2.12.md)
 
 Oban v2.12 was dedicated to enriching the testing experience and expanding
 config, plugin, and queue validation across all environments.
