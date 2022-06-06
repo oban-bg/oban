@@ -49,6 +49,18 @@ defmodule Oban.PeerTest do
           assert @peer.leader?(peer_b)
         end)
       end
+
+      test "leadership checks return false after a timeout" do
+        name = start_supervised_oban!(peer: @peer)
+
+        assert Peer.leader?(name)
+
+        name
+        |> Registry.whereis(Peer)
+        |> :sys.suspend()
+
+        refute Peer.leader?(name, 100)
+      end
     end
   end
 end

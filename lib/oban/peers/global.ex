@@ -38,7 +38,11 @@ defmodule Oban.Peers.Global do
   end
 
   @impl Oban.Peer
-  def leader?(pid), do: GenServer.call(pid, :leader?)
+  def leader?(pid, timeout \\ 5_000) do
+    GenServer.call(pid, :leader?, timeout)
+  catch
+    :exit, {:timeout, _} -> false
+  end
 
   @impl GenServer
   def init(opts) do
