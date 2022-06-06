@@ -50,6 +50,7 @@ defmodule Oban.PeerTest do
         end)
       end
 
+      @tag :capture_log
       test "leadership checks return false after a timeout" do
         name = start_supervised_oban!(peer: @peer)
 

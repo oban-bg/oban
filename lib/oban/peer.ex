@@ -49,6 +49,8 @@ defmodule Oban.Peer do
 
   alias Oban.{Config, Registry}
 
+  require Logger
+
   @type option ::
           {:name, module()}
           | {:conf, Config.t()}
@@ -90,6 +92,13 @@ defmodule Oban.Peer do
       nil ->
         false
     end
+  catch
+    :exit, {:timeout, _} = reason ->
+      Logger.warn("""
+      Oban.Peer.leader?/2 check failed due to #{inspect(reason)}.
+      """)
+
+      false
   end
 
   def leader?(name, timeout) do
