@@ -2,7 +2,8 @@ defmodule Oban.Plugins.Stager do
   @moduledoc """
   Transition jobs to the `available` state when they reach their scheduled time.
 
-  This module is necessary for the execution of scheduled and retryable jobs.
+  This module is necessary for the execution of scheduled and retryable jobs. As such, it's started
+  by each Oban instance automatically unless `plugins: false` is specified.
 
   ## Options
 
@@ -17,7 +18,7 @@ defmodule Oban.Plugins.Stager do
 
   The `Oban.Plugins.Stager` plugin adds the following metadata to the `[:oban, :plugin, :stop]` event:
 
-  * :staged_count - the number of jobs that were staged in the database
+  * `:staged_count` - the number of jobs that were staged in the database
   """
 
   @behaviour Oban.Plugin
