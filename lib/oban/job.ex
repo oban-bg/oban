@@ -273,6 +273,22 @@ defmodule Oban.Job do
 
       iex> Oban.Job.states() -- [:completed, :discarded]
       [:scheduled, :available, :executing, :retryable, :cancelled]
+
+  ## The transition of states
+
+    * `:scheduled`: When a job is inserted with the `scheduled_at` field, its state is `:scheduled`.
+    * `:available`:
+      * When a job is inserted without the `scheduled_at` field, its state is `:available`.
+      * When a scheduled job is on or after their `scheduled_at` field, its state will be
+        changed to `:available` by `Oban.Plugins.Stager`.
+    * `:executing`: When a job is `:available`, Oban will try to run it, and its state will changed
+      to `:executing`.
+    * `:retryable`: When a job is failed, the state will be changed to `:retryable` before exceeding
+      the number of retries. Then, its state will changed to `:available` again by `Oban.Plugins.Stager`.
+    * `:completed`: A job is completed.
+    * `:discarded`: A job is failed, and the number of retries has reached the job's `:max_attempts`.
+    * `:cancelled`: A job is cancelled intentionally.
+
   """
   @doc since: "2.1.0"
   def states, do: @unique_states ++ [:discarded, :cancelled]
