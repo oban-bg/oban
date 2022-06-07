@@ -3,8 +3,7 @@ defmodule Oban.Plugins.Stager do
   Transition jobs to the `:available` state when:
 
   * jobs are `:scheduled` and current time is on or after the datetime specified by their `:scheduled_at`.
-  * jobs are `:retryable` and they don't reach the limit of retries which is specified
-    by their `:max_attempts`.
+  * jobs are `:retryable` and they don't reach the attempt limit specified by `:max_attempts`.
 
   Beside changing the state of jobs, this plugin also notify queues, through pubsub, that they have
   available jobs. This prevents every queue from polling independently to reduce DB load.
