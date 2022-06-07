@@ -283,7 +283,7 @@ defmodule Oban.Job do
   * `:executing`—Available jobs may be ran, at which point they are `:executing`
   * `:retryable`—Jobs that fail and haven't exceeded their max attempts are transitiond to
     `:retryable` and rescheduled until after a backoff period. Once the backoff has ellapsed the
-    `Oban.Plugin.Stager` will transition them back to `:available`
+    `Oban.Plugins.Stager` will transition them back to `:available`
   * `:completed`—Jobs that finish executing succesfully are marked `:completed`
   * `:discarded`—Jobs that fail and exhaust their max attempts, or return a `:discard` tuple during
     execution, are marked `:discarded`
