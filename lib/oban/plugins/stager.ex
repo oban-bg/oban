@@ -2,7 +2,7 @@ defmodule Oban.Plugins.Stager do
   @moduledoc """
   Transition jobs to the `:available` state when:
 
-  * jobs are `:scheduled` and current time is on or after the datetime specified by their `:scheduled_at`.
+  * jobs are `:scheduled` and the current time is on or after the timestamp specified in `:scheduled_at`.
   * jobs are `:retryable` and they don't reach the attempt limit specified by `:max_attempts`.
 
   Besides changing the state of jobs, this plugin also uses PubSub to notify queues that they have
