@@ -274,20 +274,20 @@ defmodule Oban.Job do
       iex> Oban.Job.states() -- [:completed, :discarded]
       [:scheduled, :available, :executing, :retryable, :cancelled]
 
-  ## The transition of states
+  ## Job State Transitions
 
-    * `:scheduled`: When a job is inserted with the `scheduled_at` field, its state is `:scheduled`.
-    * `:available`:
-      * When a job is inserted without the `scheduled_at` field, its state is `:available`.
-      * When a scheduled job is on or after their `scheduled_at` field, its state will be
-        changed to `:available` by `Oban.Plugins.Stager`.
-    * `:executing`: When a job is `:available`, Oban will try to run it, and its state will changed
-      to `:executing`.
-    * `:retryable`: When a job is failed, the state will be changed to `:retryable` before exceeding
-      the number of retries. Then, its state will changed to `:available` again by `Oban.Plugins.Stager`.
-    * `:completed`: A job is completed.
-    * `:discarded`: A job is failed, and the number of retries has reached the job's `:max_attempts`.
-    * `:cancelled`: A job is cancelled intentionally.
+  * `scheduled`—Jobs inserted with `scheduled_at` in the future are `scheduled`. After the
+    `scheduled_at` time has ellapsed the `Oban.Plugins.Stager` will transition them to `available`
+  * `available`—Jobs without a future `scheduled_at` timestamp are inserted as `available` and may
+    execute immediately
+  * `executing`—Available jobs may be ran, at which point they are `executing`
+  * `retryable`—Jobs that fail and haven't exceeded their max attempts are transitiond to
+    `retryable` and rescheduled until after a backoff period. Once the backoff has ellapsed the
+    `Oban.Plugin.Stager` will transition them back to `available`
+  * `completed`—Jobs that finish executing succesfully are marked `completed`
+  * `discarded`—Jobs that fail and exhaust their max attempts, or return a `:discard` tuple during
+    execution, are marked `discarded`
+  * `cancelled`—Jobs that are cancelled intentionally
 
   """
   @doc since: "2.1.0"
