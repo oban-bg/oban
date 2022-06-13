@@ -339,23 +339,13 @@ defmodule Oban.Queue.BasicEngine do
 
   defp unique_query(_changeset), do: nil
 
-  defp unique_field({changeset, :args, keys}, acc) do
-    args = unique_map_values(changeset, :args, keys)
+  defp unique_field({changeset, field, keys}, acc) when field in [:args, :meta] do
+    value = unique_map_values(changeset, :args, keys)
 
-    if args == %{} do
-      dynamic([j], fragment("? <@ ?", j.args, ^args) and ^acc)
+    if value == %{} do
+      dynamic([j], fragment("? <@ ?", field(j, ^field), ^value) and ^acc)
     else
-      dynamic([j], fragment("? @> ?", j.args, ^args) and ^acc)
-    end
-  end
-
-  defp unique_field({changeset, :meta, keys}, acc) do
-    meta = unique_map_values(changeset, :meta, keys)
-
-    if meta == %{} do
-      dynamic([j], fragment("? <@ ?", j.meta, ^meta) and ^acc)
-    else
-      dynamic([j], fragment("? @> ?", j.meta, ^meta) and ^acc)
+      dynamic([j], fragment("? @> ?", field(j, ^field), ^value) and ^acc)
     end
   end
 
