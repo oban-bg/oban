@@ -112,7 +112,7 @@ defmodule Oban.JobTest do
     end
 
     test "retains all non-nil permitted attributes" do
-      attrs = [
+      opts = [
         attempt: 1,
         attempted_by: ["foo"],
         attempted_at: DateTime.utc_now(),
@@ -126,9 +126,14 @@ defmodule Oban.JobTest do
         worker: "Fake"
       ]
 
-      map = %{foo: "bar"} |> Job.new(attrs) |> Job.to_map()
-      assert map[:args] == %{foo: "bar"}
-      Enum.each(attrs, fn {key, val} -> assert map[key] == val end)
+      map =
+        %{foo: "bar"}
+        |> Job.new(opts)
+        |> Job.to_map()
+
+      assert %{foo: "bar"} == map[:args]
+
+      for {key, val} <- opts, do: assert map[key] == val
     end
   end
 

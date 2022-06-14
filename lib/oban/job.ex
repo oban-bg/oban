@@ -306,13 +306,15 @@ defmodule Oban.Job do
   """
   @doc since: "0.9.0"
   @spec to_map(Ecto.Changeset.t(t())) :: map()
-  def to_map(%Ecto.Changeset{} = changeset) do
-    changeset
-    |> apply_changes()
-    |> Map.from_struct()
-    |> Map.take(@permitted_params)
-    |> Enum.reject(fn {_, val} -> is_nil(val) end)
-    |> Map.new()
+  def to_map(%Ecto.Changeset{changes: changes}) do
+    Enum.reduce(changes, %{}, fn {key, val}, acc ->
+      IO.inspect(key)
+      if key in @permitted_params and not is_nil(val) do
+        Map.put(acc, key, val)
+      else
+        acc
+      end
+    end)
   end
 
   defp coerce_field(params, field, fun) do
