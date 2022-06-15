@@ -273,22 +273,6 @@ defmodule Oban.Job do
 
       iex> Oban.Job.states() -- [:completed, :discarded]
       [:scheduled, :available, :executing, :retryable, :cancelled]
-
-  ## Job State Transitions
-
-  * `:scheduled`—Jobs inserted with `scheduled_at` in the future are `:scheduled`. After the
-    `scheduled_at` time has ellapsed the `Oban.Plugins.Stager` will transition them to `:available`
-  * `:available`—Jobs without a future `scheduled_at` timestamp are inserted as `:available` and may
-    execute immediately
-  * `:executing`—Available jobs may be ran, at which point they are `:executing`
-  * `:retryable`—Jobs that fail and haven't exceeded their max attempts are transitiond to
-    `:retryable` and rescheduled until after a backoff period. Once the backoff has ellapsed the
-    `Oban.Plugins.Stager` will transition them back to `:available`
-  * `:completed`—Jobs that finish executing succesfully are marked `:completed`
-  * `:discarded`—Jobs that fail and exhaust their max attempts, or return a `:discard` tuple during
-    execution, are marked `:discarded`
-  * `:cancelled`—Jobs that are cancelled intentionally
-
   """
   @doc since: "2.1.0"
   def states, do: @unique_states ++ [:discarded, :cancelled]
@@ -306,9 +290,11 @@ defmodule Oban.Job do
   """
   @doc since: "0.9.0"
   @spec to_map(Ecto.Changeset.t(t())) :: map()
-  def to_map(%Ecto.Changeset{changes: changes}) do
-    Enum.reduce(changes, %{}, fn {key, val}, acc ->
-      IO.inspect(key)
+  def to_map(%Ecto.Changeset{} = changeset) do
+    changeset
+    |> Ecto.Changeset.apply_changes()
+    |> Map.from_struct()
+    |> Enum.reduce(%{}, fn {key, val}, acc ->
       if key in @permitted_params and not is_nil(val) do
         Map.put(acc, key, val)
       else
