@@ -340,7 +340,7 @@ defmodule Oban.Queue.BasicEngine do
   defp unique_query(_changeset), do: nil
 
   defp unique_field({changeset, field, keys}, acc) when field in [:args, :meta] do
-    value = unique_map_values(changeset, :args, keys)
+    value = unique_map_values(changeset, field, keys)
 
     if value == %{} do
       dynamic([j], fragment("? <@ ?", field(j, ^field), ^value) and ^acc)
