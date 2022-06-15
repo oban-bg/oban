@@ -44,6 +44,15 @@ defmodule Oban.Integration.InsertingTest do
     [_job_1, _job_2] = Oban.insert_all(name, wrap)
   end
 
+  test "handling empty changesets list from wrapper using insert_all/4" do
+    name = start_supervised_oban!(queues: false)
+
+    assert {:ok, %{jobs: []}} =
+             name
+             |> Oban.insert_all(Multi.new(), :jobs, %{changesets: []})
+             |> Repo.transaction()
+  end
+
   test "handling empty changesets list from wrapper with insert_all/2" do
     name = start_supervised_oban!(queues: false)
 
@@ -57,52 +66,32 @@ defmodule Oban.Integration.InsertingTest do
     changesets_2 = Enum.map(3..4, &Worker.new(%{ref: &1}))
     changesets_3 = Enum.map(5..6, &Worker.new(%{ref: &1}))
 
-    multi = Ecto.Multi.new()
+    multi = Multi.new()
     multi = Oban.insert_all(name, multi, "jobs-1", changesets_1)
     multi = Oban.insert_all(name, multi, "jobs-2", changesets_2)
-    multi = Ecto.Multi.run(multi, "build-jobs-3", fn _, _ -> {:ok, changesets_3} end)
+    multi = Multi.run(multi, "build-jobs-3", fn _, _ -> {:ok, changesets_3} end)
     multi = Oban.insert_all(name, multi, "jobs-3", & &1["build-jobs-3"])
     {:ok, %{"jobs-1" => jobs_1, "jobs-2" => jobs_2, "jobs-3" => jobs_3}} = Repo.transaction(multi)
 
-    assert is_list(jobs_1)
-    assert length(jobs_1) == 2
-    assert [%Job{} = job | _] = jobs_1
-
-    assert job.id
-    assert job.args
-
-    assert is_list(jobs_2)
-    assert length(jobs_2) == 2
-    assert [%Job{} = job | _] = jobs_2
-
-    assert job.id
-    assert job.args
-
-    assert is_list(jobs_3)
-    assert length(jobs_3) == 2
-    assert [%Job{} = job | _] = jobs_3
-
-    assert job.id
-    assert job.args
+    assert [%Job{}, %Job{}] = jobs_1
+    assert [%Job{}, %Job{}] = jobs_2
+    assert [%Job{}, %Job{}] = jobs_3
   end
 
   test "inserting multiple jobs from a changeset wrapper using insert_all/4" do
     name = start_supervised_oban!(queues: false)
     wrap = %{changesets: [Worker.new(%{ref: 0})]}
 
-    multi = Ecto.Multi.new()
+    multi = Multi.new()
     multi = Oban.insert_all(name, multi, "jobs-1", wrap)
     multi = Oban.insert_all(name, multi, "jobs-2", fn _ -> wrap end)
 
     {:ok, %{"jobs-1" => [_job_1], "jobs-2" => [_job_2]}} = Repo.transaction(multi)
   end
 
-  test "handling empty changesets list from wrapper using insert_all/4" do
+  test "inserting multiple jobs with additional options" do
     name = start_supervised_oban!(queues: false)
 
-    assert {:ok, %{jobs: []}} =
-             name
-             |> Oban.insert_all(Ecto.Multi.new(), :jobs, %{changesets: []})
-             |> Repo.transaction()
+    assert [%Job{}] = Oban.insert_all(name, [Worker.new(%{ref: 0})], timeout: 1_000)
   end
 end

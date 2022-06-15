@@ -47,43 +47,44 @@ defmodule Oban.Queue.BasicEngine do
   end
 
   @impl Engine
-  def insert_job(%Config{} = conf, %Changeset{} = changeset) do
-    fun = fn -> insert_unique(conf, changeset) end
+  def insert_job(%Config{} = conf, %Changeset{} = changeset, opts) do
+    fun = fn -> insert_unique(conf, changeset, opts) end
 
     with {:ok, result} <- Repo.transaction(conf, fun), do: result
   end
 
   @impl Engine
-  def insert_job(%Config{} = conf, %Multi{} = multi, name, fun) when is_function(fun, 1) do
+  def insert_job(%Config{} = conf, %Multi{} = multi, name, fun, opts) when is_function(fun, 1) do
     Multi.run(multi, name, fn repo, changes ->
-      insert_unique(%{conf | repo: repo}, fun.(changes))
+      insert_unique(%{conf | repo: repo}, fun.(changes), opts)
     end)
   end
 
   @impl Engine
-  def insert_job(%Config{} = conf, %Multi{} = multi, name, %Changeset{} = changeset) do
+  def insert_job(%Config{} = conf, %Multi{} = multi, name, changeset, opts) do
     Multi.run(multi, name, fn repo, _changes ->
-      insert_unique(%{conf | repo: repo}, changeset)
+      insert_unique(%{conf | repo: repo}, changeset, opts)
     end)
   end
 
   @impl Engine
-  def insert_all_jobs(%Config{} = conf, changesets) do
+  def insert_all_jobs(%Config{} = conf, changesets, opts) do
     entries =
       changesets
       |> expand(%{})
       |> Enum.map(&Job.to_map/1)
 
-    case Repo.insert_all(conf, Job, entries, on_conflict: :nothing, returning: true) do
-      {0, _} -> []
-      {_count, jobs} -> jobs
-    end
+    opts = Keyword.merge(opts, on_conflict: :nothing, returning: true)
+
+    conf
+    |> Repo.insert_all(Job, entries, opts)
+    |> elem(1)
   end
 
   @impl Engine
-  def insert_all_jobs(%Config{} = conf, %Multi{} = multi, name, wrapper) do
+  def insert_all_jobs(%Config{} = conf, %Multi{} = multi, name, wrapper, opts) do
     Multi.run(multi, name, fn repo, changes ->
-      {:ok, insert_all_jobs(%{conf | repo: repo}, expand(wrapper, changes))}
+      {:ok, insert_all_jobs(%{conf | repo: repo}, expand(wrapper, changes), opts)}
     end)
   end
 
@@ -285,8 +286,8 @@ defmodule Oban.Queue.BasicEngine do
 
   # Insertion
 
-  defp insert_unique(conf, changeset) do
-    query_opts = [on_conflict: :nothing]
+  defp insert_unique(conf, changeset, opts) do
+    query_opts = Keyword.put(opts, :on_conflict, :nothing)
 
     with {:ok, query, lock_key} <- unique_query(changeset),
          :ok <- acquire_lock(conf, lock_key),

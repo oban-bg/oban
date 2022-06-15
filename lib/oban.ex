@@ -70,6 +70,9 @@ defmodule Oban do
   @type changesets_or_wrapper_or_fun :: changesets_or_wrapper() | Job.changeset_list_fun()
   @type changeset_wrapper :: %{:changesets => Job.changeset_list(), optional(atom()) => term()}
 
+  defguardp is_changeset_or_fun(cf)
+            when is_struct(cf, Changeset) or is_function(cf, 1)
+
   defguardp is_list_or_wrapper(cw)
             when is_list(cw) or
                    (is_map(cw) and is_map_key(cw, :changesets) and is_list(cw.changesets)) or
@@ -251,13 +254,28 @@ defmodule Oban do
   Insert a job while ensuring that it is unique within the past 30 seconds:
 
       {:ok, job} = Oban.insert(MyApp.Worker.new(%{id: 1}, unique: [period: 30]))
+
+  Insert a job using a custom timeout:
+
+      {:ok, job} = Oban.insert(MyApp.Worker.new(%{id: 1}), timeout: 10_000)
   """
   @doc since: "0.7.0"
-  @spec insert(name(), Job.changeset()) :: {:ok, Job.t()} | {:error, Job.changeset() | term()}
-  def insert(name \\ __MODULE__, %Changeset{} = changeset) do
+  @spec insert(name(), Job.changeset(), opts :: Keyword.t()) ::
+          {:ok, Job.t()} | {:error, Job.changeset() | term()}
+  def insert(name \\ __MODULE__, changeset, opts \\ [])
+
+  def insert(name, %Changeset{} = changeset, opts) do
     name
     |> config()
-    |> Engine.insert_job(changeset)
+    |> Engine.insert_job(changeset, opts)
+  end
+
+  def insert(%Multi{} = multi, multi_name, changeset) when is_changeset_or_fun(changeset) do
+    insert(__MODULE__, multi, multi_name, changeset, [])
+  end
+
+  def insert(name, multi, multi_name, changeset) when is_changeset_or_fun(changeset) do
+    insert(name, multi, multi_name, changeset, [])
   end
 
   @doc """
@@ -276,13 +294,19 @@ defmodule Oban do
       |> MyApp.Repo.transaction()
   """
   @doc since: "0.7.0"
-  @spec insert(name, multi :: Multi.t(), multi_name :: Multi.name(), changeset_or_fun()) ::
+  @spec insert(
+          name,
+          multi :: Multi.t(),
+          multi_name :: Multi.name(),
+          changeset_or_fun(),
+          opts :: Keyword.t()
+        ) ::
           Multi.t()
-  def insert(name \\ __MODULE__, %Multi{} = multi, multi_name, changeset_or_fun)
-      when is_struct(changeset_or_fun, Changeset) or is_function(changeset_or_fun, 1) do
+  def insert(name, multi, multi_name, changeset, opts)
+      when is_changeset_or_fun(changeset) and is_list(opts) do
     name
     |> config()
-    |> Engine.insert_job(multi, multi_name, changeset_or_fun)
+    |> Engine.insert_job(multi, multi_name, changeset, opts)
   end
 
   @doc """
@@ -293,9 +317,9 @@ defmodule Oban do
       job = Oban.insert!(MyApp.Worker.new(%{id: 1}))
   """
   @doc since: "0.7.0"
-  @spec insert!(name(), Job.changeset()) :: Job.t()
-  def insert!(name \\ __MODULE__, %Changeset{} = changeset) do
-    case insert(name, changeset) do
+  @spec insert!(name(), Job.changeset(), opts :: Keyword.t()) :: Job.t()
+  def insert!(name \\ __MODULE__, %Changeset{} = changeset, opts \\ []) do
+    case insert(name, changeset, opts) do
       {:ok, job} ->
         job
 
@@ -320,16 +344,34 @@ defmodule Oban do
 
   ## Example
 
+  Insert 100 jobs with a single operation:
+
       1..100
       |> Enum.map(&MyApp.Worker.new(%{id: &1}))
       |> Oban.insert_all()
+
+  Insert with a custom timeout:
+
+      1..100
+      |> Enum.map(&MyApp.Worker.new(%{id: &1}))
+      |> Oban.insert_all(timeout: 10_000)
   """
   @doc since: "0.9.0"
-  @spec insert_all(name(), changesets_or_wrapper()) :: [Job.t()]
-  def insert_all(name \\ __MODULE__, changesets) when is_list_or_wrapper(changesets) do
+  @spec insert_all(name(), changesets_or_wrapper(), opts :: Keyword.t()) :: [Job.t()]
+  def insert_all(name \\ __MODULE__, changesets, opts \\ [])
+
+  def insert_all(name, changesets, opts) when is_list_or_wrapper(changesets) and is_list(opts) do
     name
     |> config()
-    |> Engine.insert_all_jobs(changesets)
+    |> Engine.insert_all_jobs(changesets, opts)
+  end
+
+  def insert_all(%Multi{} = multi, multi_name, changesets) when is_list_or_wrapper(changesets) do
+    insert_all(__MODULE__, multi, multi_name, changesets, [])
+  end
+
+  def insert_all(name, multi, multi_name, changesets) when is_list_or_wrapper(changesets) do
+    insert_all(name, multi, multi_name, changesets, [])
   end
 
   @doc """
@@ -339,10 +381,23 @@ defmodule Oban do
 
   ## Example
 
+  Insert job changesets within a multi:
+
       changesets = Enum.map(0..100, &MyApp.Worker.new(%{id: &1}))
 
       Ecto.Multi.new()
       |> Oban.insert_all(:jobs, changesets)
+      |> MyApp.Repo.transaction()
+
+  Insert job changesets using a function:
+
+      Ecto.Multi.new()
+      |> Ecto.Multi.insert(:user, user_changeset)
+      |> Oban.insert_all(:jobs, fn %{user: user} ->
+        email_job = EmailWorker.new(%{id: user.id})
+        staff_job = StaffWorker.new(%{id: user.id})
+        [email_job, staff_job]
+      end)
       |> MyApp.Repo.transaction()
   """
   @doc since: "0.9.0"
@@ -350,13 +405,14 @@ defmodule Oban do
           name(),
           multi :: Multi.t(),
           multi_name :: Multi.name(),
-          changesets_or_wrapper_or_fun() | Job.changeset_list_fun()
+          changesets_or_wrapper_or_fun(),
+          opts :: Keyword.t()
         ) :: Multi.t()
-  def insert_all(name \\ __MODULE__, multi, multi_name, changesets)
-      when is_list_or_wrapper(changesets) do
+  def insert_all(name, multi, multi_name, changesets, opts)
+      when is_list_or_wrapper(changesets) and is_list(opts) do
     name
     |> config()
-    |> Engine.insert_all_jobs(multi, multi_name, changesets)
+    |> Engine.insert_all_jobs(multi, multi_name, changesets, opts)
   end
 
   @doc """

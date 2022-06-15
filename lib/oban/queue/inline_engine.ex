@@ -22,33 +22,33 @@ defmodule Oban.Queue.InlineEngine do
   def refresh(_conf, meta), do: meta
 
   @impl Engine
-  def insert_job(%Config{} = conf, %Changeset{} = changeset) do
+  def insert_job(%Config{} = conf, %Changeset{} = changeset, _opts) do
     {:ok, execute_job(conf, changeset)}
   end
 
   @impl Engine
-  def insert_job(%Config{} = conf, %Multi{} = multi, name, fun) when is_function(fun, 1) do
+  def insert_job(%Config{} = conf, %Multi{} = multi, name, fun, _opts) when is_function(fun, 1) do
     Multi.run(multi, name, fn repo, changes ->
       {:ok, execute_job(%{conf | repo: repo}, fun.(changes))}
     end)
   end
 
   @impl Engine
-  def insert_job(%Config{} = conf, %Multi{} = multi, name, %Changeset{} = changeset) do
+  def insert_job(%Config{} = conf, %Multi{} = multi, name, changeset, _opts) do
     Multi.run(multi, name, fn repo, _changes ->
       {:ok, execute_job(%{conf | repo: repo}, changeset)}
     end)
   end
 
   @impl Engine
-  def insert_all_jobs(%Config{} = conf, changesets) do
+  def insert_all_jobs(%Config{} = conf, changesets, _opts) do
     changesets
     |> expand()
     |> Enum.map(&execute_job(conf, &1))
   end
 
   @impl Engine
-  def insert_all_jobs(%Config{} = conf, %Multi{} = multi, name, wrapper) do
+  def insert_all_jobs(%Config{} = conf, %Multi{} = multi, name, wrapper, _opts) do
     Multi.run(multi, name, fn repo, changes ->
       conf = %{conf | repo: repo}
 

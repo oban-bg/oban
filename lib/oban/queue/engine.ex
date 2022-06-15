@@ -38,23 +38,29 @@ defmodule Oban.Queue.Engine do
   @doc """
   Insert a job into the database.
   """
-  @callback insert_job(conf(), Job.changeset()) :: {:ok, Job.t()} | {:error, term()}
+  @callback insert_job(conf(), Job.changeset(), Keyword.t()) :: {:ok, Job.t()} | {:error, term()}
 
   @doc """
   Insert a job within an `Ecto.Multi`.
   """
-  @callback insert_job(conf(), Multi.t(), Multi.name(), Oban.changeset_or_fun()) :: Multi.t()
+  @callback insert_job(conf(), Multi.t(), Multi.name(), Oban.changeset_or_fun(), Keyword.t()) ::
+              Multi.t()
 
   @doc """
   Insert multiple jobs into the database.
   """
-  @callback insert_all_jobs(conf(), Oban.changesets_or_wrapper()) :: [Job.t()]
+  @callback insert_all_jobs(conf(), Oban.changesets_or_wrapper(), Keyword.t()) :: [Job.t()]
 
   @doc """
   Insert multiple jobs within an `Ecto.Multi`
   """
-  @callback insert_all_jobs(conf(), Multi.t(), Multi.name(), Oban.changesets_or_wrapper_or_fun()) ::
-              Multi.t()
+  @callback insert_all_jobs(
+              conf(),
+              Multi.t(),
+              Multi.name(),
+              Oban.changesets_or_wrapper_or_fun(),
+              Keyword.t()
+            ) :: Multi.t()
 
   @doc """
   Fetch available jobs for the given queue, up to configured limits.
@@ -135,30 +141,38 @@ defmodule Oban.Queue.Engine do
   end
 
   @doc false
-  def insert_job(%Config{} = conf, %Changeset{} = changeset) do
-    with_span(:insert_job, conf, %{changeset: changeset}, fn engine ->
-      engine.insert_job(conf, changeset)
+  def insert_job(%Config{} = conf, %Changeset{} = changeset, opts) do
+    meta = %{changeset: changeset, opts: opts}
+
+    with_span(:insert_job, conf, meta, fn engine ->
+      engine.insert_job(conf, changeset, opts)
     end)
   end
 
   @doc false
-  def insert_job(%Config{} = conf, %Multi{} = multi, name, changeset) do
-    with_span(:insert_job, conf, %{changeset: changeset}, fn engine ->
-      engine.insert_job(conf, multi, name, changeset)
+  def insert_job(%Config{} = conf, %Multi{} = multi, name, changeset, opts) do
+    meta = %{changeset: changeset, opts: opts}
+
+    with_span(:insert_job, conf, meta, fn engine ->
+      engine.insert_job(conf, multi, name, changeset, opts)
     end)
   end
 
   @doc false
-  def insert_all_jobs(%Config{} = conf, changesets) do
-    with_span(:insert_all_jobs, conf, %{changesets: changesets}, fn engine ->
-      engine.insert_all_jobs(conf, changesets)
+  def insert_all_jobs(%Config{} = conf, changesets, opts) do
+    meta = %{changesets: changesets, opts: opts}
+
+    with_span(:insert_all_jobs, conf, meta, fn engine ->
+      engine.insert_all_jobs(conf, changesets, opts)
     end)
   end
 
   @doc false
-  def insert_all_jobs(%Config{} = conf, %Multi{} = multi, name, changesets) do
-    with_span(:insert_all_jobs, conf, %{changesets: changesets}, fn engine ->
-      engine.insert_all_jobs(conf, multi, name, changesets)
+  def insert_all_jobs(%Config{} = conf, %Multi{} = multi, name, changesets, opts) do
+    meta = %{changesets: changesets, opts: opts}
+
+    with_span(:insert_all_jobs, conf, meta, fn engine ->
+      engine.insert_all_jobs(conf, multi, name, changesets, opts)
     end)
   end
 
