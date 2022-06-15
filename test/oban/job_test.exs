@@ -133,7 +133,7 @@ defmodule Oban.JobTest do
 
       assert %{foo: "bar"} == map[:args]
 
-      for {key, val} <- opts, do: assert map[key] == val
+      for {key, val} <- opts, do: assert(map[key] == val)
     end
   end
 
