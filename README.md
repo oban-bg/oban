@@ -151,8 +151,8 @@ coordination.
 
 ### Installation
 
-See the [installation guide](installation.md) for details on installing and
-configuring Oban in your application.
+See the [installation guide](guides/installation.md) for details on installing
+and configuring Oban in your application.
 
 ### Requirements
 
@@ -661,7 +661,8 @@ Oban.drain_queue(MyAppB.Oban, queue: :default)
 
 ## Testing
 
-Find testing setup, helpers, and strategies in the [testing guide](testing.md).
+Find testing setup, helpers, and strategies in the [testing
+guide](guides/testing.md).
 
 ## Error Handling
 
