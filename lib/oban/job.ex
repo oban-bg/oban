@@ -148,7 +148,6 @@ defmodule Oban.Job do
     priority
     queue
     scheduled_at
-    replace
     state
     tags
     worker
