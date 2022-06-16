@@ -389,8 +389,8 @@ defmodule Oban.Testing do
   def with_testing_mode(mode, fun) when mode in [:manual, :inline] and is_function(fun, 0) do
     engine =
       case mode do
-        :manual -> Oban.Queue.BasicEngine
-        :inline -> Oban.Queue.InlineEngine
+        :manual -> Oban.Engines.Basic
+        :inline -> Oban.Engines.Inline
       end
 
     Process.put(:oban_engine, engine)

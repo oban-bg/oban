@@ -1,14 +1,13 @@
-defmodule Oban.Queue.BasicEngine do
+defmodule Oban.Engines.Basic do
   @moduledoc false
 
-  @behaviour Oban.Queue.Engine
+  @behaviour Oban.Engine
 
   import Ecto.Query
   import DateTime, only: [utc_now: 0]
 
   alias Ecto.{Changeset, Multi}
-  alias Oban.{Config, Job, Repo}
-  alias Oban.Queue.Engine
+  alias Oban.{Config, Engine, Job, Repo}
 
   @impl Engine
   def init(%Config{} = conf, opts) do

@@ -1,9 +1,8 @@
 defmodule Oban.Queue.Executor do
   @moduledoc false
 
-  alias Oban.{Backoff, Config, CrashError, Job, PerformError, Telemetry, TimeoutError, Worker}
-
-  alias Oban.Queue.Engine
+  alias Oban.{Backoff, Config, CrashError, Engine, Job}
+  alias Oban.{PerformError, Telemetry, TimeoutError, Worker}
 
   require Logger
 

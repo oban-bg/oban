@@ -65,7 +65,7 @@ config :my_app, Oban,
 
 ### Bug Fixes
 
-- [BasicEngine] Never fetch jobs that have reached max attempts
+- [Engine] Never fetch jobs that have reached max attempts
 
   This adds a safeguard to the `fetch_jobs` function to prevent ever hitting the
   `attempt <= max_attempts` check constraint. Hitting the constraint causes the
@@ -89,7 +89,7 @@ config :my_app, Oban,
 - [Repo] Set `query_opts` in `Repo.transaction` options to prevent logging
   `begin` and `commit` events in development loggers.
 
-- [BasicEngine] Remove the `ORDER BY` clause from unique queries
+- [Engine] Remove the `ORDER BY` clause from unique queries
 
   The previous `ORDER BY id DESC` significantly hurts unique query performance
   when there are a _lot_ of potential jobs to check. The ordering was originally

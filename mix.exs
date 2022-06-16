@@ -111,6 +111,7 @@ defmodule Oban.MixProject do
       ],
       Extending: [
         Oban.Config,
+        Oban.Engine,
         Oban.Notifier,
         Oban.Peer,
         Oban.Plugin,

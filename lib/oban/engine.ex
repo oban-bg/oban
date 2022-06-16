@@ -1,5 +1,22 @@
-defmodule Oban.Queue.Engine do
-  @moduledoc false
+defmodule Oban.Engine do
+  @moduledoc """
+  Defines an Engine.
+
+  Engines are responsible for all non-plugin database interaction, from inserting through
+  executing jobs.
+
+  Oban ships with two Engine implementations:
+
+    1. `Basic` — The default engine for development, production, and manual testing mode.
+    2. `Inline` — Designed specifically for testing, it executes jobs immediately,
+       in-memory, as they are inserted.
+
+  > #### 🌟 SmartEngine {: .info}
+  >
+  > The Basic engine lacks advanced functionality such as global limits, rate limits, and
+  > unique bulk insert. For those features and more, see the [`SmartEngine` in Oban
+  > Pro](https://getoban.pro/docs/pro/smart_engine.html).
+  """
 
   alias Ecto.{Changeset, Multi}
   alias Oban.{Config, Job}

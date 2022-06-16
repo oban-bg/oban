@@ -11,8 +11,8 @@ defmodule Oban do
   use Supervisor
 
   alias Ecto.{Changeset, Multi}
-  alias Oban.{Config, Job, Midwife, Notifier, Peer, Registry, Telemetry}
-  alias Oban.Queue.{Drainer, Engine, Producer}
+  alias Oban.{Config, Engine, Job, Midwife, Notifier, Peer, Registry, Telemetry}
+  alias Oban.Queue.{Drainer, Producer}
   alias Oban.Queue.Supervisor, as: QueueSupervisor
 
   @type name :: term()
