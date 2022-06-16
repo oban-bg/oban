@@ -247,7 +247,7 @@ defmodule Oban.Job do
     |> validate_required(@required_params)
     |> put_scheduling(params[:schedule_in])
     |> put_uniqueness(params[:unique])
-    |> put_replace(params[:replace_args])
+    |> put_replace(params[:replace], params[:replace_args])
     |> validate_subset(:replace, @replace_options)
     |> put_state()
     |> validate_length(:queue, min: 1, max: 128)
@@ -391,20 +391,19 @@ defmodule Oban.Job do
     end
   end
 
-  defp put_replace(changeset, value) do
-    case value do
-      true ->
-        replace = get_change(changeset, :replace, [])
+  defp put_replace(changeset, replace, replace_args) do
+    case {replace, replace_args} do
+      {nil, true} ->
+        put_change(changeset, :replace, [:args])
+
+      {[_ | _], true} ->
         put_change(changeset, :replace, [:args | replace])
 
-      false ->
-        update_change(changeset, :replace, &(&1 -- [:args]))
-
-      nil ->
-        changeset
+      {[_ | _], nil} ->
+        put_change(changeset, :replace, replace)
 
       _ ->
-        add_error(changeset, :replace_args, "invalid value")
+        changeset
     end
   end
 

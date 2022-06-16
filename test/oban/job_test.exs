@@ -89,6 +89,18 @@ defmodule Oban.JobTest do
     end
   end
 
+  describe "replace options with new/2" do
+    test "combining replace with legacy replace_args" do
+      changes = fn opts ->
+        Job.new(%{}, Keyword.put(opts, :worker, Fake)).changes[:replace]
+      end
+
+      assert [:args] == changes.(replace_args: true)
+      assert [:tags] == changes.(replace: [:tags])
+      assert [:args, :tags] == changes.(replace: [:tags], replace_args: true)
+    end
+  end
+
   describe "to_map/1" do
     @keys_with_defaults ~w(args attempt errors max_attempts meta priority queue state tags)a
 
