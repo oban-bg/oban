@@ -82,7 +82,7 @@ defmodule Oban.Peers.Global do
 
   # Helpers
 
-  defp key(state), do: {:oban, state.conf.name}
+  defp key(state), do: {state.conf.name, state.conf.node}
 
   defp nodes, do: [Node.self() | Node.list()]
 end
