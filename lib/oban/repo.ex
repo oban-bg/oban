@@ -13,6 +13,7 @@ defmodule Oban.Repo do
   @doc "Wraps `c:Ecto.Repo.aggregate/3` and `c:Ecto.Repo.aggregate/4`."
   @spec aggregate(Config.t(), Ecto.Queryable.t(), :count, opts :: Keyword.t()) :: term | nil
   @spec aggregate(
+          Config.t(),
           Ecto.Queryable.t(),
           :avg | :count | :max | :min | :sum,
           field :: atom,
