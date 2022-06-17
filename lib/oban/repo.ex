@@ -10,6 +10,41 @@ defmodule Oban.Repo do
   alias Ecto.{Changeset, Multi, Query, Queryable, Schema}
   alias Oban.Config
 
+  @doc "Wraps `c:Ecto.Repo.aggregate/3` and `c:Ecto.Repo.aggregate/4`."
+  @spec aggregate(Config.t(), Ecto.Queryable.t(), :count, opts :: Keyword.t()) :: term | nil
+  @spec aggregate(
+          Ecto.Queryable.t(),
+          :avg | :count | :max | :min | :sum,
+          field :: atom,
+          opts :: Keyword.t()
+        ) :: term | nil
+  @aggregates [:count, :avg, :max, :min, :sum]
+  def aggregate(conf, queryable, aggregate, opts \\ [])
+
+  def aggregate(conf, queryable, aggregate, opts)
+      when aggregate in [:count] and is_list(opts) do
+    with_dynamic_repo(
+      conf,
+      fn -> conf.repo.aggregate(queryable, aggregate, query_opts(conf, opts)) end
+    )
+  end
+
+  def aggregate(conf, queryable, aggregate, field)
+      when aggregate in @aggregates and is_atom(field) do
+    with_dynamic_repo(
+      conf,
+      fn -> conf.repo.aggregate(queryable, aggregate, field, query_opts(conf, [])) end
+    )
+  end
+
+  def aggregate(conf, queryable, aggregate, field, opts)
+      when aggregate in @aggregates and is_atom(field) and is_list(opts) do
+    with_dynamic_repo(
+      conf,
+      fn -> conf.repo.aggregate(queryable, aggregate, field, query_opts(conf, opts)) end
+    )
+  end
+
   @doc "Wraps `c:Ecto.Repo.all/2`."
   @doc since: "2.2.0"
   @spec all(Config.t(), Queryable.t(), Keyword.t()) :: [Schema.t()]
