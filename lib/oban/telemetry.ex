@@ -224,26 +224,47 @@ defmodule Oban.Telemetry do
   * `tags` — the job's tags
   * `worker` — the job's worker module
 
+  ## Options
+
+  * `:level` — The log level to use for logging output, defaults to `:info`.
+
+  * `:encode` — Whether to encode log output as JSON, defaults to `true`
+
   ## Examples
 
-  Attach a logger at the default `:info` level:
+  Attach a logger at the default `:info` level with JSON encoding:
 
       :ok = Oban.Telemetry.attach_default_logger()
 
   Attach a logger at the `:debug` level:
 
-      :ok = Oban.Telemetry.attach_default_logger(:debug)
+      :ok = Oban.Telemetry.attach_default_logger(level: :debug)
+
+  Attach a logger with JSON logging disabled:
+
+      :ok = Oban.Telemetry.attach_default_logger(encode: false)
   """
   @doc since: "0.4.0"
-  @spec attach_default_logger(Logger.level()) :: :ok | {:error, :already_exists}
-  def attach_default_logger(level \\ :info) do
+  @spec attach_default_logger(Logger.level() | Keyword.t()) :: :ok | {:error, :already_exists}
+  def attach_default_logger(opts \\ [encode: true, level: :info])
+
+  def attach_default_logger(level) when is_atom(level) do
+    attach_default_logger(level: level)
+  end
+
+  def attach_default_logger(opts) when is_list(opts) do
     events = [
       [:oban, :job, :start],
       [:oban, :job, :stop],
       [:oban, :job, :exception]
     ]
 
-    :telemetry.attach_many("oban-default-logger", events, &__MODULE__.handle_event/4, level)
+    opts =
+      opts
+      |> Keyword.put_new(:encode, true)
+      |> Keyword.put_new(:level, :info)
+
+    :telemetry.attach_many("oban-default-logger", events, &__MODULE__.handle_event/4, opts)
   end
 
   @doc false
@@ -294,8 +315,10 @@ defmodule Oban.Telemetry do
   defp normalize_meta(meta), do: meta
 
   @doc false
-  @spec handle_event([atom()], map(), map(), Logger.level()) :: :ok
-  def handle_event([:oban, :job, event], measure, meta, level) do
+  @spec handle_event([atom()], map(), map(), Keyword.t()) :: :ok
+  def handle_event([:oban, :job, event], measure, meta, opts) do
+    level = Keyword.fetch!(opts, :level)
+
     Logger.log(level, fn ->
       details = Map.take(meta.job, ~w(attempt args id max_attempts meta queue tags worker)a)
 
@@ -320,11 +343,17 @@ defmodule Oban.Telemetry do
             }
         end
 
-      details
-      |> Map.put(:event, "job:#{event}")
-      |> Map.put(:source, "oban")
-      |> Map.merge(timing)
-      |> Jason.encode_to_iodata!()
+      output =
+        details
+        |> Map.put(:event, "job:#{event}")
+        |> Map.put(:source, "oban")
+        |> Map.merge(timing)
+
+      if Keyword.fetch!(opts, :encode) do
+        Jason.encode_to_iodata!(output)
+      else
+        output
+      end
     end)
   end
 

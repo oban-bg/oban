@@ -143,4 +143,24 @@ defmodule Oban.Integration.TelemetryTest do
   after
     :telemetry.detach("oban-default-logger")
   end
+
+  test "disabling encoding on the default logger" do
+    start_supervised_oban!(queues: [alpha: 3])
+
+    :ok = Telemetry.attach_default_logger(encode: false, level: :warn)
+
+    logged =
+      capture_log(fn ->
+        insert!(ref: 1, action: "OK")
+
+        assert_receive {:ok, 1}
+
+        Process.sleep(50)
+      end)
+
+    assert logged =~ ~s(source: "oban")
+    assert logged =~ ~s(event: "job:start")
+  after
+    :telemetry.detach("oban-default-logger")
+  end
 end
