@@ -44,13 +44,13 @@ defmodule Oban.Integration.UniquenessTest do
             |> unique_insert!(%{id: 1}, unique: [fields: [:worker]])
             |> Map.fetch!(:id)) in [id_1, id_2]
 
-    assert %Job{id: ^id_1} =
+    assert %Job{id: ^id_1, conflict?: true} =
              unique_insert!(context.name, %{id: 3},
                queue: "default",
                unique: [fields: [:queue, :worker]]
              )
 
-    assert %Job{id: ^id_2} =
+    assert %Job{id: ^id_2, conflict?: true} =
              unique_insert!(context.name, %{id: 3},
                queue: "delta",
                unique: [fields: [:queue, :worker]]
@@ -63,13 +63,14 @@ defmodule Oban.Integration.UniquenessTest do
     assert %Job{id: id_1} = unique_insert!(context.name, %{id: 1, url: "https://a.co"})
     assert %Job{id: id_2} = unique_insert!(context.name, %{id: 2, url: "https://b.co"})
 
-    assert %Job{id: ^id_1} =
+    assert %Job{id: ^id_1, conflict?: true} =
              unique_insert!(context.name, %{id: 3, url: "https://a.co"}, unique: [keys: [:url]])
 
-    assert %Job{id: ^id_2} =
+    assert %Job{id: ^id_2, conflict?: true} =
              unique_insert!(context.name, %{id: 2, url: "https://a.co"}, unique: [keys: [:id]])
 
-    assert %Job{id: ^id_2} = unique_insert!(context.name, %{"id" => 2}, unique: [keys: [:id]])
+    assert %Job{id: ^id_2, conflict?: true} =
+             unique_insert!(context.name, %{"id" => 2}, unique: [keys: [:id]])
 
     assert count_jobs() == 2
   end
@@ -121,11 +122,6 @@ defmodule Oban.Integration.UniquenessTest do
     assert %Job{id: _id_4} = unique_insert!(context.name, %{id: 4}, unique: [period: 30])
 
     assert count_jobs() == 5
-  end
-
-  test "conflict? is true when job already exists", %{name: name} do
-    assert %Job{id: id, conflict?: false} = unique_insert!(name, %{id: 1})
-    assert %Job{id: ^id, conflict?: true} = unique_insert!(name, %{id: 1})
   end
 
   test "replace allows replacing job data for the same job id", context do
