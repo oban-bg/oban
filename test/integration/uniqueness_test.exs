@@ -128,18 +128,6 @@ defmodule Oban.Integration.UniquenessTest do
     assert %Job{id: ^id, conflict?: true} = unique_insert!(name, %{id: 1})
   end
 
-  test "replace allows replacing the args for the same job id", context do
-    assert %Job{id: id_1} = unique_insert!(context.name, %{id: 1, url: "https://a.co"})
-
-    assert %Job{id: ^id_1, args: %{url: "https://b.co"}} =
-             unique_insert!(
-               context.name,
-               %{id: 1, url: "https://b.co"},
-               unique: [keys: [:id]],
-               replace_args: true
-             )
-  end
-
   test "replace allows replacing job data for the same job id", context do
     now = DateTime.utc_now()
     in_one_minute = DateTime.add(now, 60, :second)
