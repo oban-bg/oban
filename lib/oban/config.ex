@@ -29,7 +29,7 @@ defmodule Oban.Config do
 
   @enforce_keys [:node, :repo]
   defstruct dispatch_cooldown: 5,
-            engine: Oban.Queue.BasicEngine,
+            engine: Oban.Engines.Basic,
             get_dynamic_repo: nil,
             log: false,
             name: Oban,
@@ -214,7 +214,7 @@ defmodule Oban.Config do
       conf_opts =
         opts
         |> Keyword.take([:engine, :name, :node, :repo])
-        |> Keyword.put_new(:engine, Oban.Queue.BasicEngine)
+        |> Keyword.put_new(:engine, Oban.Engines.Basic)
         |> Keyword.put_new(:repo, None)
 
       conf = struct!(__MODULE__, conf_opts)
@@ -320,7 +320,9 @@ defmodule Oban.Config do
     |> Keyword.update(:plugins, [], &(&1 || []))
     |> Keyword.update(:queues, [], &(&1 || []))
     |> Keyword.delete(:circuit_backoff)
-    |> Enum.reject(&(&1 == {:notifier, Oban.PostgresNotifier}))
+    |> Enum.reject(
+      &(&1 in [{:engine, Oban.Queue.BasicEngine}, {:notifier, Oban.PostgresNotifier}])
+    )
   end
 
   defp crontab_to_plugin(opts) do
@@ -358,7 +360,7 @@ defmodule Oban.Config do
 
   defp testing_to_engine(opts) do
     if opts[:testing] == :inline do
-      Keyword.put(opts, :engine, Oban.Queue.InlineEngine)
+      Keyword.put(opts, :engine, Oban.Engines.Inline)
     else
       opts
     end

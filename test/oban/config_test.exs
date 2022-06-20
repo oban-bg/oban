@@ -15,7 +15,8 @@ defmodule Oban.ConfigTest do
       refute_valid(engine: nil)
       refute_valid(engine: Repo)
 
-      assert_valid(engine: Oban.Queue.BasicEngine)
+      assert_valid(engine: Oban.Engines.Basic)
+      assert_valid(engine: Oban.Engines.Inline)
     end
 
     test ":log is validated as `false` or a valid log level" do
@@ -117,6 +118,10 @@ defmodule Oban.ConfigTest do
   describe "new/1" do
     test ":notifier translates to the correct postgres module" do
       assert %Config{notifier: Oban.Notifiers.Postgres} = conf(notifier: Oban.PostgresNotifier)
+    end
+
+    test ":engine translates to the correct basic module" do
+      assert %Config{engine: Oban.Engines.Basic} = conf(engine: Oban.Queue.BasicEngine)
     end
 
     test ":queues convert to an empty list when set to false" do

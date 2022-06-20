@@ -3,8 +3,8 @@ defmodule Oban.Queue.Producer do
 
   use GenServer
 
-  alias Oban.{Backoff, Notifier, TimeoutError}
-  alias Oban.Queue.{Engine, Executor}
+  alias Oban.{Backoff, Engine, Notifier, TimeoutError}
+  alias Oban.Queue.Executor
 
   defmodule State do
     @moduledoc false

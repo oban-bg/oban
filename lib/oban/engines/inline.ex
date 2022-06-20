@@ -1,16 +1,16 @@
-defmodule Oban.Queue.InlineEngine do
+defmodule Oban.Engines.Inline do
   @moduledoc false
 
-  @behaviour Oban.Queue.Engine
+  @behaviour Oban.Engine
 
   import DateTime, only: [utc_now: 0]
 
   alias Ecto.{Changeset, Multi}
-  alias Oban.{Config, Job}
-  alias Oban.Queue.{BasicEngine, Engine, Executor}
+  alias Oban.{Config, Engine, Job}
+  alias Oban.Queue.Executor
 
   @impl Engine
-  defdelegate init(conf, opts), to: BasicEngine
+  def init(_conf, opts), do: {:ok, Map.new(opts)}
 
   @impl Engine
   def put_meta(_conf, meta, key, value), do: Map.put(meta, key, value)
