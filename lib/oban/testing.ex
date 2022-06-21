@@ -230,9 +230,8 @@ defmodule Oban.Testing do
 
     result =
       conf_opts
-      |> Keyword.put(:testing, :inline)
       |> Config.new()
-      |> Executor.new(create_job(changeset), safe: false)
+      |> Executor.new(create_job(changeset), safe: false, ack: false)
       |> Executor.call()
       |> Map.fetch!(:result)
 
@@ -387,17 +386,11 @@ defmodule Oban.Testing do
   @doc since: "2.12.0"
   @spec with_testing_mode(:inline | :manual, (() -> any())) :: any()
   def with_testing_mode(mode, fun) when mode in [:manual, :inline] and is_function(fun, 0) do
-    engine =
-      case mode do
-        :manual -> Oban.Engines.Basic
-        :inline -> Oban.Engines.Inline
-      end
-
-    Process.put(:oban_engine, engine)
+    Process.put(:oban_testing, mode)
 
     fun.()
   after
-    Process.delete(:oban_engine)
+    Process.delete(:oban_testing)
   end
 
   # Assert Helpers

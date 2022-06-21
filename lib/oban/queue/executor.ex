@@ -27,10 +27,11 @@ defmodule Oban.Queue.Executor do
           worker: Worker.t()
         }
 
-  @type option :: {:safe, boolean()}
+  @type option :: {:ack, boolean()} | {:safe, boolean()}
 
   @enforce_keys [:conf, :job]
   defstruct [
+    :ack,
     :conf,
     :error,
     :job,
@@ -53,6 +54,7 @@ defmodule Oban.Queue.Executor do
   @spec new(Config.t(), Job.t(), [option()]) :: t()
   def new(%Config{} = conf, %Job{} = job, opts \\ []) do
     struct!(__MODULE__,
+      ack: Keyword.get(opts, :ack, true),
       conf: conf,
       job: %{job | conf: conf},
       meta: event_metadata(conf, job),
@@ -198,13 +200,13 @@ defmodule Oban.Queue.Executor do
   end
 
   @spec ack_event(t()) :: t()
-  def ack_event(%__MODULE__{state: :success} = exec) do
+  def ack_event(%__MODULE__{ack: true, state: :success} = exec) do
     Engine.complete_job(exec.conf, exec.job)
 
     exec
   end
 
-  def ack_event(%__MODULE__{job: job, state: :failure, worker: worker} = exec) do
+  def ack_event(%__MODULE__{ack: true, job: job, state: :failure, worker: worker} = exec) do
     backoff = if worker, do: worker.backoff(job), else: Worker.backoff(job)
 
     Engine.error_job(exec.conf, job, backoff)
@@ -212,18 +214,20 @@ defmodule Oban.Queue.Executor do
     exec
   end
 
-  def ack_event(%__MODULE__{state: :snoozed} = exec) do
+  def ack_event(%__MODULE__{ack: true, state: :snoozed} = exec) do
     Engine.snooze_job(exec.conf, exec.job, exec.snooze)
 
     exec
   end
 
-  def ack_event(%__MODULE__{job: job, state: state} = exec)
+  def ack_event(%__MODULE__{ack: true, job: job, state: state} = exec)
       when state in [:discard, :exhausted] do
     Engine.discard_job(exec.conf, job)
 
     exec
   end
+
+  def ack_event(exec), do: exec
 
   @spec emit_event(t()) :: t()
   def emit_event(%__MODULE__{state: state} = exec) when state in [:failure, :exhausted] do

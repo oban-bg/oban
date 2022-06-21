@@ -260,7 +260,7 @@ defmodule Oban.Engine do
     tele_meta = Map.merge(tele_meta, %{conf: conf, engine: conf.engine})
 
     :telemetry.span([:oban, :engine, event], tele_meta, fn ->
-      engine = Process.get(:oban_engine, conf.engine)
+      engine = Config.get_engine(conf)
 
       {fun.(engine), tele_meta}
     end)

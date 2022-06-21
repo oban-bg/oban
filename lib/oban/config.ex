@@ -118,6 +118,16 @@ defmodule Oban.Config do
   end
 
   @doc false
+  @spec get_engine(t()) :: module()
+  def get_engine(%__MODULE__{engine: engine, testing: testing}) do
+    if Process.get(:oban_testing, testing) == :inline do
+      Oban.Engines.Inline
+    else
+      engine
+    end
+  end
+
+  @doc false
   @spec node_name(%{optional(binary()) => binary()}) :: binary()
   def node_name(env \\ System.get_env()) do
     cond do
@@ -315,7 +325,6 @@ defmodule Oban.Config do
     opts
     |> crontab_to_plugin()
     |> poll_interval_to_plugin()
-    |> testing_to_engine()
     |> Keyword.put_new(:node, node_name())
     |> Keyword.update(:plugins, [], &(&1 || []))
     |> Keyword.update(:queues, [], &(&1 || []))
@@ -355,14 +364,6 @@ defmodule Oban.Config do
 
       _ ->
         Keyword.drop(opts, [:poll_interval])
-    end
-  end
-
-  defp testing_to_engine(opts) do
-    if opts[:testing] == :inline do
-      Keyword.put(opts, :engine, Oban.Engines.Inline)
-    else
-      opts
     end
   end
 

@@ -320,6 +320,16 @@ defmodule Oban.TestingTest do
         refute_received {:ok, 1}
       end)
     end
+
+    test "with perform_job" do
+      Testing.with_testing_mode(:manual, fn ->
+        assert :ok = perform_job(Worker, %{ref: 1, action: "OK"})
+      end)
+
+      Testing.with_testing_mode(:inline, fn ->
+        assert :ok = perform_job(Worker, %{ref: 1, action: "OK"})
+      end)
+    end
   end
 
   defp assert_perform_error(worker, message) when is_binary(message) do
