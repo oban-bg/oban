@@ -12,14 +12,17 @@ defmodule Oban.Integration.TestingModeTest do
       assert {:ok, job_1} = Oban.insert(name, Worker.new(%{ref: 1, action: "OK"}))
       assert {:ok, job_2} = Oban.insert(name, Worker.new(%{ref: 2, action: "ERROR"}))
       assert {:ok, job_3} = Oban.insert(name, Worker.new(%{ref: 3, action: "SNOOZE"}))
+      assert {:ok, job_4} = Oban.insert(name, Worker.new(%{ref: 4, action: "DISCARD"}))
 
       assert %{completed_at: %_{}, state: "completed"} = job_1
       assert %{scheduled_at: %_{}, errors: [_], state: "retryable"} = job_2
       assert %{scheduled_at: %_{}, state: "scheduled"} = job_3
+      assert %{discarded_at: %_{}, state: "discarded"} = job_4
 
       assert_receive {:ok, 1}
       assert_receive {:error, 2}
       assert_receive {:snooze, 3}
+      assert_receive {:discard, 4}
     end
 
     test "executing a job with errors raises" do
