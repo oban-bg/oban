@@ -149,6 +149,8 @@ defmodule Oban.Plugins.Reindexer do
       if Expression.now?(state.schedule, datetime) do
         prefix = state.conf.prefix
 
+        Repo.query(state.conf, deindex_query(state), [])
+
         for index <- state.indexes do
           Repo.query(state.conf, "REINDEX INDEX CONCURRENTLY #{prefix}.#{index}", [])
         end
@@ -156,5 +158,25 @@ defmodule Oban.Plugins.Reindexer do
     else
       {:ok, []}
     end
+  end
+
+  defp deindex_query(state) do
+    """
+    DO $$
+    DECLARE
+      rec record;
+    BEGIN
+      FOR rec IN
+        SELECT relnamespace::regnamespace as namespace, relname
+        FROM pg_index i
+        JOIN pg_class c on c.oid = i.indexrelid
+        WHERE namespace = #{state.conf.prefix}::regnamespace
+          AND NOT indisvalid
+          AND starts_with(relname, 'oban_jobs')
+      LOOP
+        EXECUTE format('DROP INDEX %s.%s', rec.namespace, rec.relname);
+      END LOOP;
+    END $$
+    """
   end
 end
