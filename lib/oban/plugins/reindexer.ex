@@ -50,7 +50,14 @@ defmodule Oban.Plugins.Reindexer do
   defmodule State do
     @moduledoc false
 
-    defstruct [:conf, :name, :schedule, :timer, timezone: "Etc/UTC"]
+    defstruct [
+      :conf,
+      :name,
+      :schedule,
+      :timer,
+      indexes: ~w(oban_jobs_args_index oban_jobs_meta_index),
+      timezone: "Etc/UTC"
+    ]
   end
 
   @impl Plugin
@@ -140,9 +147,11 @@ defmodule Oban.Plugins.Reindexer do
       {:ok, datetime} = DateTime.now(state.timezone)
 
       if Expression.now?(state.schedule, datetime) do
-        table = "#{state.conf.prefix}.oban_jobs"
+        prefix = state.conf.prefix
 
-        Repo.query(state.conf, "REINDEX TABLE CONCURRENTLY #{table}", [])
+        for index <- state.indexes do
+          Repo.query(state.conf, "REINDEX INDEX CONCURRENTLY #{prefix}.#{index}", [])
+        end
       end
     else
       {:ok, []}
