@@ -28,6 +28,9 @@ defmodule Oban.Plugins.Reindexer do
 
   ## Options
 
+    * `:indexes` — a list of indexes to reindex on the `oban_jobs` table. Defaults to only the
+      `oban_jobs_args_index` and `oban_jobs_meta_index`.
+
     * `:schedule` — a cron expression that controls when to reindex. Defaults to `"@midnight"`.
 
     * `:timezone` — which timezone to use when evaluating the schedule. To use a timezone other than
@@ -71,6 +74,7 @@ defmodule Oban.Plugins.Reindexer do
     Validation.validate(opts, fn
       {:conf, _} -> :ok
       {:name, _} -> :ok
+      {:indexes, indexes} -> validate_indexes(indexes)
       {:schedule, schedule} -> validate_schedule(schedule)
       {:timezone, timezone} -> Validation.validate_timezone(:timezone, timezone)
       option -> {:error, "unknown option provided: #{inspect(option)}"}
@@ -123,6 +127,14 @@ defmodule Oban.Plugins.Reindexer do
   end
 
   # Validation
+
+  defp validate_indexes(indexes) do
+    if is_list(indexes) and Enum.all?(indexes, &is_binary/1) do
+      :ok
+    else
+      {:error, "expected :indexes to be a list of strings, got: #{inspect(indexes)}"}
+    end
+  end
 
   defp validate_schedule(schedule) do
     Expression.parse!(schedule)

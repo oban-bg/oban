@@ -11,6 +11,14 @@ defmodule Oban.Plugins.ReindexerTest do
       assert :ok = Reindexer.validate(schedule: "0 0 * * *")
     end
 
+    test "validating that :indexes are a list of index strings" do
+      assert {:error, _} = Reindexer.validate(indexes: "")
+      assert {:error, _} = Reindexer.validate(indexes: [:index])
+      assert {:error, _} = Reindexer.validate(indexes: ["index", :index])
+
+      assert :ok = Reindexer.validate(indexes: ["oban_jobs_some_index"])
+    end
+
     test "validating that :timezone is a known timezone" do
       assert {:error, _} = Reindexer.validate(timezone: "")
       assert {:error, _} = Reindexer.validate(timezone: nil)
