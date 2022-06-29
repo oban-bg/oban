@@ -22,12 +22,12 @@ defmodule Oban.Job do
 
   @type unique_state :: [
           :available
-          | :scheduled
-          | :executing
-          | :retryable
+          | :cancelled
           | :completed
           | :discarded
-          | :cancelled
+          | :executing
+          | :retryable
+          | :scheduled
         ]
 
   @type unique_option ::

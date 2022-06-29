@@ -33,6 +33,11 @@ defmodule Oban.Integration.ExecutingTest do
                 "completed" ->
                   assert job.completed_at
 
+                "cancelled" ->
+                  refute job.completed_at
+                  assert job.cancelled_at
+                  assert [%{"attempt" => _, "at" => _, "error" => _} | _] = job.errors
+
                 "discarded" ->
                   refute job.completed_at
                   assert job.discarded_at
@@ -82,7 +87,8 @@ defmodule Oban.Integration.ExecutingTest do
 
   defp job do
     gen all queue <- member_of(~w(alpha beta gamma delta)),
-            action <- member_of(~w(OK DISCARD ERROR EXIT FAIL KILL SNOOZE TASK_ERROR TASK_EXIT)),
+            action <-
+              member_of(~w(OK CANCEL DISCARD ERROR EXIT FAIL KILL SNOOZE TASK_ERROR TASK_EXIT)),
             ref <- integer(),
             max_attempts <- integer(1..20),
             timeout <- frequency([{3, constant(0)}, {1, constant(100)}]),
@@ -103,6 +109,7 @@ defmodule Oban.Integration.ExecutingTest do
     end
   end
 
+  defp action_to_state("CANCEL", _), do: "cancelled"
   defp action_to_state("DISCARD", _), do: "discarded"
   defp action_to_state("OK", _max), do: "completed"
   defp action_to_state("SNOOZE", _), do: "scheduled"

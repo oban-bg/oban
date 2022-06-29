@@ -27,7 +27,7 @@ defmodule Oban.Worker do
         end
       end
 
-  The following example defines a complex worker module to process jobs in the `events` queue. 
+  The following example defines a complex worker module to process jobs in the `events` queue.
   It then dials down the priority from 0 to 1, limits retrying on failures to 10 attempts, adds
   a "business" tag, and ensures that duplicate jobs aren't enqueued within a 30 second period:
 
@@ -56,9 +56,12 @@ defmodule Oban.Worker do
   The value returned from `c:perform/1` can control whether the job is a success or a failure:
 
   * `:ok` or `{:ok, value}` — the job is successful; for success tuples the `value` is ignored
-  * `:discard` or `{:discard, reason}` — discard the job and prevent it from being retried again.
-    An error is recorded using the optional reason, though the job is still successful
+
+  * `{:cancel, reason}` — cancel executing the job and stop retrying it. An error is recorded
+    using the optional `reason`, though the job is still successful.
+
   * `{:error, error}` — the job failed, record the error and schedule a retry if possible
+
   * `{:snooze, seconds}` — mark the job as `snoozed` and schedule it to run again `seconds` in the
     future. See [Snoozing](#module-snoozing-jobs) for more details.
 
@@ -241,6 +244,7 @@ defmodule Oban.Worker do
   @type result ::
           :ok
           | :discard
+          | {:cancel, reason :: term()}
           | {:discard, reason :: term()}
           | {:ok, ignored :: term()}
           | {:error, reason :: term()}

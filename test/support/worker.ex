@@ -24,6 +24,11 @@ defmodule Oban.Integration.Worker do
 
         :ok
 
+      "CANCEL" ->
+        send(pid, {:cancel, ref})
+
+        {:cancel, :because}
+
       "DISCARD" ->
         send(pid, {:discard, ref})
 

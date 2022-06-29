@@ -93,7 +93,7 @@ orphaned due to crashes.
 
 - **Job Canceling** — Jobs can be canceled in the middle of execution regardless
   of which node they are running on. This stops the job at once and flags it as
-  `discarded`.
+  `cancelled`.
 
 - **Triggered Execution** — Database triggers ensure that jobs are dispatched as
   soon as they are inserted into the database.
@@ -217,7 +217,7 @@ end
 
 Successful jobs should return `:ok` or an `{:ok, value}` tuple. The value
 returned from `perform/1` is used to control whether the job is treated as a
-success, a failure, discarded completely or deferred until later.
+success, a failure, cancelled or deferred for retrying later.
 
 See the `Oban.Worker` docs for more details on failure conditions and
 `Oban.Telemetry` for details on job reporting.
