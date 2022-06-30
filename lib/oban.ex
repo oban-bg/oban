@@ -59,6 +59,7 @@ defmodule Oban do
           | {:with_scheduled, boolean() | DateTime.t()}
 
   @type drain_result :: %{
+          cancelled: non_neg_integer(),
           discard: non_neg_integer(),
           failure: non_neg_integer(),
           snoozed: non_neg_integer(),

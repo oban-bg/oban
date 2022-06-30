@@ -18,7 +18,7 @@ defmodule Oban.Queue.Drainer do
       |> Map.put_new(:with_scheduled, false)
       |> Map.update!(:queue, &to_string/1)
 
-    drain(conf, %{discard: 0, failure: 0, snoozed: 0, success: 0}, args)
+    drain(conf, %{cancelled: 0, discard: 0, failure: 0, snoozed: 0, success: 0}, args)
   end
 
   defp stage_scheduled(conf, queue, with_scheduled) do

@@ -6,7 +6,7 @@ defmodule Oban.Queue.Executor do
 
   require Logger
 
-  @type state :: :discard | :exhausted | :failure | :success | :snoozed
+  @type state :: :cancelled | :discard | :exhausted | :failure | :success | :snoozed
 
   @type t :: %__MODULE__{
           conf: Config.t(),
@@ -133,6 +133,9 @@ defmodule Oban.Queue.Executor do
       {:ok, _value} = result ->
         %{exec | state: :success, result: result}
 
+      {:cancel, _reason} = result ->
+        %{exec | result: result, state: :cancelled, error: perform_error(worker, result)}
+
       :discard = result ->
         %{exec | result: result, state: :discard, error: perform_error(worker, result)}
 
@@ -220,9 +223,15 @@ defmodule Oban.Queue.Executor do
     exec
   end
 
-  def ack_event(%__MODULE__{ack: true, job: job, state: state} = exec)
+  def ack_event(%__MODULE__{ack: true, state: :cancelled} = exec) do
+    Engine.cancel_job(exec.conf, exec.job)
+
+    exec
+  end
+
+  def ack_event(%__MODULE__{ack: true, state: state} = exec)
       when state in [:discard, :exhausted] do
-    Engine.discard_job(exec.conf, job)
+    Engine.discard_job(exec.conf, exec.job)
 
     exec
   end
@@ -256,7 +265,8 @@ defmodule Oban.Queue.Executor do
     exec
   end
 
-  def emit_event(%__MODULE__{state: state} = exec) when state in [:success, :snoozed, :discard] do
+  def emit_event(%__MODULE__{state: state} = exec)
+      when state in [:cancelled, :success, :snoozed, :discard] do
     measurements = %{duration: exec.duration, queue_time: exec.queue_time}
 
     meta =
@@ -299,6 +309,7 @@ defmodule Oban.Queue.Executor do
       - `:discard`
       - `{:ok, value}`
       - `{:error, reason}`,
+      - `{:cancel, reason}`
       - `{:discard, reason}`
       - `{:snooze, seconds}`
 
