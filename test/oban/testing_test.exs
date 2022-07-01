@@ -134,6 +134,7 @@ defmodule Oban.TestingTest do
 
     test "returning the value of worker's perform/1 function" do
       assert :ok = perform_job(Worker, %{ref: 1, action: "OK"})
+      assert {:cancel, _} = perform_job(Worker, %{ref: 1, action: "CANCEL"})
       assert :discard = perform_job(Worker, %{ref: 1, action: "DISCARD"})
       assert {:error, _} = perform_job(Worker, %{ref: 1, action: "ERROR"})
     end
