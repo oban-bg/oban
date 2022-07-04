@@ -93,6 +93,20 @@ defmodule Oban.Migrations do
     def down, do: Oban.Migrations.down(prefix: "private")
   end
   ```
+
+  ## Migrating Without Ecto
+
+  If your application uses something other than Ecto for migrations, be it an external system or
+  another ORM, it may be helpful to create plain SQL migrations for Oban database schema changes.
+
+  The simplest mechanism to obtain the SQL changes is to create the migration locally and run `mix
+  ecto.migrate --log-migrations-sql`. That will log all of the generated SQL, which you can then
+  paste into your migration system of choice.
+
+  Alternatively, if you'd like a more automated approach, try using the [oban_migations_sql][sql]
+  project to generate `up` and `down` SQL migrations for you.
+
+  [sql]: https://github.com/btwb/oban_migrations_sql
   """
 
   use Ecto.Migration
