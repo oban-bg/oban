@@ -151,7 +151,7 @@ coordination.
 
 ### Installation
 
-See the [installation guide](installation.md) for details on installing and
+See the [installation guide](guides/installation.md) for details on installing and
 configuring Oban in your application.
 
 ### Requirements
