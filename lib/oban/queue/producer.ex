@@ -31,9 +31,9 @@ defmodule Oban.Queue.Producer do
     GenServer.call(producer, :check)
   end
 
-  @spec pause(GenServer.name()) :: :ok
-  def pause(producer) do
-    GenServer.call(producer, :pause)
+  @spec shutdown(GenServer.name()) :: :ok
+  def shutdown(producer) do
+    GenServer.call(producer, :shutdown)
   end
 
   # Callbacks
@@ -180,8 +180,8 @@ defmodule Oban.Queue.Producer do
     {:reply, meta, state}
   end
 
-  def handle_call(:pause, _from, state) do
-    meta = Engine.put_meta(state.conf, state.meta, :paused, true)
+  def handle_call(:shutdown, _from, state) do
+    meta = Engine.shutdown(state.conf, state.meta)
 
     {:reply, :ok, %{state | meta: meta}}
   end

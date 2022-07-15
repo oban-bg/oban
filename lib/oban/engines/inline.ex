@@ -22,6 +22,9 @@ defmodule Oban.Engines.Inline do
   def refresh(_conf, meta), do: meta
 
   @impl Engine
+  def shutdown(_conf, meta), do: meta
+
+  @impl Engine
   def insert_job(%Config{} = conf, %Changeset{} = changeset, _opts) do
     {:ok, execute_job(conf, changeset)}
   end

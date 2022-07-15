@@ -46,6 +46,11 @@ defmodule Oban.Engines.Basic do
   end
 
   @impl Engine
+  def shutdown(_conf, %{} = meta) do
+    %{meta | paused: true}
+  end
+
+  @impl Engine
   def insert_job(%Config{} = conf, %Changeset{} = changeset, opts) do
     fun = fn -> insert_unique(conf, changeset, opts) end
 

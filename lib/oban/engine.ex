@@ -38,11 +38,6 @@ defmodule Oban.Engine do
   @callback init(conf(), opts()) :: {:ok, meta()} | {:error, term()}
 
   @doc """
-  Refresh a queue to indicate that it is still alive.
-  """
-  @callback refresh(conf(), meta()) :: meta()
-
-  @doc """
   Store the given key/value pair in the engine meta.
   """
   @callback put_meta(conf(), meta(), atom(), term()) :: meta()
@@ -51,6 +46,19 @@ defmodule Oban.Engine do
   Format engine meta in a digestible format for queue inspection.
   """
   @callback check_meta(conf(), meta(), running()) :: map()
+
+  @doc """
+  Refresh a queue to indicate that it is still alive.
+  """
+  @callback refresh(conf(), meta()) :: meta()
+
+  @doc """
+  Prepare a queue engine for shutdown.
+
+  The queue process is expected to stop processing new jobs after shutdown starts, though it may
+  continue executing jobs that are already running.
+  """
+  @callback shutdown(conf(), meta()) :: meta()
 
   @doc """
   Insert a job into the database.
@@ -140,6 +148,13 @@ defmodule Oban.Engine do
   def refresh(%Config{} = conf, %{} = meta) do
     with_span(:refresh, conf, fn engine ->
       engine.refresh(conf, meta)
+    end)
+  end
+
+  @doc false
+  def shutdown(%Config{} = conf, %{} = meta) do
+    with_span(:shutdown, conf, fn engine ->
+      engine.shutdown(conf, meta)
     end)
   end
 

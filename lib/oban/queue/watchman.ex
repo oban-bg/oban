@@ -48,7 +48,7 @@ defmodule Oban.Queue.Watchman do
   @impl GenServer
   def terminate(_reason, %State{foreman: foreman, producer: producer}) do
     try do
-      :ok = Producer.pause(producer)
+      :ok = Producer.shutdown(producer)
       :ok = wait_for_executing(foreman)
     catch
       :exit, _reason -> :ok
