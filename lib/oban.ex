@@ -335,13 +335,21 @@ defmodule Oban do
   @doc """
   Insert multiple jobs into the database for execution.
 
-  **Note:** `insert_all` doesn't use per-job unique configuration. You must use `insert/2,4` or
-  `insert!/2` for per-job unique support.
-
   There are a few important differences between this function and `c:Ecto.Repo.insert_all/3`:
 
   1. This function always returns a list rather than a tuple of `{count, records}`
-  2. This function requires a list of changesets rather than a list of maps or keyword lists
+  2. This function accepts a list of changesets rather than a list of maps or keyword lists
+
+  > #### 🌟 Unique Jobs and Batching {: .warning}
+  >
+  > The built-in `Basic` engine doesn't support unique inserts for `insert_all` and you must use
+  > `insert/3` for per-job unique support. Alternatively, the [`SmartEngine` in Oban
+  > Pro](https://getoban.pro/docs/pro/smart_engine.html) supports bulk unique jobs and automatic
+  > batching.
+
+  ## Options
+
+  Accepts any of Ecto's "Shared Options" such as `timeout` and `log`.
 
   ## Example
 

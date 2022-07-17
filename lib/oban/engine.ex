@@ -1,15 +1,15 @@
 defmodule Oban.Engine do
   @moduledoc """
-  Defines an Engine.
+  Defines an Engine for job orchestration.
 
   Engines are responsible for all non-plugin database interaction, from inserting through
   executing jobs.
 
   Oban ships with two Engine implementations:
 
-    1. `Basic` — The default engine for development, production, and manual testing mode.
-    2. `Inline` — Designed specifically for testing, it executes jobs immediately,
-       in-memory, as they are inserted.
+  1. `Basic` — The default engine for development, production, and manual testing mode.
+  2. `Inline` — Designed specifically for testing, it executes jobs immediately, in-memory, as
+     they are inserted.
 
   > #### 🌟 SmartEngine {: .info}
   >
@@ -63,18 +63,18 @@ defmodule Oban.Engine do
   @doc """
   Insert a job into the database.
   """
-  @callback insert_job(conf(), Job.changeset(), Keyword.t()) :: {:ok, Job.t()} | {:error, term()}
+  @callback insert_job(conf(), Job.changeset(), opts()) :: {:ok, Job.t()} | {:error, term()}
 
   @doc """
   Insert a job within an `Ecto.Multi`.
   """
-  @callback insert_job(conf(), Multi.t(), Multi.name(), Oban.changeset_or_fun(), Keyword.t()) ::
+  @callback insert_job(conf(), Multi.t(), Multi.name(), Oban.changeset_or_fun(), opts()) ::
               Multi.t()
 
   @doc """
   Insert multiple jobs into the database.
   """
-  @callback insert_all_jobs(conf(), Oban.changesets_or_wrapper(), Keyword.t()) :: [Job.t()]
+  @callback insert_all_jobs(conf(), Oban.changesets_or_wrapper(), opts()) :: [Job.t()]
 
   @doc """
   Insert multiple jobs within an `Ecto.Multi`
@@ -84,7 +84,7 @@ defmodule Oban.Engine do
               Multi.t(),
               Multi.name(),
               Oban.changesets_or_wrapper_or_fun(),
-              Keyword.t()
+              opts()
             ) :: Multi.t()
 
   @doc """
