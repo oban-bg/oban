@@ -275,6 +275,7 @@ defmodule Oban do
     insert(__MODULE__, multi, multi_name, changeset, [])
   end
 
+  @doc false
   def insert(name, multi, multi_name, changeset) when is_changeset_or_fun(changeset) do
     insert(name, multi, multi_name, changeset, [])
   end
@@ -379,6 +380,7 @@ defmodule Oban do
     insert_all(__MODULE__, multi, multi_name, changesets, [])
   end
 
+  @doc false
   def insert_all(name, multi, multi_name, changesets) when is_list_or_wrapper(changesets) do
     insert_all(name, multi, multi_name, changesets, [])
   end
