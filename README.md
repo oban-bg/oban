@@ -151,8 +151,8 @@ coordination.
 
 ### Installation
 
-See the [installation guide](installation.md) for details on installing and
-configuring Oban in your application.
+See the [installation guide](https://hexdocs.pm/oban/installation.html) for
+details on installing and configuring Oban in your application.
 
 ### Requirements
 
