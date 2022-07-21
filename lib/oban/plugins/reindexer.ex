@@ -62,7 +62,7 @@ defmodule Oban.Plugins.Reindexer do
       :timer,
       indexes: ~w(oban_jobs_args_index oban_jobs_meta_index),
       timezone: "Etc/UTC",
-      timeout: 15_000
+      timeout: :timer.seconds(15)
     ]
   end
 
