@@ -53,7 +53,7 @@ the Basic and Inline engines are now `Oban.Engines.Basic` and
 
 ## v2.13.0 — 2022-07-22
 
-## Enhancements
+### Enhancements
 
 - [Telemetry] Add `encode` option to make JSON encoding for `attach_default_logger/1`.
 
@@ -74,7 +74,7 @@ the Basic and Inline engines are now `Oban.Engines.Basic` and
 - [Repo] Add `aggregate/4` wrapper to facilitate aggregates from plugins or
   other extensions that use `Oban.Repo`.
 
-## Bug Fixes
+### Bug Fixes
 
 - [Oban] Prevent empty maps from matching non-empty maps during uniqueness checks.
 
@@ -122,9 +122,9 @@ the Basic and Inline engines are now `Oban.Engines.Basic` and
   2. Controlling post-execution db interaction with a new `ack` option for
      the Executor module.
 
-# Deprecations
+### Deprecations
 
-* 048717d 2022-06-30 | Soft replace discard with cancel return value (#730) [Parker Selbert]
+- [Oban] Soft replace discard with cancel return value (#730) [Parker Selbert]
 
 For changes prior to v2.13 see the [v2.12][prv] docs.
 
