@@ -164,12 +164,18 @@ defmodule Oban.Plugins.Reindexer do
 
       if Expression.now?(state.schedule, datetime) do
         prefix = inspect(state.conf.prefix)
+        params = []
         query_opts = [timeout: state.timeout]
 
-        Repo.query(state.conf, deindex_query(state), query_opts)
+        Repo.query(state.conf, deindex_query(state), params, query_opts)
 
         for index <- state.indexes do
-          Repo.query(state.conf, "REINDEX INDEX CONCURRENTLY #{prefix}.#{index}", query_opts)
+          Repo.query(
+            state.conf,
+            "REINDEX INDEX CONCURRENTLY #{prefix}.#{index}",
+            params,
+            query_opts
+          )
         end
       end
     else
