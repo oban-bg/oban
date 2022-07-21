@@ -1,157 +1,133 @@
-# Changelog for Oban v2.12
+# Changelog for Oban v2.13
 
 _🌟 Looking for changes to Web or Pro? Check the [Oban.Pro Changelog][opc] or
 the [Oban.Web Changelog][owc]. 🌟_
 
-[Oban v2.12 Upgrade Guide](guides/upgrading/v2.12.md)
+## Cancel Directly from Job Execution
 
-Oban v2.12 was dedicated to enriching the testing experience and expanding
-config, plugin, and queue validation across all environments.
+Discard was initially intended to mean "a job exhausted all retries." Later, it
+was added as a return type for `perform/1`, and it came to mean either "stop
+retrying" or "exhausted retries" ambiguously, with no clear way to
+differentiate. Even later, we introduced cancel with a `cancelled` state as a
+way to stop jobs at runtime.
 
-## Testing Modes
+To repair this dichotomy, we're introducing a new `{:cancel, reason}` return
+type that transitions jobs to the `cancelled` state:
 
-Testing modes bring a new, vastly improved, way to configure Oban for testing.
-The new `testing` option makes it explicit that Oban should operate in a
-restricted mode for the given environment.
+```diff
+case do_some_work(job) do
+  {:ok, _result} = ok ->
+    ok
 
-Behind the scenes, the new testing modes rely on layers of validation within
-Oban's `Config` module. Now production configuration is validated automatically
-during test runs. Even though queues and plugins aren't _started_ in the test
-environment, their configuration is still validated.
+  {:error, :invalid} ->
+-   {:discard, :invalid}
++   {:cancel, :invalid}
 
-To switch, stop overriding `plugins` and `queues` and enable a testing mode
-in your `test.exs` config:
-
-```elixir
-config :my_app, Oban, testing: :manual
+  {:error, _reason} = error ->
+    error
+end
 ```
 
-Testing in `:manual` mode is identical to testing in older versions of Oban:
-jobs won't run automatically so you can use helpers like `assert_enqueued` and
-execute them manually with `Oban.drain_queue/2`.
+With this change we're also deprecating the use of discard from `perform/1`
+entirely! The meaning of each action/state is now:
 
-An alternate `:inline` allows Oban to bypass all database interaction and run
-jobs _immediately in the process that enqueued them_.
+* `cancel`—this job was purposefully stopped from retrying, either from a return
+  value or the cancel command triggered by a _human_
 
-```elixir
-config :my_app, Oban, testing: :inline
-```
+* `discard`—this job has exhausted all retries and transitioned by the _system_
 
-Finally, new [testing guides][tst] cover test setup, unit [testing
-workers][tsw], integration [testing queues][tsq], and testing [dynamic
-configuration][tsc].
+You're encouraged to replace usage of `:discard` with `:cancel` throughout your
+application's workers, but `:discard` is only soft-deprecated and undocumented
+now.
 
-[tst]: testing.html
-[tsw]: testing_workers.html
-[tsq]: testing_queues.html
-[tsc]: testing_config.html
+## Public Engine Behaviour
 
-## Global Peer Module
+Engines are responsible for all non-plugin database interaction, from inserting
+through executing jobs. They're also the intermediate layer that makes Pro's
+SmartEngine possible.
 
-Oban v2.11 introduced centralized leadership via Postgres tables. However,
-Postgres based leadership isn't always a good fit. For example, an ephemeral
-leadership mechanism is preferred for integration testing.
+Along with documenting the Engine this also flattens its name for parity with
+other "extension" modules. For the sake of consistency with notifiers and peers,
+the Basic and Inline engines are now `Oban.Engines.Basic` and
+`Oban.Engines.Inline`, respectively.
 
-In that case, you can make use of the new `:global` powered peer module for
-leadership:
+## v2.13.0 — 2022-07-22
 
-```elixir
-config :my_app, Oban,
-  peer: Oban.Peers.Global,
-  ...
-```
+## Enhancements
 
-## v2.12.1 — 2022-05-24
+- [Telemetry] Add `encode` option to make JSON encoding for `attach_default_logger/1`.
 
-### Bug Fixes
+  Now it's possible to use the default logger in applications that prefer
+  structured logging or use a standard JSON log formatter.
 
-- [Engine] Never fetch jobs that have reached max attempts
+- [Oban] Accept a `DateTime` for the `:with_scheduled` option when draining.
 
-  This adds a safeguard to the `fetch_jobs` function to prevent ever hitting the
-  `attempt <= max_attempts` check constraint. Hitting the constraint causes the
-  query to fail, which crashes the producer and starts an infinite loop of
-  crashes. The previous commit _should_ prevent this situation from ocurring at
-  the "staging" level, but to be absolutely safe this change prevents it at the
-  "fetching" level too.
+   When a `DateTime` is provided, drains all jobs scheduled up to, and
+   including, that point in time.
 
-  There is a very minor performance hit from this change because the query can
-  no longer run as an index only scan. For systems with a modest number of
-  available jobs the performance impact is indistinguishable.
+- [Oban] Accept extra options for `insert/2,4` and `insert_all/2,4`.
 
-- [Plugins] Prevent unexpectedly modifying jobs selected by subqueries
+  These are typically the Ecto's standard "Shared Options" such as `log` and
+  `timeout`. Other engines, such as Pro's `SmartEngine` may support additional
+  options.
 
-  Most applications don't run at a serializable isolation level. That allows
-  subqueries to run within a transaction without having the conditions
-  rechecked—only predicates on `UPDATE` or `DELETE` are re-checked, not on
-  subqueries. That allows a race condition where rows may be updated without
-  another evaluation.
+- [Repo] Add `aggregate/4` wrapper to facilitate aggregates from plugins or
+  other extensions that use `Oban.Repo`.
 
-- [Repo] Set `query_opts` in `Repo.transaction` options to prevent logging
-  `begin` and `commit` events in development loggers.
+## Bug Fixes
 
-- [Engine] Remove the `ORDER BY` clause from unique queries
+- [Oban] Prevent empty maps from matching non-empty maps during uniqueness checks.
 
-  The previous `ORDER BY id DESC` significantly hurts unique query performance
-  when there are a _lot_ of potential jobs to check. The ordering was originally
-  added to make test cases predictable and isn't important for the actual
-  behaviour of the unique check.
+- [Oban] Handle discarded and exhausted states for inline testing mode.
 
-## v2.12.0 — 2022-04-19
+  Previously, returning a `:discard` tuple or exhausting attempts would cause an
+  error.
 
-### Enhancements
+- [Peer] Default `leader?` check to false on peer timeout.
 
-- [Oban] Replace queue, plugin, and peer test configuration with a single
-  `:testing` option. Now configuring Oban for testing only requires one change,
-  setting the test mode to either `:inline` or `:manual`.
+  Timeouts should be rare, as they're symptoms of application/database overload.
+  If leadership can't be established it's safe to assume an instance isn't
+  leader and log a warning.
 
-  - `:inline`—jobs execute immediately within the calling process and without
-    touching the database. This mode is simple and may not be suitable for apps
-    with complex jobs.
-  - `:manual`—jobs are inserted into the database where they can be verified and
-    executed when desired. This mode is more advanced and trades simplicity for
-    flexibility.
+- [Peer] Use node-specific lock requester id for Global peers.
 
-- [Testing] Add `with_testing_mode/2` to temporarily change testing modes
-  within the context of a function.
+  Occasionally a peer module may hang while establishing leadership. In this
+  case the peer isn't yet a leader, and we can fallback to `false`.
 
-  Once the application starts in a particular testing mode it can't be changed.
-  That's inconvenient if you're running in `:inline` mode and don't want a
-  particular job to execute inline.
+- [Config] Validate options only after applying normalizations.
 
-- [Config] Add `validate/1` to aid in testing dynamic Oban configuration.
+- [Migrations] Allow any viable `prefix` in migrations.
 
-- [Config] Validate full plugin and queue options on init, without the need
-  to start plugins or queues.
+- [Reindexer] Drop invalid Oban indexes before reindexing again.
 
-- [Peers.Global] Add an alternate `:global` powered peer module.
+  Table contention that occurs during concurrent reindexing may leave indexes in
+  an invalid, and unusable state. Those indexes aren't used by Postgres and they
+  take up disk space. Now the Reindexer will drop any invalid indexes before
+  attempting to reindex.
 
-- [Plugin] A new `Oban.Plugin` behaviour formalizes starting and validating
-  plugins. The behaviour is implemented by all plugins, and is the foundation of
-  enhanced config validation.
+- [Reindexer] Only rebuild `args` and `meta` GIN indexes concurrently.
 
-- [Plugin] Emit `[:oban, :plugin, :init]` event on init from every plugin.
+  The new `indexes` option can be used to override the reindexed indexes rather
+  than the defaults.
 
-### Bug Fixes
+  The other two standard indexes (primary key and compound fields) are BTREE
+  based and not as subject to bloat.
 
-- [Executor ] Skip timeout check with an unknown worker
+- [Testing] Fix testing mode for `perform_job` and alt engines, e.g. Inline
 
-  When the worker can't be resolved we don't need to check the timeout. Doing so
-  prevents returning a helpful "unknown worker" message, and instead causes a
-  function error for `nil.timeout/1`.
+  A couple of changes enabled this compound fix:
 
-- [Testing] Include `log` and `prefix` in generated conf for `perform_job`.
+  1. Removing the engine override within config and exposing a centralized
+     engine lookup instead.
+  2. Controlling post-execution db interaction with a new `ack` option for
+     the Executor module.
 
-  The opts, and subsequent conf, built for `perform_job` didn't include the
-  `prefix` or `log` options. That prevented functions that depend on a job's
-  `conf` within `perform/1` from running with the correct options.
+# Deprecations
 
-- [Drainer] Retain the currently configured engine while draining a queue.
+* 048717d 2022-06-30 | Soft replace discard with cancel return value (#730) [Parker Selbert]
 
-- [Watchman] Skip pausing queues when shutdown is immediate. This prevents
-  queue's from interacting with the database during short test runs.
-
-For changes prior to v2.12 see the [v2.11][prv] docs.
+For changes prior to v2.13 see the [v2.12][prv] docs.
 
 [opc]: https://getoban.pro/docs/pro/changelog.html
 [owc]: https://getoban.pro/docs/web/changelog.html
-[prv]: https://hexdocs.pm/oban/2.11.2/changelog.html
+[prv]: https://hexdocs.pm/oban/2.12.1/changelog.html
