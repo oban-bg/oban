@@ -33,7 +33,7 @@ defmodule Oban.Plugins.Reindexer do
 
     * `:schedule` — a cron expression that controls when to reindex. Defaults to `"@midnight"`.
 
-    * `:timeout` - time in milliseconds to wait for each query call to finish.
+    * `:timeout` - time in milliseconds to wait for each query call to finish. Defaults to 15 seconds.
 
     * `:timezone` — which timezone to use when evaluating the schedule. To use a timezone other than
       the default of "Etc/UTC" you *must* have a timezone database like [tzdata][tzdata] installed
@@ -60,9 +60,9 @@ defmodule Oban.Plugins.Reindexer do
       :name,
       :schedule,
       :timer,
-      :timeout,
       indexes: ~w(oban_jobs_args_index oban_jobs_meta_index),
-      timezone: "Etc/UTC"
+      timezone: "Etc/UTC",
+      timeout: 15_000
     ]
   end
 
@@ -164,7 +164,7 @@ defmodule Oban.Plugins.Reindexer do
 
       if Expression.now?(state.schedule, datetime) do
         prefix = inspect(state.conf.prefix)
-        query_opts = query_opts(state)
+        query_opts = [timeout: state.timeout]
 
         Repo.query(state.conf, deindex_query(state), query_opts)
 
@@ -195,11 +195,5 @@ defmodule Oban.Plugins.Reindexer do
       END LOOP;
     END $$
     """
-  end
-
-  defp query_opts(state) do
-    timeout = state.timeout
-
-    if timeout, do: [timeout: timeout], else: []
   end
 end
