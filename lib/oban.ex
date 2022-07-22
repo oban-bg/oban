@@ -70,6 +70,8 @@ defmodule Oban do
   @type changesets_or_wrapper :: Job.changeset_list() | changeset_wrapper()
   @type changesets_or_wrapper_or_fun :: changesets_or_wrapper() | Job.changeset_list_fun()
   @type changeset_wrapper :: %{:changesets => Job.changeset_list(), optional(atom()) => term()}
+  @type multi :: Multi.t()
+  @type multi_name :: Multi.name()
 
   defguardp is_changeset_or_fun(cf)
             when is_struct(cf, Changeset) or is_function(cf, 1)
@@ -261,7 +263,7 @@ defmodule Oban do
       {:ok, job} = Oban.insert(MyApp.Worker.new(%{id: 1}), timeout: 10_000)
   """
   @doc since: "0.7.0"
-  @spec insert(name(), Job.changeset(), opts :: Keyword.t()) ::
+  @spec insert(name(), Job.changeset(), Keyword.t()) ::
           {:ok, Job.t()} | {:error, Job.changeset() | term()}
   def insert(name \\ __MODULE__, changeset, opts \\ [])
 
@@ -271,6 +273,8 @@ defmodule Oban do
     |> Engine.insert_job(changeset, opts)
   end
 
+  @spec insert(multi(), multi_name(), changeset_or_fun()) ::
+          {:ok, Job.t()} | {:error, Job.changeset() | term()}
   def insert(%Multi{} = multi, multi_name, changeset) when is_changeset_or_fun(changeset) do
     insert(__MODULE__, multi, multi_name, changeset, [])
   end
@@ -296,14 +300,7 @@ defmodule Oban do
       |> MyApp.Repo.transaction()
   """
   @doc since: "0.7.0"
-  @spec insert(
-          name,
-          multi :: Multi.t(),
-          multi_name :: Multi.name(),
-          changeset_or_fun(),
-          opts :: Keyword.t()
-        ) ::
-          Multi.t()
+  @spec insert(name, multi(), multi_name(), changeset_or_fun(), Keyword.t()) :: multi()
   def insert(name, multi, multi_name, changeset, opts)
       when is_changeset_or_fun(changeset) and is_list(opts) do
     name
@@ -367,7 +364,11 @@ defmodule Oban do
       |> Oban.insert_all(timeout: 10_000)
   """
   @doc since: "0.9.0"
-  @spec insert_all(name(), changesets_or_wrapper(), opts :: Keyword.t()) :: [Job.t()]
+  @spec insert_all(
+          name() | multi(),
+          changesets_or_wrapper() | multi_name(),
+          changesets_or_wrapper_or_fun() | Keyword.t()
+        ) :: [Job.t()]
   def insert_all(name \\ __MODULE__, changesets, opts \\ [])
 
   def insert_all(name, changesets, opts) when is_list_or_wrapper(changesets) and is_list(opts) do
@@ -412,13 +413,8 @@ defmodule Oban do
       |> MyApp.Repo.transaction()
   """
   @doc since: "0.9.0"
-  @spec insert_all(
-          name(),
-          multi :: Multi.t(),
-          multi_name :: Multi.name(),
-          changesets_or_wrapper_or_fun(),
-          opts :: Keyword.t()
-        ) :: Multi.t()
+  @spec insert_all(name(), multi(), multi_name(), changesets_or_wrapper_or_fun(), Keyword.t()) ::
+          multi()
   def insert_all(name, multi, multi_name, changesets, opts)
       when is_list_or_wrapper(changesets) and is_list(opts) do
     name
