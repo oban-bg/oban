@@ -158,6 +158,60 @@ defmodule Oban.Integration.UniquenessTest do
              )
   end
 
+  test "replace is disallowed for jobs with completed, discarded, cancelled, or executing state",
+       context do
+    now = DateTime.utc_now()
+    in_two_minutes = DateTime.add(now, 120, :second)
+
+    opts = [
+      tags: ["a"],
+      priority: 3,
+      max_attempts: 1
+    ]
+
+    replace_keys = [:scheduled_at, :tags, :priority]
+
+    for {extra_opts, idx} <-
+          Enum.with_index(
+            [
+              [state: "completed", completed_at: now],
+              [state: "discarded", discarded_at: now],
+              [state: "cancelled", cancelled_at: now],
+              [state: "executing", attempted_at: now]
+            ],
+            1
+          ) do
+      assert {:ok, %Job{state: state}} =
+               Oban.insert(
+                 context.name,
+                 UniqueWorker.new(%{id: idx}, Keyword.merge(opts, extra_opts))
+               )
+
+      unique_states = [String.to_existing_atom(state)]
+
+      assert {:error, %{errors: errors} = _changeset} =
+               Oban.insert(
+                 context.name,
+                 UniqueWorker.new(%{id: idx},
+                   unique: [
+                     keys: [:id],
+                     states: unique_states
+                   ],
+                   scheduled_at: in_two_minutes,
+                   tags: ["b"],
+                   priority: 2,
+                   max_attempts: 3,
+                   replace: replace_keys
+                 )
+               )
+
+      Enum.each(replace_keys, fn field ->
+        assert Keyword.get(errors, field) ==
+                 {"job state should be available, retryable, or scheduled; got: #{state}", []}
+      end)
+    end
+  end
+
   test "scoping uniqueness by period", %{name: name} do
     now = DateTime.utc_now()
     two_minutes_ago = DateTime.add(now, -120, :second)
