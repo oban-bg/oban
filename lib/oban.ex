@@ -273,8 +273,7 @@ defmodule Oban do
     |> Engine.insert_job(changeset, opts)
   end
 
-  @spec insert(multi(), multi_name(), changeset_or_fun()) ::
-          {:ok, Job.t()} | {:error, Job.changeset() | term()}
+  @spec insert(multi(), multi_name(), changeset_or_fun()) :: multi()
   def insert(%Multi{} = multi, multi_name, changeset) when is_changeset_or_fun(changeset) do
     insert(__MODULE__, multi, multi_name, changeset, [])
   end
@@ -364,11 +363,7 @@ defmodule Oban do
       |> Oban.insert_all(timeout: 10_000)
   """
   @doc since: "0.9.0"
-  @spec insert_all(
-          name() | multi(),
-          changesets_or_wrapper() | multi_name(),
-          changesets_or_wrapper_or_fun() | Keyword.t()
-        ) :: [Job.t()]
+  @spec insert_all(name(), changesets_or_wrapper(), Keyword.t()) :: [Job.t()]
   def insert_all(name \\ __MODULE__, changesets, opts \\ [])
 
   def insert_all(name, changesets, opts) when is_list_or_wrapper(changesets) and is_list(opts) do
@@ -377,6 +372,7 @@ defmodule Oban do
     |> Engine.insert_all_jobs(changesets, opts)
   end
 
+  @spec insert_all(multi(), multi_name(), changesets_or_wrapper_or_fun()) :: multi()
   def insert_all(%Multi{} = multi, multi_name, changesets) when is_list_or_wrapper(changesets) do
     insert_all(__MODULE__, multi, multi_name, changesets, [])
   end
