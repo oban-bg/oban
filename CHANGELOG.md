@@ -51,6 +51,22 @@ other "extension" modules. For the sake of consistency with notifiers and peers,
 the Basic and Inline engines are now `Oban.Engines.Basic` and
 `Oban.Engines.Inline`, respectively.
 
+## v2.13.1 — 2022-08-09
+
+### Bug Fixes
+
+- [Oban] Expand `insert`/`insert_all` typespecs for multi arity
+
+  This fixes dialyzer issues from the introduction of `opts` to `Oban.insert` and
+  `Oban.insert_all` functions.
+
+- [Reindexer] Allow specifying timeouts for all queries
+
+  In some cases, applying `REINDEX INDEX CONCURRENTLY` on the indexes
+  `oban_jobs_args_index`, and `oban_jobs_meta_index` takes more than the default
+  value (15 seconds). This new option allows clients to specify other values
+  than the default.
+
 ## v2.13.0 — 2022-07-22
 
 ### Enhancements
