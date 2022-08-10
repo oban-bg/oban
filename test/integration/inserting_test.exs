@@ -62,7 +62,7 @@ defmodule Oban.Integration.InsertingTest do
 
     name = start_supervised_oban!(queues: false)
 
-    changesets_2 = Enum.map(0..4, &Worker.new(%{ref: &1}, queue: "special", schedule_in: 10))
+    changesets_2 = Enum.map(5..9, &Worker.new(%{ref: &1}, queue: "special", schedule_in: 10))
     jobs_2 = Oban.insert_all(name, changesets_2)
 
     assert is_list(jobs_2)
@@ -104,16 +104,29 @@ defmodule Oban.Integration.InsertingTest do
     changesets_2 = Enum.map(3..4, &Worker.new(%{ref: &1}))
     changesets_3 = Enum.map(5..6, &Worker.new(%{ref: &1}))
 
-    multi = Multi.new()
-    multi = Oban.insert_all(name, multi, "jobs-1", changesets_1)
-    multi = Oban.insert_all(name, multi, "jobs-2", changesets_2)
-    multi = Multi.run(multi, "build-jobs-3", fn _, _ -> {:ok, changesets_3} end)
-    multi = Oban.insert_all(name, multi, "jobs-3", & &1["build-jobs-3"])
-    {:ok, %{"jobs-1" => jobs_1, "jobs-2" => jobs_2, "jobs-3" => jobs_3}} = Repo.transaction(multi)
+    multi_1 = Multi.new()
+    multi_1 = Oban.insert_all(name, multi_1, "jobs-1", changesets_1)
+    multi_1 = Oban.insert_all(name, multi_1, "jobs-2", changesets_2)
+    multi_1 = Multi.run(multi_1, "build-jobs-3", fn _, _ -> {:ok, changesets_3} end)
+    multi_1 = Oban.insert_all(name, multi_1, "jobs-3", & &1["build-jobs-3"])
+
+    {:ok, %{"jobs-1" => jobs_1, "jobs-2" => jobs_2, "jobs-3" => jobs_3}} =
+      Repo.transaction(multi_1)
 
     assert [%Job{}, %Job{}] = jobs_1
     assert [%Job{}, %Job{}] = jobs_2
     assert [%Job{}, %Job{}] = jobs_3
+
+    start_supervised_oban!(name: Oban, queues: false)
+
+    changesets_4 = Enum.map(7..8, &Worker.new(%{ref: &1}))
+
+    multi_2 = Multi.new()
+    multi_2 = Oban.insert_all(multi_2, "jobs-4", changesets_4, timeout: 10_000)
+
+    {:ok, %{"jobs-4" => jobs_4}} = Repo.transaction(multi_2)
+
+    assert [%Job{}, %Job{}] = jobs_4
   end
 
   test "inserting multiple jobs from a changeset wrapper using insert_all/4" do

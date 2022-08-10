@@ -402,6 +402,12 @@ defmodule Oban do
   end
 
   @doc false
+  def insert_all(%Multi{} = multi, multi_name, changesets, opts)
+      when is_list_or_wrapper(changesets) do
+    insert_all(__MODULE__, multi, multi_name, changesets, opts)
+  end
+
+  @doc false
   def insert_all(name, multi, multi_name, changesets) when is_list_or_wrapper(changesets) do
     insert_all(name, multi, multi_name, changesets, [])
   end
