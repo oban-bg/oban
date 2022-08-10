@@ -3,6 +3,14 @@ defmodule Oban.Integration.InsertingTest do
 
   alias Ecto.Multi
 
+  test "inserting job with insert/2" do
+    start_supervised_oban!(name: Oban, queues: false)
+    assert {:ok, %Job{}} = Oban.insert(Worker.new(%{ref: 1}), timeout: 10_000)
+
+    name = start_supervised_oban!(queues: false)
+    assert {:ok, %Job{}} = Oban.insert(name, Worker.new(%{ref: 2}))
+  end
+
   test "inserting multiple jobs within a multi using insert/3" do
     name = start_supervised_oban!(queues: false)
 
@@ -17,6 +25,14 @@ defmodule Oban.Integration.InsertingTest do
     assert job_1.id
     assert job_2.id
     assert job_3.id
+  end
+
+  test "inserting job with insert!/2" do
+    start_supervised_oban!(name: Oban, queues: false)
+    assert %Job{} = Oban.insert!(Worker.new(%{ref: 1}), timeout: 10_000)
+
+    name = start_supervised_oban!(queues: false)
+    assert %Job{} = Oban.insert!(name, Worker.new(%{ref: 2}))
   end
 
   test "inserting multiple jobs with insert_all/2" do
