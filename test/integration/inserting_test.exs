@@ -11,20 +11,30 @@ defmodule Oban.Integration.InsertingTest do
     assert {:ok, %Job{}} = Oban.insert(name, Worker.new(%{ref: 2}))
   end
 
-  test "inserting multiple jobs within a multi using insert/3" do
+  test "inserting multiple jobs within a multi using insert/4" do
     name = start_supervised_oban!(queues: false)
 
-    multi = Multi.new()
-    multi = Oban.insert(name, multi, :job_1, Worker.new(%{ref: 1}))
-    multi = Oban.insert(name, multi, "job-2", fn _ -> Worker.new(%{ref: 2}) end)
-    multi = Oban.insert(name, multi, {:job, 3}, Worker.new(%{ref: 3}))
-    assert {:ok, results} = Repo.transaction(multi)
+    multi_1 = Multi.new()
+    multi_1 = Oban.insert(name, multi_1, :job_1, Worker.new(%{ref: 1}))
+    multi_1 = Oban.insert(name, multi_1, "job-2", fn _ -> Worker.new(%{ref: 2}) end)
+    multi_1 = Oban.insert(name, multi_1, {:job, 3}, Worker.new(%{ref: 3}))
+    assert {:ok, results_1} = Repo.transaction(multi_1)
 
-    assert %{:job_1 => job_1, "job-2" => job_2, {:job, 3} => job_3} = results
+    assert %{:job_1 => job_1, "job-2" => job_2, {:job, 3} => job_3} = results_1
 
     assert job_1.id
     assert job_2.id
     assert job_3.id
+
+    start_supervised_oban!(name: Oban, queues: false)
+
+    multi_2 = Multi.new()
+    multi_2 = Oban.insert(multi_2, :job_4, Worker.new(%{ref: 4}), timeout: 10_000)
+    assert {:ok, results_2} = Repo.transaction(multi_2)
+
+    assert %{:job_4 => job_4} = results_2
+
+    assert job_4.id
   end
 
   test "inserting job with insert!/2" do

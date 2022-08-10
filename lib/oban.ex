@@ -285,6 +285,11 @@ defmodule Oban do
   end
 
   @doc false
+  def insert(%Multi{} = multi, multi_name, changeset, opts) when is_changeset_or_fun(changeset) do
+    insert(__MODULE__, multi, multi_name, changeset, opts)
+  end
+
+  @doc false
   def insert(name, multi, multi_name, changeset) when is_changeset_or_fun(changeset) do
     insert(name, multi, multi_name, changeset, [])
   end
