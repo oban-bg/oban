@@ -326,11 +326,12 @@ defmodule Oban do
       job = Oban.insert!(MyApp.Worker.new(%{id: 1}))
   """
   @doc since: "0.7.0"
-  @spec insert!(Job.changeset(), Keyword.t()) :: Job.t()
+  @spec insert!(Job.changeset(), opts :: Keyword.t()) :: Job.t()
   def insert!(%Changeset{} = changeset, opts) do
     insert!(__MODULE__, changeset, opts)
   end
 
+  @spec insert!(name(), Job.changeset()) :: Job.t()
   @spec insert!(name(), Job.changeset(), opts :: Keyword.t()) :: Job.t()
   def insert!(name \\ __MODULE__, %Changeset{} = changeset, opts \\ []) do
     case insert(name, changeset, opts) do
