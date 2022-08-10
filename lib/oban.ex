@@ -263,6 +263,12 @@ defmodule Oban do
       {:ok, job} = Oban.insert(MyApp.Worker.new(%{id: 1}), timeout: 10_000)
   """
   @doc since: "0.7.0"
+  @spec insert(Job.changeset(), Keyword.t()) ::
+          {:ok, Job.t()} | {:error, Job.changeset() | term()}
+  def insert(%Changeset{} = changeset, opts) do
+    insert(__MODULE__, changeset, opts)
+  end
+
   @spec insert(name(), Job.changeset(), Keyword.t()) ::
           {:ok, Job.t()} | {:error, Job.changeset() | term()}
   def insert(name \\ __MODULE__, changeset, opts \\ [])
@@ -276,6 +282,11 @@ defmodule Oban do
   @spec insert(multi(), multi_name(), changeset_or_fun()) :: multi()
   def insert(%Multi{} = multi, multi_name, changeset) when is_changeset_or_fun(changeset) do
     insert(__MODULE__, multi, multi_name, changeset, [])
+  end
+
+  @doc false
+  def insert(%Multi{} = multi, multi_name, changeset, opts) when is_changeset_or_fun(changeset) do
+    insert(__MODULE__, multi, multi_name, changeset, opts)
   end
 
   @doc false
@@ -315,6 +326,12 @@ defmodule Oban do
       job = Oban.insert!(MyApp.Worker.new(%{id: 1}))
   """
   @doc since: "0.7.0"
+  @spec insert!(Job.changeset(), opts :: Keyword.t()) :: Job.t()
+  def insert!(%Changeset{} = changeset, opts) do
+    insert!(__MODULE__, changeset, opts)
+  end
+
+  @spec insert!(name(), Job.changeset()) :: Job.t()
   @spec insert!(name(), Job.changeset(), opts :: Keyword.t()) :: Job.t()
   def insert!(name \\ __MODULE__, %Changeset{} = changeset, opts \\ []) do
     case insert(name, changeset, opts) do
@@ -363,6 +380,11 @@ defmodule Oban do
       |> Oban.insert_all(timeout: 10_000)
   """
   @doc since: "0.9.0"
+  @spec insert_all(changesets_or_wrapper(), Keyword.t()) :: [Job.t()]
+  def insert_all(changesets, opts) when is_list_or_wrapper(changesets) do
+    insert_all(__MODULE__, changesets, opts)
+  end
+
   @spec insert_all(
           name() | multi(),
           changesets_or_wrapper() | multi_name(),
@@ -378,6 +400,12 @@ defmodule Oban do
 
   def insert_all(%Multi{} = multi, multi_name, changesets) when is_list_or_wrapper(changesets) do
     insert_all(__MODULE__, multi, multi_name, changesets, [])
+  end
+
+  @doc false
+  def insert_all(%Multi{} = multi, multi_name, changesets, opts)
+      when is_list_or_wrapper(changesets) do
+    insert_all(__MODULE__, multi, multi_name, changesets, opts)
   end
 
   @doc false
