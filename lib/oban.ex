@@ -379,6 +379,11 @@ defmodule Oban do
       |> Oban.insert_all(timeout: 10_000)
   """
   @doc since: "0.9.0"
+  @spec insert_all(changesets_or_wrapper(), Keyword.t()) :: [Job.t()]
+  def insert_all(changesets, opts) when is_list_or_wrapper(changesets) do
+    insert_all(__MODULE__, changesets, opts)
+  end
+
   @spec insert_all(
           name() | multi(),
           changesets_or_wrapper() | multi_name(),

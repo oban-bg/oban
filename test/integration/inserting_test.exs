@@ -46,21 +46,33 @@ defmodule Oban.Integration.InsertingTest do
   end
 
   test "inserting multiple jobs with insert_all/2" do
+    start_supervised_oban!(name: Oban, queues: false)
+
+    changesets_1 = Enum.map(0..4, &Worker.new(%{ref: &1}, queue: "special", schedule_in: 10))
+    jobs_1 = Oban.insert_all(changesets_1, timeout: 10_000)
+
+    assert is_list(jobs_1)
+    assert length(jobs_1) == 5
+
+    [%Job{queue: "special", state: "scheduled"} = job_1 | _] = jobs_1
+
+    assert job_1.id
+    assert job_1.args
+    assert job_1.scheduled_at
+
     name = start_supervised_oban!(queues: false)
 
-    changesets = Enum.map(0..4, &Worker.new(%{ref: &1}, queue: "special", schedule_in: 10))
-    jobs = Oban.insert_all(name, changesets)
+    changesets_2 = Enum.map(0..4, &Worker.new(%{ref: &1}, queue: "special", schedule_in: 10))
+    jobs_2 = Oban.insert_all(name, changesets_2)
 
-    assert is_list(jobs)
-    assert length(jobs) == 5
+    assert is_list(jobs_2)
+    assert length(jobs_2) == 5
 
-    [%Job{} = job | _] = jobs
+    [%Job{queue: "special", state: "scheduled"} = job_2 | _] = jobs_2
 
-    assert job.id
-    assert job.args
-    assert job.queue == "special"
-    assert job.state == "scheduled"
-    assert job.scheduled_at
+    assert job_2.id
+    assert job_2.args
+    assert job_2.scheduled_at
   end
 
   test "inserting multiple jobs from a changeset wrapper with insert_all/2" do
