@@ -330,28 +330,12 @@ defmodule Oban.Engines.Basic do
         {:ok, job}
 
       replace_keys ->
-        maybe_replace(conf, query_opts, job, changeset, replace_keys)
+        Repo.update(
+          conf,
+          Ecto.Changeset.change(job, Map.take(changeset.changes, replace_keys)),
+          query_opts
+        )
     end
-  end
-
-  defp maybe_replace(conf, query_opts, %{state: state} = job, changeset, replace_keys)
-       when state in ~w(available retryable scheduled) do
-    Repo.update(
-      conf,
-      Ecto.Changeset.change(job, Map.take(changeset.changes, replace_keys)),
-      query_opts
-    )
-  end
-
-  defp maybe_replace(_conf, _query_opts, job, changeset, replace_keys) do
-    changeset =
-      Enum.reduce(replace_keys, changeset, fn field, acc ->
-        Ecto.Changeset.validate_change(acc, field, fn _, _ ->
-          [{field, "job state should be available, retryable, or scheduled; got: #{job.state}"}]
-        end)
-      end)
-
-    {:error, changeset}
   end
 
   defp unique_query(%{changes: %{unique: %{} = unique}} = changeset) do
