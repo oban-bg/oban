@@ -158,6 +158,77 @@ defmodule Oban.Integration.UniquenessTest do
              )
   end
 
+  test "replace allows replacing job data for the same job id based on its state", context do
+    now = DateTime.utc_now()
+    in_one_minute = DateTime.add(now, 60, :second)
+    in_two_minutes = DateTime.add(now, 120, :second)
+
+    assert %Job{id: id_1} =
+             unique_insert!(
+               context.name,
+               %{id: 1},
+               scheduled_at: in_one_minute,
+               tags: ["a"],
+               priority: 3,
+               max_attempts: 1
+             )
+
+    assert %Job{
+             id: ^id_1,
+             scheduled_at: ^in_two_minutes,
+             tags: ["b"],
+             priority: 2,
+             max_attempts: 1
+           } =
+             unique_insert!(
+               context.name,
+               %{id: 1},
+               unique: [keys: [:id]],
+               scheduled_at: in_two_minutes,
+               tags: ["b"],
+               priority: 2,
+               max_attempts: 3,
+               replace: [scheduled: [:scheduled_at, :tags, :priority]]
+             )
+  end
+
+  test "replace disallows replacing job data for the same job id if the state is not listed as key",
+       context do
+    now = DateTime.utc_now()
+    in_one_minute = DateTime.add(now, 60, :second)
+    in_two_minutes = DateTime.add(now, 120, :second)
+
+    assert %Job{id: id_1} =
+             unique_insert!(
+               context.name,
+               %{id: 1},
+               scheduled_at: in_one_minute,
+               tags: ["a"],
+               priority: 3,
+               max_attempts: 1
+             )
+
+    assert {:ok,
+            %Job{
+              id: ^id_1,
+              scheduled_at: ^in_one_minute,
+              tags: ["a"],
+              priority: 3,
+              max_attempts: 1
+            }} =
+             Oban.insert(
+               context.name,
+               UniqueWorker.new(%{id: 1},
+                 unique: [keys: [:id]],
+                 scheduled_at: in_two_minutes,
+                 tags: ["b"],
+                 priority: 2,
+                 max_attempts: 3,
+                 replace: [completed: [:scheduled_at, :tags, :priority]]
+               )
+             )
+  end
+
   test "scoping uniqueness by period", %{name: name} do
     now = DateTime.utc_now()
     two_minutes_ago = DateTime.add(now, -120, :second)
