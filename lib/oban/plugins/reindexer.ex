@@ -169,14 +169,23 @@ defmodule Oban.Plugins.Reindexer do
 
         Repo.query(state.conf, deindex_query(state), params, query_opts)
 
-        for index <- state.indexes do
-          Repo.query(
-            state.conf,
-            "REINDEX INDEX CONCURRENTLY #{prefix}.#{index}",
-            params,
-            query_opts
-          )
+        res =
+          for index <- state.indexes do
+            Repo.query(
+              state.conf,
+              "REINDEX INDEX CONCURRENTLY #{prefix}.#{index}",
+              params,
+              query_opts
+            )
+          end
+
+        case Enum.group_by(res, &elem(&1, 0), &elem(&1, 1)) do
+          %{error: errors} -> {:error, errors}
+          %{ok: successes} -> {:ok, successes}
+          _ -> {:ok, []}
         end
+      else
+        {:ok, []}
       end
     else
       {:ok, []}
@@ -193,7 +202,7 @@ defmodule Oban.Plugins.Reindexer do
         SELECT relnamespace::regnamespace as namespace, relname
         FROM pg_index i
         JOIN pg_class c on c.oid = i.indexrelid
-        WHERE namespace = #{state.conf.prefix}::regnamespace
+        WHERE relnamespace = '#{state.conf.prefix}'::regnamespace
           AND NOT indisvalid
           AND starts_with(relname, 'oban_jobs')
       LOOP
