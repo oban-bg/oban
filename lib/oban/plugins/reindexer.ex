@@ -118,13 +118,9 @@ defmodule Oban.Plugins.Reindexer do
     meta = %{conf: state.conf, plugin: __MODULE__}
 
     :telemetry.span([:oban, :plugin], meta, fn ->
-      case check_leadership_and_reindex(state) do
-        {:ok, _} ->
-          {:ok, meta}
+      check_leadership_and_reindex!(state)
 
-        error ->
-          {:error, Map.put(meta, :error, error)}
-      end
+      {:ok, meta}
     end)
 
     {:noreply, schedule_reindex(state)}
@@ -158,29 +154,24 @@ defmodule Oban.Plugins.Reindexer do
 
   # Reindexing
 
-  defp check_leadership_and_reindex(state) do
-    if Peer.leader?(state.conf) do
-      {:ok, datetime} = DateTime.now(state.timezone)
+  defp check_leadership_and_reindex!(state) do
+    {:ok, datetime} = DateTime.now(state.timezone)
 
-      if Expression.now?(state.schedule, datetime) do
-        prefix = inspect(state.conf.prefix)
-        params = []
-        query_opts = [timeout: state.timeout]
+    if Peer.leader?(state.conf) and Expression.now?(state.schedule, datetime) do
+      reindex_queries = Enum.map(state.indexes, &reindex_query(state, &1))
 
-        Repo.query(state.conf, deindex_query(state), params, query_opts)
-
-        for index <- state.indexes do
-          Repo.query(
-            state.conf,
-            "REINDEX INDEX CONCURRENTLY #{prefix}.#{index}",
-            params,
-            query_opts
-          )
+      for query <- [deindex_query(state) | reindex_queries] do
+        with {:error, error} <- Repo.query(state.conf, query, [], timeout: state.timeout) do
+          raise error
         end
       end
-    else
-      {:ok, []}
     end
+  end
+
+  defp reindex_query(state, index) do
+    prefix = inspect(state.conf.prefix)
+
+    "REINDEX INDEX CONCURRENTLY #{prefix}.#{index}"
   end
 
   defp deindex_query(state) do
@@ -190,10 +181,10 @@ defmodule Oban.Plugins.Reindexer do
       rec record;
     BEGIN
       FOR rec IN
-        SELECT relnamespace::regnamespace as namespace, relname
+        SELECT relnamespace, relname
         FROM pg_index i
         JOIN pg_class c on c.oid = i.indexrelid
-        WHERE namespace = #{state.conf.prefix}::regnamespace
+        WHERE relnamespace = '#{state.conf.prefix}'::regnamespace
           AND NOT indisvalid
           AND starts_with(relname, 'oban_jobs')
       LOOP
