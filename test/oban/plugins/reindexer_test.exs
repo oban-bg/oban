@@ -39,6 +39,7 @@ defmodule Oban.Plugins.ReindexerTest do
   end
 
   @tag :capture_log
+  @tag :reindex
   test "reindexing with an unknown column causes an exception" do
     PluginTelemetryHandler.attach_plugin_events("plugin-reindexer-handler")
 
@@ -55,6 +56,7 @@ defmodule Oban.Plugins.ReindexerTest do
     :telemetry.detach("plugin-reindexer-handler")
   end
 
+  @tag :reindex
   test "reindexing according to the provided schedule" do
     PluginTelemetryHandler.attach_plugin_events("plugin-reindexer-handler")
 
