@@ -118,9 +118,13 @@ defmodule Oban.Plugins.Reindexer do
     meta = %{conf: state.conf, plugin: __MODULE__}
 
     :telemetry.span([:oban, :plugin], meta, fn ->
-      check_leadership_and_reindex!(state)
+      case check_leadership_and_reindex(state) do
+        :ok ->
+          {:ok, meta}
 
-      {:ok, meta}
+        error ->
+          {:error, Map.put(meta, :error, error)}
+      end
     end)
 
     {:noreply, schedule_reindex(state)}
@@ -154,17 +158,18 @@ defmodule Oban.Plugins.Reindexer do
 
   # Reindexing
 
-  defp check_leadership_and_reindex!(state) do
+  defp check_leadership_and_reindex(state) do
     {:ok, datetime} = DateTime.now(state.timezone)
 
     if Peer.leader?(state.conf) and Expression.now?(state.schedule, datetime) do
-      reindex_queries = Enum.map(state.indexes, &reindex_query(state, &1))
+      queries = [deindex_query(state) | Enum.map(state.indexes, &reindex_query(state, &1))]
 
-      for query <- [deindex_query(state) | reindex_queries] do
-        with {:error, error} <- Repo.query(state.conf, query, [], timeout: state.timeout) do
-          raise error
+      Enum.reduce_while(queries, :ok, fn query, _ ->
+        case Repo.query(state.conf, query, [], timeout: state.timeout) do
+          {:ok, _} -> {:cont, :ok}
+          error -> {:halt, error}
         end
-      end
+      end)
     end
   end
 
