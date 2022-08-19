@@ -118,7 +118,9 @@ defmodule Oban.Integration.InsertingTest do
       multi = Oban.insert_all(name, multi, "jobs-2", changesets_2)
       multi = Multi.run(multi, "build-jobs-3", fn _, _ -> {:ok, changesets_3} end)
       multi = Oban.insert_all(name, multi, "jobs-3", & &1["build-jobs-3"])
-      {:ok, %{"jobs-1" => jobs_1, "jobs-2" => jobs_2, "jobs-3" => jobs_3}} = Repo.transaction(multi)
+
+      {:ok, %{"jobs-1" => jobs_1, "jobs-2" => jobs_2, "jobs-3" => jobs_3}} =
+        Repo.transaction(multi)
 
       assert [%Job{}, %Job{}] = jobs_1
       assert [%Job{}, %Job{}] = jobs_2
