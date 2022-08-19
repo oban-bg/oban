@@ -51,6 +51,20 @@ other "extension" modules. For the sake of consistency with notifiers and peers,
 the Basic and Inline engines are now `Oban.Engines.Basic` and
 `Oban.Engines.Inline`, respectively.
 
+## v2.13.2 — 2022-08-19
+
+### Bug Fixes
+
+- [Oban] Fix `insert/3` and `insert_all/3` when using options.
+
+  Multiple default arguments caused a conflict for function calls with options
+  but without an Oban instance name, e.g. `Oban.insert(changeset, timeout: 500)`
+
+- [Reindexer] Fix the unused index repair query and correctly report errors.
+
+  Reindexing and deindexing would faily silently because the results weren't
+  checked and no exceptions were raised.
+
 ## v2.13.1 — 2022-08-09
 
 ### Bug Fixes
