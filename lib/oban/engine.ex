@@ -177,7 +177,9 @@ defmodule Oban.Engine do
     meta = %{changeset: changeset, opts: opts}
 
     with_span(:insert_job, conf, meta, fn engine ->
-      engine.insert_job(conf, changeset, opts)
+      with {:ok, job} <- engine.insert_job(conf, changeset, opts) do
+        {:meta, {:ok, job}, %{job: job}}
+      end
     end)
   end
 
@@ -271,13 +273,19 @@ defmodule Oban.Engine do
     end)
   end
 
-  defp with_span(event, %Config{} = conf, tele_meta \\ %{}, fun) do
-    tele_meta = Map.merge(tele_meta, %{conf: conf, engine: conf.engine})
+  defp with_span(event, %Config{} = conf, base_meta \\ %{}, fun) do
+    base_meta = Map.merge(base_meta, %{conf: conf, engine: conf.engine})
 
-    :telemetry.span([:oban, :engine, event], tele_meta, fn ->
+    :telemetry.span([:oban, :engine, event], base_meta, fn ->
       engine = Config.get_engine(conf)
 
-      {fun.(engine), tele_meta}
+      case fun.(engine) do
+        {:meta, result, more_meta} ->
+          {result, Map.merge(base_meta, more_meta)}
+
+        result ->
+          {result, base_meta}
+      end
     end)
   end
 end

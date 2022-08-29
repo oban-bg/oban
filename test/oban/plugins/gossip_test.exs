@@ -2,7 +2,7 @@ defmodule Oban.Plugins.GossipTest do
   use Oban.Case, async: true
 
   alias Oban.Plugins.Gossip
-  alias Oban.{Notifier, PluginTelemetryHandler, Registry}
+  alias Oban.{Notifier, Registry, TelemetryHandler}
 
   defmodule SlowFakeProducer do
     @moduledoc false
@@ -35,6 +35,10 @@ defmodule Oban.Plugins.GossipTest do
   end
 
   describe "integration" do
+    setup do
+      TelemetryHandler.attach_events()
+    end
+
     test "queue producers periodically emit check meta as gossip" do
       name =
         start_supervised_oban!(
@@ -49,27 +53,19 @@ defmodule Oban.Plugins.GossipTest do
     end
 
     test "telemetry events include plugin meta with gossip counts" do
-      PluginTelemetryHandler.attach_plugin_events("plugin-gossip-handler")
-
       start_supervised_oban!(plugins: [{Gossip, interval: 10}])
 
       assert_receive {:event, :start, %{system_time: _}, %{conf: _, plugin: Gossip}}
       assert_receive {:event, :stop, %{duration: _}, %{conf: _, plugin: Gossip, gossip_count: 0}}
-    after
-      :telemetry.detach("plugin-gossip-handler")
     end
 
     test "slow producer calls don't crash gossip checks" do
-      PluginTelemetryHandler.attach_plugin_events("plugin-gossip-handler")
-
       name = start_supervised_oban!(plugins: [{Gossip, interval: 10}])
 
       prod_name = Registry.via(name, {:producer, :slow_fake})
       start_supervised!({SlowFakeProducer, name: prod_name})
 
       refute_receive {:notification, :gossip, _}
-    after
-      :telemetry.detach("plugin-gossip-handler")
     end
   end
 end

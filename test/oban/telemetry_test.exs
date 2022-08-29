@@ -28,7 +28,7 @@ defmodule Oban.TelemetryTest do
   end
 
   test "telemetry event is emitted for supervisor initialization" do
-    TelemetryHandler.attach_events("init-handler")
+    TelemetryHandler.attach_events()
 
     name = start_supervised_oban!(queues: [alpha: 2])
     pid = Oban.Registry.whereis(name)
@@ -36,12 +36,10 @@ defmodule Oban.TelemetryTest do
 
     assert_receive {:event, [:oban, :supervisor, :init], %{system_time: _},
                     %{conf: ^conf, pid: ^pid}}
-  after
-    :telemetry.detach("init-handler")
   end
 
   test "telemetry events are emitted for executed jobs" do
-    TelemetryHandler.attach_events("job-handler")
+    TelemetryHandler.attach_events()
 
     name = start_supervised_oban!(poll_interval: 10, queues: [alpha: 2])
 
@@ -92,8 +90,6 @@ defmodule Oban.TelemetryTest do
              state: :failure,
              tags: ["foo"]
            } = error_meta
-  after
-    :telemetry.detach("job-handler")
   end
 
   test "the default handler logs detailed event information" do

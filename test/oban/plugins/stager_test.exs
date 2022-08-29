@@ -2,7 +2,7 @@ defmodule Oban.Plugins.StagerTest do
   use Oban.Case, async: true
 
   alias Oban.Plugins.Stager
-  alias Oban.PluginTelemetryHandler
+  alias Oban.{Registry, TelemetryHandler}
 
   describe "validate/1" do
     test "validating numerical values" do
@@ -16,7 +16,7 @@ defmodule Oban.Plugins.StagerTest do
 
   describe "integration" do
     test "descheduling jobs to make them available for execution" do
-      PluginTelemetryHandler.attach_plugin_events("plugin-stager-handler")
+      TelemetryHandler.attach_events()
 
       then = DateTime.add(DateTime.utc_now(), -30)
 
@@ -34,8 +34,6 @@ defmodule Oban.Plugins.StagerTest do
 
       assert_receive {:event, :start, %{system_time: _}, %{conf: _, plugin: Stager}}
       assert_receive {:event, :stop, %{duration: _}, %{conf: _, plugin: Stager, staged_count: 2}}
-    after
-      :telemetry.detach("plugin-stager-handler")
     end
 
     test "limiting the number of jobs staged at one time" do

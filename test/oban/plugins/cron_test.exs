@@ -3,7 +3,7 @@ defmodule Oban.Plugins.CronTest do
 
   alias Oban.Cron.Expression
   alias Oban.Plugins.Cron
-  alias Oban.{Job, PluginTelemetryHandler, Registry}
+  alias Oban.{Job, Registry, TelemetryHandler}
 
   defmodule WorkerWithoutPerform do
   end
@@ -79,7 +79,7 @@ defmodule Oban.Plugins.CronTest do
   end
 
   test "cron jobs are enqueued on startup and telemetry events are emitted" do
-    PluginTelemetryHandler.attach_plugin_events("plugin-cron-handler")
+    TelemetryHandler.attach_events()
 
     run_with_opts(
       crontab: [
@@ -95,8 +95,6 @@ defmodule Oban.Plugins.CronTest do
                     %{conf: _, jobs: [%Job{}, %Job{}], plugin: Cron}}
 
     assert inserted_refs() == [1, 3]
-  after
-    :telemetry.detach("plugin-cron-handler")
   end
 
   test "cron jobs are not enqueued twice within the same minute" do

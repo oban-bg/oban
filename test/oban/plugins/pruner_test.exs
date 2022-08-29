@@ -4,7 +4,7 @@ defmodule Oban.Plugins.PrunerTest do
   import Ecto.Query
 
   alias Oban.Plugins.Pruner
-  alias Oban.PluginTelemetryHandler
+  alias Oban.TelemetryHandler
 
   describe "validate/1" do
     test "validating numerical values" do
@@ -20,7 +20,7 @@ defmodule Oban.Plugins.PrunerTest do
 
   describe "integration" do
     test "historic jobs are pruned when they are older than the configured age" do
-      PluginTelemetryHandler.attach_plugin_events("plugin-pruner-handler")
+      TelemetryHandler.attach_events()
 
       %Job{id: _id_} = insert!(%{}, state: "completed", attempted_at: seconds_ago(62))
       %Job{id: _id_} = insert!(%{}, state: "completed", attempted_at: seconds_ago(61))
@@ -37,8 +37,6 @@ defmodule Oban.Plugins.PrunerTest do
       assert_receive {:event, :stop, %{duration: _}, %{conf: _, plugin: Pruner, pruned_count: 4}}
 
       stop_supervised(name)
-    after
-      :telemetry.detach("plugin-pruner-handler")
     end
   end
 

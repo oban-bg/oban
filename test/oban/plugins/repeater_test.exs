@@ -4,11 +4,8 @@ defmodule Oban.Plugins.RepeaterTest do
   import ExUnit.CaptureLog
 
   test "ignoring plugin startup" do
-    logged =
-      capture_log(fn ->
-        start_supervised_oban!(plugins: [Oban.Plugins.Repeater])
-      end)
-
-    assert logged =~ "Repeater is deprecated"
+    assert capture_log(fn ->
+             start_supervised_oban!(plugins: [Oban.Plugins.Repeater])
+           end) =~ "Repeater is deprecated"
   end
 end

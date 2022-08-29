@@ -2,7 +2,7 @@ defmodule Oban.Plugins.ReindexerTest do
   use Oban.Case, async: true
 
   alias Oban.Plugins.Reindexer
-  alias Oban.{PluginTelemetryHandler, Registry}
+  alias Oban.{Registry, TelemetryHandler}
 
   describe "validate/1" do
     test "validating that schedule is a valid cron expression" do
@@ -38,38 +38,36 @@ defmodule Oban.Plugins.ReindexerTest do
     end
   end
 
-  @tag :reindex
-  test "reindexing with an unknown column causes an exception" do
-    PluginTelemetryHandler.attach_plugin_events("plugin-reindexer-handler")
+  describe "integration" do
+    @describetag :reindex
 
-    name = start_supervised_oban!(plugins: [{Reindexer, indexes: ["a"], schedule: "* * * * *"}])
+    setup do
+      TelemetryHandler.attach_events()
+    end
 
-    name
-    |> Registry.whereis({:plugin, Reindexer})
-    |> send(:reindex)
+    test "reindexing with an unknown column causes an exception" do
+      name = start_supervised_oban!(plugins: [{Reindexer, indexes: ["a"], schedule: "* * * * *"}])
 
-    assert_receive {:event, :stop, _, %{error: _, plugin: Reindexer}}, 500
+      name
+      |> Registry.whereis({:plugin, Reindexer})
+      |> send(:reindex)
 
-    stop_supervised(name)
-  after
-    :telemetry.detach("plugin-reindexer-handler")
-  end
+      assert_receive {:event, :stop, _, %{error: _, plugin: Reindexer}}, 500
 
-  @tag :reindex
-  test "reindexing according to the provided schedule" do
-    PluginTelemetryHandler.attach_plugin_events("plugin-reindexer-handler")
+      stop_supervised(name)
+    end
 
-    name = start_supervised_oban!(plugins: [{Reindexer, schedule: "* * * * *"}])
+    test "reindexing according to the provided schedule" do
+      name = start_supervised_oban!(plugins: [{Reindexer, schedule: "* * * * *"}])
 
-    name
-    |> Registry.whereis({:plugin, Reindexer})
-    |> send(:reindex)
+      name
+      |> Registry.whereis({:plugin, Reindexer})
+      |> send(:reindex)
 
-    assert_receive {:event, :start, _, %{plugin: Reindexer}}, 500
-    assert_receive {:event, :stop, _, %{plugin: Reindexer}}, 500
+      assert_receive {:event, :start, _, %{plugin: Reindexer}}, 500
+      assert_receive {:event, :stop, _, %{plugin: Reindexer}}, 500
 
-    stop_supervised(name)
-  after
-    :telemetry.detach("plugin-reindexer-handler")
+      stop_supervised(name)
+    end
   end
 end

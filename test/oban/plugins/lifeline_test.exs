@@ -2,7 +2,7 @@ defmodule Oban.Plugins.LifelineTest do
   use Oban.Case, async: true
 
   alias Oban.Plugins.Lifeline
-  alias Oban.PluginTelemetryHandler
+  alias Oban.TelemetryHandler
 
   describe "validate/1" do
     test "validating interval options" do
@@ -16,11 +16,7 @@ defmodule Oban.Plugins.LifelineTest do
 
   describe "integration" do
     setup do
-      PluginTelemetryHandler.attach_plugin_events("plugin-lifeline-handler")
-
-      on_exit(fn ->
-        :telemetry.detach("plugin-lifeline-handler")
-      end)
+      TelemetryHandler.attach_events()
     end
 
     test "rescuing executing jobs older than the rescue window" do
