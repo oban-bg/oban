@@ -241,8 +241,6 @@ defmodule Oban do
   def config(name \\ __MODULE__), do: Registry.config(name)
 
   @doc false
-  @spec insert(Job.changeset(), Keyword.t()) ::
-          {:ok, Job.t()} | {:error, Job.changeset() | term()}
   def insert(%Changeset{} = changeset, opts) do
     insert(__MODULE__, changeset, opts)
   end
