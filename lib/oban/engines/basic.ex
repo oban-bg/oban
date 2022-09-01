@@ -330,11 +330,11 @@ defmodule Oban.Engines.Basic do
         {:ok, job}
 
       replace ->
-        if valid_replace_option?(replace) do
+        if state_replace_option?(replace) do
           job_state = String.to_existing_atom(state)
           replace_keys = Keyword.get(replace, job_state, [])
 
-          maybe_replace(conf, query_opts, job, changeset, replace_keys)
+          replace_keys(conf, query_opts, job, changeset, replace_keys)
         else
           replace_keys(conf, query_opts, job, changeset, replace)
         end
@@ -348,7 +348,7 @@ defmodule Oban.Engines.Basic do
   end
 
   defp replace_keys(_conf, _query_opts, job, _changeset, []), do: {:ok, job}
-  
+
   defp replace_keys(conf, query_opts, job, changeset, replace_keys) do
     Repo.update(
       conf,
