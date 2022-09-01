@@ -341,11 +341,10 @@ defmodule Oban.Engines.Basic do
     end
   end
 
-  def valid_replace_option?(replace_keys) do
+  def state_replace_option?(replace) do
     all_states = Oban.Job.states()
 
-    match?([{_, _} | _], replace_keys) and
-      replace_keys |> Keyword.keys() |> Enum.all?(&(&1 in all_states))
+    Keyword.keyword?(replace) and Enum.all?(replace, fn {state, _} -> state in all_states end)
   end
 
   defp replace_keys(_conf, _query_opts, job, _changeset, []), do: {:ok, job}
