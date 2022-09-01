@@ -348,11 +348,8 @@ defmodule Oban.Engines.Basic do
       replace_keys |> Keyword.keys() |> Enum.all?(&(&1 in all_states))
   end
 
-  defp maybe_replace(_conf, _query_opts, job, _changeset, []), do: {:ok, job}
-
-  defp maybe_replace(conf, query_opts, job, changeset, replace_keys),
-    do: replace_keys(conf, query_opts, job, changeset, replace_keys)
-
+  defp replace_keys(_conf, _query_opts, job, _changeset, []), do: {:ok, job}
+  
   defp replace_keys(conf, query_opts, job, changeset, replace_keys) do
     Repo.update(
       conf,
