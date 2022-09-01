@@ -463,18 +463,18 @@ configuration.
 
 In addition to detecting unique conflicts, passing options to `replace` can
 update any job field when there is a conflict. Any of the following fields can
-be replaced:  `args`, `max_attempts`, `meta`, `priority`, `queue`,
+be replaced per _state_:  `args`, `max_attempts`, `meta`, `priority`, `queue`,
 `scheduled_at`, `tags`, `worker`.
 
 For example, to change the `priority` and increase `max_attempts` when there is
-a conflict:
+a conflict with a job in a `scheduled` state:
 
 ```elixir
 BusinessWorker.new(
   args,
   max_attempts: 5,
   priority: 0,
-  replace: [:max_attempts, :priority]
+  replace: [scheduled: [:max_attempts, :priority]]
 )
 ```
 
@@ -483,8 +483,13 @@ or `schedule_in` values will work, but the replace option is always
 `scheduled_at`.
 
 ```elixir
-UrgentWorker.new(args, schedule_in: 1, replace: [:scheduled_at])
+UrgentWorker.new(args, schedule_in: 1, replace: [scheduled: [:scheduled_at]])
 ```
+
+NOTE: If you use this feature to replace a field (e.g. `args`) in the `executing`
+state by doing something like: `UniqueWorker.new(new_args, replace: [executing:
+[:args]])` keep in mind that Oban will update the field or fields, but the Oban
+executor runs with the old values.
 
 #### Strong Guarantees
 
