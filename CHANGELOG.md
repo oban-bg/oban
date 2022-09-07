@@ -51,6 +51,16 @@ other "extension" modules. For the sake of consistency with notifiers and peers,
 the Basic and Inline engines are now `Oban.Engines.Basic` and
 `Oban.Engines.Inline`, respectively.
 
+## v2.13.3 — 2022-09-07
+
+### Bug Fixes
+
+- [Oban] Fix dialyzer for `insert/2` and `insert_all/2`, again.
+
+  The recent addition of a `@spec` for `Oban.insert/2` broke dialyzer in some
+  situations. To prevent this regression in the future we now include a compiled
+  module that exercises all `Oban.insert` function clauses for dialyzer.
+
 ## v2.13.2 — 2022-08-19
 
 ### Bug Fixes
