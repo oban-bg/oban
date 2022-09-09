@@ -47,7 +47,7 @@ defmodule Oban.Job do
           | :worker
         ]
 
-  @type state_replace_option :: [
+  @type replace_by_state_option :: [
           {:available, [replace_option()]}
           | {:cancelled, [replace_option()]}
           | {:completed, [replace_option()]}
@@ -79,7 +79,7 @@ defmodule Oban.Job do
           | {:queue, atom() | binary()}
           | {:schedule_in, schedule_in_option()}
           | {:replace_args, boolean()}
-          | {:replace, [replace_option() | state_replace_option()]}
+          | {:replace, [replace_option() | replace_by_state_option()]}
           | {:scheduled_at, DateTime.t()}
           | {:tags, tags()}
           | {:unique, [unique_option()]}
@@ -106,7 +106,7 @@ defmodule Oban.Job do
           cancelled_at: DateTime.t(),
           conf: Oban.Config.t(),
           conflict?: boolean(),
-          replace: [replace_option() | state_replace_option()],
+          replace: [replace_option() | replace_by_state_option()],
           unique: %{fields: [unique_field()], period: unique_period(), states: [unique_state()]},
           unsaved_error: %{kind: atom(), reason: term(), stacktrace: Exception.stacktrace()}
         }
