@@ -194,37 +194,15 @@ defmodule Oban.Integration.UniquenessTest do
 
   test "replace disallows replacing job data for the same job id if the state is not listed as key",
        context do
-    now = DateTime.utc_now()
-    in_one_minute = DateTime.add(now, 60, :second)
-    in_two_minutes = DateTime.add(now, 120, :second)
+    assert %Job{id: id_1} = unique_insert!(context.name, %{id: 1}, priority: 3)
 
-    assert %Job{id: id_1} =
-             unique_insert!(
-               context.name,
-               %{id: 1},
-               scheduled_at: in_one_minute,
-               tags: ["a"],
-               priority: 3,
-               max_attempts: 1
-             )
-
-    assert {:ok,
-            %Job{
-              id: ^id_1,
-              scheduled_at: ^in_one_minute,
-              tags: ["a"],
-              priority: 3,
-              max_attempts: 1
-            }} =
+    assert {:ok, %Job{id: ^id_1, priority: 3}} =
              Oban.insert(
                context.name,
                UniqueWorker.new(%{id: 1},
                  unique: [keys: [:id]],
-                 scheduled_at: in_two_minutes,
-                 tags: ["b"],
                  priority: 2,
-                 max_attempts: 3,
-                 replace: [completed: [:scheduled_at, :tags, :priority]]
+                 replace: [completed: [:priority]]
                )
              )
   end
