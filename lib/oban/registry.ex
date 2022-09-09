@@ -59,7 +59,7 @@ defmodule Oban.Registry do
 
   Get the pid for a queue's producer:
 
-      Oban.Registry.whereis(Oban, {:producer, :default})
+      Oban.Registry.whereis(Oban, {:producer, "default"})
   """
   @spec whereis(Oban.name(), role()) :: pid() | nil
   def whereis(oban_name, role \\ nil) do

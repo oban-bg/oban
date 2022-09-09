@@ -39,6 +39,23 @@ defmodule Oban.Plugins.ReindexerTest do
   end
 
   @tag :reindex
+  test "reindexing with an unknown column causes an exception" do
+    PluginTelemetryHandler.attach_plugin_events("plugin-reindexer-handler")
+
+    name = start_supervised_oban!(plugins: [{Reindexer, indexes: ["a"], schedule: "* * * * *"}])
+
+    name
+    |> Registry.whereis({:plugin, Reindexer})
+    |> send(:reindex)
+
+    assert_receive {:event, :stop, _, %{error: _, plugin: Reindexer}}, 500
+
+    stop_supervised(name)
+  after
+    :telemetry.detach("plugin-reindexer-handler")
+  end
+
+  @tag :reindex
   test "reindexing according to the provided schedule" do
     PluginTelemetryHandler.attach_plugin_events("plugin-reindexer-handler")
 
@@ -48,8 +65,8 @@ defmodule Oban.Plugins.ReindexerTest do
     |> Registry.whereis({:plugin, Reindexer})
     |> send(:reindex)
 
-    assert_receive {:event, :start, _, %{plugin: Reindexer}}, 1000
-    assert_receive {:event, :stop, _, %{plugin: Reindexer}}, 1000
+    assert_receive {:event, :start, _, %{plugin: Reindexer}}, 500
+    assert_receive {:event, :stop, _, %{plugin: Reindexer}}, 500
 
     stop_supervised(name)
   after

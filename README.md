@@ -666,7 +666,7 @@ Oban.drain_queue(MyAppB.Oban, queue: :default)
 
 ## Testing
 
-Find testing setup, helpers, and strategies in the [testing guide](testing.md).
+Find testing setup, helpers, and strategies in the [testing guide](https://hexdocs.pm/oban/testing.html).
 
 ## Error Handling
 

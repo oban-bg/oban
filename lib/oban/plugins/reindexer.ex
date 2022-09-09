@@ -119,7 +119,7 @@ defmodule Oban.Plugins.Reindexer do
 
     :telemetry.span([:oban, :plugin], meta, fn ->
       case check_leadership_and_reindex(state) do
-        {:ok, _} ->
+        :ok ->
           {:ok, meta}
 
         error ->
@@ -159,28 +159,24 @@ defmodule Oban.Plugins.Reindexer do
   # Reindexing
 
   defp check_leadership_and_reindex(state) do
-    if Peer.leader?(state.conf) do
-      {:ok, datetime} = DateTime.now(state.timezone)
+    {:ok, datetime} = DateTime.now(state.timezone)
 
-      if Expression.now?(state.schedule, datetime) do
-        prefix = inspect(state.conf.prefix)
-        params = []
-        query_opts = [timeout: state.timeout]
+    if Peer.leader?(state.conf) and Expression.now?(state.schedule, datetime) do
+      queries = [deindex_query(state) | Enum.map(state.indexes, &reindex_query(state, &1))]
 
-        Repo.query(state.conf, deindex_query(state), params, query_opts)
-
-        for index <- state.indexes do
-          Repo.query(
-            state.conf,
-            "REINDEX INDEX CONCURRENTLY #{prefix}.#{index}",
-            params,
-            query_opts
-          )
+      Enum.reduce_while(queries, :ok, fn query, _ ->
+        case Repo.query(state.conf, query, [], timeout: state.timeout) do
+          {:ok, _} -> {:cont, :ok}
+          error -> {:halt, error}
         end
-      end
-    else
-      {:ok, []}
+      end)
     end
+  end
+
+  defp reindex_query(state, index) do
+    prefix = inspect(state.conf.prefix)
+
+    "REINDEX INDEX CONCURRENTLY #{prefix}.#{index}"
   end
 
   defp deindex_query(state) do
@@ -190,10 +186,10 @@ defmodule Oban.Plugins.Reindexer do
       rec record;
     BEGIN
       FOR rec IN
-        SELECT relnamespace::regnamespace as namespace, relname
+        SELECT relnamespace, relname
         FROM pg_index i
         JOIN pg_class c on c.oid = i.indexrelid
-        WHERE namespace = #{state.conf.prefix}::regnamespace
+        WHERE relnamespace = '#{state.conf.prefix}'::regnamespace
           AND NOT indisvalid
           AND starts_with(relname, 'oban_jobs')
       LOOP

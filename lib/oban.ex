@@ -70,6 +70,8 @@ defmodule Oban do
   @type changesets_or_wrapper :: Job.changeset_list() | changeset_wrapper()
   @type changesets_or_wrapper_or_fun :: changesets_or_wrapper() | Job.changeset_list_fun()
   @type changeset_wrapper :: %{:changesets => Job.changeset_list(), optional(atom()) => term()}
+  @type multi :: Multi.t()
+  @type multi_name :: Multi.name()
 
   defguardp is_changeset_or_fun(cf)
             when is_struct(cf, Changeset) or is_function(cf, 1)
@@ -238,6 +240,11 @@ defmodule Oban do
   @spec config(name()) :: Config.t()
   def config(name \\ __MODULE__), do: Registry.config(name)
 
+  @doc false
+  def insert(%Changeset{} = changeset, opts) do
+    insert(__MODULE__, changeset, opts)
+  end
+
   @doc """
   Insert a new job into the database for execution.
 
@@ -259,9 +266,13 @@ defmodule Oban do
   Insert a job using a custom timeout:
 
       {:ok, job} = Oban.insert(MyApp.Worker.new(%{id: 1}), timeout: 10_000)
+
+  Insert a job using an alternative instance name:
+
+      {:ok, job} = Oban.insert(MyOban, MyApp.Worker.new(%{id: 1}))
   """
   @doc since: "0.7.0"
-  @spec insert(name(), Job.changeset(), opts :: Keyword.t()) ::
+  @spec insert(name(), Job.changeset(), Keyword.t()) ::
           {:ok, Job.t()} | {:error, Job.changeset() | term()}
   def insert(name \\ __MODULE__, changeset, opts \\ [])
 
@@ -271,8 +282,14 @@ defmodule Oban do
     |> Engine.insert_job(changeset, opts)
   end
 
+  @spec insert(multi(), multi_name(), changeset_or_fun()) :: multi()
   def insert(%Multi{} = multi, multi_name, changeset) when is_changeset_or_fun(changeset) do
     insert(__MODULE__, multi, multi_name, changeset, [])
+  end
+
+  @doc false
+  def insert(%Multi{} = multi, multi_name, changeset, opts) when is_changeset_or_fun(changeset) do
+    insert(__MODULE__, multi, multi_name, changeset, opts)
   end
 
   @doc false
@@ -296,14 +313,7 @@ defmodule Oban do
       |> MyApp.Repo.transaction()
   """
   @doc since: "0.7.0"
-  @spec insert(
-          name,
-          multi :: Multi.t(),
-          multi_name :: Multi.name(),
-          changeset_or_fun(),
-          opts :: Keyword.t()
-        ) ::
-          Multi.t()
+  @spec insert(name, multi(), multi_name(), changeset_or_fun(), Keyword.t()) :: multi()
   def insert(name, multi, multi_name, changeset, opts)
       when is_changeset_or_fun(changeset) and is_list(opts) do
     name
@@ -311,14 +321,31 @@ defmodule Oban do
     |> Engine.insert_job(multi, multi_name, changeset, opts)
   end
 
+  @doc false
+  @spec insert!(Job.changeset(), opts :: Keyword.t()) :: Job.t()
+  def insert!(%Changeset{} = changeset, opts) do
+    insert!(__MODULE__, changeset, opts)
+  end
+
   @doc """
-  Similar to `insert/2`, but raises an `Ecto.InvalidChangesetError` if the job can't be inserted.
+  Similar to `insert/3`, but raises an `Ecto.InvalidChangesetError` if the job can't be inserted.
 
   ## Example
 
+  Insert a single job:
+
       job = Oban.insert!(MyApp.Worker.new(%{id: 1}))
+
+  Insert a job using a custom timeout:
+
+      job = Oban.insert!(MyApp.Worker.new(%{id: 1}), timeout: 10_000)
+
+  Insert a job using an alternative instance name:
+
+      job = Oban.insert!(MyOban, MyApp.Worker.new(%{id: 1}))
   """
   @doc since: "0.7.0"
+  @spec insert!(name(), Job.changeset()) :: Job.t()
   @spec insert!(name(), Job.changeset(), opts :: Keyword.t()) :: Job.t()
   def insert!(name \\ __MODULE__, %Changeset{} = changeset, opts \\ []) do
     case insert(name, changeset, opts) do
@@ -331,6 +358,12 @@ defmodule Oban do
       {:error, reason} ->
         raise RuntimeError, inspect(reason)
     end
+  end
+
+  @doc false
+  @spec insert_all(changesets_or_wrapper(), Keyword.t()) :: [Job.t()]
+  def insert_all(changesets, opts) when is_list_or_wrapper(changesets) do
+    insert_all(__MODULE__, changesets, opts)
   end
 
   @doc """
@@ -365,9 +398,18 @@ defmodule Oban do
       1..100
       |> Enum.map(&MyApp.Worker.new(%{id: &1}))
       |> Oban.insert_all(timeout: 10_000)
+
+  Insert with an alternative instance name:
+
+      changesets = Enum.map(1..100, &MyApp.Worker.new(%{id: &1}))
+      jobs = Oban.insert_all(MyOban, changesets)
   """
   @doc since: "0.9.0"
-  @spec insert_all(name(), changesets_or_wrapper(), opts :: Keyword.t()) :: [Job.t()]
+  @spec insert_all(
+          name() | multi(),
+          changesets_or_wrapper() | multi_name(),
+          Keyword.t() | changesets_or_wrapper_or_fun()
+        ) :: [Job.t()] | multi()
   def insert_all(name \\ __MODULE__, changesets, opts \\ [])
 
   def insert_all(name, changesets, opts) when is_list_or_wrapper(changesets) and is_list(opts) do
@@ -378,6 +420,12 @@ defmodule Oban do
 
   def insert_all(%Multi{} = multi, multi_name, changesets) when is_list_or_wrapper(changesets) do
     insert_all(__MODULE__, multi, multi_name, changesets, [])
+  end
+
+  @doc false
+  def insert_all(%Multi{} = multi, multi_name, changesets, opts)
+      when is_list_or_wrapper(changesets) do
+    insert_all(__MODULE__, multi, multi_name, changesets, opts)
   end
 
   @doc false
@@ -412,13 +460,8 @@ defmodule Oban do
       |> MyApp.Repo.transaction()
   """
   @doc since: "0.9.0"
-  @spec insert_all(
-          name(),
-          multi :: Multi.t(),
-          multi_name :: Multi.name(),
-          changesets_or_wrapper_or_fun(),
-          opts :: Keyword.t()
-        ) :: Multi.t()
+  @spec insert_all(name(), multi(), multi_name(), changesets_or_wrapper_or_fun(), Keyword.t()) ::
+          multi()
   def insert_all(name, multi, multi_name, changesets, opts)
       when is_list_or_wrapper(changesets) and is_list(opts) do
     name
