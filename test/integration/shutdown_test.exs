@@ -17,4 +17,23 @@ defmodule Oban.Integration.ShutdownTest do
     assert Repo.get(Job, id_1).state == "completed"
     assert Repo.get(Job, id_2).state == "executing"
   end
+
+  test "additional jobs aren't started after shutdown starts" do
+    name = start_supervised_oban!(queues: [alpha: 1], shutdown_grace_period: 10)
+
+    %Job{id: id_1} = insert!(ref: 1, sleep: 50)
+    %Job{id: id_2} = insert!(ref: 2, sleep: 1)
+    %Job{id: id_3} = insert!(ref: 2, sleep: 1)
+
+    assert_receive {:started, 1}
+
+    :ok = stop_supervised(name)
+
+    refute_receive {:started, 2}, 100
+    refute_receive {:started, 3}, 100
+
+    assert Repo.get(Job, id_1).state == "executing"
+    assert Repo.get(Job, id_2).state == "available"
+    assert Repo.get(Job, id_3).state == "available"
+  end
 end
