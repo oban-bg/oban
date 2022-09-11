@@ -47,6 +47,16 @@ defmodule Oban.Job do
           | :worker
         ]
 
+  @type replace_by_state_option :: [
+          {:available, [replace_option()]}
+          | {:cancelled, [replace_option()]}
+          | {:completed, [replace_option()]}
+          | {:discarded, [replace_option()]}
+          | {:executing, [replace_option()]}
+          | {:retryable, [replace_option()]}
+          | {:scheduled, [replace_option()]}
+        ]
+
   @type schedule_in_option ::
           pos_integer()
           | {pos_integer(),
@@ -69,7 +79,7 @@ defmodule Oban.Job do
           | {:queue, atom() | binary()}
           | {:schedule_in, schedule_in_option()}
           | {:replace_args, boolean()}
-          | {:replace, [replace_option()]}
+          | {:replace, [replace_option() | replace_by_state_option()]}
           | {:scheduled_at, DateTime.t()}
           | {:tags, tags()}
           | {:unique, [unique_option()]}
@@ -96,7 +106,7 @@ defmodule Oban.Job do
           cancelled_at: DateTime.t(),
           conf: Oban.Config.t(),
           conflict?: boolean(),
-          replace: [replace_option()],
+          replace: [replace_option() | replace_by_state_option()],
           unique: %{fields: [unique_field()], period: unique_period(), states: [unique_state()]},
           unsaved_error: %{kind: atom(), reason: term(), stacktrace: Exception.stacktrace()}
         }
@@ -171,7 +181,7 @@ defmodule Oban.Job do
       other jobs in the same queue. The lower the number, the higher priority the job.
     * `:queue` — a named queue to push the job into. Jobs may be pushed into any queue, regardless
       of whether jobs are currently being processed for the queue.
-    * `:replace` - a list of keys to replace on a unique conflict
+    * `:replace` - a list of keys to replace per state on a unique conflict
     * `:scheduled_at` - a time in the future after which the job should be executed
     * `:schedule_in` - the number of seconds until the job should be executed or a tuple containing
       a number and unit

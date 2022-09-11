@@ -324,18 +324,37 @@ defmodule Oban.Engines.Basic do
     end
   end
 
-  defp return_or_replace(conf, query_opts, job, changeset) do
+  defp return_or_replace(conf, query_opts, %{state: state} = job, changeset) do
     case Changeset.get_change(changeset, :replace, []) do
       [] ->
         {:ok, job}
 
-      replace_keys ->
-        Repo.update(
-          conf,
-          Ecto.Changeset.change(job, Map.take(changeset.changes, replace_keys)),
-          query_opts
-        )
+      replace ->
+        if state_replace_option?(replace) do
+          job_state = String.to_existing_atom(state)
+          replace_keys = Keyword.get(replace, job_state, [])
+
+          replace_keys(conf, query_opts, job, changeset, replace_keys)
+        else
+          replace_keys(conf, query_opts, job, changeset, replace)
+        end
     end
+  end
+
+  def state_replace_option?(replace) do
+    all_states = Oban.Job.states()
+
+    Keyword.keyword?(replace) and Enum.all?(replace, fn {state, _} -> state in all_states end)
+  end
+
+  defp replace_keys(_conf, _query_opts, job, _changeset, []), do: {:ok, job}
+
+  defp replace_keys(conf, query_opts, job, changeset, replace_keys) do
+    Repo.update(
+      conf,
+      Ecto.Changeset.change(job, Map.take(changeset.changes, replace_keys)),
+      query_opts
+    )
   end
 
   defp unique_query(%{changes: %{unique: %{} = unique}} = changeset) do
