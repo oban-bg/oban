@@ -192,8 +192,7 @@ defmodule Oban.Integration.UniquenessTest do
              )
   end
 
-  test "replace disallows replacing job data for the same job id if the state is not listed as key",
-       context do
+  test "disallowing replace when the state is not listed", context do
     assert %Job{id: id_1} = unique_insert!(context.name, %{id: 1}, priority: 3)
 
     assert {:ok, %Job{id: ^id_1, priority: 3}} =
