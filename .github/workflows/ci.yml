@@ -24,9 +24,9 @@ jobs:
               postgres: '10.19-alpine'
             exclude_tags: 'reindex'
           - pair:
-              elixir: '1.13'
+              elixir: '1.14'
               otp: '25.0'
-              postgres: '14.1-alpine'
+              postgres: '14.5-alpine'
             exclude_tags: 'nothing'
             lint: lint
 
