@@ -1,5 +1,5 @@
 defmodule Oban.Plugins.LifelineTest do
-  use Oban.Case
+  use Oban.Case, async: true
 
   alias Oban.Plugins.Lifeline
   alias Oban.PluginTelemetryHandler
