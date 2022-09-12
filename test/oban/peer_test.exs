@@ -3,8 +3,6 @@ defmodule Oban.PeerTest do
 
   alias Oban.{Peer, Registry}
 
-  @moduletag :integration
-
   describe "configuration" do
     test "leadership is disabled when peer is false" do
       name = start_supervised_oban!(peer: false)

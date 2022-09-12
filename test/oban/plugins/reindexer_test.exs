@@ -1,5 +1,5 @@
 defmodule Oban.Plugins.ReindexerTest do
-  use Oban.Case, async: true
+  use Oban.Case
 
   alias Oban.Plugins.Reindexer
   alias Oban.{PluginTelemetryHandler, Registry}

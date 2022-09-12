@@ -1,7 +1,9 @@
 defmodule Oban.NotifierTest do
-  use Oban.Case, async: true
+  use Oban.Case
 
   alias Oban.Notifier
+
+  @moduletag :integration
 
   for notifier <- [Oban.Notifiers.PG, Oban.Notifiers.Postgres] do
     @notifier notifier

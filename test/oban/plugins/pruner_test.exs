@@ -19,8 +19,6 @@ defmodule Oban.Plugins.PrunerTest do
   end
 
   describe "integration" do
-    @describetag :integration
-
     test "historic jobs are pruned when they are older than the configured age" do
       PluginTelemetryHandler.attach_plugin_events("plugin-pruner-handler")
 

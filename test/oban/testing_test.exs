@@ -1,11 +1,9 @@
 defmodule Oban.TestingTest do
-  use Oban.Case
+  use Oban.Case, async: true
 
   use Oban.Testing, repo: Oban.Test.Repo
 
   alias Oban.{TelemetryHandler, Testing}
-
-  @moduletag :integration
 
   defmodule InvalidWorker do
     def perform(_), do: :ok

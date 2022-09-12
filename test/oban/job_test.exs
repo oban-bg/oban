@@ -1,6 +1,5 @@
 defmodule Oban.JobTest do
   use Oban.Case, async: true
-  use ExUnitProperties
 
   doctest Oban.Job
 
