@@ -1,11 +1,9 @@
-defmodule Oban.Integration.TelemetryTest do
-  use Oban.Case
+defmodule Oban.TelemetryTest do
+  use Oban.Case, async: true
 
   import ExUnit.CaptureLog
 
   alias Oban.{Config, PerformError, Telemetry, TelemetryHandler}
-
-  @moduletag :integration
 
   def handle_query(_event, _measure, meta, pid) do
     send(pid, {:query, meta})
@@ -45,7 +43,7 @@ defmodule Oban.Integration.TelemetryTest do
   test "telemetry events are emitted for executed jobs" do
     TelemetryHandler.attach_events("job-handler")
 
-    name = start_supervised_oban!(queues: [alpha: 2])
+    name = start_supervised_oban!(poll_interval: 10, queues: [alpha: 2])
 
     %Job{id: ok_id} = insert!([ref: 1, action: "OK"], tags: ["baz"])
     %Job{id: error_id} = insert!([ref: 2, action: "ERROR"], tags: ["foo"])
@@ -99,9 +97,9 @@ defmodule Oban.Integration.TelemetryTest do
   end
 
   test "the default handler logs detailed event information" do
-    start_supervised_oban!(queues: [alpha: 3])
-
     :ok = Telemetry.attach_default_logger(:warn)
+
+    start_supervised_oban!(poll_interval: 10, queues: [alpha: 3])
 
     logged =
       capture_log(fn ->
@@ -145,7 +143,7 @@ defmodule Oban.Integration.TelemetryTest do
   end
 
   test "disabling encoding on the default logger" do
-    start_supervised_oban!(queues: [alpha: 3])
+    start_supervised_oban!(poll_interval: 10, queues: [alpha: 3])
 
     :ok = Telemetry.attach_default_logger(encode: false, level: :warn)
 
@@ -164,3 +162,4 @@ defmodule Oban.Integration.TelemetryTest do
     :telemetry.detach("oban-default-logger")
   end
 end
+
