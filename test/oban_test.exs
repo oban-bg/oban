@@ -2,6 +2,7 @@ defmodule ObanTest do
   use Oban.Case, async: true
 
   alias Ecto.Multi
+  alias Oban.Registry
 
   @opts [repo: Repo, testing: :manual]
 
@@ -52,10 +53,28 @@ defmodule ObanTest do
   end
 
   describe "insert/2" do
-    setup :start_supervised_oban
+    test "inserting a single job" do
+      name = start_supervised_oban!(testing: :manual)
 
-    test "inserting a single job", %{name: name} do
       assert {:ok, %Job{}} = Oban.insert(name, Worker.new(%{ref: 1}))
+    end
+
+    test "inserting jobs with a custom prefix" do
+      name = start_supervised_oban!(prefix: "private", testing: :manual)
+
+      insert!(name, %{ref: 1, action: "OK"}, [])
+
+      assert [%Job{}] = Repo.all(Job, prefix: "private")
+    end
+
+    test "inserting unique jobs with a custom prefix" do
+      name = start_supervised_oban!(prefix: "private", queues: [alpha: 5])
+      opts = [unique: [period: 60, fields: [:worker]]]
+
+      insert!(name, %{ref: 1, action: "OK"}, opts)
+      insert!(name, %{ref: 2, action: "OK"}, opts)
+
+      assert [%Job{args: %{"ref" => 1}}] = Repo.all(Job, prefix: "private")
     end
   end
 
@@ -167,12 +186,85 @@ defmodule ObanTest do
     end
   end
 
+  describe "cancel_job/2" do
+    test "cancelling an executing job by its id" do
+      name = start_supervised_oban!(poll_interval: 10, queues: [alpha: 5])
+
+      job = insert!(ref: 1, sleep: 100)
+
+      assert_receive {:started, 1}
+
+      Oban.cancel_job(name, job.id)
+
+      refute_receive {:ok, 1}, 200
+
+      assert %Job{state: "cancelled", cancelled_at: %_{}} = Repo.reload(job)
+
+      assert %{running: []} = Oban.check_queue(name, queue: :alpha)
+    end
+
+    test "cancelling jobs that may or may not be executing" do
+      name = start_supervised_oban!(poll_interval: 10, queues: [alpha: 5])
+
+      job_a = insert!(%{ref: 1}, schedule_in: 10)
+      job_b = insert!(%{ref: 2}, schedule_in: 10, state: "retryable")
+      job_c = insert!(%{ref: 3}, state: "completed")
+      job_d = insert!(%{ref: 4, sleep: 200})
+
+      assert_receive {:started, 4}
+
+      assert :ok = Oban.cancel_job(name, job_a.id)
+      assert :ok = Oban.cancel_job(name, job_b.id)
+      assert :ok = Oban.cancel_job(name, job_c.id)
+      assert :ok = Oban.cancel_job(name, job_d.id)
+
+      refute_receive {:ok, 4}, 250
+
+      assert %Job{state: "cancelled", cancelled_at: %_{}} = Repo.reload(job_a)
+      assert %Job{state: "cancelled", cancelled_at: %_{}} = Repo.reload(job_b)
+      assert %Job{state: "completed", cancelled_at: nil} = Repo.reload(job_c)
+      assert %Job{state: "cancelled", cancelled_at: %_{}} = Repo.reload(job_d)
+    end
+  end
+
+  describe "cancel_all_jobs/2" do
+    test "cancelling all jobs that may or may not be executing" do
+      name = start_supervised_oban!(poll_interval: 10, queues: [alpha: 5])
+
+      job_a = insert!(%{ref: 1}, schedule_in: 10)
+      job_b = insert!(%{ref: 2}, schedule_in: 10, state: "retryable")
+      job_c = insert!(%{ref: 3}, state: "completed")
+      job_d = insert!(%{ref: 4, sleep: 200})
+
+      assert_receive {:started, 4}
+
+      assert {:ok, 3} = Oban.cancel_all_jobs(name, Job)
+
+      refute_receive {:ok, 4}, 250
+
+      assert %Job{state: "cancelled", cancelled_at: %_{}} = Repo.reload(job_a)
+      assert %Job{state: "cancelled", cancelled_at: %_{}} = Repo.reload(job_b)
+      assert %Job{state: "completed", cancelled_at: nil} = Repo.reload(job_c)
+      assert %Job{state: "cancelled", cancelled_at: %_{}} = Repo.reload(job_d)
+    end
+
+    test "cancelling jobs with an alternate prefix" do
+      name = start_supervised_oban!(prefix: "private", queues: [alpha: 5])
+
+      insert!(name, %{ref: 1}, schedule_in: 10)
+      insert!(name, %{ref: 2}, schedule_in: 10)
+
+      assert {:ok, 2} = Oban.cancel_all_jobs(name, Job)
+    end
+  end
+
   describe "check_queue/2" do
     test "checking on queue state at runtime" do
-      name = start_supervised_oban!(
-        poll_interval: 5,
-        queues: [alpha: 1, gamma: 2, delta: [limit: 2, paused: true]]
-      )
+      name =
+        start_supervised_oban!(
+          poll_interval: 5,
+          queues: [alpha: 1, gamma: 2, delta: [limit: 2, paused: true]]
+        )
 
       insert!([ref: 1, sleep: 500], queue: :alpha)
       insert!([ref: 2, sleep: 500], queue: :gamma)
@@ -283,9 +375,291 @@ defmodule ObanTest do
     end
   end
 
+  describe "pause_queue/2 and resume_queue/2" do
+    test "validating options" do
+      name = start_supervised_oban!(testing: :manual)
+
+      assert_invalid_opts(name, :pause_queue, queue: nil)
+      assert_invalid_opts(name, :pause_queue, local_only: -1)
+      assert_invalid_opts(name, :resume_queue, queue: nil)
+      assert_invalid_opts(name, :resume_queue, local_only: -1)
+    end
+
+    test "pausing and resuming individual queues" do
+      name = start_supervised_oban!(queues: [alpha: 5])
+
+      assert :ok = Oban.pause_queue(name, queue: :alpha)
+
+      with_backoff(fn ->
+        assert %{paused: true} = Oban.check_queue(name, queue: :alpha)
+      end)
+
+      assert :ok = Oban.resume_queue(name, queue: :alpha)
+
+      with_backoff(fn ->
+        assert %{paused: false} = Oban.check_queue(name, queue: :alpha)
+      end)
+    end
+
+    test "pausing queues only on the local node" do
+      name1 = start_supervised_oban!(poll_interval: 10, queues: [alpha: 1])
+      name2 = start_supervised_oban!(poll_interval: 10, queues: [alpha: 1])
+
+      assert :ok = Oban.pause_queue(name2, queue: :alpha, local_only: true)
+
+      with_backoff(fn ->
+        assert %{paused: false} = Oban.check_queue(name1, queue: :alpha)
+        assert %{paused: true} = Oban.check_queue(name2, queue: :alpha)
+      end)
+    end
+
+    test "resuming queues only on the local node" do
+      name1 = start_supervised_oban!(poll_interval: 10, queues: [alpha: 1])
+      name2 = start_supervised_oban!(poll_interval: 10, queues: [alpha: 1])
+
+      assert :ok = Oban.pause_queue(name1, queue: :alpha)
+
+      with_backoff(fn ->
+        assert %{paused: true} = Oban.check_queue(name1, queue: :alpha)
+        assert %{paused: true} = Oban.check_queue(name2, queue: :alpha)
+      end)
+
+      assert :ok = Oban.resume_queue(name1, queue: :alpha, local_only: true)
+
+      with_backoff(fn ->
+        assert %{paused: false} = Oban.check_queue(name1, queue: :alpha)
+        assert %{paused: true} = Oban.check_queue(name2, queue: :alpha)
+      end)
+    end
+
+    test "trying to resume queues that don't exist" do
+      name = start_supervised_oban!(testing: :manual)
+
+      assert :ok = Oban.resume_queue(name, queue: :alpha)
+
+      assert_raise ArgumentError, "queue :alpha does not exist locally", fn ->
+        Oban.resume_queue(name, queue: :alpha, local_only: true)
+      end
+    end
+
+    test "trying to pause queues that don't exist" do
+      name = start_supervised_oban!(queues: [])
+
+      assert :ok = Oban.pause_queue(name, queue: :alpha)
+
+      assert_raise ArgumentError, "queue :alpha does not exist locally", fn ->
+        Oban.pause_queue(name, queue: :alpha, local_only: true)
+      end
+    end
+  end
+
+  describe "retry_job/2" do
+    setup :start_supervised_oban
+
+    test "retrying jobs from multiple states", %{name: name} do
+      job_a = insert!(%{ref: 1}, state: "discarded", max_attempts: 20, attempt: 20)
+      job_b = insert!(%{ref: 2}, state: "completed", max_attempts: 20)
+      job_c = insert!(%{ref: 3}, state: "available", max_attempts: 20)
+      job_d = insert!(%{ref: 4}, state: "retryable", max_attempts: 20)
+      job_e = insert!(%{ref: 5}, state: "executing", max_attempts: 1, attempt: 1)
+      job_f = insert!(%{ref: 6}, state: "scheduled", max_attempts: 1, attempt: 1)
+
+      assert :ok = Oban.retry_job(name, job_a.id)
+      assert :ok = Oban.retry_job(name, job_b.id)
+      assert :ok = Oban.retry_job(name, job_c.id)
+      assert :ok = Oban.retry_job(name, job_d.id)
+      assert :ok = Oban.retry_job(name, job_e.id)
+      assert :ok = Oban.retry_job(name, job_f.id)
+
+      assert %Job{state: "available", max_attempts: 21} = Repo.reload(job_a)
+      assert %Job{state: "available", max_attempts: 20} = Repo.reload(job_b)
+      assert %Job{state: "available", max_attempts: 20} = Repo.reload(job_c)
+      assert %Job{state: "available", max_attempts: 20} = Repo.reload(job_d)
+      assert %Job{state: "executing", max_attempts: 1} = Repo.reload(job_e)
+      assert %Job{state: "scheduled", max_attempts: 1} = Repo.reload(job_f)
+    end
+
+    test "retrying all retryable jobs", %{name: name} do
+      job_a = insert!(%{ref: 1}, state: "discarded", max_attempts: 20, attempt: 20)
+      job_b = insert!(%{ref: 2}, state: "completed", max_attempts: 20)
+      job_c = insert!(%{ref: 3}, state: "available", max_attempts: 20)
+      job_d = insert!(%{ref: 4}, state: "retryable", max_attempts: 20)
+      job_e = insert!(%{ref: 5}, state: "executing", max_attempts: 1, attempt: 1)
+      job_f = insert!(%{ref: 6}, state: "scheduled", max_attempts: 1, attempt: 1)
+
+      assert {:ok, 3} = Oban.retry_all_jobs(name, Job)
+
+      assert %Job{state: "available", max_attempts: 21} = Repo.reload(job_a)
+      assert %Job{state: "available", max_attempts: 20} = Repo.reload(job_b)
+      assert %Job{state: "available", max_attempts: 20} = Repo.reload(job_c)
+      assert %Job{state: "available", max_attempts: 20} = Repo.reload(job_d)
+      assert %Job{state: "executing", max_attempts: 1} = Repo.reload(job_e)
+      assert %Job{state: "scheduled", max_attempts: 1} = Repo.reload(job_f)
+    end
+
+    test "retrying jobs with an alternate prefix" do
+      name = start_supervised_oban!(prefix: "private", queues: [alpha: 5])
+
+      insert!(name, %{ref: 1}, state: "cancelled")
+      insert!(name, %{ref: 2}, state: "cancelled")
+
+      assert {:ok, 2} = Oban.retry_all_jobs(name, Job)
+    end
+  end
+
+  describe "scale_queue/2" do
+    test "validating options" do
+      name = start_supervised_oban!(testing: :manual)
+
+      assert_invalid_opts(name, :scale_queue, [])
+      assert_invalid_opts(name, :scale_queue, queue: nil)
+      assert_invalid_opts(name, :scale_queue, limit: -1)
+      assert_invalid_opts(name, :scale_queue, local_only: -1)
+    end
+
+    test "scaling queues up" do
+      name = start_supervised_oban!(queues: [alpha: 1])
+
+      assert :ok = Oban.scale_queue(name, queue: :alpha, limit: 5)
+
+      with_backoff(fn ->
+        assert %{limit: 5} = Oban.check_queue(name, queue: :alpha)
+      end)
+    end
+
+    test "forwarding scaling options for alternative engines" do
+      # This is an abuse of `scale` because other engines support other options and passing
+      # `paused` verifies that other options are supported.
+      name = start_supervised_oban!(queues: [alpha: 1])
+
+      assert :ok = Oban.scale_queue(name, queue: :alpha, limit: 5, paused: true)
+
+      with_backoff(fn ->
+        assert %{limit: 5, paused: true} = Oban.check_queue(name, queue: :alpha)
+      end)
+    end
+
+    test "scaling queues only on the local node" do
+      name1 = start_supervised_oban!(queues: [alpha: 2])
+      name2 = start_supervised_oban!(queues: [alpha: 2])
+
+      assert :ok = Oban.scale_queue(name2, queue: :alpha, limit: 1, local_only: true)
+
+      with_backoff(fn ->
+        assert %{limit: 2} = Oban.check_queue(name1, queue: :alpha)
+        assert %{limit: 1} = Oban.check_queue(name2, queue: :alpha)
+      end)
+    end
+
+    test "trying to scale queues that don't exist" do
+      name = start_supervised_oban!(queues: [])
+
+      assert :ok = Oban.scale_queue(name, queue: :alpha, limit: 1)
+
+      assert_raise ArgumentError, "queue :alpha does not exist locally", fn ->
+        Oban.scale_queue(name, queue: :alpha, limit: 1, local_only: true)
+      end
+    end
+  end
+
+  describe "start_queue/2" do
+    test "validating options" do
+      name = start_supervised_oban!(testing: :manual)
+
+      assert_invalid_opts(name, :start_queue, [])
+      assert_invalid_opts(name, :start_queue, queue: nil)
+      assert_invalid_opts(name, :start_queue, limit: -1)
+      assert_invalid_opts(name, :start_queue, local_only: -1)
+      assert_invalid_opts(name, :start_queue, wat: -1)
+    end
+
+    test "starting individual queues dynamically" do
+      name = start_supervised_oban!(queues: [alpha: 9])
+
+      assert :ok = Oban.start_queue(name, queue: :gamma, limit: 5, refresh_interval: 10)
+      assert :ok = Oban.start_queue(name, queue: :delta, limit: 6, paused: true)
+      assert :ok = Oban.start_queue(name, queue: :alpha, limit: 5)
+
+      with_backoff(fn ->
+        assert supervised_queue?(name, "alpha")
+        assert supervised_queue?(name, "delta")
+        assert supervised_queue?(name, "gamma")
+      end)
+    end
+
+    test "starting individual queues only on the local node" do
+      name1 = start_supervised_oban!(queues: [])
+      name2 = start_supervised_oban!(queues: [])
+
+      assert :ok = Oban.start_queue(name1, queue: :alpha, limit: 1, local_only: true)
+
+      with_backoff(fn ->
+        assert supervised_queue?(name1, "alpha")
+        refute supervised_queue?(name2, "alpha")
+      end)
+    end
+  end
+
+  describe "stop_queue/2" do
+    test "validating options" do
+      name = start_supervised_oban!(testing: :manual)
+
+      assert_invalid_opts(name, :start_queue, queue: nil)
+      assert_invalid_opts(name, :start_queue, local_only: -1)
+    end
+
+    test "stopping individual queues" do
+      name = start_supervised_oban!(poll_interval: 10, queues: [alpha: 5, delta: 5, gamma: 5])
+
+      assert supervised_queue?(name, "delta")
+      assert supervised_queue?(name, "gamma")
+
+      assert :ok = Oban.stop_queue(name, queue: :delta)
+      assert :ok = Oban.stop_queue(name, queue: :gamma)
+
+      with_backoff(fn ->
+        assert supervised_queue?(name, "alpha")
+        refute supervised_queue?(name, "delta")
+        refute supervised_queue?(name, "gamma")
+      end)
+    end
+
+    test "stopping individual queues only on the local node" do
+      name1 = start_supervised_oban!(poll_interval: 10, queues: [alpha: 1])
+      name2 = start_supervised_oban!(poll_interval: 10, queues: [alpha: 1])
+
+      assert :ok = Oban.stop_queue(name2, queue: :alpha, local_only: true)
+
+      with_backoff(fn ->
+        assert supervised_queue?(name1, "alpha")
+        refute supervised_queue?(name2, "alpha")
+      end)
+    end
+
+    test "trying to stop queues that don't exist" do
+      name = start_supervised_oban!(queues: [])
+
+      assert :ok = Oban.pause_queue(name, queue: :alpha)
+
+      assert_raise ArgumentError, "queue :alpha does not exist locally", fn ->
+        Oban.pause_queue(name, queue: :alpha, local_only: true)
+      end
+    end
+  end
+
   defp start_supervised_oban(_context) do
     name = start_supervised_oban!(testing: :manual)
 
     {:ok, name: name}
+  end
+
+  defp assert_invalid_opts(oban_name, function_name, opts) do
+    assert_raise ArgumentError, fn -> apply(oban_name, function_name, [opts]) end
+  end
+
+  defp supervised_queue?(oban_name, queue_name) do
+    oban_name
+    |> Registry.whereis({:producer, queue_name})
+    |> is_pid()
   end
 end
