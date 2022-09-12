@@ -1,5 +1,5 @@
 defmodule Oban.Plugins.RepeaterTest do
-  use Oban.Case
+  use Oban.Case, async: true
 
   alias Oban.Plugins.Repeater
   alias Oban.{PluginTelemetryHandler, Registry}

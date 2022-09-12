@@ -1,5 +1,5 @@
 defmodule Oban.Plugins.PrunerTest do
-  use Oban.Case
+  use Oban.Case, async: true
 
   import Ecto.Query
 
