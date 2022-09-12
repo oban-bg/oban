@@ -5,8 +5,6 @@ defmodule Oban.Plugins.CronTest do
   alias Oban.Plugins.Cron
   alias Oban.{Job, PluginTelemetryHandler, Registry}
 
-  @moduletag :integration
-
   defmodule WorkerWithoutPerform do
   end
 

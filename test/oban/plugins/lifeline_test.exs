@@ -15,8 +15,6 @@ defmodule Oban.Plugins.LifelineTest do
   end
 
   describe "integration" do
-    @describetag :integration
-
     setup do
       PluginTelemetryHandler.attach_plugin_events("plugin-lifeline-handler")
 

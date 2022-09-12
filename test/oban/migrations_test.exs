@@ -5,6 +5,8 @@ defmodule Oban.MigrationsTest do
 
   @arbitrary_checks 20
 
+  @moduletag :integration
+
   defmodule StepMigration do
     use Ecto.Migration
 

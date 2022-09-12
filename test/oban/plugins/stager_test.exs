@@ -15,8 +15,6 @@ defmodule Oban.Plugins.StagerTest do
   end
 
   describe "integration" do
-    @describetag :integration
-
     test "descheduling jobs to make them available for execution" do
       PluginTelemetryHandler.attach_plugin_events("plugin-stager-handler")
 

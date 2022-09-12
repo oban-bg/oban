@@ -1,9 +1,7 @@
 defmodule Oban.WorkerTest do
-  use ExUnit.Case, async: false
+  use Oban.Case, async: false
 
   doctest Oban.Worker
-
-  use ExUnitProperties
 
   alias Oban.{Job, Worker}
 

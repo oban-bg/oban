@@ -35,13 +35,12 @@ defmodule Oban.Plugins.GossipTest do
   end
 
   describe "integration" do
-    @describetag :integration
-
     test "queue producers periodically emit check meta as gossip" do
       PluginTelemetryHandler.attach_plugin_events("plugin-gossip-handler")
 
       name =
         start_supervised_oban!(
+          notifier: Oban.Notifiers.PG,
           plugins: [{Gossip, interval: 10}],
           queues: [alpha: 2, omega: 3]
         )
