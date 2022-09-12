@@ -11,7 +11,7 @@ defmodule Oban.Cron.ExpressionTest do
                 months <- months(),
                 weekdays <- weekdays(),
                 spaces <- spaces() do
-        spacing = :erlang.iolist_to_binary(spaces)
+        spacing = IO.iodata_to_binary(spaces)
 
         [minutes, hours, days, months, weekdays]
         |> Enum.join(spacing)
