@@ -167,6 +167,92 @@ defmodule ObanTest do
     end
   end
 
+  describe "drain_queue/2" do
+    setup :start_supervised_oban
+
+    test "all jobs in a queue can be drained and executed synchronously", %{name: name} do
+      insert!(ref: 1, action: "OK")
+      insert!(ref: 2, action: "FAIL")
+      insert!(ref: 3, action: "OK")
+      insert!(ref: 4, action: "SNOOZE")
+      insert!(ref: 5, action: "CANCEL")
+      insert!(ref: 6, action: "DISCARD")
+      insert!(%{ref: 7, action: "FAIL"}, max_attempts: 1)
+
+      assert %{cancelled: 1, discard: 2, failure: 1, snoozed: 1, success: 2} ==
+               Oban.drain_queue(name, queue: :alpha)
+
+      assert_received {:ok, 1}
+      assert_received {:fail, 2}
+      assert_received {:ok, 3}
+      assert_received {:cancel, 5}
+    end
+
+    test "all scheduled jobs are executed using :with_scheduled", %{name: name} do
+      insert!(%{ref: 1, action: "OK"}, scheduled_at: seconds_from_now(3600))
+      insert!(%{ref: 2, action: "OK"}, scheduled_at: seconds_from_now(7200))
+
+      assert %{success: 0, failure: 0} = Oban.drain_queue(name, queue: :alpha)
+
+      assert %{success: 2, failure: 0} =
+               Oban.drain_queue(name, queue: :alpha, with_scheduled: true)
+    end
+
+    test "jobs scheduled up to a timestamp are executed", %{name: name} do
+      insert!(%{ref: 1, action: "OK"}, scheduled_at: seconds_from_now(3600))
+      insert!(%{ref: 2, action: "OK"}, scheduled_at: seconds_from_now(7200))
+
+      assert %{success: 0, failure: 0} =
+               Oban.drain_queue(name, queue: :alpha, with_scheduled: seconds_from_now(1))
+
+      assert %{success: 1, failure: 0} =
+               Oban.drain_queue(name, queue: :alpha, with_scheduled: seconds_from_now(3_600))
+
+      assert %{success: 1, failure: 0} =
+               Oban.drain_queue(name, queue: :alpha, with_scheduled: seconds_from_now(9_000))
+    end
+
+    test "job errors bubble up when :with_safety is false", %{name: name} do
+      insert!(ref: 1, action: "FAIL")
+
+      assert_raise RuntimeError, "FAILED", fn ->
+        Oban.drain_queue(name, queue: :alpha, with_safety: false)
+      end
+
+      assert_received {:fail, 1}
+    end
+
+    test "job crashes bubble up when :with_safety is false", %{name: name} do
+      insert!(ref: 1, action: "EXIT")
+
+      assert_raise Oban.CrashError, fn ->
+        Oban.drain_queue(name, queue: :alpha, with_safety: false)
+      end
+
+      assert_received {:exit, 1}
+    end
+
+    test "jobs inserted during perform are executed for :with_recursion", %{name: name} do
+      insert!(ref: 1, recur: 3)
+
+      assert %{success: 3} = Oban.drain_queue(name, queue: :alpha, with_recursion: true)
+
+      assert_received {:ok, 1, 3}
+      assert_received {:ok, 2, 3}
+      assert_received {:ok, 3, 3}
+    end
+
+    test "only the specified number of jobs are executed for :with_limit", %{name: name} do
+      insert!(ref: 1, action: "OK")
+      insert!(ref: 2, action: "OK")
+
+      assert %{success: 1} = Oban.drain_queue(name, queue: :alpha, with_limit: 1)
+
+      assert_received {:ok, 1}
+      refute_received {:ok, 2}
+    end
+  end
+
   defp start_supervised_oban(_context) do
     name = start_supervised_oban!(testing: :manual)
 

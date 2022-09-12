@@ -85,6 +85,18 @@ defmodule Oban.Integration.ExecutingTest do
     refute_receive {:ok, 2}
   end
 
+  test "jobs that exceed the worker's timeout fail" do
+    start_supervised_oban!(queues: [alpha: 1])
+
+    job = insert!(ref: 1, sleep: 100, timeout: 20)
+
+    assert_receive {:started, 1}
+    refute_receive {:ok, 1}
+
+    assert %Job{state: "retryable", errors: [%{"error" => error}]} = Repo.reload(job)
+    assert error == "** (Oban.TimeoutError) Oban.Integration.Worker timed out after 20ms"
+  end
+
   defp job do
     gen all queue <- member_of(~w(alpha beta gamma delta)),
             action <-
