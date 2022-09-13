@@ -4,7 +4,7 @@ defmodule Oban.Test.Exercise do
   alias Ecto.Multi
   alias Oban.Job
 
-  def check_install do
+  def check_insert do
     changeset = changeset()
 
     {:ok, _} = Oban.insert(changeset)
@@ -16,6 +16,26 @@ defmodule Oban.Test.Exercise do
     %Multi{} = Oban.insert(Multi.new(), :job, changeset, timeout: 500)
     %Multi{} = Oban.insert(Oban, Multi.new(), :job, changeset)
     %Multi{} = Oban.insert(Oban, Multi.new(), :job, changeset, timeout: 500)
+  end
+
+  def check_insert_all do
+    changeset = changeset()
+    wrapper = %{changesets: [changeset]}
+
+    [_ | _] = Oban.insert_all([changeset])
+    [_ | _] = Oban.insert_all(Oban, [changeset])
+    [_ | _] = Oban.insert_all([changeset], timeout: 500)
+    [_ | _] = Oban.insert_all(Oban, [changeset], timeout: 500)
+
+    [_ | _] = Oban.insert_all(wrapper)
+    [_ | _] = Oban.insert_all(Oban, wrapper)
+    [_ | _] = Oban.insert_all(wrapper, timeout: 500)
+    [_ | _] = Oban.insert_all(Oban, wrapper, timeout: 500)
+
+    %Multi{} = Oban.insert_all(Multi.new(), :job, [changeset])
+    %Multi{} = Oban.insert_all(Multi.new(), :job, [changeset], timeout: 500)
+    %Multi{} = Oban.insert_all(Oban, Multi.new(), :job, [changeset])
+    %Multi{} = Oban.insert_all(Oban, Multi.new(), :job, [changeset], timeout: 500)
   end
 
   defp changeset, do: Job.new(%{}, worker: "FakeWorker")
