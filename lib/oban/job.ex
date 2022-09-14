@@ -258,12 +258,12 @@ defmodule Oban.Job do
     |> put_scheduling(params[:schedule_in])
     |> put_uniqueness(params[:unique])
     |> put_replace(params[:replace], params[:replace_args])
-    |> validate_subset(:replace, @replace_options)
     |> put_state()
     |> validate_length(:queue, min: 1, max: 128)
     |> validate_length(:worker, min: 1, max: 128)
     |> validate_number(:max_attempts, greater_than: 0)
     |> validate_number(:priority, greater_than: -1, less_than: 4)
+    |> validate_replace()
     |> check_constraint(:attempt, name: :attempt_range)
     |> check_constraint(:max_attempts, name: :positive_max_attempts)
     |> check_constraint(:priority, name: :priority_range)
@@ -352,6 +352,29 @@ defmodule Oban.Job do
             when is_integer(value) or
                    (is_integer(elem(value, 0)) and elem(value, 1) in @time_units)
 
+  def put_replace(changeset, replace, replace_args) do
+    with_states = fn fields ->
+      for state <- states(), do: {state, fields}
+    end
+
+    case {replace, replace_args} do
+      {nil, true} ->
+        put_change(changeset, :replace, with_states.([:args]))
+
+      {[field | _] = replace, true} when is_atom(field) ->
+        put_change(changeset, :replace, with_states.([:args | replace]))
+
+      {[field | _] = replace, _} when is_atom(field) ->
+        put_change(changeset, :replace, with_states.(replace))
+
+      {replace, _} when is_list(replace) ->
+        put_change(changeset, :replace, replace)
+
+      _ ->
+        changeset
+    end
+  end
+
   defp put_scheduling(changeset, value) do
     case value do
       value when is_timestampable(value) ->
@@ -401,22 +424,6 @@ defmodule Oban.Job do
     end
   end
 
-  defp put_replace(changeset, replace, replace_args) do
-    case {replace, replace_args} do
-      {nil, true} ->
-        put_change(changeset, :replace, [:args])
-
-      {[_ | _], true} ->
-        put_change(changeset, :replace, [:args | replace])
-
-      {[_ | _], nil} ->
-        put_change(changeset, :replace, replace)
-
-      _ ->
-        changeset
-    end
-  end
-
   defp normalize_tags(%{tags: [_ | _] = tags} = params) do
     normalize = fn string ->
       string
@@ -436,18 +443,6 @@ defmodule Oban.Job do
 
   defp normalize_tags(params), do: params
 
-  def validate_keys(changeset, params, keys) do
-    keys = Enum.map(keys, &to_string/1)
-
-    Enum.reduce(params, changeset, fn {key, _val}, acc ->
-      if to_string(key) in keys do
-        acc
-      else
-        add_error(acc, :base, "unknown option #{inspect(key)} provided")
-      end
-    end)
-  end
-
   defp to_timestamp(seconds) when is_integer(seconds) do
     DateTime.add(DateTime.utc_now(), seconds, :second)
   end
@@ -462,6 +457,48 @@ defmodule Oban.Job do
   defp to_timestamp({days, :days}), do: to_timestamp({days, :day})
   defp to_timestamp({weeks, :week}), do: to_timestamp(weeks * 7 * 24 * 60 * 60)
   defp to_timestamp({weeks, :weeks}), do: to_timestamp({weeks, :week})
+
+  # Validation
+
+  defp validate_keys(changeset, params, keys) do
+    keys = Enum.map(keys, &to_string/1)
+
+    Enum.reduce(params, changeset, fn {key, _val}, acc ->
+      if to_string(key) in keys do
+        acc
+      else
+        add_error(acc, :base, "unknown option #{inspect(key)} provided")
+      end
+    end)
+  end
+
+  defp validate_replace(changeset) do
+    invalid_state = fn replace ->
+      replace
+      |> Keyword.keys()
+      |> Enum.any?(&(&1 not in states()))
+    end
+
+    invalid_field = fn replace ->
+      replace
+      |> Keyword.values()
+      |> List.flatten()
+      |> Enum.any?(&(&1 not in @replace_options))
+    end
+
+    replace = get_change(changeset, :replace)
+
+    cond do
+      is_list(replace) and invalid_state.(replace) ->
+        add_error(changeset, :replace, "has an invalid state")
+
+      is_list(replace) and invalid_field.(replace) ->
+        add_error(changeset, :replace, "has an invalid field")
+
+      true ->
+        changeset
+    end
+  end
 
   defp validate_unique_opts(unique) do
     Enum.reduce_while(unique, :ok, fn {key, val}, _acc ->
