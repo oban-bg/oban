@@ -4,12 +4,13 @@ defmodule Oban.Integration.DatabaseTriggerTest do
   @moduletag :unboxed
 
   test "dispatching jobs from a queue via database trigger" do
-    name = start_supervised_oban!(
-      notifier: Oban.Notifiers.Postgres,
-      queues: [alpha: 5],
-      repo: UnboxedRepo,
-      prefix: "private"
-    )
+    name =
+      start_supervised_oban!(
+        notifier: Oban.Notifiers.Postgres,
+        queues: [alpha: 5],
+        repo: UnboxedRepo,
+        prefix: "private"
+      )
 
     Oban.insert!(name, Worker.new(%{ref: 1, action: "OK"}))
 

@@ -19,7 +19,7 @@ defmodule Oban.Integration.DynamicRepoTest do
       name: name,
       peer: Oban.Case.Peer,
       queues: [alpha: 1],
-      repo: DynamicRepo,
+      repo: DynamicRepo
     ]
 
     start_supervised!({Oban, opts})

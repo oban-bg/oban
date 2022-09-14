@@ -162,4 +162,3 @@ defmodule Oban.TelemetryTest do
     :telemetry.detach("oban-default-logger")
   end
 end
-
