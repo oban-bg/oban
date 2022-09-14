@@ -1,10 +1,9 @@
 defmodule Oban.Integration.ShutdownTest do
-  use Oban.Case
-
-  @moduletag :integration
+  use Oban.Case, async: true
 
   test "slow jobs are allowed to complete within the shutdown grace period" do
-    name = start_supervised_oban!(queues: [alpha: 3], shutdown_grace_period: 50)
+    name =
+      start_supervised_oban!(poll_interval: 10, queues: [alpha: 3], shutdown_grace_period: 50)
 
     %Job{id: id_1} = insert!(ref: 1, sleep: 10)
     %Job{id: id_2} = insert!(ref: 2, sleep: 4000)
@@ -19,7 +18,8 @@ defmodule Oban.Integration.ShutdownTest do
   end
 
   test "additional jobs aren't started after shutdown starts" do
-    name = start_supervised_oban!(queues: [alpha: 1], shutdown_grace_period: 10)
+    name =
+      start_supervised_oban!(poll_interval: 10, queues: [alpha: 1], shutdown_grace_period: 10)
 
     %Job{id: id_1} = insert!(ref: 1, sleep: 50)
     %Job{id: id_2} = insert!(ref: 2, sleep: 1)

@@ -1,11 +1,7 @@
 defmodule Oban.Integration.ExecutingTest do
-  use Oban.Case
+  use Oban.Case, async: true
 
   import ExUnit.CaptureLog
-
-  alias Oban.Plugins.Stager
-
-  @moduletag :integration
 
   describe "properties" do
     setup do
@@ -63,7 +59,7 @@ defmodule Oban.Integration.ExecutingTest do
   end
 
   test "jobs transitioned to available for running queues are executed" do
-    name = start_supervised_oban!(plugins: [{Stager, interval: 25}], queues: [alpha: 3])
+    name = start_supervised_oban!(poll_interval: 25, queues: [alpha: 3])
 
     job_1 = insert!(%{ref: 1, action: "OK"}, queue: "alpha", state: "completed")
     job_2 = insert!(%{ref: 2, action: "OK"}, queue: "alpha", state: "discarded")
@@ -76,7 +72,7 @@ defmodule Oban.Integration.ExecutingTest do
   end
 
   test "ignoring available jobs that have exceeded max attempts" do
-    start_supervised_oban!(plugins: [{Stager, interval: 25}], queues: [alpha: 3])
+    start_supervised_oban!(poll_interval: 25, queues: [alpha: 3])
 
     insert!(%{ref: 1, action: "OK"}, queue: "alpha", state: "available", attempt: 19)
     insert!(%{ref: 2, action: "OK"}, queue: "alpha", state: "available", attempt: 20)
@@ -86,7 +82,7 @@ defmodule Oban.Integration.ExecutingTest do
   end
 
   test "jobs that exceed the worker's timeout fail" do
-    start_supervised_oban!(queues: [alpha: 1])
+    start_supervised_oban!(poll_interval: 10, queues: [alpha: 1])
 
     job = insert!(ref: 1, sleep: 100, timeout: 20)
 

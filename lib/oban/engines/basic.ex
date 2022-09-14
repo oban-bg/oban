@@ -325,26 +325,16 @@ defmodule Oban.Engines.Basic do
   end
 
   defp return_or_replace(conf, query_opts, %{state: state} = job, changeset) do
-    case Changeset.get_change(changeset, :replace, []) do
-      [] ->
+    case Changeset.fetch_change(changeset, :replace) do
+      {:ok, replace} ->
+        job_state = String.to_existing_atom(state)
+        replace_keys = Keyword.get(replace, job_state, [])
+
+        replace_keys(conf, query_opts, job, changeset, replace_keys)
+
+      :error ->
         {:ok, job}
-
-      replace ->
-        if state_replace_option?(replace) do
-          job_state = String.to_existing_atom(state)
-          replace_keys = Keyword.get(replace, job_state, [])
-
-          replace_keys(conf, query_opts, job, changeset, replace_keys)
-        else
-          replace_keys(conf, query_opts, job, changeset, replace)
-        end
     end
-  end
-
-  def state_replace_option?(replace) do
-    all_states = Oban.Job.states()
-
-    Keyword.keyword?(replace) and Enum.all?(replace, fn {state, _} -> state in all_states end)
   end
 
   defp replace_keys(_conf, _query_opts, job, _changeset, []), do: {:ok, job}

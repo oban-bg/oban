@@ -1,9 +1,7 @@
-defmodule Oban.Integration.TestingModeTest do
+defmodule Oban.Integration.InlineModeTest do
   use Oban.Case, async: true
 
   alias Ecto.Multi
-
-  @moduletag :integration
 
   describe ":inline mode" do
     test "executing a single inserted job inline" do
