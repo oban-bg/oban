@@ -94,9 +94,36 @@ defmodule Oban.JobTest do
         Job.new(%{}, Keyword.put(opts, :worker, Fake)).changes[:replace]
       end
 
-      assert [:args] == changes.(replace_args: true)
-      assert [:tags] == changes.(replace: [:tags])
-      assert [:args, :tags] == changes.(replace: [:tags], replace_args: true)
+      assert [{:scheduled, [:args]} | _] = changes.(replace_args: true)
+      assert [{:scheduled, [:tags]} | _] = changes.(replace: [:tags])
+      assert [{:scheduled, [:args, :tags]} | _] = changes.(replace: [:tags], replace_args: true)
+    end
+
+    test "allows a subset of fields for replacement" do
+      changes = fn replace ->
+        Job.new(%{}, worker: Fake, replace: replace)
+      end
+
+      assert changes.([:args, :max_attempts, :meta, :priority]).valid?
+      assert changes.([:queue, :scheduled_at, :tags, :worker]).valid?
+      refute changes.([:state]).valid?
+      refute changes.([:errors]).valid?
+    end
+
+    test "allows a list of state specific overrides" do
+      changes = fn replace ->
+        Job.new(%{}, worker: Fake, replace: replace)
+      end
+
+      for state <- Job.states() do
+        changeset = changes.([{state, [:args]}])
+
+        assert changeset.valid?
+        assert [{^state, [:args]}] = changeset.changes[:replace]
+      end
+
+      refute changes.(sched: [:args]).valid?
+      refute changes.(scheduled: [:state]).valid?
     end
   end
 
