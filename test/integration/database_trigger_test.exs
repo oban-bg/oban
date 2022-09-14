@@ -1,4 +1,4 @@
-defmodule Oban.Integration.ControllingTest do
+defmodule Oban.Integration.DatabaseTriggerTest do
   use Oban.Case
 
   test "dispatching jobs from a queue via database trigger" do
