@@ -17,3 +17,17 @@ defmodule Oban.Test.DynamicRepo do
     {:ok, Oban.Test.Repo.config()}
   end
 end
+
+defmodule Oban.Test.MigrationRepo do
+  @moduledoc false
+
+  use Ecto.Repo,
+    otp_app: :oban,
+    adapter: Ecto.Adapters.Postgres
+
+  def init(_, _) do
+    config = Oban.Test.Repo.config()
+
+    {:ok, Keyword.delete(config, :pool)}
+  end
+end

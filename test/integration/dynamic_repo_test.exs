@@ -1,58 +1,29 @@
 defmodule Oban.Integration.DynamicRepoTest do
   use Oban.Case
 
-  import Ecto.Query
-
   alias Oban.Test.DynamicRepo
 
-  setup do
+  test "executing jobs using a dynamic repo" do
     {:ok, repo_pid} = start_supervised({DynamicRepo, name: nil})
 
-    DynamicRepo.put_dynamic_repo(repo_pid)
     DynamicRepo.put_dynamic_repo(nil)
 
-    on_exit(fn ->
-      DynamicRepo.put_dynamic_repo(repo_pid)
-    end)
+    on_exit(fn -> DynamicRepo.put_dynamic_repo(repo_pid) end)
 
-    {:ok, repo_pid: repo_pid}
-  end
+    name = make_ref()
 
-  test "job execution", context do
-    name = start_oban!(context.repo_pid, queues: [alpha: 1])
-    job_ref = insert_job!(name).ref
+    opts = [
+      get_dynamic_repo: fn -> repo_pid end,
+      name: name,
+      peer: Oban.Case.Peer,
+      queues: [alpha: 1],
+      repo: DynamicRepo,
+    ]
 
-    assert_receive {:ok, ^job_ref}
-  end
+    start_supervised!({Oban, opts})
 
-  test "rollback job insertion after transaction failure", context do
-    name = start_oban!(context.repo_pid, queues: [alpha: 1])
+    Oban.insert!(name, Worker.new(%{ref: 1, action: "OK"}))
 
-    {:ok, _app_repo_pid} =
-      start_supervised(%{DynamicRepo.child_spec(name: :app_repo) | id: :app_repo})
-
-    DynamicRepo.put_dynamic_repo(:app_repo)
-
-    ref = System.unique_integer([:positive, :monotonic])
-
-    assert {:error, :failure, :wat, %{job: %Oban.Job{args: %{ref: ^ref, action: "OK"}}}} =
-             name
-             |> Oban.insert(Ecto.Multi.new(), :job, Worker.new(%{ref: ref, action: "OK"}))
-             |> Ecto.Multi.run(:failure, fn _repo, _ -> {:error, :wat} end)
-             |> DynamicRepo.transaction()
-
-    refute_receive {:ok, ^ref}
-  end
-
-  defp start_oban!(repo_pid, opts) do
-    opts
-    |> Keyword.merge(repo: DynamicRepo, get_dynamic_repo: fn -> repo_pid end)
-    |> start_supervised_oban!()
-  end
-
-  defp insert_job!(oban_name) do
-    ref = System.unique_integer([:positive, :monotonic])
-    {:ok, job} = Oban.insert(oban_name, Worker.new(%{ref: ref, action: "OK"}))
-    %{ref: ref, job: job}
+    assert_receive {:ok, 1}
   end
 end
