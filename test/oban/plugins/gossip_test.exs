@@ -40,7 +40,6 @@ defmodule Oban.Plugins.GossipTest do
 
       name =
         start_supervised_oban!(
-          notifier: Oban.Notifiers.PG,
           plugins: [{Gossip, interval: 10}],
           queues: [alpha: 2, omega: 3]
         )
@@ -59,7 +58,7 @@ defmodule Oban.Plugins.GossipTest do
     test "slow producer calls don't crash gossip checks" do
       PluginTelemetryHandler.attach_plugin_events("plugin-gossip-handler")
 
-      name = start_supervised_oban!(plugins: [{Gossip, interval: 25}])
+      name = start_supervised_oban!(plugins: [{Gossip, interval: 10}])
 
       prod_name = Registry.via(name, {:producer, :slow_fake})
       start_supervised!({SlowFakeProducer, name: prod_name})

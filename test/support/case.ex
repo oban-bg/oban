@@ -6,7 +6,7 @@ defmodule Oban.Case do
   alias Ecto.Adapters.SQL.Sandbox
   alias Oban.Integration.Worker
   alias Oban.Job
-  alias Oban.Test.Repo
+  alias Oban.Test.{Repo, UnboxedRepo}
 
   defmodule Peer do
     @moduledoc false
@@ -24,31 +24,23 @@ defmodule Oban.Case do
 
       alias Oban.Integration.Worker
       alias Oban.{Config, Job, Peer}
-      alias Oban.Test.Repo
+      alias Oban.Test.{Repo, UnboxedRepo}
     end
   end
 
-  @delete_query """
-  DO $$BEGIN
-  DELETE FROM oban_jobs;
-  DELETE FROM oban_peers;
-  DELETE FROM private.oban_jobs;
-  DELETE FROM private.oban_peers;
-  END$$
-  """
-
   setup context do
-    unless context[:migration] do
+    if context[:unboxed] do
+      on_exit(fn ->
+        UnboxedRepo.delete_all(Oban.Job)
+        UnboxedRepo.delete_all(Oban.Job, prefix: "private")
+      end)
+    else
       pid = Sandbox.start_owner!(Repo, shared: not context[:async])
 
       on_exit(fn -> Sandbox.stop_owner(pid) end)
     end
 
     :ok
-  end
-
-  def delete_oban_data! do
-    Repo.query!(@delete_query, [])
   end
 
   def start_supervised_oban!(opts) do
@@ -125,7 +117,7 @@ defmodule Oban.Case do
 
   # Attaching
 
-  defp attach_auto_allow(repo, name) do
+  defp attach_auto_allow(Repo, name) do
     telemetry_name = "oban-auto-allow-#{inspect(name)}"
 
     auto_allow = fn _event, _measure, %{conf: conf}, {name, repo, test_pid} ->
@@ -136,9 +128,11 @@ defmodule Oban.Case do
       telemetry_name,
       [[:oban, :engine, :init, :start], [:oban, :plugin, :init]],
       auto_allow,
-      {name, repo, self()}
+      {name, Repo, self()}
     )
 
     on_exit(name, fn -> :telemetry.detach(telemetry_name) end)
   end
+
+  defp attach_auto_allow(_repo, _name), do: :ok
 end

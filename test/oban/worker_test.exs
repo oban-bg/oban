@@ -1,5 +1,5 @@
 defmodule Oban.WorkerTest do
-  use Oban.Case, async: false
+  use Oban.Case, async: true
 
   doctest Oban.Worker
 

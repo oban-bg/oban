@@ -3,5 +3,6 @@ if function_exported?(Code, :put_compiler_option, 2) do
 end
 
 Oban.Test.Repo.start_link()
+Oban.Test.UnboxedRepo.start_link()
 ExUnit.start()
 Ecto.Adapters.SQL.Sandbox.mode(Oban.Test.Repo, :manual)
