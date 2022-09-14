@@ -186,12 +186,12 @@ defmodule Oban.Plugins.Reindexer do
       rec record;
     BEGIN
       FOR rec IN
-        SELECT relnamespace, relname
+        SELECT relname, relnamespace::regnamespace AS namespace
         FROM pg_index i
         JOIN pg_class c on c.oid = i.indexrelid
         WHERE relnamespace = '#{state.conf.prefix}'::regnamespace
           AND NOT indisvalid
-          AND starts_with(relname, 'oban_jobs')
+          AND starts_with(relname, 'index_oban_jobs')
       LOOP
         EXECUTE format('DROP INDEX %s.%s', rec.namespace, rec.relname);
       END LOOP;
