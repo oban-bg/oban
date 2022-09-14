@@ -3,9 +3,17 @@ defmodule Oban.MigrationsTest do
 
   import Oban.Migrations, only: [initial_version: 0, current_version: 0, migrated_version: 2]
 
+  alias Oban.Test.MigrationRepo
+
   @arbitrary_checks 20
 
-  @moduletag :integration
+  @moduletag :migration
+
+  setup do
+    start_supervised!(MigrationRepo)
+
+    :ok
+  end
 
   defmodule StepMigration do
     use Ecto.Migration
@@ -57,7 +65,7 @@ defmodule Oban.MigrationsTest do
     for up <- initial_version()..current_version() do
       Application.put_env(:oban, :up_version, up)
 
-      assert :ok = Ecto.Migrator.up(Repo, @base_version + up, StepMigration)
+      assert :ok = Ecto.Migrator.up(MigrationRepo, @base_version + up, StepMigration)
       assert migrated_version() == up
     end
 
@@ -66,13 +74,13 @@ defmodule Oban.MigrationsTest do
     assert migrated_version() == current_version()
 
     Application.put_env(:oban, :down_version, 2)
-    assert :ok = Ecto.Migrator.down(Repo, @base_version + 2, StepMigration)
+    assert :ok = Ecto.Migrator.down(MigrationRepo, @base_version + 2, StepMigration)
 
     assert table_exists?("oban_jobs")
     assert migrated_version() == 1
 
     Application.put_env(:oban, :down_version, 1)
-    assert :ok = Ecto.Migrator.down(Repo, @base_version + 1, StepMigration)
+    assert :ok = Ecto.Migrator.down(MigrationRepo, @base_version + 1, StepMigration)
 
     refute table_exists?("oban_jobs")
     refute table_exists?("oban_peers")
@@ -81,19 +89,19 @@ defmodule Oban.MigrationsTest do
   end
 
   test "migrating up and down between default versions" do
-    assert :ok = Ecto.Migrator.up(Repo, @base_version, DefaultMigration)
+    assert :ok = Ecto.Migrator.up(MigrationRepo, @base_version, DefaultMigration)
 
     assert table_exists?("oban_jobs")
     assert migrated_version() == current_version()
 
     # Migrating once more to replicate multiple migrations that don't specify a version.
-    assert :ok = Ecto.Migrator.up(Repo, @base_version + 1, DefaultMigration)
-    assert :ok = Ecto.Migrator.down(Repo, @base_version + 1, DefaultMigration)
+    assert :ok = Ecto.Migrator.up(MigrationRepo, @base_version + 1, DefaultMigration)
+    assert :ok = Ecto.Migrator.down(MigrationRepo, @base_version + 1, DefaultMigration)
 
     refute table_exists?("oban_jobs")
 
     # Migrating once more to replicate multiple migrations that don't specify a version.
-    assert :ok = Ecto.Migrator.down(Repo, @base_version, DefaultMigration)
+    assert :ok = Ecto.Migrator.down(MigrationRepo, @base_version, DefaultMigration)
   after
     clear_migrated()
   end
@@ -110,8 +118,8 @@ defmodule Oban.MigrationsTest do
       Application.put_env(:oban, :up_version, up)
       Application.put_env(:oban, :down_version, down)
 
-      assert :ok = Ecto.Migrator.up(Repo, @base_version, StepMigration)
-      assert :ok = Ecto.Migrator.down(Repo, @base_version, StepMigration)
+      assert :ok = Ecto.Migrator.up(MigrationRepo, @base_version, StepMigration)
+      assert :ok = Ecto.Migrator.down(MigrationRepo, @base_version, StepMigration)
 
       clear_migrated()
     end)
@@ -119,7 +127,7 @@ defmodule Oban.MigrationsTest do
 
   test "skipping schema creation when schema doesn't exist" do
     assert_raise Postgrex.Error, fn ->
-      Ecto.Migrator.up(Repo, @base_version, DefaultMigrationNoSchemaCreation)
+      Ecto.Migrator.up(MigrationRepo, @base_version, DefaultMigrationNoSchemaCreation)
     end
 
     refute table_exists?("oban_jobs")
@@ -129,9 +137,9 @@ defmodule Oban.MigrationsTest do
   end
 
   test "skipping schema creation when schema does exist" do
-    Repo.query!("CREATE SCHEMA IF NOT EXISTS migrating")
+    MigrationRepo.query!("CREATE SCHEMA IF NOT EXISTS migrating")
 
-    assert :ok = Ecto.Migrator.up(Repo, @base_version, DefaultMigrationNoSchemaCreation)
+    assert :ok = Ecto.Migrator.up(MigrationRepo, @base_version, DefaultMigrationNoSchemaCreation)
 
     assert table_exists?("oban_jobs")
     assert migrated_version() == current_version()
@@ -140,7 +148,7 @@ defmodule Oban.MigrationsTest do
   end
 
   defp migrated_version do
-    migrated_version(Repo, "migrating")
+    migrated_version(MigrationRepo, "migrating")
   end
 
   defp table_exists?(table) do
@@ -153,13 +161,13 @@ defmodule Oban.MigrationsTest do
     )
     """
 
-    {:ok, %{rows: [[bool]]}} = Repo.query(query)
+    {:ok, %{rows: [[bool]]}} = MigrationRepo.query(query)
 
     bool
   end
 
   defp clear_migrated do
-    Repo.query("DELETE FROM schema_migrations WHERE version >= #{@base_version}")
-    Repo.query("DROP SCHEMA IF EXISTS migrating CASCADE")
+    MigrationRepo.query("DELETE FROM schema_migrations WHERE version >= #{@base_version}")
+    MigrationRepo.query("DROP SCHEMA IF EXISTS migrating CASCADE")
   end
 end

@@ -21,9 +21,12 @@ defmodule Oban.Peers.PostgresTest do
 
     logged =
       capture_log(fn ->
-        name = start_supervised_oban!(peer: Postgres, plugins: [])
+        name = start_supervised_oban!(peer: Postgres, plugins: false)
+        conf = Oban.config(name)
 
-        refute Peer.leader?(name)
+        start_supervised!({Peer, conf: conf, name: Peer})
+
+        refute Postgres.leader?(Peer)
       end)
 
     assert logged =~ "leadership is disabled"

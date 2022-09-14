@@ -37,20 +37,18 @@ defmodule Oban.Case do
   END$$
   """
 
-  setup tags do
-    # Within Sandbox mode everything happens in a transaction, which prevents the use of
-    # LISTEN/NOTIFY messages.
-    if tags[:integration] do
-      Repo.query!(@delete_query, [])
-
-      on_exit(fn -> Repo.query!(@delete_query, []) end)
-    else
-      pid = Sandbox.start_owner!(Repo, shared: not tags[:async])
+  setup context do
+    unless context[:migration] do
+      pid = Sandbox.start_owner!(Repo, shared: not context[:async])
 
       on_exit(fn -> Sandbox.stop_owner(pid) end)
     end
 
     :ok
+  end
+
+  def delete_oban_data! do
+    Repo.query!(@delete_query, [])
   end
 
   def start_supervised_oban!(opts) do

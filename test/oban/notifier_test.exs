@@ -1,72 +1,75 @@
 defmodule Oban.NotifierTest do
   use Oban.Case
 
+  alias Ecto.Adapters.SQL.Sandbox
   alias Oban.Notifier
-
-  @moduletag :integration
 
   for notifier <- [Oban.Notifiers.PG, Oban.Notifiers.Postgres] do
     @notifier notifier
 
-    describe "using #{notifier}" do
+    describe "with #{inspect(notifier)}" do
       test "broadcasting notifications to subscribers" do
-        name = start_supervised_oban!(notifier: @notifier)
+        Sandbox.unboxed_run(Repo, fn ->
+          name = start_supervised_oban!(notifier: @notifier)
 
-        :ok = Notifier.listen(name, [:signal])
-        :ok = Notifier.notify(name, :signal, %{incoming: "message"})
+          :ok = Notifier.listen(name, [:signal])
+          :ok = Notifier.notify(name, :signal, %{incoming: "message"})
 
-        assert_receive {:notification, :signal, %{"incoming" => "message"}}
+          assert_receive {:notification, :signal, %{"incoming" => "message"}}
+        end)
       end
 
       test "notifying with complex types" do
-        name = start_supervised_oban!(notifier: @notifier)
+        Sandbox.unboxed_run(Repo, fn ->
+          name = start_supervised_oban!(notifier: @notifier)
 
-        Notifier.listen(name, [:insert, :gossip, :signal])
+          Notifier.listen(name, [:insert, :gossip, :signal])
 
-        Notifier.notify(name, :signal, %{
-          date: ~D[2021-08-09],
-          keyword: [a: 1, b: 1],
-          map: %{tuple: {1, :second}},
-          tuple: {1, :second}
-        })
+          Notifier.notify(name, :signal, %{
+            date: ~D[2021-08-09],
+            keyword: [a: 1, b: 1],
+            map: %{tuple: {1, :second}},
+            tuple: {1, :second}
+          })
 
-        assert_receive {:notification, :signal, notice}
-        assert %{"date" => "2021-08-09", "keyword" => [["a", 1], ["b", 1]]} = notice
-        assert %{"map" => %{"tuple" => [1, "second"]}, "tuple" => [1, "second"]} = notice
-
-        stop_supervised(name)
+          assert_receive {:notification, :signal, notice}
+          assert %{"date" => "2021-08-09", "keyword" => [["a", 1], ["b", 1]]} = notice
+          assert %{"map" => %{"tuple" => [1, "second"]}, "tuple" => [1, "second"]} = notice
+        end)
       end
 
       test "broadcasting on select channels" do
-        name = start_supervised_oban!(notifier: @notifier)
+        Sandbox.unboxed_run(Repo, fn ->
+          name = start_supervised_oban!(notifier: @notifier)
 
-        :ok = Notifier.listen(name, [:signal, :gossip])
-        :ok = Notifier.unlisten(name, [:gossip])
+          :ok = Notifier.listen(name, [:signal, :gossip])
+          :ok = Notifier.unlisten(name, [:gossip])
 
-        :ok = Notifier.notify(name, :gossip, %{foo: "bar"})
-        :ok = Notifier.notify(name, :signal, %{baz: "bat"})
+          :ok = Notifier.notify(name, :gossip, %{foo: "bar"})
+          :ok = Notifier.notify(name, :signal, %{baz: "bat"})
 
-        refute_receive {:notification, :gossip, _}
-        assert_receive {:notification, :signal, _}
+          assert_receive {:notification, :signal, _}
+          refute_received {:notification, :gossip, _}
+        end)
       end
 
       test "ignoring messages scoped to other instances" do
-        name = start_supervised_oban!(notifier: @notifier)
+        Sandbox.unboxed_run(Repo, fn ->
+          name = start_supervised_oban!(notifier: @notifier)
 
-        :ok = Notifier.listen(name, [:gossip, :signal])
+          :ok = Notifier.listen(name, [:gossip, :signal])
 
-        ident =
-          name
-          |> Oban.config()
-          |> Config.to_ident()
+          ident =
+            name
+            |> Oban.config()
+            |> Config.to_ident()
 
-        :ok = Notifier.notify(name, :gossip, %{foo: "bar", ident: ident})
-        :ok = Notifier.notify(name, :signal, %{foo: "baz", ident: "bogus.ident"})
+          :ok = Notifier.notify(name, :gossip, %{foo: "bar", ident: ident})
+          :ok = Notifier.notify(name, :signal, %{foo: "baz", ident: "bogus.ident"})
 
-        assert_receive {:notification, :gossip, _}
-        refute_receive {:notification, :signal, _}
-
-        stop_supervised(name)
+          assert_receive {:notification, :gossip, _}
+          refute_received {:notification, :signal, _}
+        end)
       end
     end
   end
