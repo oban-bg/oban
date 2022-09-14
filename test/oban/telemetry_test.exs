@@ -1,5 +1,5 @@
 defmodule Oban.TelemetryTest do
-  use Oban.Case, async: true
+  use Oban.Case
 
   import ExUnit.CaptureLog
 

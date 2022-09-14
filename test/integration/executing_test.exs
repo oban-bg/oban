@@ -1,57 +1,48 @@
 defmodule Oban.Integration.ExecutingTest do
-  use Oban.Case, async: true
+  use Oban.Case
 
-  import ExUnit.CaptureLog
+  @tag :capture_log
+  property "jobs inserted into running queues are executed" do
+    name = start_supervised_oban!(poll_interval: 25, queues: [alpha: 3, omega: 3])
 
-  describe "properties" do
-    setup do
-      name = start_supervised_oban!(queues: [alpha: 3, beta: 3, gamma: 3, delta: 3])
+    check all jobs <- list_of(job()), max_runs: 20 do
+      for job <- Oban.insert_all(name, jobs) do
+        %{args: %{"ref" => ref, "action" => action}, id: id, max_attempts: max} = job
 
-      {:ok, name: name}
-    end
+        assert_receive {_, ^ref}
 
-    property "jobs inserted into running queues are executed", context do
-      check all jobs <- list_of(job()), max_runs: 40 do
-        capture_log(fn ->
-          for job <- Oban.insert_all(context.name, jobs) do
-            %{args: %{"ref" => ref, "action" => action}, id: id, max_attempts: max} = job
+        with_backoff([total: 20, sleep: 1], fn ->
+          job = Repo.get(Job, id)
 
-            assert_receive {_, ^ref}
+          assert job.attempt == 1
+          assert job.attempted_at
+          assert job.state == action_to_state(action, max)
 
-            with_backoff(fn ->
-              job = Repo.get(Job, id)
+          case job.state do
+            "completed" ->
+              assert job.completed_at
 
-              assert job.attempt == 1
-              assert job.attempted_at
-              assert job.state == action_to_state(action, max)
+            "cancelled" ->
+              refute job.completed_at
+              assert job.cancelled_at
+              assert [%{"attempt" => _, "at" => _, "error" => _} | _] = job.errors
 
-              case job.state do
-                "completed" ->
-                  assert job.completed_at
+            "discarded" ->
+              refute job.completed_at
+              assert job.discarded_at
+              assert [%{"attempt" => _, "at" => _, "error" => _} | _] = job.errors
 
-                "cancelled" ->
-                  refute job.completed_at
-                  assert job.cancelled_at
-                  assert [%{"attempt" => _, "at" => _, "error" => _} | _] = job.errors
+            "retryable" ->
+              refute job.completed_at
+              assert DateTime.compare(job.scheduled_at, DateTime.utc_now()) == :gt
+              assert length(job.errors) > 0
+              assert [%{"attempt" => 1, "at" => _, "error" => _} | _] = job.errors
+              assert job.attempt < job.max_attempts
 
-                "discarded" ->
-                  refute job.completed_at
-                  assert job.discarded_at
-                  assert [%{"attempt" => _, "at" => _, "error" => _} | _] = job.errors
-
-                "retryable" ->
-                  refute job.completed_at
-                  assert DateTime.compare(job.scheduled_at, DateTime.utc_now()) == :gt
-                  assert length(job.errors) > 0
-                  assert [%{"attempt" => 1, "at" => _, "error" => _} | _] = job.errors
-                  assert job.attempt < job.max_attempts
-
-                "scheduled" ->
-                  refute job.completed_at
-                  assert DateTime.compare(job.scheduled_at, DateTime.utc_now()) == :gt
-                  assert job.max_attempts > 1
-              end
-            end)
+            "scheduled" ->
+              refute job.completed_at
+              assert DateTime.compare(job.scheduled_at, DateTime.utc_now()) == :gt
+              assert job.max_attempts > 1
           end
         end)
       end
@@ -94,7 +85,7 @@ defmodule Oban.Integration.ExecutingTest do
   end
 
   defp job do
-    gen all queue <- member_of(~w(alpha beta gamma delta)),
+    gen all queue <- member_of(~w(alpha omega)),
             action <-
               member_of(~w(OK CANCEL DISCARD ERROR EXIT FAIL KILL SNOOZE TASK_ERROR TASK_EXIT)),
             ref <- integer(),

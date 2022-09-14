@@ -417,7 +417,7 @@ defmodule ObanTest do
       assert :ok = Oban.cancel_job(name, job_c.id)
       assert :ok = Oban.cancel_job(name, job_d.id)
 
-      refute_receive {:ok, 4}, 250
+      refute_receive {:ok, 4}, 50
 
       assert %Job{state: "cancelled", cancelled_at: %_{}} = Repo.reload(job_a)
       assert %Job{state: "cancelled", cancelled_at: %_{}} = Repo.reload(job_b)
@@ -439,7 +439,7 @@ defmodule ObanTest do
 
       assert {:ok, 3} = Oban.cancel_all_jobs(name, Job)
 
-      refute_receive {:ok, 4}, 250
+      refute_receive {:ok, 4}, 50
 
       assert %Job{state: "cancelled", cancelled_at: %_{}} = Repo.reload(job_a)
       assert %Job{state: "cancelled", cancelled_at: %_{}} = Repo.reload(job_b)

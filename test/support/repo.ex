@@ -18,7 +18,7 @@ defmodule Oban.Test.DynamicRepo do
   end
 end
 
-defmodule Oban.Test.MigrationRepo do
+defmodule Oban.Test.UnboxedRepo do
   @moduledoc false
 
   use Ecto.Repo,

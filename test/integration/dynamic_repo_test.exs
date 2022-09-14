@@ -3,6 +3,8 @@ defmodule Oban.Integration.DynamicRepoTest do
 
   alias Oban.Test.DynamicRepo
 
+  @moduletag :unboxed
+
   test "executing jobs using a dynamic repo" do
     {:ok, repo_pid} = start_supervised({DynamicRepo, name: nil})
 
