@@ -65,27 +65,17 @@ defmodule Oban.Engine do
   """
   @callback insert_job(conf(), Job.changeset(), opts()) :: {:ok, Job.t()} | {:error, term()}
 
-  @doc """
-  Insert a job within an `Ecto.Multi`.
-  """
-  @callback insert_job(conf(), Multi.t(), Multi.name(), Oban.changeset_or_fun(), opts()) ::
-              Multi.t()
+  @doc deprecated: "Handled automatically by engine dispatch."
+  @callback insert_job(conf(), Multi.t(), Multi.name(), [Job.changeset()], opts()) :: Multi.t()
 
   @doc """
   Insert multiple jobs into the database.
   """
-  @callback insert_all_jobs(conf(), Oban.changesets_or_wrapper(), opts()) :: [Job.t()]
+  @callback insert_all_jobs(conf(), [Job.changeset()], opts()) :: [Job.t()]
 
-  @doc """
-  Insert multiple jobs within an `Ecto.Multi`
-  """
-  @callback insert_all_jobs(
-              conf(),
-              Multi.t(),
-              Multi.name(),
-              Oban.changesets_or_wrapper_or_fun(),
-              opts()
-            ) :: Multi.t()
+  @doc deprecated: "Handled automatically by engine dispatch."
+  @callback insert_all_jobs(conf(), Multi.t(), Multi.name(), [Job.changeset()], opts()) ::
+              Multi.t()
 
   @doc """
   Fetch available jobs for the given queue, up to configured limits.
@@ -137,6 +127,8 @@ defmodule Oban.Engine do
   """
   @callback retry_all_jobs(conf(), queryable()) :: {:ok, non_neg_integer()}
 
+  @optional_callbacks [insert_all_jobs: 5, insert_job: 5]
+
   @doc false
   def init(%Config{} = conf, [_ | _] = opts) do
     with_span(:init, conf, fn engine ->
@@ -174,9 +166,7 @@ defmodule Oban.Engine do
 
   @doc false
   def insert_job(%Config{} = conf, %Changeset{} = changeset, opts) do
-    meta = %{changeset: changeset, opts: opts}
-
-    with_span(:insert_job, conf, meta, fn engine ->
+    with_span(:insert_job, conf, %{opts: opts}, fn engine ->
       with {:ok, job} <- engine.insert_job(conf, changeset, opts) do
         {:meta, {:ok, job}, %{job: job}}
       end
@@ -184,29 +174,31 @@ defmodule Oban.Engine do
   end
 
   @doc false
-  def insert_job(%Config{} = conf, %Multi{} = multi, name, changeset, opts) do
-    meta = %{changeset: changeset, opts: opts}
+  def insert_job(%Config{} = conf, %Multi{} = multi, name, fun, opts) when is_function(fun, 1) do
+    Multi.run(multi, name, fn repo, changes ->
+      insert_job(%{conf | repo: repo}, fun.(changes), opts)
+    end)
+  end
 
-    with_span(:insert_job, conf, meta, fn engine ->
-      engine.insert_job(conf, multi, name, changeset, opts)
+  def insert_job(%Config{} = conf, %Multi{} = multi, name, changeset, opts) do
+    Multi.run(multi, name, fn repo, _changes ->
+      insert_job(%{conf | repo: repo}, changeset, opts)
     end)
   end
 
   @doc false
   def insert_all_jobs(%Config{} = conf, changesets, opts) do
-    meta = %{changesets: changesets, opts: opts}
+    with_span(:insert_all_jobs, conf, %{opts: opts}, fn engine ->
+      jobs = engine.insert_all_jobs(conf, expand(changesets, %{}), opts)
 
-    with_span(:insert_all_jobs, conf, meta, fn engine ->
-      engine.insert_all_jobs(conf, changesets, opts)
+      {:meta, jobs, %{jobs: jobs}}
     end)
   end
 
   @doc false
-  def insert_all_jobs(%Config{} = conf, %Multi{} = multi, name, changesets, opts) do
-    meta = %{changesets: changesets, opts: opts}
-
-    with_span(:insert_all_jobs, conf, meta, fn engine ->
-      engine.insert_all_jobs(conf, multi, name, changesets, opts)
+  def insert_all_jobs(%Config{} = conf, %Multi{} = multi, name, wrapper, opts) do
+    Multi.run(multi, name, fn repo, changes ->
+      {:ok, insert_all_jobs(%{conf | repo: repo}, expand(wrapper, changes), opts)}
     end)
   end
 
@@ -272,6 +264,10 @@ defmodule Oban.Engine do
       engine.retry_all_jobs(conf, queryable)
     end)
   end
+
+  defp expand(fun, changes) when is_function(fun, 1), do: expand(fun.(changes), changes)
+  defp expand(%{changesets: changesets}, _), do: expand(changesets, %{})
+  defp expand(changesets, _) when is_list(changesets), do: changesets
 
   defp with_span(event, %Config{} = conf, base_meta \\ %{}, fun) do
     base_meta = Map.merge(base_meta, %{conf: conf, engine: conf.engine})

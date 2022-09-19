@@ -3,7 +3,7 @@ defmodule ObanTest do
 
   alias Ecto.Adapters.SQL.Sandbox
   alias Ecto.Multi
-  alias Oban.Registry
+  alias Oban.{Registry, TelemetryHandler}
 
   @opts [repo: Repo, testing: :manual]
 
@@ -39,9 +39,13 @@ defmodule ObanTest do
     setup :start_supervised_oban
 
     test "inserting a single job" do
+      TelemetryHandler.attach_events()
+
       name = start_supervised_oban!(testing: :manual)
 
-      assert {:ok, %Job{}} = Oban.insert(name, Worker.new(%{ref: 1}))
+      assert {:ok, job} = Oban.insert(name, Worker.new(%{ref: 1}))
+
+      assert_receive {:event, [:insert_job, :stop], _, %{job: ^job, opts: []}}
     end
 
     @tag :unique
@@ -268,6 +272,8 @@ defmodule ObanTest do
     setup :start_supervised_oban
 
     test "inserting multiple jobs within a multi", %{name: name} do
+      TelemetryHandler.attach_events()
+
       multi = Multi.new()
       multi = Oban.insert(name, multi, :job_1, Worker.new(%{ref: 1}))
       multi = Oban.insert(name, multi, "job-2", fn _ -> Worker.new(%{ref: 2}) end)
@@ -279,6 +285,10 @@ defmodule ObanTest do
       assert job_1.id
       assert job_2.id
       assert job_3.id
+
+      assert_receive {:event, [:insert_job, :stop], _, %{job: ^job_1, opts: []}}
+      assert_receive {:event, [:insert_job, :stop], _, %{job: ^job_2, opts: []}}
+      assert_receive {:event, [:insert_job, :stop], _, %{job: ^job_3, opts: []}}
     end
 
     @tag :unique
@@ -313,6 +323,8 @@ defmodule ObanTest do
     setup :start_supervised_oban
 
     test "inserting multiple jobs", %{name: name} do
+      TelemetryHandler.attach_events()
+
       changesets = Enum.map(0..2, &Worker.new(%{ref: &1}, queue: "special", schedule_in: 10))
       jobs = Oban.insert_all(name, changesets)
 
@@ -324,6 +336,8 @@ defmodule ObanTest do
       assert job.id
       assert job.args
       assert job.scheduled_at
+
+      assert_receive {:event, [:insert_all_jobs, :stop], _, %{jobs: _, opts: []}}
     end
 
     test "inserting multiple jobs from a changeset wrapper", %{name: name} do
@@ -349,6 +363,8 @@ defmodule ObanTest do
     setup :start_supervised_oban
 
     test "inserting multiple jobs within a multi", %{name: name} do
+      TelemetryHandler.attach_events()
+
       changesets_1 = Enum.map(1..2, &Worker.new(%{ref: &1}))
       changesets_2 = Enum.map(3..4, &Worker.new(%{ref: &1}))
       changesets_3 = Enum.map(5..6, &Worker.new(%{ref: &1}))
@@ -365,6 +381,8 @@ defmodule ObanTest do
       assert [%Job{}, %Job{}] = jobs_1
       assert [%Job{}, %Job{}] = jobs_2
       assert [%Job{}, %Job{}] = jobs_3
+
+      assert_receive {:event, [:insert_all_jobs, :stop], _, %{jobs: _, opts: []}}
     end
 
     test "inserting multiple jobs from a changeset wrapper", %{name: name} do

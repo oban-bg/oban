@@ -58,38 +58,14 @@ defmodule Oban.Engines.Basic do
   end
 
   @impl Engine
-  def insert_job(%Config{} = conf, %Multi{} = multi, name, fun, opts) when is_function(fun, 1) do
-    Multi.run(multi, name, fn repo, changes ->
-      insert_unique(%{conf | repo: repo}, fun.(changes), opts)
-    end)
-  end
-
-  @impl Engine
-  def insert_job(%Config{} = conf, %Multi{} = multi, name, changeset, opts) do
-    Multi.run(multi, name, fn repo, _changes ->
-      insert_unique(%{conf | repo: repo}, changeset, opts)
-    end)
-  end
-
-  @impl Engine
   def insert_all_jobs(%Config{} = conf, changesets, opts) do
-    entries =
-      changesets
-      |> expand(%{})
-      |> Enum.map(&Job.to_map/1)
+    entries = Enum.map(changesets, &Job.to_map/1)
 
     opts = Keyword.merge(opts, on_conflict: :nothing, returning: true)
 
     conf
     |> Repo.insert_all(Job, entries, opts)
     |> elem(1)
-  end
-
-  @impl Engine
-  def insert_all_jobs(%Config{} = conf, %Multi{} = multi, name, wrapper, opts) do
-    Multi.run(multi, name, fn repo, changes ->
-      {:ok, insert_all_jobs(%{conf | repo: repo}, expand(wrapper, changes), opts)}
-    end)
   end
 
   @impl Engine
@@ -432,13 +408,6 @@ defmodule Oban.Engines.Basic do
       _ -> nil
     end
   end
-
-  # Changeset Helpers
-
-  @doc false
-  def expand(fun, changes) when is_function(fun, 1), do: expand(fun.(changes), changes)
-  def expand(%{changesets: changesets}, _), do: expand(changesets, %{})
-  def expand(changesets, _) when is_list(changesets), do: changesets
 
   # Other Helpers
 

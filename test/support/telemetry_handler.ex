@@ -6,18 +6,18 @@ defmodule Oban.TelemetryHandler do
 
   import ExUnit.Callbacks, only: [on_exit: 1]
 
+  @span_tail [:start, :stop, :exception]
+  @span_type [:job, :plugin, [:engine, :insert_job], [:engine, :insert_all_jobs]]
+
   def attach_events do
     name = name()
 
-    events = [
-      [:oban, :job, :start],
-      [:oban, :job, :stop],
-      [:oban, :job, :exception],
-      [:oban, :plugin, :start],
-      [:oban, :plugin, :stop],
-      [:oban, :plugin, :exception],
-      [:oban, :supervisor, :init]
-    ]
+    events =
+      for type <- @span_type, tail <- @span_tail do
+        List.flatten([:oban, type, tail])
+      end
+
+    events = [[:oban, :supervisor, :init] | events]
 
     on_exit(fn -> :telemetry.detach(name) end)
 
@@ -36,12 +36,16 @@ defmodule Oban.TelemetryHandler do
     send(pid, {:event, event, duration, meta})
   end
 
-  def handle([:oban, :plugin, event], measurements, meta, pid) do
-    send(pid, {:event, event, measurements, meta})
+  def handle([:oban, :engine | event], measure, meta, pid) do
+    send(pid, {:event, event, measure, meta})
   end
 
-  def handle(event, measurements, meta, pid) do
-    send(pid, {:event, event, measurements, meta})
+  def handle([:oban, :plugin, event], measure, meta, pid) do
+    send(pid, {:event, event, measure, meta})
+  end
+
+  def handle(event, measure, meta, pid) do
+    send(pid, {:event, event, measure, meta})
   end
 
   defp name, do: "handler-#{System.unique_integer([:positive])}"
