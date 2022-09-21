@@ -103,6 +103,7 @@ defmodule Oban.Engines.Inline do
   defp execute_job(conf, changeset) do
     changeset =
       changeset
+      |> Changeset.put_change(:attempt, 1)
       |> Changeset.put_change(:attempted_by, [conf.node])
       |> Changeset.put_change(:attempted_at, utc_now())
       |> Changeset.put_change(:scheduled_at, utc_now())
