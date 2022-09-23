@@ -66,7 +66,7 @@ defmodule Oban.Config do
       if opts[:testing] in [:manual, :inline] do
         opts
         |> Keyword.put(:queues, [])
-        |> Keyword.put(:peer, false)
+        |> Keyword.put(:peer, Oban.Peers.Disabled)
         |> Keyword.put(:plugins, [])
       else
         opts
@@ -325,6 +325,7 @@ defmodule Oban.Config do
     opts
     |> crontab_to_plugin()
     |> poll_interval_to_plugin()
+    |> peer_to_disabled()
     |> Keyword.put_new(:node, node_name())
     |> Keyword.update(:plugins, [], &(&1 || []))
     |> Keyword.update(:queues, [], &(&1 || []))
@@ -364,6 +365,19 @@ defmodule Oban.Config do
 
       _ ->
         Keyword.drop(opts, [:poll_interval])
+    end
+  end
+
+  defp peer_to_disabled(opts) do
+    cond do
+      opts[:peer] == false ->
+        Keyword.put(opts, :peer, Oban.Peers.Disabled)
+
+      is_nil(opts[:peer]) and opts[:plugins] in [[], false] ->
+        Keyword.put(opts, :peer, Oban.Peers.Disabled)
+
+      true ->
+        opts
     end
   end
 

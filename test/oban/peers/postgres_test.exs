@@ -7,8 +7,8 @@ defmodule Oban.Peers.PostgresTest do
   alias Oban.Peers.Postgres
 
   test "only a single peer is leader" do
-    name = start_supervised_oban!(peer: Postgres, plugins: false)
-    conf = Oban.config(name)
+    name = start_supervised_oban!(peer: false)
+    conf = %{Oban.config(name) | peer: Postgres}
 
     assert [_leader] =
              [A, B, C]

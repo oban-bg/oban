@@ -13,7 +13,7 @@ defmodule Oban.Case do
 
     def start_link(opts), do: Agent.start_link(fn -> true end, name: opts[:name])
 
-    def leader?(pid, _timeout), do: Agent.get(pid, & &1)
+    def leader?(_pid, _timeout \\ nil), do: true
   end
 
   using do

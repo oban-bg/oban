@@ -212,10 +212,10 @@ defmodule Oban do
   def init(%Config{plugins: plugins, queues: queues} = conf) do
     children = [
       {Notifier, conf: conf, name: Registry.via(conf.name, Notifier)},
-      {Midwife, conf: conf, name: Registry.via(conf.name, Midwife)}
+      {Midwife, conf: conf, name: Registry.via(conf.name, Midwife)},
+      {Peer, conf: conf, name: Registry.via(conf.name, Peer)}
     ]
 
-    children = children ++ peer_child_spec(conf)
     children = children ++ Enum.map(plugins, &plugin_child_spec(&1, conf))
     children = children ++ Enum.map(queues, &QueueSupervisor.child_spec(&1, conf))
     children = children ++ event_child_spec(conf)
@@ -923,14 +923,6 @@ defmodule Oban do
   end
 
   ## Child Spec Helpers
-
-  defp peer_child_spec(conf) do
-    case conf do
-      %{peer: false} -> []
-      %{plugins: []} -> []
-      _ -> [{Peer, conf: conf, name: Registry.via(conf.name, Peer)}]
-    end
-  end
 
   defp plugin_child_spec({module, opts}, conf) do
     name = Registry.via(conf.name, {:plugin, module})

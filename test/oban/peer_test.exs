@@ -7,14 +7,12 @@ defmodule Oban.PeerTest do
     test "leadership is disabled when peer is false" do
       name = start_supervised_oban!(peer: false)
 
-      refute Registry.whereis(name, Peer)
       refute Peer.leader?(name)
     end
 
     test "leadership is disabled along with plugins" do
-      name = start_supervised_oban!(plugins: false)
+      name = start_supervised_oban!(peer: nil, plugins: false)
 
-      refute Registry.whereis(name, Peer)
       refute Peer.leader?(name)
     end
   end
@@ -30,8 +28,8 @@ defmodule Oban.PeerTest do
       end
 
       test "leadership transfers to another peer when the leader exits" do
-        name = start_supervised_oban!(peer: @peer, plugins: false)
-        conf = Oban.config(name)
+        name = start_supervised_oban!(plugins: false)
+        conf = %{Oban.config(name) | peer: @peer}
 
         peer_a = start_supervised!({Peer, conf: conf, name: Peer.A})
 

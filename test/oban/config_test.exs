@@ -129,7 +129,7 @@ defmodule Oban.ConfigTest do
     end
 
     test ":testing in :manual mode disables queues, peer, and plugins" do
-      assert %Config{queues: [], plugins: [], peer: false} =
+      assert %Config{queues: [], plugins: [], peer: Oban.Peers.Disabled} =
                conf(queues: [alpha: 1], plugins: [Pruner], testing: :manual)
     end
 
@@ -147,6 +147,11 @@ defmodule Oban.ConfigTest do
       assert has_plugin?(Stager, poll_interval: 2000)
 
       refute has_plugin?(Stager, plugins: false, poll_interval: 2000)
+    end
+
+    test "translating peer false to the disabled module" do
+      assert %Config{peer: Oban.Peers.Disabled} = conf(peer: false)
+      assert %Config{peer: Oban.Peers.Disabled} = conf(plugins: false)
     end
   end
 
