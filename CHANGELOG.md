@@ -51,6 +51,21 @@ other "extension" modules. For the sake of consistency with notifiers and peers,
 the Basic and Inline engines are now `Oban.Engines.Basic` and
 `Oban.Engines.Inline`, respectively.
 
+## v2.13.4 — 2022-09-23
+
+### Bug Fixes
+
+- [Oban] Fix dialyzer ambiguity for `insert_all/2` when using a custom name
+  rather than options.
+
+- [Testing] Increment attempt when executing with `:inline` testing mode
+
+  Inline testing mode neglected to increment the `attempt` and left it at 0.
+  That caused jobs with a single attempt to erroneously report `failure` rather
+  than a `discard` telemetry event.
+
+- [Reindexer] Correct namespace reference in reindexer query.
+
 ## v2.13.3 — 2022-09-07
 
 ### Bug Fixes
