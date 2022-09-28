@@ -30,12 +30,26 @@ defmodule Oban.Plugins.Lifeline do
         plugins: [{Oban.Plugins.Lifeline, rescue_after: :timer.minutes(5)}],
         ...
 
+  If you want a more granular option, you can also override the default period
+  to rescue specific Oban workers by their names:
+
+      config :my_app, Oban,
+        plugins: [{Oban.Plugins.Lifeline, worker_overrides: [{MyApp.MyWorker, :timer.minutes(5)}]],
+        ...
+
   ## Options
 
   * `:interval` — the number of milliseconds between rescue attempts. The default is `60_000ms`.
 
   * `:rescue_after` — the maximum amount of time, in milliseconds, that a job may execute before
   being rescued. 60 minutes by default, and rescuing is performed once a minute.
+
+  * :`:worker_overrides` - allows to override the maximum amount of time, in
+  milliseconds, that an specific Oban Worker may execute before being
+  rescued.
+
+   * `:timeout` - time in milliseconds to wait for each query call to finish.
+   Defaults to 15 seconds.
 
   ## Instrumenting with Telemetry
 
@@ -67,7 +81,10 @@ defmodule Oban.Plugins.Lifeline do
       :name,
       :timer,
       interval: :timer.minutes(1),
-      rescue_after: :timer.minutes(60)
+      rescue_after: :timer.minutes(60),
+      worker_overrides: [],
+      excluded_worker_names: [],
+      timeout: :timer.seconds(15)
     ]
   end
 
@@ -84,6 +101,8 @@ defmodule Oban.Plugins.Lifeline do
       {:name, _} -> :ok
       {:interval, interval} -> Validation.validate_integer(:interval, interval)
       {:rescue_after, interval} -> Validation.validate_integer(:rescue_after, interval)
+      {:worker_overrides, overrides} -> validate_overrides(:worker_overrides, overrides)
+      {:timeout, timeout} -> Validation.validate_timeout(:timeout, timeout)
       option -> {:error, "unknown option provided: #{inspect(option)}"}
     end)
   end
@@ -91,6 +110,14 @@ defmodule Oban.Plugins.Lifeline do
   @impl GenServer
   def init(opts) do
     Validation.validate!(opts, &validate/1)
+
+    {excluded_worker_names, worker_overrides} = normalize_worker_overrides(opts)
+
+    opts =
+      Keyword.merge(opts,
+        worker_overrides: worker_overrides,
+        excluded_worker_names: excluded_worker_names
+      )
 
     state =
       State
@@ -143,18 +170,44 @@ defmodule Oban.Plugins.Lifeline do
 
   defp check_leadership_and_rescue_jobs(state) do
     if Peer.leader?(state.conf) do
-      Repo.transaction(state.conf, fn ->
-        time = DateTime.add(DateTime.utc_now(), -state.rescue_after, :millisecond)
-        base = where(Job, [j], j.state == "executing" and j.attempted_at < ^time)
+      Repo.transaction(
+        state.conf,
+        fn ->
+          now = DateTime.utc_now()
+          base = where(Job, [j], j.state == "executing")
 
-        {rescued_count, _} = transition_available(base, state)
-        {discard_count, _} = transition_discarded(base, state)
+          worker_counts =
+            for {worker, rescue_after} <- state.worker_overrides do
+              time = DateTime.add(now, -rescue_after, :millisecond)
+              query = where(base, [j], j.attempted_at < ^time and j.worker == ^worker)
+              run_transitions(query, state)
+            end
 
-        {rescued_count, discard_count}
-      end)
+          time = DateTime.add(now, -state.rescue_after, :millisecond)
+
+          query =
+            base
+            |> where([j], j.attempted_at < ^time)
+            |> exclude_workers(state.excluded_worker_names)
+
+          default_counts = run_transitions(query, state)
+
+          Enum.reduce(worker_counts, default_counts, fn {r, d}, {rescued_count, discard_count} ->
+            {rescued_count + r, discard_count + d}
+          end)
+        end,
+        timeout: state.timeout
+      )
     else
       {:ok, 0, 0}
     end
+  end
+
+  defp run_transitions(query, state) do
+    {rescued_count, _} = transition_available(query, state)
+    {discard_count, _} = transition_discarded(query, state)
+
+    {rescued_count, discard_count}
   end
 
   defp transition_available(query, state) do
@@ -169,5 +222,31 @@ defmodule Oban.Plugins.Lifeline do
     Repo.update_all(state.conf, where(query, [j], j.attempt >= j.max_attempts),
       set: [state: "discarded", discarded_at: DateTime.utc_now()]
     )
+  end
+
+  defp validate_overrides(parent_key, overrides) do
+    Validation.validate(parent_key, overrides, fn
+      {worker, rescue_after} when is_atom(worker) and is_integer(rescue_after) ->
+        Validation.validate_integer(:rescue_after, rescue_after)
+
+      override ->
+        {:error, "expected #{inspect(parent_key)} to contain a tuple, got: #{inspect(override)}"}
+    end)
+  end
+
+  defp exclude_workers(queryable, []), do: queryable
+
+  defp exclude_workers(queryable, excluded_worker_names),
+    do: where(queryable, [j], j.worker not in ^excluded_worker_names)
+
+  defp normalize_worker_overrides(opts) do
+    opts
+    |> Keyword.get(:worker_overrides, [])
+    |> Enum.reduce({[], []}, fn {worker, rescue_after},
+                                {excluded_worker_names, worker_overrides} ->
+      worker_name = Oban.Worker.to_string(worker)
+
+      {[worker_name | excluded_worker_names], [{worker_name, rescue_after} | worker_overrides]}
+    end)
   end
 end
