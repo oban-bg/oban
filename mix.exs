@@ -80,6 +80,7 @@ defmodule Oban.MixProject do
       "guides/recipes/reporting-progress.md",
       "guides/recipes/expected-failures.md",
       "guides/recipes/splitting-queues.md",
+      "guides/recipes/migrating-from-other-languages.md",
 
       # Testing
       "guides/testing/testing.md",
