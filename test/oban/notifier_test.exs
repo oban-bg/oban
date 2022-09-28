@@ -12,7 +12,7 @@ defmodule Oban.NotifierTest do
         Sandbox.unboxed_run(Repo, fn ->
           name = start_supervised_oban!(notifier: @notifier)
 
-          :ok = Notifier.listen(name, [:signal])
+          :ok = Notifier.listen(name, :signal)
           :ok = Notifier.notify(name, :signal, %{incoming: "message"})
 
           assert_receive {:notification, :signal, %{"incoming" => "message"}}

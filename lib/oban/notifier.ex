@@ -63,7 +63,7 @@ defmodule Oban.Notifier do
 
   @type server :: GenServer.server()
   @type option :: {:name, module()} | {:conf, Config.t()}
-  @type channel :: :gossip | :insert | :leader | :signal
+  @type channel :: :gossip | :insert | :leader | :signal | :stager
 
   @doc "Starts a notifier"
   @callback start_link([option]) :: GenServer.on_start()
@@ -77,7 +77,7 @@ defmodule Oban.Notifier do
   @doc "Broadcast a notification in a channel"
   @callback notify(server(), channel :: channel(), payload :: [map()]) :: :ok
 
-  defguardp is_channel(channel) when channel in [:gossip, :insert, :leader, :signal]
+  defguardp is_channel(channel) when channel in [:gossip, :insert, :leader, :signal, :stager]
 
   @doc false
   def child_spec(opts) do
@@ -100,18 +100,24 @@ defmodule Oban.Notifier do
 
   Register to listen for all `:gossip` channel messages:
 
-      Oban.Notifier.listen([:gossip])
+      Oban.Notifier.listen(:gossip)
 
   Listen for messages on all channels:
 
-      Oban.Notifier.listen([:gossip, :insert, :leader, :signal])
+      Oban.Notifier.listen([:gossip, :insert, :leader, :signal, :stager])
 
   Listen for messages when using a custom Oban name:
 
       Oban.Notifier.listen(MyApp.MyOban, [:gossip, :signal])
   """
-  @spec listen(server(), [channel]) :: :ok
-  def listen(server \\ Oban, channels) when is_list(channels) do
+  @spec listen(server(), channel() | [channel()]) :: :ok
+  def listen(server \\ Oban, channels)
+
+  def listen(server, channel) when is_atom(channel) do
+    listen(server, [channel])
+  end
+
+  def listen(server, channels) when is_list(channels) do
     :ok = validate_channels!(channels)
 
     conf = Oban.config(server)
