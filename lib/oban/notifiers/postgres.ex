@@ -30,7 +30,8 @@ defmodule Oban.Notifiers.Postgres do
     gossip: "oban_gossip",
     insert: "oban_insert",
     leader: "oban_leader",
-    signal: "oban_signal"
+    signal: "oban_signal",
+    stager: "oban_stager"
   }
 
   defmodule State do
@@ -91,7 +92,7 @@ defmodule Oban.Notifiers.Postgres do
   end
 
   @impl Simple
-  def notify(server, channel, payload) when channel in [:gossip, :insert, :leader, :signal] do
+  def notify(server, channel, payload) when is_atom(channel) do
     with %State{conf: conf} <- Simple.call(server, :get_state) do
       full_channel = Map.fetch!(@mappings, channel)
 

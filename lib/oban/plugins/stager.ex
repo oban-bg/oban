@@ -1,21 +1,26 @@
 defmodule Oban.Plugins.Stager do
   @moduledoc """
-  Transition jobs to the `:available` state when:
+  Makes scheduled jobs available for execution and notifies the relevant queues.
 
-  * jobs are `:scheduled` and the current time is on or after the timestamp specified in `:scheduled_at`.
-  * jobs are `:retryable` and they don't reach the attempt limit specified by `:max_attempts`.
+  The Stager transitions jobs from `:scheduled` or `:retryable` to the `:available` state on or
+  after the timestamp specified in `:scheduled_at`. It is necessary for the execution of scheduled
+  and retryable jobs. As such, it's started by each Oban instance automatically unless `plugins:
+  false` is specified.
 
-  Besides changing the state of jobs, this plugin also uses PubSub to notify queues that they have
-  available jobs. This prevents every queue from polling independently and reduces database load.
+  It also alerts queues when they have available jobs to trigger execution. Normally, it notifies
+  via PubSub in a `:global` mode to minimize database load. When PubSub isn't available the Stager
+  falls back to `:local` mode and each queue polls independently.
 
-  This module is necessary for the execution of scheduled and retryable jobs. As such, it's started
-  by each Oban instance automatically unless `plugins: false` is specified.
+  Running in `:local` mode typically happens because Postgres is running behind a connection
+  pooler that prevents `LISTEN/NOTIFY` commands. To restore global mode, ensure
+  `Oban.Notifiers.Postgres` notifications work or switch to `Oban.Notifiers.PG`.
 
   ## Options
 
   * `:interval` - the number of milliseconds between database updates. This is directly tied to
     the resolution of _scheduled_ jobs. For example, with an `interval` of `5_000ms`, scheduled
     jobs are checked every 5 seconds. The default is `1_000ms`.
+
   * `:limit` — the number of jobs that will be staged each time the plugin runs. Defaults to
     `5,000`, which you can increase if staging can't keep up with your insertion rate or decrease
     if you're experiencing staging timeouts.
@@ -44,6 +49,8 @@ defmodule Oban.Plugins.Stager do
 
   alias Oban.{Job, Notifier, Peer, Plugin, Repo, Validation}
 
+  require Logger
+
   @type option :: Plugin.option() | {:interval, pos_integer()}
 
   defmodule State do
@@ -53,8 +60,12 @@ defmodule Oban.Plugins.Stager do
       :conf,
       :name,
       :timer,
+      interval: :timer.seconds(1),
       limit: 5_000,
-      interval: :timer.seconds(1)
+      mode: :global,
+      ping_at_tick: 0,
+      swap_at_tick: 5,
+      tick: 0
     ]
   end
 
@@ -81,14 +92,23 @@ defmodule Oban.Plugins.Stager do
 
     Process.flag(:trap_exit, true)
 
-    state =
-      State
-      |> struct!(opts)
-      |> schedule_staging()
+    state = struct!(State, opts)
 
     :telemetry.execute([:oban, :plugin, :init], %{}, %{conf: state.conf, plugin: __MODULE__})
 
-    {:ok, state}
+    {:ok, state, {:continue, :start}}
+  end
+
+  @impl GenServer
+  def handle_continue(:start, %State{} = state) do
+    Notifier.listen(state.conf.name, :stager)
+
+    state =
+      state
+      |> schedule_staging()
+      |> check_notify_mode()
+
+    {:noreply, state}
   end
 
   @impl GenServer
@@ -112,24 +132,31 @@ defmodule Oban.Plugins.Stager do
       end
     end)
 
-    {:noreply, schedule_staging(state)}
+    state =
+      state
+      |> schedule_staging()
+      |> check_notify_mode()
+
+    {:noreply, state}
+  end
+
+  def handle_info({:notification, :stager, _payload}, %State{} = state) do
+    {:noreply, %{state | ping_at_tick: 60, mode: :global, swap_at_tick: 65, tick: 0}}
   end
 
   defp check_leadership_and_stage(state) do
-    if Peer.leader?(state.conf) do
-      Repo.transaction(state.conf, fn ->
-        {sched_count, nil} = stage_scheduled(state)
+    leader? = Peer.leader?(state.conf)
 
-        notify_queues(state)
+    Repo.transaction(state.conf, fn ->
+      sched_count = stage_scheduled(state, leader?: leader?)
 
-        sched_count
-      end)
-    else
-      {:ok, 0}
-    end
+      notify_queues(state, leader?: leader?)
+
+      sched_count
+    end)
   end
 
-  defp stage_scheduled(state) do
+  defp stage_scheduled(state, leader?: true) do
     subquery =
       Job
       |> where([j], j.state in ["scheduled", "retryable"])
@@ -139,14 +166,19 @@ defmodule Oban.Plugins.Stager do
       |> limit(^state.limit)
       |> lock("FOR UPDATE SKIP LOCKED")
 
-    Repo.update_all(
-      state.conf,
-      join(Job, :inner, [j], x in subquery(subquery), on: j.id == x.id),
-      set: [state: "available"]
-    )
+    {count, nil} =
+      Repo.update_all(
+        state.conf,
+        join(Job, :inner, [j], x in subquery(subquery), on: j.id == x.id),
+        set: [state: "available"]
+      )
+
+    count
   end
 
-  defp notify_queues(state) do
+  defp stage_scheduled(_state, _leader), do: 0
+
+  defp notify_queues(%State{conf: conf, mode: :global}, leader?: true) do
     query =
       Job
       |> where([j], j.state == "available")
@@ -154,10 +186,20 @@ defmodule Oban.Plugins.Stager do
       |> select([j], %{queue: j.queue})
       |> distinct(true)
 
-    payload = Repo.all(state.conf, query)
+    payload = Repo.all(conf, query)
 
-    Notifier.notify(state.conf, :insert, payload)
+    Notifier.notify(conf, :insert, payload)
   end
+
+  defp notify_queues(%State{conf: conf, mode: :local}, _leader) do
+    match = [{{{conf.name, {:producer, :"$1"}}, :"$2", :_}, [], [{{:"$1", :"$2"}}]}]
+
+    for {queue, pid} <- Registry.select(Oban.Registry, match) do
+      send(pid, {:notification, :insert, %{"queue" => queue}})
+    end
+  end
+
+  defp notify_queues(_state, _leader), do: :ok
 
   # Scheduling
 
@@ -165,5 +207,24 @@ defmodule Oban.Plugins.Stager do
     timer = Process.send_after(self(), :stage, state.interval)
 
     %{state | timer: timer}
+  end
+
+  defp check_notify_mode(state) do
+    if state.tick >= state.ping_at_tick do
+      Notifier.notify(state.conf.name, :stager, %{ping: :pong})
+    end
+
+    if state.tick == state.swap_at_tick do
+      Logger.warn("""
+      Oban job staging switched to local mode.
+
+      Local mode places more load on the database because each queue polls for jobs every second.
+      To restore global mode, ensure PostgreSQL notifications work or switch to the PG notifier.
+      """)
+
+      %{state | mode: :local}
+    else
+      %{state | tick: state.tick + 1}
+    end
   end
 end

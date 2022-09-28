@@ -2,7 +2,7 @@ defmodule Oban.Plugins.StagerTest do
   use Oban.Case, async: true
 
   alias Oban.Plugins.Stager
-  alias Oban.{PluginTelemetryHandler, Registry}
+  alias Oban.PluginTelemetryHandler
 
   describe "validate/1" do
     test "validating numerical values" do
@@ -24,9 +24,7 @@ defmodule Oban.Plugins.StagerTest do
       job_2 = insert!([ref: 2, action: "OK"], inserted_at: then, schedule_in: -5)
       job_3 = insert!([ref: 3, action: "OK"], inserted_at: then, schedule_in: 10)
 
-      name = start_supervised_oban!(plugins: [Stager])
-
-      stage(name)
+      start_supervised_oban!(plugins: [{Stager, interval: 5}])
 
       with_backoff(fn ->
         assert %{state: "available"} = Repo.reload(job_1)
@@ -47,7 +45,9 @@ defmodule Oban.Plugins.StagerTest do
 
       name = start_supervised_oban!(plugins: [{Stager, limit: 1}])
 
-      stage(name)
+      name
+      |> Oban.Registry.whereis({:plugin, Stager})
+      |> send(:stage)
 
       with_backoff(fn ->
         assert %{state: "available"} = Repo.reload(job_1)
@@ -55,11 +55,16 @@ defmodule Oban.Plugins.StagerTest do
         assert %{state: "scheduled"} = Repo.reload(job_3)
       end)
     end
-  end
 
-  defp stage(name) do
-    name
-    |> Registry.whereis({:plugin, Stager})
-    |> send(:stage)
+    @tag :capture_log
+    test "switching to local mode without functional pubsub" do
+      name = start_supervised_oban!(poll_interval: 2, notifier: Oban.Notifiers.Postgres)
+
+      {:via, _, {_, prod_name}} = Oban.Registry.via(name, {:producer, "default"})
+
+      Registry.register(Oban.Registry, prod_name, nil)
+
+      assert_receive {:notification, :insert, %{"queue" => "default"}}
+    end
   end
 end
