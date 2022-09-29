@@ -3,8 +3,8 @@ defmodule Oban.Peer do
   The `Peer` module maintains leadership for a particular Oban instance within a cluster.
 
   Leadership is used by plugins, primarily, to prevent duplicate work accross nodes. For example,
-  only the leader's `Cron` plugin will insert new jobs. You can use peer leadership to extend Oban
-  with custom plugins, or even within your own application.
+  only the leader's `Cron` plugin will try inserting new jobs. You can use peer leadership to
+  extend Oban with custom plugins, or even within your own application.
 
   Note a few important details about how peer leadership operates:
 
@@ -21,7 +21,8 @@ defmodule Oban.Peer do
   There are two built-in peering modules:
 
   * `Oban.Peers.Postgres` — uses table-based leadership through the `oban_peers` table and works
-    in any environment, with or without clustering. This is the default.
+    in any environment, with or without clustering. Only one node (per instance name) will have a
+    row in the peers table, that node is the leader. This is the default.
 
   * `Oban.Peers.Global` — coordinates global locks through distributed Erlang, requires
     distributed Erlang.

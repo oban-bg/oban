@@ -2,8 +2,13 @@ defmodule Oban.Peers.Postgres do
   @moduledoc """
   A Postgres based peer that coordinates centrally through a database table.
 
-  Leadership is coordinated through the `oban_peers` table in your database. It doesn't require
-  clustering through distributed Erlang or any other interconnectivity.
+  Postgres peers don't require clustering through distributed Erlang or any other
+  interconnectivity between nodes. Leadership is coordinated through the `oban_peers` table in
+  your database. With a standard Oban config the `oban_peers` table will only have one row, and
+  that node is the leader.
+
+  Applications that run multiple Oban instances will have one row per instance. For example, an
+  umbrella application that runs `Oban.A` and `Oban.B` will have two rows in `oban_peers`.
 
   ## Usage
 
