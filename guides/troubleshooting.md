@@ -42,19 +42,10 @@ There are several options available to ensure functional notifications:
 3. Use a dedicated Repo that connects directly to the database, bypassing
    `PgBouncer`.
 
-If none of those options work, you can use the [Repeater][repe] plugin to ensure
-that queues keep processing jobs:
+If none of those options work, the [Stager][stag] will switch to `local` polling
+mode to ensure that queues keep processing jobs.
 
-```elixir
-config :my_app, Oban,
-  plugins: [Oban.Plugins.Repeater],
-  ...
-```
-
-_Note: The Repeater plugin keeps jobs processing, it will not facilitate other
-notification based functionality, e.g. pausing, scaling, or starting queues._
-
-[repe]: Oban.Plugins.Repeater.html
+[stag]: Oban.Plugins.Stager.html
 
 ## Unexpectedly Re-running All Migrations
 

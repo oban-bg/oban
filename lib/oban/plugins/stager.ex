@@ -1,19 +1,31 @@
 defmodule Oban.Plugins.Stager do
   @moduledoc """
-  Makes scheduled jobs available for execution and notifies the relevant queues.
+  Makes jobs available for execution and notifies the relevant queues.
 
-  The Stager transitions jobs from `:scheduled` or `:retryable` to the `:available` state on or
-  after the timestamp specified in `:scheduled_at`. It is necessary for the execution of scheduled
-  and retryable jobs. As such, it's started by each Oban instance automatically unless `plugins:
-  false` is specified.
+  An operational Stager is necessary for job processing, as it performs two essential functions:
 
-  It also alerts queues when they have available jobs to trigger execution. Normally, it notifies
-  via PubSub in a `:global` mode to minimize database load. When PubSub isn't available the Stager
-  falls back to `:local` mode and each queue polls independently.
+  1. Transitioning jobs from `:scheduled` or `:retryable` to the `:available` state on or after
+    the timestamp specified in `:scheduled_at`.
+  2. Alerting queues that there are jobs available for execution.
 
-  Running in `:local` mode typically happens because Postgres is running behind a connection
-  pooler that prevents `LISTEN/NOTIFY` commands. To restore global mode, ensure
-  `Oban.Notifiers.Postgres` notifications work or switch to `Oban.Notifiers.PG`.
+  Each Oban instance starts a Stager automatically unless `plugins: false` or a testing mode is
+  specified.
+
+  ## Global and Local Modes
+
+  Usually, a Stager instance operates in `global` mode and notifies queues of available jobs via
+  PubSub to minimize database load. However, when PubSub isn't available, the Stager switches to a
+  `local` mode where each queue polls independently.
+
+  Local mode is a **last resort** and will only happen if you're running in an environment where
+  neither `Postgres` nor `PG` notifications work. That situation should be rare and limited to
+  the following conditions:
+
+  1. Running with a database connection pooler, i.e., pg_bouncer, in transaction mode.
+  2. Running without clustering, i.e., without Distributed Erlang
+
+  If **both** of those criteria apply and PubSub notifications won't work, then the Stager will
+  switch to polling in `local` mode.
 
   ## Options
 
