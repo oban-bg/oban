@@ -70,7 +70,7 @@ run.
 ### Elixir and Erlang Versions
 
 If your app crashes on launch, be sure to confirm you are running the correct
-version of Elixir and Erlang ([view requirements](#Requirements)). If using the
+version of Elixir and Erlang ([view requirements][reqs]). If using the
 *hashnuke/elixir* buildpack, you can update the `elixir_buildpack.config` file
 in your application's root directory to something like:
 
@@ -96,3 +96,4 @@ Heroku's [Hobby tier Postgres plans][plans] have a maximum of 20 connections, so
 if you're using one of those plan accordingly.
 
 [plans]: https://devcenter.heroku.com/articles/heroku-postgres-plans#hobby-tier
+[reqs]: Oban.html#requirements
