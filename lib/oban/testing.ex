@@ -122,6 +122,12 @@ defmodule Oban.Testing do
 
   alias Oban.{Config, Job, Queue.Executor, Repo, Worker}
 
+  @type perform_opts ::
+          Job.option()
+          | {:log, Logger.level()}
+          | {:prefix, binary()}
+          | {:repo, module()}
+
   @wait_interval 10
 
   @doc false
@@ -208,30 +214,33 @@ defmodule Oban.Testing do
       assert :ok = perform_job(Vorker, %{"id" => 1})
   """
   @doc since: "2.0.0"
-  @spec perform_job(
-          worker :: Worker.t(),
-          args :: term(),
-          opts :: [Job.option() | {:repo, module()}]
-        ) ::
-          Worker.result()
+  @spec perform_job(worker :: Worker.t(), args :: term(), [perform_opts()]) :: Worker.result()
   def perform_job(worker, args, opts) when is_atom(worker) do
+    assert_valid_worker(worker)
+
     {conf_opts, opts} = Keyword.split(opts, [:log, :prefix, :repo])
 
-    opts = Keyword.put_new(opts, :attempt, 1)
-
-    assert_valid_worker(worker)
+    opts =
+      opts
+      |> Keyword.put_new(:attempt, 1)
+      |> Keyword.put_new(:attempted_at, DateTime.utc_now())
+      |> Keyword.put_new(:scheduled_at, DateTime.utc_now())
 
     changeset =
       args
       |> worker.new(opts)
+      |> Changeset.put_change(:id, System.unique_integer([:positive]))
       |> Changeset.update_change(:args, &json_encode_decode/1)
+      |> Changeset.update_change(:meta, &json_encode_decode/1)
 
     assert_valid_changeset(changeset)
+
+    job = Changeset.apply_action!(changeset, :insert)
 
     result =
       conf_opts
       |> Config.new()
-      |> Executor.new(create_job(changeset), safe: false, ack: false)
+      |> Executor.new(job, safe: false, ack: false)
       |> Executor.call()
       |> Map.fetch!(:result)
 
@@ -568,18 +577,5 @@ defmodule Oban.Testing do
     query
     |> where(^[{key, value}])
     |> apply_where_clauses(rest)
-  end
-
-  defp create_job(changeset) do
-    changeset
-    |> default_to_now(:attempted_at)
-    |> default_to_now(:scheduled_at)
-    |> Changeset.apply_action!(:insert)
-  end
-
-  defp default_to_now(changeset, field) do
-    value = Changeset.get_change(changeset, field) || DateTime.utc_now()
-
-    Changeset.put_change(changeset, field, value)
   end
 end

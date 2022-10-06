@@ -79,11 +79,15 @@ defmodule Oban.TestingTest do
     end
   end
 
-  defmodule ConfRelayWorker do
+  defmodule EchoWorker do
     use Oban.Worker
 
     @impl Oban.Worker
-    def perform(%{conf: conf}), do: {:ok, conf}
+    def perform(%{args: %{"field" => field}} = job) do
+      field = String.to_existing_atom(field)
+
+      {:ok, Map.fetch!(job, field)}
+    end
   end
 
   describe "perform_job/3" do
@@ -94,12 +98,6 @@ defmodule Oban.TestingTest do
       assert_perform_error(InvalidWorker, message)
 
       :ok = perform_job(DoubleBehaviourWorker, %{})
-    end
-
-    test "injecting a complete conf into the job before execution" do
-      assert {:ok, conf} = perform_job(ConfRelayWorker, %{}, prefix: "private", log: :debug)
-
-      assert %{log: :debug, prefix: "private"} = conf
     end
 
     test "creating a valid job out of the args and options" do
@@ -157,6 +155,29 @@ defmodule Oban.TestingTest do
       perform_job(MisbehavedWorker, %{"action" => "bad_timing", "timeout" => 20})
 
       refute_receive {:EXIT, _pid, %Oban.TimeoutError{}}
+    end
+
+    test "injecting a complete conf into the job before execution" do
+      assert {:ok, conf} = perform_job(EchoWorker, %{field: :conf}, prefix: "private")
+
+      assert %{prefix: "private"} = conf
+    end
+
+    test "generating a fake id for each attempt" do
+      assert {:ok, id_1} = perform_job(EchoWorker, %{field: :id})
+      assert {:ok, id_2} = perform_job(EchoWorker, %{field: :id})
+
+      assert is_integer(id_1)
+      assert is_integer(id_2)
+
+      refute id_1 == id_2
+    end
+
+    test "round trip encoding map fields" do
+      meta = %{check: :meta}
+
+      assert {:ok, %{"field" => "args"}} = perform_job(EchoWorker, %{field: :args})
+      assert {:ok, %{"check" => "meta"}} = perform_job(EchoWorker, %{field: :meta}, meta: meta)
     end
 
     test "defaulting the number of attempts to mimic real execution" do
