@@ -191,7 +191,7 @@ defmodule Oban.Telemetry do
       if attempt >= 3 do
         context = Map.take(meta, [:id, :args, :queue, :worker])
 
-        Honeybadger.notify(meta.reason, context, meta.stacktrace)
+        Honeybadger.notify(meta.reason, metadata: context, stacktrace: meta.stacktrace)
       end
     end
   end
