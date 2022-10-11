@@ -107,8 +107,8 @@ strategy is too fast. By defining a custom `backoff` function on the
 # inside of MyApp.Workers.FlakyWorker
 
 @impl true
-def backoff(attempt, base_amount \\ 60) do
-  attempt * base_amount
+def backoff(%Job{attempt: attempt}) do
+  attempt * 60
 end
 ```
 
