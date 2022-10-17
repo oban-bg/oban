@@ -73,18 +73,19 @@ defmodule Oban.Cron.Expression do
   def parse!("@reboot"), do: %__MODULE__{reboot?: true}
 
   def parse!(input) when is_binary(input) do
-    [mip, hrp, dap, mop, wdp] =
-      input
-      |> String.trim()
-      |> String.split(~r/\s+/, parts: 5)
+    case String.split(input, ~r/\s+/, trim: true, parts: 5) do
+      [mip, hrp, dap, mop, wdp] ->
+        %__MODULE__{
+          minutes: parse_field(mip, 0..59),
+          hours: parse_field(hrp, 0..23),
+          days: parse_field(dap, 1..31),
+          months: mop |> trans_field(@mon_map) |> parse_field(1..12),
+          weekdays: wdp |> trans_field(@dow_map) |> parse_field(0..6)
+        }
 
-    %__MODULE__{
-      minutes: parse_field(mip, 0..59),
-      hours: parse_field(hrp, 0..23),
-      days: parse_field(dap, 1..31),
-      months: mop |> trans_field(@mon_map) |> parse_field(1..12),
-      weekdays: wdp |> trans_field(@dow_map) |> parse_field(0..6)
-    }
+      _parts ->
+        raise ArgumentError, "incorrect number of fields in expression: #{input}"
+    end
   end
 
   defp parse_field(field, range) do
