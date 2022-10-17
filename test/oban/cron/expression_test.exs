@@ -27,6 +27,7 @@ defmodule Oban.Cron.ExpressionTest do
 
     test "parsing expressions that are out of bounds fails" do
       expressions = [
+        "* * * *",
         "60 * * * *",
         "* 24 * * *",
         "* * 32 * *",
