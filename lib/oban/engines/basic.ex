@@ -345,6 +345,9 @@ defmodule Oban.Engines.Basic do
       Ecto.Changeset.change(job, Map.take(changeset.changes, replace_keys)),
       query_opts
     )
+  rescue
+    error in [Ecto.StaleEntryError] ->
+      {:error, error}
   end
 
   defp unique_query(%{changes: %{unique: %{} = unique}} = changeset) do
