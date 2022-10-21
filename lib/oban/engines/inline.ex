@@ -134,6 +134,12 @@ defmodule Oban.Engines.Inline do
     %Job{job | errors: [error], state: "retryable", scheduled_at: utc_now()}
   end
 
+  defp complete_job(%{job: job, state: :cancelled}) do
+    error = %{attempt: job.attempt, at: utc_now(), error: format_blamed(job.unsaved_error)}
+
+    %Job{job | errors: [error], state: "cancelled", cancelled_at: utc_now()}
+  end
+
   defp complete_job(%{job: job, state: state}) when state in [:discard, :exhausted] do
     error = %{attempt: job.attempt, at: utc_now(), error: format_blamed(job.unsaved_error)}
 
