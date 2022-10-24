@@ -39,8 +39,9 @@ defmodule Oban.Telemetry do
 
   * `:conf` — the executing Oban instance's config
   * `:job` — the executing `Oban.Job`
-  * `:state` — one of `:success`, `:failure`, `:discard` or `:snoozed`
-  * `:result` — the `perform/1` return value, included unless job failed with an exception or crash
+  * `:state` — one of `:success`, `:failure`, `:cancelled`, `:discard` or `:snoozed`
+  * `:result` — the `perform/1` return value, included unless job failed with an exception or
+    crash
 
   For `:exception` events the metadata also includes details about what caused the failure. The
   `:kind` value is determined by how an error occurred. Here are the possible kinds:
@@ -219,7 +220,8 @@ defmodule Oban.Telemetry do
   * `meta` — a map of the job's raw metadata
   * `queue` — the job's queue
   * `source` — always "oban"
-  * `state` — the execution state, one of "success", "failure", "discard", or "snoozed"
+  * `state` — the execution state, one of "success", "failure", "cancelled", "discard", or
+    "snoozed"
   * `system_time` — when the job started, in microseconds
   * `tags` — the job's tags
   * `worker` — the job's worker module
