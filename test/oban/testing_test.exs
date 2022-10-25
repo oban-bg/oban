@@ -75,7 +75,7 @@ defmodule Oban.TestingTest do
 
     @impl Oban.Worker
     def perform(%Oban.Job{} = job) do
-      {:ok, Map.take(job, ~w(attempted_at inserted_at scheduled_at)a}
+      {:ok, Map.take(job, ~w(attempted_at inserted_at scheduled_at)a)}
     end
   end
 
