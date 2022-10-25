@@ -75,13 +75,7 @@ defmodule Oban.TestingTest do
 
     @impl Oban.Worker
     def perform(%Oban.Job{} = job) do
-      result = %{
-        attempted_at: job.attempted_at,
-        scheduled_at: job.scheduled_at,
-        inserted_at: job.inserted_at
-      }
-
-      {:ok, result}
+      {:ok, Map.take(job, ~w(attempted_at inserted_at scheduled_at)a}
     end
   end
 
@@ -192,32 +186,24 @@ defmodule Oban.TestingTest do
     end
 
     test "defaulting timestamp fields to mimic real execution" do
-      assert {:ok,
-              %{
-                attempted_at: %DateTime{},
-                scheduled_at: %DateTime{},
-                inserted_at: %DateTime{}
-              }} = perform_job(TemporalWorker, %{})
+      assert {:ok, result} = perform_job(TemporalWorker, %{})
+
+      assert %{attempted_at: %_{}, inserted_at: %_{}, scheduled_at: %_{}} = result
     end
 
     test "retaining attempted_at, scheduled_at and inserted_at timestamps" do
       time = ~U[2020-02-20 00:00:00.000000Z]
 
-      assert {:ok,
-              %{
-                attempted_at: attempted_at,
-                scheduled_at: scheduled_at,
-                inserted_at: inserted_at
-              }} =
+      assert {:ok, result} =
                perform_job(TemporalWorker, %{},
                  attempted_at: time,
-                 scheduled_at: time,
-                 inserted_at: time
+                 inserted_at: time,
+                 scheduled_at: time
                )
 
-      assert attempted_at == time
-      assert scheduled_at == time
-      assert inserted_at == time
+      assert result.attempted_at == time
+      assert result.inserted_at == time
+      assert result.scheduled_at == time
     end
 
     test "emitting appropriate telemetry events" do
