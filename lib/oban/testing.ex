@@ -225,6 +225,7 @@ defmodule Oban.Testing do
       |> Keyword.put_new(:attempt, 1)
       |> Keyword.put_new(:attempted_at, DateTime.utc_now())
       |> Keyword.put_new(:scheduled_at, DateTime.utc_now())
+      |> Keyword.put_new(:inserted_at, DateTime.utc_now())
 
     changeset =
       args
