@@ -321,6 +321,8 @@ defmodule Oban.Config do
 
   # Normalization
 
+  @renamed [{:engine, Oban.Queue.BasicEngine}, {:notifier, Oban.PostgresNotifier}]
+
   defp normalize(opts) do
     opts
     |> crontab_to_plugin()
@@ -330,9 +332,7 @@ defmodule Oban.Config do
     |> Keyword.update(:plugins, [], &(&1 || []))
     |> Keyword.update(:queues, [], &(&1 || []))
     |> Keyword.delete(:circuit_backoff)
-    |> Enum.reject(
-      &(&1 in [{:engine, Oban.Queue.BasicEngine}, {:notifier, Oban.PostgresNotifier}])
-    )
+    |> Enum.reject(&(&1 in @renamed))
   end
 
   defp crontab_to_plugin(opts) do
@@ -359,7 +359,7 @@ defmodule Oban.Config do
         |> Keyword.update(:plugins, [plugin], &[plugin | &1])
 
       {plugins, nil} when is_list(plugins) or is_nil(plugins) ->
-        plugin = Oban.Plugins.Stager
+        plugin = {Oban.Plugins.Stager, []}
 
         Keyword.update(opts, :plugins, [plugin], &[plugin | &1])
 
@@ -393,10 +393,8 @@ defmodule Oban.Config do
   # plugin list. The order doesn't matter as they are supervised one-for-one.
   defp normalize_plugins(plugins) do
     plugins
+    |> Enum.map(&(if is_atom(&1), do: {&1, []}, else: &1))
     |> Enum.reverse()
-    |> Enum.uniq_by(fn
-      {module, _opts} -> module
-      module -> module
-    end)
+    |> Enum.uniq()
   end
 end

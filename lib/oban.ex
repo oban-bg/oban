@@ -934,10 +934,6 @@ defmodule Oban do
     Supervisor.child_spec({module, opts}, id: {:plugin, module})
   end
 
-  defp plugin_child_spec(module, conf) do
-    plugin_child_spec({module, []}, conf)
-  end
-
   defp event_child_spec(conf) do
     time = %{system_time: System.system_time()}
     meta = %{pid: self(), conf: conf}

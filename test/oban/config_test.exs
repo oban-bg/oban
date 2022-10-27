@@ -133,6 +133,16 @@ defmodule Oban.ConfigTest do
                conf(queues: [alpha: 1], plugins: [Pruner], testing: :manual)
     end
 
+    test "normalizing plugins as a module options tuple" do
+      assert %Config{plugins: plugins} = conf(plugins: [Cron, Pruner, {Stager, []}])
+
+      for plugin <- plugins do
+        assert {module, opts} = plugin
+        assert is_atom(module)
+        assert is_list(opts)
+      end
+    end
+
     test "translating deprecated crontab/timezone config into plugin usage" do
       assert has_plugin?(Cron, timezone: "America/Chicago", crontab: [{"* * * * *", Worker}])
       assert has_plugin?(Cron, crontab: [{"* * * * *", Worker}])
@@ -144,6 +154,7 @@ defmodule Oban.ConfigTest do
 
     test "translating poll_interval config into plugin usage" do
       assert has_plugin?(Stager, [])
+      assert has_plugin?(Stager, plugins: [])
       assert has_plugin?(Stager, poll_interval: 2000)
 
       refute has_plugin?(Stager, plugins: false, poll_interval: 2000)
@@ -187,10 +198,7 @@ defmodule Oban.ConfigTest do
       opts
       |> conf()
       |> Map.fetch!(:plugins)
-      |> Enum.map(fn
-        {module, _opts} -> module
-        module -> module
-      end)
+      |> Enum.map(fn {module, _opts} -> module end)
 
     plugin in plugins
   end
