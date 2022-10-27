@@ -375,10 +375,9 @@ defmodule Oban do
 
   > #### 🌟 Unique Jobs and Batching {: .warning}
   >
-  > The built-in `Basic` engine doesn't support unique inserts for `insert_all` and you must use
-  > `insert/3` for per-job unique support. Alternatively, the [`SmartEngine` in Oban
-  > Pro](https://getoban.pro/docs/pro/smart_engine.html) supports bulk unique jobs and automatic
-  > batching.
+  > Only the [SmartEngine](https://getoban.pro/docs/pro/smart_engine.html) in [Oban
+  > Pro](https://getoban.pro) supports bulk unique jobs and automatic batching. With the basic
+  > engine, you must use `insert/3` for unique support.
 
   ## Options
 
