@@ -412,11 +412,11 @@ defmodule Oban.Worker do
     if Code.ensure_loaded?(module) && function_exported?(module, :perform, 1) do
       {:ok, module}
     else
-      {:error, %RuntimeError{message: "module is not a worker: #{inspect(module)}"}}
+      {:error, RuntimeError.exception("module is not a worker: #{inspect(module)}")}
     end
   rescue
     ArgumentError ->
-      {:error, %RuntimeError{message: "unknown worker: #{worker_name}"}}
+      {:error, RuntimeError.exception("unknown worker: #{worker_name}")}
   end
 
   # Validation Helpers
