@@ -5,7 +5,7 @@ defmodule Oban.Engines.Inline do
 
   import DateTime, only: [utc_now: 0]
 
-  alias Ecto.{Changeset, Multi}
+  alias Ecto.Changeset
   alias Oban.{Config, Engine, Job}
   alias Oban.Queue.Executor
 
@@ -30,38 +30,10 @@ defmodule Oban.Engines.Inline do
   end
 
   @impl Engine
-  def insert_job(%Config{} = conf, %Multi{} = multi, name, fun, _opts) when is_function(fun, 1) do
-    Multi.run(multi, name, fn repo, changes ->
-      {:ok, execute_job(%{conf | repo: repo}, fun.(changes))}
-    end)
-  end
-
-  @impl Engine
-  def insert_job(%Config{} = conf, %Multi{} = multi, name, changeset, _opts) do
-    Multi.run(multi, name, fn repo, _changes ->
-      {:ok, execute_job(%{conf | repo: repo}, changeset)}
-    end)
-  end
-
-  @impl Engine
   def insert_all_jobs(%Config{} = conf, changesets, _opts) do
     changesets
     |> expand()
     |> Enum.map(&execute_job(conf, &1))
-  end
-
-  @impl Engine
-  def insert_all_jobs(%Config{} = conf, %Multi{} = multi, name, wrapper, _opts) do
-    Multi.run(multi, name, fn repo, changes ->
-      conf = %{conf | repo: repo}
-
-      jobs =
-        wrapper
-        |> expand(changes)
-        |> Enum.map(&execute_job(conf, &1))
-
-      {:ok, jobs}
-    end)
   end
 
   @impl Engine
