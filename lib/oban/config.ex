@@ -393,7 +393,7 @@ defmodule Oban.Config do
   # plugin list. The order doesn't matter as they are supervised one-for-one.
   defp normalize_plugins(plugins) do
     plugins
-    |> Enum.map(&(if is_atom(&1), do: {&1, []}, else: &1))
+    |> Enum.map(&if is_atom(&1), do: {&1, []}, else: &1)
     |> Enum.reverse()
     |> Enum.uniq()
   end
