@@ -53,7 +53,7 @@ defmodule Oban.Plugins.Lifeline do
 
   use GenServer
 
-  import Ecto.Query, only: [select: 2, where: 3]
+  import Ecto.Query, only: [select: 3, where: 3]
 
   alias Oban.{Job, Peer, Plugin, Repo, Validation}
 
@@ -118,7 +118,7 @@ defmodule Oban.Plugins.Lifeline do
 
     :telemetry.span([:oban, :plugin], meta, fn ->
       case check_leadership_and_rescue_jobs(state) do
-        {:ok, extra} ->
+        {:ok, extra} when is_map(extra) ->
           {:ok, Map.merge(meta, extra)}
 
         error ->
@@ -164,7 +164,7 @@ defmodule Oban.Plugins.Lifeline do
     query =
       base
       |> where([j], j.attempt < j.max_attempts)
-      |> select([:id, :queue, :worker])
+      |> select([j], map(j, [:id, :queue, :worker]))
 
     Repo.update_all(state.conf, query, set: [state: "available"])
   end
@@ -173,7 +173,7 @@ defmodule Oban.Plugins.Lifeline do
     query =
       base
       |> where([j], j.attempt >= j.max_attempts)
-      |> select([:id, :queue, :worker])
+      |> select([j], map(j, [:id, :queue, :worker]))
 
     Repo.update_all(state.conf, query, set: [state: "discarded", discarded_at: DateTime.utc_now()])
   end

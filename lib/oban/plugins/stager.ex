@@ -57,7 +57,6 @@ defmodule Oban.Plugins.Stager do
       limit: 2,
       lock: 2,
       order_by: 2,
-      select: 2,
       select: 3,
       where: 3
     ]
@@ -139,7 +138,7 @@ defmodule Oban.Plugins.Stager do
 
     :telemetry.span([:oban, :plugin], meta, fn ->
       case check_leadership_and_stage(state) do
-        {:ok, extra} ->
+        {:ok, extra} when is_map(extra) ->
           {:ok, Map.merge(meta, extra)}
 
         error ->
@@ -184,7 +183,7 @@ defmodule Oban.Plugins.Stager do
     query =
       Job
       |> join(:inner, [j], x in subquery(subquery), on: j.id == x.id)
-      |> select([:id, :queue, :worker])
+      |> select([j], map(j, [:id, :queue, :worker]))
 
     {staged_count, staged} = Repo.update_all(state.conf, query, set: [state: "available"])
 

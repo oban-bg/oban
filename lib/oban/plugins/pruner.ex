@@ -47,7 +47,7 @@ defmodule Oban.Plugins.Pruner do
 
   use GenServer
 
-  import Ecto.Query, only: [join: 5, limit: 2, lock: 2, or_where: 3, select: 2]
+  import Ecto.Query, only: [join: 5, limit: 2, lock: 2, or_where: 3, select: 2, select: 3]
 
   alias Oban.{Job, Peer, Plugin, Repo, Validation}
 
@@ -116,7 +116,7 @@ defmodule Oban.Plugins.Pruner do
 
     :telemetry.span([:oban, :plugin], meta, fn ->
       case check_leadership_and_delete_jobs(state) do
-        {:ok, extra} ->
+        {:ok, extra} when is_map(extra) ->
           {:ok, Map.merge(meta, extra)}
 
         error ->
@@ -160,7 +160,7 @@ defmodule Oban.Plugins.Pruner do
     query =
       Job
       |> join(:inner, [j], x in subquery(subquery), on: j.id == x.id)
-      |> select([:id, :queue, :worker])
+      |> select([j], map(j, [:id, :queue, :worker]))
 
     {pruned_count, pruned} = Repo.delete_all(conf, query)
 
