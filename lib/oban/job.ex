@@ -108,7 +108,11 @@ defmodule Oban.Job do
           conflict?: boolean(),
           replace: [replace_option() | replace_by_state_option()],
           unique: %{fields: [unique_field()], period: unique_period(), states: [unique_state()]},
-          unsaved_error: %{kind: atom(), reason: term(), stacktrace: Exception.stacktrace()}
+          unsaved_error: %{
+            kind: Exception.kind(),
+            reason: term(),
+            stacktrace: Exception.stacktrace()
+          }
         }
 
   @type changeset :: Ecto.Changeset.t(t())
