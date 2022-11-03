@@ -1,5 +1,5 @@
 defmodule Oban.Plugins.StagerTest do
-  use Oban.Case, async: true
+  use Oban.Case
 
   alias Oban.Plugins.Stager
   alias Oban.TelemetryHandler

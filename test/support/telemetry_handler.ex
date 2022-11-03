@@ -9,11 +9,14 @@ defmodule Oban.TelemetryHandler do
   @span_tail [:start, :stop, :exception]
   @span_type [:job, :plugin, [:engine, :insert_job], [:engine, :insert_all_jobs]]
 
-  def attach_events do
+  def attach_events(opts \\ []) do
+    span_tail = Keyword.get(opts, :span_tail, @span_tail)
+    span_type = Keyword.get(opts, :span_type, @span_type)
+
     name = name()
 
     events =
-      for type <- @span_type, tail <- @span_tail do
+      for type <- span_type, tail <- span_tail do
         List.flatten([:oban, type, tail])
       end
 

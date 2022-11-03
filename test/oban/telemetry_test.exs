@@ -39,7 +39,7 @@ defmodule Oban.TelemetryTest do
   end
 
   test "telemetry events are emitted for executed jobs" do
-    TelemetryHandler.attach_events()
+    TelemetryHandler.attach_events(span_type: [:job])
 
     name = start_supervised_oban!(poll_interval: 10, queues: [alpha: 2])
 
