@@ -41,7 +41,9 @@ defmodule Oban.Plugins.Stager do
 
   The `Oban.Plugins.Stager` plugin adds the following metadata to the `[:oban, :plugin, :stop]` event:
 
-  * `:staged_count` - the number of jobs that were staged in the database
+  * `:staged` - a list of jobs transitioned to `available`
+
+  _Note: jobs only include `id`, `queue`, and `worker` fields._
   """
 
   @behaviour Oban.Plugin
@@ -55,6 +57,7 @@ defmodule Oban.Plugins.Stager do
       limit: 2,
       lock: 2,
       order_by: 2,
+      select: 2,
       select: 3,
       where: 3
     ]
@@ -136,8 +139,8 @@ defmodule Oban.Plugins.Stager do
 
     :telemetry.span([:oban, :plugin], meta, fn ->
       case check_leadership_and_stage(state) do
-        {:ok, staged_count} when is_integer(staged_count) ->
-          {:ok, Map.put(meta, :staged_count, staged_count)}
+        {:ok, extra} ->
+          {:ok, Map.merge(meta, extra)}
 
         error ->
           {:error, Map.put(meta, :error, error)}
@@ -178,14 +181,14 @@ defmodule Oban.Plugins.Stager do
       |> limit(^state.limit)
       |> lock("FOR UPDATE SKIP LOCKED")
 
-    {count, nil} =
-      Repo.update_all(
-        state.conf,
-        join(Job, :inner, [j], x in subquery(subquery), on: j.id == x.id),
-        set: [state: "available"]
-      )
+    query =
+      Job
+      |> join(:inner, [j], x in subquery(subquery), on: j.id == x.id)
+      |> select([:id, :queue, :worker])
 
-    count
+    {staged_count, staged} = Repo.update_all(state.conf, query, set: [state: "available"])
+
+    %{staged_count: staged_count, staged: staged}
   end
 
   defp stage_scheduled(_state, _leader), do: 0

@@ -2,7 +2,7 @@ defmodule Oban.Plugins.StagerTest do
   use Oban.Case, async: true
 
   alias Oban.Plugins.Stager
-  alias Oban.{Registry, TelemetryHandler}
+  alias Oban.TelemetryHandler
 
   describe "validate/1" do
     test "validating numerical values" do
@@ -33,7 +33,9 @@ defmodule Oban.Plugins.StagerTest do
       end)
 
       assert_receive {:event, :start, %{system_time: _}, %{conf: _, plugin: Stager}}
-      assert_receive {:event, :stop, %{duration: _}, %{conf: _, plugin: Stager, staged_count: 2}}
+      assert_receive {:event, :stop, %{duration: _}, %{plugin: Stager} = meta}
+
+      assert %{staged_count: 2, staged: [_ | _]} = meta
     end
 
     test "limiting the number of jobs staged at one time" do
