@@ -42,15 +42,18 @@ defmodule Oban.Plugins.Lifeline do
   The `Oban.Plugins.Lifeline` plugin adds the following metadata to the `[:oban, :plugin, :stop]`
   event:
 
-  * `:rescued_count` — the number of jobs transitioned back to `available`
-  * `:discarded_count` — the number of jobs transitioned to `discarded`
+  * `:rescued` — a list of jobs transitioned back to `available`
+
+  * `:discarded` — a list of jobs transitioned to `discarded`
+
+  _Note: jobs only include `id`, `queue`, and `worker` fields._
   """
 
   @behaviour Oban.Plugin
 
   use GenServer
 
-  import Ecto.Query, only: [where: 3]
+  import Ecto.Query, only: [select: 2, where: 3]
 
   alias Oban.{Job, Peer, Plugin, Repo, Validation}
 
@@ -115,13 +118,8 @@ defmodule Oban.Plugins.Lifeline do
 
     :telemetry.span([:oban, :plugin], meta, fn ->
       case check_leadership_and_rescue_jobs(state) do
-        {:ok, {rescued_count, discarded_count}} when is_integer(rescued_count) ->
-          meta =
-            meta
-            |> Map.put(:rescued_count, rescued_count)
-            |> Map.put(:discarded_count, discarded_count)
-
-          {:ok, meta}
+        {:ok, extra} ->
+          {:ok, Map.merge(meta, extra)}
 
         error ->
           {:error, Map.put(meta, :error, error)}
@@ -147,27 +145,36 @@ defmodule Oban.Plugins.Lifeline do
         time = DateTime.add(DateTime.utc_now(), -state.rescue_after, :millisecond)
         base = where(Job, [j], j.state == "executing" and j.attempted_at < ^time)
 
-        {rescued_count, _} = transition_available(base, state)
-        {discard_count, _} = transition_discarded(base, state)
+        {rescued_count, rescued} = transition_available(base, state)
+        {discard_count, discard} = transition_discarded(base, state)
 
-        {rescued_count, discard_count}
+        %{
+          discarded_count: discard_count,
+          discarded: discard,
+          rescued_count: rescued_count,
+          rescued: rescued
+        }
       end)
     else
-      {:ok, 0, 0}
+      {:ok, %{}}
     end
   end
 
-  defp transition_available(query, state) do
-    Repo.update_all(
-      state.conf,
-      where(query, [j], j.attempt < j.max_attempts),
-      set: [state: "available"]
-    )
+  defp transition_available(base, state) do
+    query =
+      base
+      |> where([j], j.attempt < j.max_attempts)
+      |> select([:id, :queue, :worker])
+
+    Repo.update_all(state.conf, query, set: [state: "available"])
   end
 
-  defp transition_discarded(query, state) do
-    Repo.update_all(state.conf, where(query, [j], j.attempt >= j.max_attempts),
-      set: [state: "discarded", discarded_at: DateTime.utc_now()]
-    )
+  defp transition_discarded(base, state) do
+    query =
+      base
+      |> where([j], j.attempt >= j.max_attempts)
+      |> select([:id, :queue, :worker])
+
+    Repo.update_all(state.conf, query, set: [state: "discarded", discarded_at: DateTime.utc_now()])
   end
 end
