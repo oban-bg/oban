@@ -47,7 +47,7 @@ defmodule Oban.Plugins.Pruner do
 
   use GenServer
 
-  import Ecto.Query, only: [join: 5, limit: 2, lock: 2, or_where: 3, select: 2, select: 3]
+  import Ecto.Query, only: [join: 5, limit: 2, lock: 2, or_where: 3, select: 3]
 
   alias Oban.{Job, Peer, Plugin, Repo, Validation}
 
@@ -153,14 +153,13 @@ defmodule Oban.Plugins.Pruner do
       |> or_where([j], j.state == "completed" and j.attempted_at < ^time)
       |> or_where([j], j.state == "cancelled" and j.cancelled_at < ^time)
       |> or_where([j], j.state == "discarded" and j.discarded_at < ^time)
-      |> select([:id])
       |> limit(^limit)
       |> lock("FOR UPDATE SKIP LOCKED")
 
     query =
       Job
       |> join(:inner, [j], x in subquery(subquery), on: j.id == x.id)
-      |> select([j], map(j, [:id, :queue, :state, :worker]))
+      |> select([_, x], map(x, [:id, :queue, :state, :worker]))
 
     {pruned_count, pruned} = Repo.delete_all(conf, query)
 

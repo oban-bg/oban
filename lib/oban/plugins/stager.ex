@@ -183,7 +183,7 @@ defmodule Oban.Plugins.Stager do
     query =
       Job
       |> join(:inner, [j], x in subquery(subquery), on: j.id == x.id)
-      |> select([j], map(j, [:id, :queue, :state, :worker]))
+      |> select([_j, x], map(x, [:id, :queue, :state, :worker]))
 
     {staged_count, staged} = Repo.update_all(state.conf, query, set: [state: "available"])
 
