@@ -150,9 +150,9 @@ defmodule Oban.Plugins.Lifeline do
 
         %{
           discarded_count: discard_count,
-          discarded: discard,
+          discarded_jobs: discard,
           rescued_count: rescued_count,
-          rescued: rescued
+          rescued_jobs: rescued
         }
       end)
     else
