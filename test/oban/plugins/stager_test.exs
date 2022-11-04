@@ -35,7 +35,7 @@ defmodule Oban.Plugins.StagerTest do
       assert_receive {:event, :start, %{system_time: _}, %{conf: _, plugin: Stager}}
       assert_receive {:event, :stop, %{duration: _}, %{plugin: Stager} = meta}
 
-      assert %{staged_count: 2, staged: [_ | _]} = meta
+      assert %{staged_count: 2, staged_jobs: [_ | _]} = meta
     end
 
     test "limiting the number of jobs staged at one time" do

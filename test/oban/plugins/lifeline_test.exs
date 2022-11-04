@@ -31,8 +31,8 @@ defmodule Oban.Plugins.LifelineTest do
       assert_receive {:event, :start, _measure, %{plugin: Lifeline}}
       assert_receive {:event, :stop, _measure, %{plugin: Lifeline} = meta}
 
-      assert %{rescued_count: 1, rescued: [_ | _]} = meta
-      assert %{discarded_count: 1, discarded: [_ | _]} = meta
+      assert %{rescued_count: 1, rescued_jobs: [_ | _]} = meta
+      assert %{discarded_count: 1, discarded_jobs: [_ | _]} = meta
 
       assert %{state: "executing"} = Repo.reload(job_a)
       assert %{state: "available"} = Repo.reload(job_b)

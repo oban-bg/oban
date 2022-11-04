@@ -36,7 +36,7 @@ defmodule Oban.Plugins.PrunerTest do
       assert_receive {:event, :start, %{system_time: _}, %{conf: _, plugin: Pruner}}
       assert_receive {:event, :stop, %{duration: _}, %{plugin: Pruner} = meta}
 
-      assert %{pruned_count: 4, pruned: [_ | _]} = meta
+      assert %{pruned_count: 4, pruned_jobs: [_ | _]} = meta
 
       stop_supervised(name)
     end

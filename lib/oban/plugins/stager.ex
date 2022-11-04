@@ -41,9 +41,9 @@ defmodule Oban.Plugins.Stager do
 
   The `Oban.Plugins.Stager` plugin adds the following metadata to the `[:oban, :plugin, :stop]` event:
 
-  * `:staged` - a list of jobs transitioned to `available`
+  * `:staged_jobs` - a list of jobs transitioned to `available`
 
-  _Note: jobs only include `id`, `queue`, and `worker` fields._
+  _Note: jobs only include `id`, `queue`, `state`, and `worker` fields._
   """
 
   @behaviour Oban.Plugin
@@ -183,11 +183,11 @@ defmodule Oban.Plugins.Stager do
     query =
       Job
       |> join(:inner, [j], x in subquery(subquery), on: j.id == x.id)
-      |> select([j], map(j, [:id, :queue, :worker]))
+      |> select([j], map(j, [:id, :queue, :state, :worker]))
 
     {staged_count, staged} = Repo.update_all(state.conf, query, set: [state: "available"])
 
-    %{staged_count: staged_count, staged: staged}
+    %{staged_count: staged_count, staged_jobs: staged}
   end
 
   defp stage_scheduled(_state, _leader), do: 0

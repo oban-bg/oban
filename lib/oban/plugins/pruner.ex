@@ -36,9 +36,9 @@ defmodule Oban.Plugins.Pruner do
 
   The `Oban.Plugins.Pruner` plugin adds the following metadata to the `[:oban, :plugin, :stop]` event:
 
-  * `:pruned` - the jobs that were deleted from the database
+  * `:pruned_jobs` - the jobs that were deleted from the database
 
-  _Note: jobs only include `id`, `queue`, and `worker` fields._
+  _Note: jobs only include `id`, `queue`, `state`, and `worker` fields._
 
   [dyn]: https://getoban.pro/docs/pro/dynamic_pruner.html.
   """
@@ -160,10 +160,10 @@ defmodule Oban.Plugins.Pruner do
     query =
       Job
       |> join(:inner, [j], x in subquery(subquery), on: j.id == x.id)
-      |> select([j], map(j, [:id, :queue, :worker]))
+      |> select([j], map(j, [:id, :queue, :state, :worker]))
 
     {pruned_count, pruned} = Repo.delete_all(conf, query)
 
-    %{pruned_count: pruned_count, pruned: pruned}
+    %{pruned_count: pruned_count, pruned_jobs: pruned}
   end
 end
