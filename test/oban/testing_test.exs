@@ -15,8 +15,8 @@ defmodule Oban.TestingTest do
     use Oban.Worker
 
     @impl Worker
-    def new({key, val}, opts) do
-      super(%{key => val}, opts)
+    def new({key, val}, _) do
+      super(%{key => val}, [])
     end
 
     @impl Worker
