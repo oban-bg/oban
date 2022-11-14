@@ -51,6 +51,23 @@ other "extension" modules. For the sake of consistency with notifiers and peers,
 the Basic and Inline engines are now `Oban.Engines.Basic` and
 `Oban.Engines.Inline`, respectively.
 
+## v2.13.5 — 2022-11-14
+
+### Bug Fixes
+
+- [Testing] Correctly handle cancelling jobs via `:cancel` tuples when executing
+  jobs with the `Inline` engine.
+
+- [Testing] Improve the realism of `perform_job/3` by injecting a unique integer
+  for the `id`, setting an `inserted_at` timestamp, and encoding/decoding `meta`
+  as JSON.
+
+- [Cron] Raise `ArgumentError` when given the wrong number of expression fields.
+
+  Cron expressions with the wrong number of fields would raise a `MatchError`
+  without any insight as to what was wrong. Now parsing returns a more helpful
+  `ArgumentError` error.
+
 ## v2.13.4 — 2022-09-23
 
 ### Bug Fixes
