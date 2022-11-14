@@ -220,12 +220,7 @@ defmodule Oban.Testing do
 
     {conf_opts, opts} = Keyword.split(opts, [:log, :prefix, :repo])
 
-    opts =
-      opts
-      |> Keyword.put_new(:attempt, 1)
-      |> Keyword.put_new(:attempted_at, DateTime.utc_now())
-      |> Keyword.put_new(:scheduled_at, DateTime.utc_now())
-      |> Keyword.put_new(:inserted_at, DateTime.utc_now())
+    utc_now = DateTime.utc_now()
 
     changeset =
       args
@@ -233,6 +228,10 @@ defmodule Oban.Testing do
       |> Changeset.put_change(:id, System.unique_integer([:positive]))
       |> Changeset.update_change(:args, &json_encode_decode/1)
       |> Changeset.update_change(:meta, &json_encode_decode/1)
+      |> put_new_change(:attempt, 1)
+      |> put_new_change(:attempted_at, utc_now)
+      |> put_new_change(:scheduled_at, utc_now)
+      |> put_new_change(:inserted_at, utc_now)
 
     assert_valid_changeset(changeset)
 
@@ -413,6 +412,16 @@ defmodule Oban.Testing do
   end
 
   # Perform Helpers
+
+  defp put_new_change(changeset, key, value) do
+    case Changeset.fetch_change(changeset, key) do
+      {:ok, _} ->
+        changeset
+
+      :error ->
+        Changeset.put_change(changeset, key, value)
+    end
+  end
 
   defp assert_valid_worker(worker) do
     assert Code.ensure_loaded?(worker) and implements_worker?(worker), """
