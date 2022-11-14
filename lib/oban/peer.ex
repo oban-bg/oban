@@ -65,7 +65,7 @@ defmodule Oban.Peer do
   @doc """
   Check whether the current peer instance leads the cluster.
   """
-  @callback leader?(pid()) :: boolean()
+  @callback leader?(Config.t() | GenServer.server()) :: boolean()
 
   @doc """
   Check whether the current instance leads the cluster.
