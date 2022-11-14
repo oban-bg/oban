@@ -36,10 +36,10 @@ defmodule Oban.Plugins.Reindexer do
     * `:timeout` - time in milliseconds to wait for each query call to finish. Defaults to 15 seconds.
 
     * `:timezone` — which timezone to use when evaluating the schedule. To use a timezone other than
-      the default of "Etc/UTC" you *must* have a timezone database like [tzdata][tzdata] installed
-      and configured.
+      the default of "Etc/UTC" you *must* have a timezone database like [tz][tz] installed and
+      configured.
 
-  [tzdata]: https://hexdocs.pm/tzdata
+  [tz]: https://hexdocs.pm/tz
   """
 
   @behaviour Oban.Plugin

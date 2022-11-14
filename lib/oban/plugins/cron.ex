@@ -33,10 +33,10 @@ defmodule Oban.Plugins.Cron do
     Jobs][perjob] in the Oban module docs for syntax and details.
 
   * `:timezone` — which timezone to use when scheduling cron jobs. To use a timezone other than
-    the default of "Etc/UTC" you *must* have a timezone database like [tzdata][tzdata] installed
-    and configured.
+    the default of "Etc/UTC" you *must* have a timezone database like [tz][tz] installed and
+    configured.
 
-  [tzdata]: https://hexdocs.pm/tzdata
+  [tz]: https://hexdocs.pm/tz
   [perjob]: Oban.html#module-periodic-jobs
 
   ## Instrumenting with Telemetry

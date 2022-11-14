@@ -149,7 +149,7 @@ defmodule Oban.MixProject do
       {:postgrex, "~> 0.16"},
       {:telemetry, "~> 0.4 or ~> 1.0"},
       {:stream_data, "~> 0.4", only: [:test, :dev]},
-      {:tzdata, "~> 1.0", only: [:test, :dev]},
+      {:tz, "~> 0.24", only: [:test, :dev]},
       {:benchee, "~> 1.0", only: [:test, :dev], runtime: false},
       {:credo, "~> 1.6", only: [:test, :dev], runtime: false},
       {:dialyxir, "~> 1.0", only: [:test, :dev], runtime: false},
