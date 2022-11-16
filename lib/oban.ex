@@ -851,9 +851,11 @@ defmodule Oban do
   @doc since: "2.9.0"
   @spec retry_all_jobs(name(), queryable :: Ecto.Queryable.t()) :: {:ok, non_neg_integer()}
   def retry_all_jobs(name \\ __MODULE__, queryable) do
-    name
-    |> config()
-    |> Engine.retry_all_jobs(queryable)
+    conf = config(name)
+
+    {:ok, jobs} = Engine.retry_all_jobs(conf, queryable)
+
+    {:ok, length(jobs)}
   end
 
   @doc """

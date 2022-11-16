@@ -210,9 +210,12 @@ defmodule Oban.Engines.Basic do
 
   @impl Engine
   def retry_all_jobs(%Config{} = conf, queryable) do
+    subquery = where(queryable, [j], j.state not in ["available", "executing", "scheduled"])
+
     query =
-      queryable
-      |> where([j], j.state not in ["available", "executing", "scheduled"])
+      Job
+      |> join(:inner, [j], x in subquery(subquery), on: j.id == x.id)
+      |> select([_, x], map(x, [:id, :queue, :state, :worker]))
       |> update([j],
         set: [
           state: "available",
@@ -224,9 +227,9 @@ defmodule Oban.Engines.Basic do
         ]
       )
 
-    {count, _} = Repo.update_all(conf, query, [])
+    {_, jobs} = Repo.update_all(conf, query, [])
 
-    {:ok, count}
+    {:ok, jobs}
   end
 
   # Validation

@@ -110,22 +110,22 @@ defmodule Oban.Engine do
   @callback cancel_job(conf(), Job.t()) :: :ok
 
   @doc """
-  Mark many `executing`, `available`, `scheduled` or `retryable` job as `cancelled` to prevent them
-  from running.
-  """
-  @callback cancel_all_jobs(conf(), queryable()) :: {:ok, [Job.t()]}
-
-  @doc """
   Mark a job as `available`, adding attempts if already maxed out. If the job is currently
   `available`, `executing` or `scheduled` it should be ignored.
   """
   @callback retry_job(conf(), Job.t()) :: :ok
 
   @doc """
+  Mark many `executing`, `available`, `scheduled` or `retryable` job as `cancelled` to prevent them
+  from running.
+  """
+  @callback cancel_all_jobs(conf(), queryable()) :: {:ok, [Job.t()]}
+
+  @doc """
   Mark many jobs as `available`, adding attempts if already maxed out. Any jobs currently
   `available`, `executing` or `scheduled` should be ignored.
   """
-  @callback retry_all_jobs(conf(), queryable()) :: {:ok, non_neg_integer()}
+  @callback retry_all_jobs(conf(), queryable()) :: {:ok, [Job.t()]}
 
   @optional_callbacks [insert_all_jobs: 5, insert_job: 5]
 
@@ -263,7 +263,9 @@ defmodule Oban.Engine do
   @doc false
   def retry_all_jobs(%Config{} = conf, queryable) do
     with_span(:retry_all_jobs, conf, fn engine ->
-      engine.retry_all_jobs(conf, queryable)
+      with {:ok, jobs} <- engine.retry_all_jobs(conf, queryable) do
+        {:meta, {:ok, jobs}, %{jobs: jobs}}
+      end
     end)
   end
 

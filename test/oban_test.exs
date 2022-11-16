@@ -702,8 +702,14 @@ defmodule ObanTest do
       assert %Job{state: "executing", max_attempts: 1} = Repo.reload(job_e)
       assert %Job{state: "scheduled", max_attempts: 1} = Repo.reload(job_f)
     end
+  end
+
+  describe "retry_all_jobs/2" do
+    setup :start_supervised_oban
 
     test "retrying all retryable jobs", %{name: name} do
+      TelemetryHandler.attach_events(span_type: [[:engine, :retry_all_jobs]])
+
       job_a = insert!(%{ref: 1}, state: "discarded", max_attempts: 20, attempt: 20)
       job_b = insert!(%{ref: 2}, state: "completed", max_attempts: 20)
       job_c = insert!(%{ref: 3}, state: "available", max_attempts: 20)
@@ -719,6 +725,8 @@ defmodule ObanTest do
       assert %Job{state: "available", max_attempts: 20} = Repo.reload(job_d)
       assert %Job{state: "executing", max_attempts: 1} = Repo.reload(job_e)
       assert %Job{state: "scheduled", max_attempts: 1} = Repo.reload(job_f)
+
+      assert_receive {:event, [:retry_all_jobs, :stop], _, %{jobs: _}}
     end
 
     test "retrying jobs with an alternate prefix" do
