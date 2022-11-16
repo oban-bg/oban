@@ -113,7 +113,7 @@ defmodule Oban.Engine do
   Mark many `executing`, `available`, `scheduled` or `retryable` job as `cancelled` to prevent them
   from running.
   """
-  @callback cancel_all_jobs(conf(), queryable()) :: {:ok, {non_neg_integer(), [Job.t()]}}
+  @callback cancel_all_jobs(conf(), queryable()) :: {:ok, [Job.t()]}
 
   @doc """
   Mark a job as `available`, adding attempts if already maxed out. If the job is currently
@@ -247,7 +247,9 @@ defmodule Oban.Engine do
   @doc false
   def cancel_all_jobs(%Config{} = conf, queryable) do
     with_span(:cancel_all_jobs, conf, fn engine ->
-      engine.cancel_all_jobs(conf, queryable)
+      with {:ok, jobs} <- engine.cancel_all_jobs(conf, queryable) do
+        {:meta, {:ok, jobs}, %{jobs: jobs}}
+      end
     end)
   end
 

@@ -405,6 +405,8 @@ defmodule ObanTest do
 
   describe "cancel_job/2" do
     test "cancelling an executing job by its id" do
+      TelemetryHandler.attach_events(span_type: [[:engine, :cancel_job]])
+
       name = start_supervised_oban!(poll_interval: 10, queues: [alpha: 5])
 
       job = insert!(ref: 1, sleep: 100)
@@ -416,8 +418,9 @@ defmodule ObanTest do
       refute_receive {:ok, 1}, 200
 
       assert %Job{state: "cancelled", cancelled_at: %_{}} = Repo.reload(job)
-
       assert %{running: []} = Oban.check_queue(name, queue: :alpha)
+
+      assert_receive {:event, [:cancel_job, :stop], _, %{job: _}}
     end
 
     test "cancelling jobs that may or may not be executing" do
@@ -446,6 +449,8 @@ defmodule ObanTest do
 
   describe "cancel_all_jobs/2" do
     test "cancelling all jobs that may or may not be executing" do
+      TelemetryHandler.attach_events(span_type: [[:engine, :cancel_all_jobs]])
+
       name = start_supervised_oban!(poll_interval: 10, queues: [alpha: 5])
 
       job_a = insert!(%{ref: 1}, schedule_in: 10)
@@ -463,6 +468,8 @@ defmodule ObanTest do
       assert %Job{state: "cancelled", cancelled_at: %_{}} = Repo.reload(job_b)
       assert %Job{state: "completed", cancelled_at: nil} = Repo.reload(job_c)
       assert %Job{state: "cancelled", cancelled_at: %_{}} = Repo.reload(job_d)
+
+      assert_receive {:event, [:cancel_all_jobs, :stop], _, %{jobs: _jobs}}
     end
 
     test "cancelling jobs with an alternate prefix" do

@@ -908,17 +908,16 @@ defmodule Oban do
   def cancel_all_jobs(name \\ __MODULE__, queryable) do
     conf = config(name)
 
-    case Engine.cancel_all_jobs(conf, queryable) do
-      {:ok, {count, [_ | _] = executing}} ->
-        payload = Enum.map(executing, fn job -> %{action: :pkill, job_id: job.id} end)
+    {:ok, cancelled_jobs} = Engine.cancel_all_jobs(conf, queryable)
 
-        Notifier.notify(conf, :signal, payload)
+    payload =
+      for %{id: id, state: "executing"} <- cancelled_jobs do
+        %{action: :pkill, job_id: id}
+      end
 
-        {:ok, count}
+    Notifier.notify(conf, :signal, payload)
 
-      {:ok, {count, _executing}} ->
-        {:ok, count}
-    end
+    {:ok, length(cancelled_jobs)}
   end
 
   ## Child Spec Helpers
