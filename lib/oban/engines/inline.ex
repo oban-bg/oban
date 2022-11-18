@@ -55,13 +55,13 @@ defmodule Oban.Engines.Inline do
   def cancel_job(_conf, _job), do: :ok
 
   @impl Engine
-  def cancel_all_jobs(_conf, _queryable), do: {:ok, {0, []}}
+  def cancel_all_jobs(_conf, _queryable), do: {:ok, []}
 
   @impl Engine
   def retry_job(_conf, _job), do: :ok
 
   @impl Engine
-  def retry_all_jobs(_conf, _queryable), do: {:ok, 0}
+  def retry_all_jobs(_conf, _queryable), do: {:ok, []}
 
   # Changeset Helpers
 
