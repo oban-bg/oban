@@ -51,6 +51,14 @@ other "extension" modules. For the sake of consistency with notifiers and peers,
 the Basic and Inline engines are now `Oban.Engines.Basic` and
 `Oban.Engines.Inline`, respectively.
 
+## v2.13.6 — 2022-11-28
+
+- [Testing] Put default timestamps directly in changeset.
+
+  Workers that override `new/2` and don't pass options through would end up
+  without necessary timestamps, causing a `CaseClauseError` during execution
+  when timestamps couldn't be compared.
+
 ## v2.13.5 — 2022-11-14
 
 ### Bug Fixes
