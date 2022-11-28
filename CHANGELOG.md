@@ -53,6 +53,8 @@ the Basic and Inline engines are now `Oban.Engines.Basic` and
 
 ## v2.13.6 — 2022-11-28
 
+### Bug Fixes
+
 - [Testing] Put default timestamps directly in changeset.
 
   Workers that override `new/2` and don't pass options through would end up
