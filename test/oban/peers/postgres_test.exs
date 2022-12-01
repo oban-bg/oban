@@ -5,8 +5,10 @@ defmodule Oban.Peers.PostgresTest do
 
   alias Oban.Peer
   alias Oban.Peers.Postgres
+  alias Oban.TelemetryHandler
 
   test "only a single peer is leader" do
+    TelemetryHandler.attach_events()
     name = start_supervised_oban!(peer: false)
     conf = %{Oban.config(name) | peer: Postgres}
 
@@ -14,6 +16,9 @@ defmodule Oban.Peers.PostgresTest do
              [A, B, C]
              |> Enum.map(&start_supervised!({Peer, conf: conf, name: &1}))
              |> Enum.filter(&Postgres.leader?/1)
+
+    assert_receive {:event, [:election, :start], _measure, %{peering_module: Oban.Peers.Postgres}}
+    assert_receive {:event, [:election, :stop], _measure, %{peering_module: Oban.Peers.Postgres}}
   end
 
   test "gacefully handling a missing oban_peers table" do

@@ -95,7 +95,7 @@ defmodule Oban.Telemetry do
 
   ### Notifier Events
 
-  Oban emits telemetry a span event each time the Notifier is triggered:
+  Oban emits a telemetry span event each time the Notifier is triggered:
 
   * `[:oban, :notifier, :notify, :start | :stop | :exception]`
 
@@ -138,6 +138,24 @@ defmodule Oban.Telemetry do
   | `:start`     | `:system_time`  | `:conf`, `:plugin`                                    |
   | `:stop`      | `:duration`     | `:conf`, `:plugin`                                    |
   | `:exception` | `:duration`     | `:conf`, `:plugin`, `:kind`, `:reason`, `:stacktrace` |
+
+  ### Peer Events
+
+  Oban emits a telemetry span event each time an Oban Peer election occurs:
+
+  * `[:oban, :peers, :election, :start | :stop | :exception]`
+
+  | event        | measures       | metadata                                                       |
+  | ------------ | -------------- | -------------------------------------------------------        |
+  | `:start`     | `:system_time` | `:conf`, `:peering_module`,                                    |
+  | `:stop`      | `:duration`    | `:conf`, `:peering_module`,                                    |
+  | `:exception` | `:duration`    | `:conf`, `:peering_module`, `:kind`, `:reason`, `:stacktrace`  |
+
+  #### Metadata
+
+  * `:conf`, `:kind`, `:reason`, `:stacktrace` — see the explanation in notifier metadata above
+  * `:peering_module` — module used for peering
+
 
   ## Default Logger
 

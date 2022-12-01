@@ -3,8 +3,10 @@ defmodule Oban.Peers.GlobalTest do
 
   alias Oban.Peer
   alias Oban.Peers.Global
+  alias Oban.TelemetryHandler
 
   test "only a single peer is leader" do
+    TelemetryHandler.attach_events()
     name_1 = start_supervised_oban!(peer: Global, node: "worker.1", plugins: false)
     name_2 = start_supervised_oban!(peer: Global, node: "worker.2", plugins: false)
 
@@ -15,5 +17,8 @@ defmodule Oban.Peers.GlobalTest do
     peer_2 = start_supervised!({Peer, conf: conf_2, name: B})
 
     assert [_leader] = Enum.filter([peer_1, peer_2], &Global.leader?/1)
+
+    assert_receive {:event, [:election, :start], _measure, %{peering_module: Oban.Peers.Global}}
+    assert_receive {:event, [:election, :stop], _measure, %{peering_module: Oban.Peers.Global}}
   end
 end
