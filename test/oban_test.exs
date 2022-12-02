@@ -637,6 +637,22 @@ defmodule ObanTest do
       end)
     end
 
+    test "pausing queues on a specific node" do
+      name = start_supervised_oban!(node: "web.1", poll_interval: 10, queues: [alpha: 1])
+
+      assert :ok = Oban.pause_queue(name, queue: :alpha, node: "web.2")
+
+      with_backoff(fn ->
+        assert %{paused: false} = Oban.check_queue(name, queue: :alpha)
+      end)
+
+      assert :ok = Oban.pause_queue(name, queue: :alpha, node: "web.1")
+
+      with_backoff(fn ->
+        assert %{paused: true} = Oban.check_queue(name, queue: :alpha)
+      end)
+    end
+
     test "resuming queues only on the local node" do
       name1 = start_supervised_oban!(poll_interval: 10, queues: [alpha: 1])
       name2 = start_supervised_oban!(poll_interval: 10, queues: [alpha: 1])
@@ -656,14 +672,26 @@ defmodule ObanTest do
       end)
     end
 
-    test "trying to resume queues that don't exist" do
-      name = start_supervised_oban!(testing: :manual)
+    test "resuming queues on a specific node" do
+      name = start_supervised_oban!(node: "web.1", poll_interval: 10, queues: [alpha: 1])
 
-      assert :ok = Oban.resume_queue(name, queue: :alpha)
+      Oban.pause_queue(name, queue: :alpha)
 
-      assert_raise ArgumentError, "queue :alpha does not exist locally", fn ->
-        Oban.resume_queue(name, queue: :alpha, local_only: true)
-      end
+      with_backoff(fn ->
+        assert %{paused: true} = Oban.check_queue(name, queue: :alpha)
+      end)
+
+      Oban.resume_queue(name, queue: :alpha, node: "web.2")
+
+      with_backoff(fn ->
+        assert %{paused: true} = Oban.check_queue(name, queue: :alpha)
+      end)
+
+      Oban.resume_queue(name, queue: :alpha, node: "web.1")
+
+      with_backoff(fn ->
+        assert %{paused: false} = Oban.check_queue(name, queue: :alpha)
+      end)
     end
 
     test "trying to pause queues that don't exist" do
@@ -673,6 +701,16 @@ defmodule ObanTest do
 
       assert_raise ArgumentError, "queue :alpha does not exist locally", fn ->
         Oban.pause_queue(name, queue: :alpha, local_only: true)
+      end
+    end
+
+    test "trying to resume queues that don't exist" do
+      name = start_supervised_oban!(testing: :manual)
+
+      assert :ok = Oban.resume_queue(name, queue: :alpha)
+
+      assert_raise ArgumentError, "queue :alpha does not exist locally", fn ->
+        Oban.resume_queue(name, queue: :alpha, local_only: true)
       end
     end
   end

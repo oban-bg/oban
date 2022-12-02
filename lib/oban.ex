@@ -23,6 +23,7 @@ defmodule Oban do
           {:queue, queue_name()}
           | {:limit, pos_integer()}
           | {:local_only, boolean()}
+          | {:node, String.t()}
 
   @type queue_state :: %{
           :limit => pos_integer(),
@@ -41,11 +42,11 @@ defmodule Oban do
           | {:get_dynamic_repo, nil | (() -> pid() | atom())}
           | {:log, false | Logger.level()}
           | {:name, name()}
-          | {:node, binary()}
+          | {:node, String.t()}
           | {:notifier, module()}
           | {:peer, false | module()}
           | {:plugins, false | [module() | {module() | Keyword.t()}]}
-          | {:prefix, binary()}
+          | {:prefix, String.t()}
           | {:queues, false | [{queue_name(), pos_integer() | Keyword.t()}]}
           | {:repo, module()}
           | {:shutdown_grace_period, timeout()}
@@ -587,6 +588,11 @@ defmodule Oban do
       Oban.start_queue(queue: :media, limit: 5, local_only: true)
       :ok
 
+  Start the `:media` queue on a particular node.
+
+      Oban.start_queue(queue: :media, limit: 5, node: "worker.1")
+      :ok
+
   Start the `:media` queue in a `paused` state.
 
       Oban.start_queue(queue: :media, limit: 5, paused: true)
@@ -618,7 +624,10 @@ defmodule Oban do
   ## Options
 
   * `:queue` - a string or atom specifying the queue to pause, required
+
   * `:local_only` - whether the queue will be paused only on the local node, default: `false`
+
+  * `:node` - restrict pausing to a particular node
 
   Note: by default, Oban does not verify that the given queue exists unless `:local_only`
   is set to `true` as even if the queue does not exist locally, it might be running on
@@ -635,11 +644,16 @@ defmodule Oban do
 
       Oban.pause_queue(queue: :default, local_only: true)
       :ok
+
+  Pause the default queue only on a particular node:
+
+      Oban.pause_queue(queue: :default, node: "worker.1")
+      :ok
   """
   @doc since: "0.2.0"
   @spec pause_queue(name(), opts :: [queue_option()]) :: :ok
   def pause_queue(name \\ __MODULE__, [_ | _] = opts) do
-    validate_queue_opts!(opts, [:queue, :local_only])
+    validate_queue_opts!(opts, [:queue, :local_only, :node])
     validate_queue_exists!(name, opts)
 
     conf = config(name)
@@ -654,7 +668,10 @@ defmodule Oban do
   ## Options
 
   * `:queue` - a string or atom specifying the queue to resume, required
+
   * `:local_only` - whether the queue will be resumed only on the local node, default: `false`
+
+  * `:node` - restrict resuming to a particular node
 
   Note: by default, Oban does not verify that the given queue exists unless `:local_only`
   is set to `true` as even if the queue does not exist locally, it might be running on
@@ -671,11 +688,16 @@ defmodule Oban do
 
       Oban.resume_queue(queue: :default, local_only: true)
       :ok
+
+  Resume the default queue only on a particular node:
+
+      Oban.resume_queue(queue: :default, node: "worker.1")
+      :ok
   """
   @doc since: "0.2.0"
   @spec resume_queue(name(), opts :: [queue_option()]) :: :ok
   def resume_queue(name \\ __MODULE__, [_ | _] = opts) do
-    validate_queue_opts!(opts, [:queue, :local_only])
+    validate_queue_opts!(opts, [:queue, :local_only, :node])
     validate_queue_exists!(name, opts)
 
     conf = config(name)
@@ -690,8 +712,12 @@ defmodule Oban do
   ## Options
 
   * `:queue` - a string or atom specifying the queue to scale, required
+
   * `:limit` — the new concurrency limit, required
+
   * `:local_only` — whether the queue will be scaled only on the local node, default: `false`
+
+  * `:node` - restrict scaling to a particular node
 
   In addition, all engine-specific queue options are passed along after validation.
 
@@ -715,13 +741,18 @@ defmodule Oban do
 
       Oban.scale_queue(queue: :default, limit: 10, local_only: true)
       :ok
+
+  Scale the queue on a particular node:
+
+      Oban.scale_queue(queue: :default, limit: 10, node: "worker.1")
+      :ok
   """
   @doc since: "0.2.0"
   @spec scale_queue(name(), opts :: [queue_option()]) :: :ok
   def scale_queue(name \\ __MODULE__, [_ | _] = opts) do
     conf = config(name)
 
-    validate_queue_opts!(opts, [:queue, :local_only])
+    validate_queue_opts!(opts, [:queue, :local_only, :node])
     validate_engine_meta!(conf, opts)
     validate_queue_exists!(name, opts)
 
@@ -751,20 +782,32 @@ defmodule Oban do
   ## Options
 
   * `:queue` - a string or atom specifying the queue to stop, required
+
   * `:local_only` - whether the queue will be stopped only on the local node, default: `false`
 
+  * `:node` - restrict stopping to a particular node
+
   ## Example
+
+  Stop a running queue on all nodes:
 
       Oban.stop_queue(queue: :default)
       :ok
 
+  Stop the queue only on the local node:
+
       Oban.stop_queue(queue: :media, local_only: true)
+      :ok
+
+  Stop the queue only on a particular node:
+
+      Oban.stop_queue(queue: :media, node: "worker.1")
       :ok
   """
   @doc since: "0.12.0"
   @spec stop_queue(name(), opts :: [queue_option()]) :: :ok
   def stop_queue(name \\ __MODULE__, [_ | _] = opts) do
-    validate_queue_opts!(opts, [:queue, :local_only])
+    validate_queue_opts!(opts, [:queue, :local_only, :node])
     validate_queue_exists!(name, opts)
 
     conf = config(name)
@@ -947,10 +990,15 @@ defmodule Oban do
   ## Signal Helper
 
   defp scope_signal(conf, opts) do
-    if Keyword.get(opts, :local_only) do
-      Config.to_ident(conf)
-    else
-      :any
+    cond do
+      Keyword.get(opts, :local_only) ->
+        Config.to_ident(conf)
+
+      Keyword.has_key?(opts, :node) ->
+        Config.to_ident(%{conf | node: opts[:node]})
+
+      true ->
+        :any
     end
   end
 
@@ -976,6 +1024,13 @@ defmodule Oban do
   defp validate_queue_opts!({:local_only, local_only}) do
     unless is_boolean(local_only) do
       raise ArgumentError, "expected :local_only to be a boolean, got: #{inspect(local_only)}"
+    end
+  end
+
+  defp validate_queue_opts!({:node, node}) do
+    unless (is_atom(node) and not is_nil(node)) or (is_binary(node) and byte_size(node) > 0) do
+      raise ArgumentError,
+            "expected :node to be a binary or atom (except `nil`), got: #{inspect(node)}"
     end
   end
 
