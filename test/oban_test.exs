@@ -724,21 +724,18 @@ defmodule ObanTest do
       job_c = insert!(%{ref: 3}, state: "available", max_attempts: 20)
       job_d = insert!(%{ref: 4}, state: "retryable", max_attempts: 20)
       job_e = insert!(%{ref: 5}, state: "executing", max_attempts: 1, attempt: 1)
-      job_f = insert!(%{ref: 6}, state: "scheduled", max_attempts: 1, attempt: 1)
 
       assert :ok = Oban.retry_job(name, job_a.id)
       assert :ok = Oban.retry_job(name, job_b.id)
       assert :ok = Oban.retry_job(name, job_c.id)
       assert :ok = Oban.retry_job(name, job_d.id)
       assert :ok = Oban.retry_job(name, job_e.id)
-      assert :ok = Oban.retry_job(name, job_f.id)
 
       assert %Job{state: "available", max_attempts: 21} = Repo.reload(job_a)
       assert %Job{state: "available", max_attempts: 20} = Repo.reload(job_b)
       assert %Job{state: "available", max_attempts: 20} = Repo.reload(job_c)
       assert %Job{state: "available", max_attempts: 20} = Repo.reload(job_d)
       assert %Job{state: "executing", max_attempts: 1} = Repo.reload(job_e)
-      assert %Job{state: "scheduled", max_attempts: 1} = Repo.reload(job_f)
     end
   end
 
@@ -753,7 +750,6 @@ defmodule ObanTest do
       job_c = insert!(%{ref: 3}, state: "available", max_attempts: 20)
       job_d = insert!(%{ref: 4}, state: "retryable", max_attempts: 20)
       job_e = insert!(%{ref: 5}, state: "executing", max_attempts: 1, attempt: 1)
-      job_f = insert!(%{ref: 6}, state: "scheduled", max_attempts: 1, attempt: 1)
 
       assert {:ok, 3} = Oban.retry_all_jobs(name, Job)
 
@@ -762,7 +758,6 @@ defmodule ObanTest do
       assert %Job{state: "available", max_attempts: 20} = Repo.reload(job_c)
       assert %Job{state: "available", max_attempts: 20} = Repo.reload(job_d)
       assert %Job{state: "executing", max_attempts: 1} = Repo.reload(job_e)
-      assert %Job{state: "scheduled", max_attempts: 1} = Repo.reload(job_f)
 
       assert_receive {:event, [:retry_all_jobs, :stop], _, %{jobs: _}}
     end

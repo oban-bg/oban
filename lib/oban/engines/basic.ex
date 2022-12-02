@@ -210,7 +210,7 @@ defmodule Oban.Engines.Basic do
 
   @impl Engine
   def retry_all_jobs(%Config{} = conf, queryable) do
-    subquery = where(queryable, [j], j.state not in ["available", "executing", "scheduled"])
+    subquery = where(queryable, [j], j.state not in ["available", "executing"])
 
     query =
       Job
