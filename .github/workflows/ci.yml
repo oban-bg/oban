@@ -30,7 +30,7 @@ jobs:
             exclude_tags: 'nothing'
             lint: lint
 
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
 
     services:
       postgres:
