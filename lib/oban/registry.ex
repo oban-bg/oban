@@ -34,9 +34,9 @@ defmodule Oban.Registry do
         config
 
       _ ->
-        raise RuntimeError,
-              "no config registered for #{inspect(oban_name)} instance, " <>
-                "is the supervisor running?"
+        raise RuntimeError, """
+        No Oban instance named `#{inspect(oban_name)}` is running and config isn't available.
+        """
     end
   end
 
