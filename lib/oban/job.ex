@@ -94,25 +94,28 @@ defmodule Oban.Job do
           errors: errors(),
           tags: tags(),
           attempt: non_neg_integer(),
-          attempted_by: [binary()],
+          attempted_by: [binary()] | nil,
           max_attempts: pos_integer(),
           meta: map(),
           priority: pos_integer(),
           inserted_at: DateTime.t(),
           scheduled_at: DateTime.t(),
-          attempted_at: DateTime.t(),
-          completed_at: DateTime.t(),
-          discarded_at: DateTime.t(),
-          cancelled_at: DateTime.t(),
-          conf: Oban.Config.t(),
+          attempted_at: DateTime.t() | nil,
+          completed_at: DateTime.t() | nil,
+          discarded_at: DateTime.t() | nil,
+          cancelled_at: DateTime.t() | nil,
+          conf: Oban.Config.t() | nil,
           conflict?: boolean(),
-          replace: [replace_option() | replace_by_state_option()],
-          unique: %{fields: [unique_field()], period: unique_period(), states: [unique_state()]},
-          unsaved_error: %{
-            kind: Exception.kind(),
-            reason: term(),
-            stacktrace: Exception.stacktrace()
-          }
+          replace: [replace_option() | replace_by_state_option()] | nil,
+          unique:
+            %{fields: [unique_field()], period: unique_period(), states: [unique_state()]} | nil,
+          unsaved_error:
+            %{
+              kind: Exception.kind(),
+              reason: term(),
+              stacktrace: Exception.stacktrace()
+            }
+            | nil
         }
 
   @type changeset :: Ecto.Changeset.t(t())
