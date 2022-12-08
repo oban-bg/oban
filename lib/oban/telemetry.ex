@@ -149,7 +149,7 @@ defmodule Oban.Telemetry do
   | ------------ | -------------- | -------------------------------------------------------        |
   | `:start`     | `:system_time` | `:conf`, `:leader`, `:peer`,                        |
   | `:stop`      | `:duration`    | `:conf`, `:leader`, `:peer`,                        |
-  | `:exception` | `:duration`    | `:conf`, `:peer`, `:kind`, `:reason`, `:stacktrace` |
+  | `:exception` | `:duration`    | `:conf`, `:leader`, `:peer`, `:kind`, `:reason`, `:stacktrace` |
 
   #### Metadata
 
