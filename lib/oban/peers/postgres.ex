@@ -88,16 +88,16 @@ defmodule Oban.Peers.Postgres do
   def handle_info(:election, %State{} = state) do
     meta = %{conf: state.conf, leader: state.leader?, peer: __MODULE__}
 
-    {:ok, state} =
-      :telemetry.span([:oban, :peers, :election], meta, fn ->
-        result =
+    state =
+      :telemetry.span([:oban, :peer, :election], meta, fn ->
+        {:ok, state} =
           Repo.transaction(state.conf, fn ->
             state
             |> delete_expired_peers()
             |> upsert_peer()
           end)
 
-        {result, %{meta | leader: result.leader?}}
+        {state, %{meta | leader: state.leader?}}
       end)
 
     {:noreply, schedule_election(state)}
