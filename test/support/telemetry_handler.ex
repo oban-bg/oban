@@ -12,7 +12,7 @@ defmodule Oban.TelemetryHandler do
     :plugin,
     [:engine, :insert_job],
     [:engine, :insert_all_jobs],
-    [:peers, :election]
+    [:peer, :election]
   ]
 
   def attach_events(opts \\ []) do
@@ -53,7 +53,7 @@ defmodule Oban.TelemetryHandler do
     send(pid, {:event, event, measure, meta})
   end
 
-  def handle([:oban, :peers | event], measure, meta, pid) do
+  def handle([:oban, :peer | event], measure, meta, pid) do
     send(pid, {:event, event, measure, meta})
   end
 

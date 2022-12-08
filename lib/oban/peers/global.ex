@@ -69,11 +69,13 @@ defmodule Oban.Peers.Global do
 
   @impl GenServer
   def handle_info(:election, %State{} = state) do
-    meta = %{conf: state.conf, peering_module: __MODULE__}
+    meta = %{conf: state.conf, leader: state.leader?, peer: __MODULE__}
 
     locked? =
-      :telemetry.span([:oban, :peers, :election], meta, fn ->
-        {:global.set_lock(key(state), nodes(), 0), meta}
+      :telemetry.span([:oban, :peer, :election], meta, fn ->
+        locked? = :global.set_lock(key(state), nodes(), 0)
+
+        {locked?, %{meta | leader: locked?}}
       end)
 
     {:noreply, schedule_election(%{state | leader?: locked?})}

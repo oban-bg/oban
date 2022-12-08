@@ -86,7 +86,7 @@ defmodule Oban.Peers.Postgres do
 
   @impl GenServer
   def handle_info(:election, %State{} = state) do
-    meta = %{conf: state.conf, peering_module: __MODULE__}
+    meta = %{conf: state.conf, leader: state.leader?, peer: __MODULE__}
 
     {:ok, state} =
       :telemetry.span([:oban, :peers, :election], meta, fn ->
@@ -97,7 +97,7 @@ defmodule Oban.Peers.Postgres do
             |> upsert_peer()
           end)
 
-        {result, meta}
+        {result, %{meta | leader: result.leader?}}
       end)
 
     {:noreply, schedule_election(state)}
