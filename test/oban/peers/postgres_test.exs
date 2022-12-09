@@ -18,11 +18,8 @@ defmodule Oban.Peers.PostgresTest do
              |> Enum.map(&start_supervised!({Peer, conf: conf, name: &1}))
              |> Enum.filter(&Postgres.leader?/1)
 
-    assert_received {:event, [:election, :start], _measure,
-                     %{leader: _, peer: Oban.Peers.Postgres}}
-
-    assert_received {:event, [:election, :stop], _measure,
-                     %{leader: _, peer: Oban.Peers.Postgres}}
+    assert_received {:event, [:election, :start], _measure, %{leader: _, peer: Postgres}}
+    assert_received {:event, [:election, :stop], _measure, %{leader: _, peer: Postgres}}
   end
 
   test "gacefully handling a missing oban_peers table" do
