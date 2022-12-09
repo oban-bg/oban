@@ -35,10 +35,6 @@ defmodule Oban.Plugins.GossipTest do
   end
 
   describe "integration" do
-    setup do
-      TelemetryHandler.attach_events()
-    end
-
     test "queue producers periodically emit check meta as gossip" do
       name =
         start_supervised_oban!(
@@ -53,6 +49,8 @@ defmodule Oban.Plugins.GossipTest do
     end
 
     test "telemetry events include plugin meta with gossip counts" do
+      TelemetryHandler.attach_events()
+
       start_supervised_oban!(plugins: [{Gossip, interval: 10}])
 
       assert_receive {:event, :start, %{system_time: _}, %{conf: _, plugin: Gossip}}
