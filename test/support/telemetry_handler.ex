@@ -7,7 +7,13 @@ defmodule Oban.TelemetryHandler do
   import ExUnit.Callbacks, only: [on_exit: 1]
 
   @span_tail [:start, :stop, :exception]
-  @span_type [:job, :plugin, [:engine, :insert_job], [:engine, :insert_all_jobs]]
+  @span_type [
+    :job,
+    :plugin,
+    [:engine, :insert_job],
+    [:engine, :insert_all_jobs],
+    [:peer, :election]
+  ]
 
   def attach_events(opts \\ []) do
     span_tail = Keyword.get(opts, :span_tail, @span_tail)
@@ -44,6 +50,10 @@ defmodule Oban.TelemetryHandler do
   end
 
   def handle([:oban, :plugin, event], measure, meta, pid) do
+    send(pid, {:event, event, measure, meta})
+  end
+
+  def handle([:oban, :peer | event], measure, meta, pid) do
     send(pid, {:event, event, measure, meta})
   end
 
