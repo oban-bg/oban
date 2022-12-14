@@ -55,15 +55,15 @@ defmodule Oban.Worker do
 
   The value returned from `c:perform/1` can control whether the job is a success or a failure:
 
-  * `:ok` or `{:ok, value}` — the job is successful; for success tuples the `value` is ignored.
-    The job is marked as `completed`.
+  * `:ok` or `{:ok, value}` — the job is successful and marked as `completed`.  The `value` from
+    success tuples is ignored.
 
   * `{:cancel, reason}` — cancel executing the job and stop retrying it. An error is recorded
-    using the optional `reason`. The job is marked as `cancelled`.
+    using the provided `reason`. The job is marked as `cancelled`.
 
-  * `{:error, error}` — the job failed, record the error. If `max_attempt`
-    has not been reached already, a retry is scheduled and the job is marked as `retryable`.
-    Otherwise, no retry is scheduled and the job is marked as `discarded`.
+  * `{:error, error}` — the job failed, record the error. If `max_attempts` has not been reached
+    already, the job is marked as `retryable` and scheduled to run again. Otherwise, the job is
+    marked as `discarded` and won't be retried.
 
   * `{:snooze, seconds}` — mark the job as `snoozed` and schedule it to run again `seconds` in the
     future. See [Snoozing](#module-snoozing-jobs) for more details.
