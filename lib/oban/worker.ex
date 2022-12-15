@@ -55,12 +55,15 @@ defmodule Oban.Worker do
 
   The value returned from `c:perform/1` can control whether the job is a success or a failure:
 
-  * `:ok` or `{:ok, value}` — the job is successful; for success tuples the `value` is ignored
+  * `:ok` or `{:ok, value}` — the job is successful and marked as `completed`.  The `value` from
+    success tuples is ignored.
 
   * `{:cancel, reason}` — cancel executing the job and stop retrying it. An error is recorded
-    using the optional `reason`, though the job is still successful.
+    using the provided `reason`. The job is marked as `cancelled`.
 
-  * `{:error, error}` — the job failed, record the error and schedule a retry if possible
+  * `{:error, error}` — the job failed, record the error. If `max_attempts` has not been reached
+    already, the job is marked as `retryable` and scheduled to run again. Otherwise, the job is
+    marked as `discarded` and won't be retried.
 
   * `{:snooze, seconds}` — mark the job as `snoozed` and schedule it to run again `seconds` in the
     future. See [Snoozing](#module-snoozing-jobs) for more details.
@@ -117,8 +120,8 @@ defmodule Oban.Worker do
   When jobs fail they may be retried again in the future using a backoff algorithm. By default the
   backoff is exponential with a fixed padding of 15 seconds and a small amount of jitter. The
   jitter helps to prevent jobs that fail simultaneously from consistently retrying at the same
-  time. The default backoff is clamped to a maximum of 12 days, the equivalent of the 20th
-  attempt.
+  time. With the default backoff behavior, the 20th attempt will occur around 12 days after the
+  first attempt.
 
   If the default strategy is too aggressive or otherwise unsuited to your app's workload you can
   define a custom backoff function using the `c:backoff/1` callback.
