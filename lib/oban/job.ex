@@ -250,6 +250,8 @@ defmodule Oban.Job do
   @doc since: "0.1.0"
   @spec new(args(), [option()]) :: changeset()
   def new(args, opts \\ []) when is_map(args) and is_list(opts) do
+    args = serialize_arguments(args)
+
     params =
       opts
       |> Keyword.put(:args, args)
@@ -530,6 +532,12 @@ defmodule Oban.Job do
       else
         {:halt, {:error, key, val}}
       end
+    end)
+  end
+
+  defp serialize_arguments(args) do
+    Map.new(args, fn {key, value} ->
+      {key, Oban.Serializer.serialize(value)}
     end)
   end
 end

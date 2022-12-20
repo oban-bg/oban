@@ -38,6 +38,12 @@ defmodule Oban.JobTest do
       assert Job.new(%{}, worker: Fake, schedule_in: {6, :units}).errors[:schedule_in]
       assert Job.new(%{}, worker: Fake, schedule_in: {6.0, :hours}).errors[:schedule_in]
     end
+
+    test "args are serialized with user-provided protocol implementations" do
+      changeset = Job.new(%{foo: Decimal.new("1.23")}, worker: Fake)
+
+      assert changeset.changes[:args] == %{foo: "1.23"}
+    end
   end
 
   describe "tags with new/2" do
