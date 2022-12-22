@@ -94,7 +94,11 @@ defmodule Oban.Repo do
   """
   @doc since: "2.14.0"
   def default_options(conf) do
-    [log: conf.log, prefix: conf.prefix, telemetry_options: [oban_conf: conf]]
+    if conf.prefix do
+      [log: conf.log, prefix: conf.prefix, telemetry_options: [oban_conf: conf]]
+    else
+      [log: conf.log, telemetry_options: [oban_conf: conf]]
+    end
   end
 
   @doc """
