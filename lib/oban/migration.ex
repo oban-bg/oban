@@ -1,26 +1,33 @@
 defmodule Oban.Migrations do
+  @moduledoc false
+
+  defdelegate up(opts \\ []), to: Oban.Migration
+  defdelegate down(opts \\ []), to: Oban.Migration
+end
+
+defmodule Oban.Migration do
   @moduledoc """
   Migrations create and modify the database tables Oban needs to function.
 
   ## Usage
 
   To use migrations in your application you'll need to generate an `Ecto.Migration` that wraps
-  calls to `Oban.Migrations`:
+  calls to `Oban.Migration`:
 
   ```bash
   mix ecto.gen.migration add_oban
   ```
 
   Open the generated migration in your editor and call the `up` and `down` functions on
-  `Oban.Migrations`:
+  `Oban.Migration`:
 
   ```elixir
   defmodule MyApp.Repo.Migrations.AddOban do
     use Ecto.Migration
 
-    def up, do: Oban.Migrations.up()
+    def up, do: Oban.Migration.up()
 
-    def down, do: Oban.Migrations.down()
+    def down, do: Oban.Migration.down()
   end
   ```
 
@@ -32,23 +39,23 @@ defmodule Oban.Migrations do
   mix ecto.migrate
   ```
 
-  Migrations between versions are idempotent. As new versions are released, you
-  may need to run additional migrations. To do this, generate a new migration:
+  Migrations between versions are idempotent. As new versions are released, you may need to run
+  additional migrations. To do this, generate a new migration:
 
   ```bash
   mix ecto.gen.migration upgrade_oban_to_v11
   ```
 
-  Open the generated migration in your editor and call the `up` and `down`
-  functions on `Oban.Migrations`, passing a version number:
+  Open the generated migration in your editor and call the `up` and `down` functions on
+  `Oban.Migration`, passing a version number:
 
   ```elixir
   defmodule MyApp.Repo.Migrations.UpgradeObanToV11 do
     use Ecto.Migration
 
-    def up, do: Oban.Migrations.up(version: 11)
+    def up, do: Oban.Migration.up(version: 11)
 
-    def down, do: Oban.Migrations.down(version: 11)
+    def down, do: Oban.Migration.down(version: 11)
   end
   ```
 
@@ -99,9 +106,9 @@ defmodule Oban.Migrations do
   If your application uses something other than Ecto for migrations, be it an external system or
   another ORM, it may be helpful to create plain SQL migrations for Oban database schema changes.
 
-  The simplest mechanism to obtain the SQL changes is to create the migration locally and run `mix
-  ecto.migrate --log-migrations-sql`. That will log all of the generated SQL, which you can then
-  paste into your migration system of choice.
+  The simplest mechanism for obtaining the SQL changes is to create the migration locally and run
+  `mix ecto.migrate --log-migrations-sql`. That will log all of the generated SQL, which you can
+  then paste into your migration system of choice.
 
   Alternatively, if you'd like a more automated approach, try using the [oban_migations_sql][sql]
   project to generate `up` and `down` SQL migrations for you.
@@ -111,11 +118,20 @@ defmodule Oban.Migrations do
 
   use Ecto.Migration
 
-  alias Oban.{Config, Repo}
+  @doc """
+  Migrates storage up to the latest version.
+  """
+  @callback up(Keyword.t()) :: :ok
 
-  @initial_version 1
-  @current_version 11
-  @default_prefix "public"
+  @doc """
+  Migrates storage down to the previous version.
+  """
+  @callback down(Keyword.t()) :: :ok
+
+  @doc """
+  Identifies the last migrated version.
+  """
+  @callback migrated_version(Keyword.t()) :: non_neg_integer()
 
   @doc """
   Run the `up` changes for all migrations between the initial version and the current version.
@@ -124,34 +140,22 @@ defmodule Oban.Migrations do
 
   Run all migrations up to the current version:
 
-      Oban.Migrations.up()
+      Oban.Migration.up()
 
   Run migrations up to a specified version:
 
-      Oban.Migrations.up(version: 2)
+      Oban.Migration.up(version: 2)
 
   Run migrations in an alternate prefix:
 
-      Oban.Migrations.up(prefix: "payments")
+      Oban.Migration.up(prefix: "payments")
 
   Run migrations in an alternate prefix but don't try to create the schema:
 
-      Oban.Migrations.up(prefix: "payments", create_schema: false)
+      Oban.Migration.up(prefix: "payments", create_schema: false)
   """
   def up(opts \\ []) when is_list(opts) do
-    opts = with_defaults(opts, @current_version)
-    initial = migrated_version(repo(), opts.prefix)
-
-    cond do
-      initial == 0 ->
-        change(@initial_version..opts.version, :up, opts)
-
-      initial < opts.version ->
-        change((initial + 1)..opts.version, :up, opts)
-
-      true ->
-        :ok
-    end
+    migrator().up(opts)
   end
 
   @doc """
@@ -161,79 +165,35 @@ defmodule Oban.Migrations do
 
   Run all migrations from current version down to the first:
 
-      Oban.Migrations.down()
+      Oban.Migration.down()
 
   Run migrations down to and including a specified version:
 
-      Oban.Migrations.down(version: 5)
+      Oban.Migration.down(version: 5)
 
   Run migrations in an alternate prefix:
 
-      Oban.Migrations.down(prefix: "payments")
+      Oban.Migration.down(prefix: "payments")
   """
   def down(opts \\ []) when is_list(opts) do
-    opts = with_defaults(opts, @initial_version)
-    initial = max(migrated_version(repo(), opts.prefix), @initial_version)
-
-    if initial >= opts.version do
-      change(initial..opts.version, :down, opts)
-    end
+    migrator().down(opts)
   end
 
-  defp with_defaults(opts, version) do
-    opts = Enum.into(opts, %{prefix: @default_prefix, version: version})
+  @doc """
+  Check the latest version the database is migrated to.
 
-    opts
-    |> Map.put_new(:create_schema, opts.prefix != @default_prefix)
-    |> Map.put_new(:quoted_prefix, inspect(opts.prefix))
-    |> Map.put_new(:escaped_prefix, String.replace(opts.prefix, "'", "\\'"))
+  ## Example
+
+      Oban.Migration.migrated_version()
+  """
+  def migrated_version(opts \\ []) when is_list(opts) do
+    migrator().migrated_version(opts)
   end
 
-  @doc false
-  def initial_version, do: @initial_version
-
-  @doc false
-  def current_version, do: @current_version
-
-  @doc false
-  def migrated_version(repo, prefix) do
-    escaped_prefix = String.replace(prefix, "'", "\\'")
-
-    query = """
-    SELECT description
-    FROM pg_class
-    LEFT JOIN pg_description ON pg_description.objoid = pg_class.oid
-    LEFT JOIN pg_namespace ON pg_namespace.oid = pg_class.relnamespace
-    WHERE pg_class.relname = 'oban_jobs'
-    AND pg_namespace.nspname = '#{escaped_prefix}'
-    """
-
-    conf = Config.new(repo: repo, prefix: prefix)
-
-    case Repo.query(conf, query) do
-      {:ok, %{rows: [[version]]}} when is_binary(version) -> String.to_integer(version)
-      _ -> 0
+  defp migrator do
+    case repo().__adapter__() do
+      Ecto.Adapters.Postgres ->
+        Oban.Migrations.Postgres
     end
-  end
-
-  defp change(range, direction, opts) do
-    for index <- range do
-      pad_idx = String.pad_leading(to_string(index), 2, "0")
-
-      [__MODULE__, "V#{pad_idx}"]
-      |> Module.concat()
-      |> apply(direction, [opts])
-    end
-
-    case direction do
-      :up -> record_version(opts, Enum.max(range))
-      :down -> record_version(opts, Enum.min(range) - 1)
-    end
-  end
-
-  defp record_version(_opts, 0), do: :ok
-
-  defp record_version(%{prefix: prefix}, version) do
-    execute "COMMENT ON TABLE #{inspect(prefix)}.oban_jobs IS '#{version}'"
   end
 end

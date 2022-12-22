@@ -1,7 +1,9 @@
-defmodule Oban.Integration.MigrationsTest do
+defmodule Oban.Migrations.PostgresTest do
   use Oban.Case, async: true
 
-  import Oban.Migrations, only: [initial_version: 0, current_version: 0, migrated_version: 2]
+  import Oban.Migrations.Postgres, only: [initial_version: 0, current_version: 0]
+
+  alias Oban.Migrations.Postgres
 
   @arbitrary_checks 20
 
@@ -11,11 +13,11 @@ defmodule Oban.Integration.MigrationsTest do
     use Ecto.Migration
 
     def up do
-      Oban.Migrations.up(version: up_version(), prefix: "migrating")
+      Oban.Migration.up(version: up_version(), prefix: "migrating")
     end
 
     def down do
-      Oban.Migrations.down(version: down_version(), prefix: "migrating")
+      Oban.Migration.down(version: down_version(), prefix: "migrating")
     end
 
     defp up_version do
@@ -31,11 +33,11 @@ defmodule Oban.Integration.MigrationsTest do
     use Ecto.Migration
 
     def up do
-      Oban.Migrations.up(prefix: "migrating")
+      Oban.Migration.up(prefix: "migrating")
     end
 
     def down do
-      Oban.Migrations.down(prefix: "migrating")
+      Oban.Migration.down(prefix: "migrating")
     end
   end
 
@@ -43,11 +45,11 @@ defmodule Oban.Integration.MigrationsTest do
     use Ecto.Migration
 
     def up do
-      Oban.Migrations.up(prefix: "migrating", create_schema: false)
+      Oban.Migration.up(prefix: "migrating", create_schema: false)
     end
 
     def down do
-      Oban.Migrations.down(prefix: "migrating")
+      Oban.Migration.down(prefix: "migrating")
     end
   end
 
@@ -140,7 +142,7 @@ defmodule Oban.Integration.MigrationsTest do
   end
 
   defp migrated_version do
-    migrated_version(UnboxedRepo, "migrating")
+    Postgres.migrated_version(repo: UnboxedRepo, prefix: "migrating")
   end
 
   defp table_exists?(table) do
