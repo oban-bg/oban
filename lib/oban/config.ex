@@ -20,7 +20,7 @@ defmodule Oban.Config do
           notifier: module(),
           peer: false | module(),
           plugins: false | [module() | {module() | Keyword.t()}],
-          prefix: String.t(),
+          prefix: false | String.t(),
           queues: false | [{atom() | binary(), pos_integer() | Keyword.t()}],
           repo: module(),
           shutdown_grace_period: timeout(),
@@ -210,10 +210,10 @@ defmodule Oban.Config do
   end
 
   defp validate_opt(_opts, {:prefix, prefix}) do
-    if is_binary(prefix) and Regex.match?(~r/^[a-z0-9_]+$/i, prefix) do
+    if prefix == false or (is_binary(prefix) and Regex.match?(~r/^[a-z0-9_]+$/i, prefix)) do
       :ok
     else
-      {:error, "expected :prefix to be an alphanumeric string, got: #{inspect(prefix)}"}
+      {:error, "expected :prefix to be false or an alphanumeric string, got: #{inspect(prefix)}"}
     end
   end
 

@@ -78,7 +78,9 @@ defmodule Oban.ConfigTest do
       refute_valid(prefix: :private)
       refute_valid(prefix: " private schema ")
       refute_valid(prefix: "")
+      refute_valid(prefix: true)
 
+      assert_valid(prefix: false)
       assert_valid(prefix: "private")
     end
 
