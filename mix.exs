@@ -118,6 +118,9 @@ defmodule Oban.MixProject do
         Oban.Registry,
         Oban.Repo
       ],
+      Migrations: [
+        Oban.Migrations.Postgres
+      ],
       Notifiers: [
         Oban.Notifiers.Postgres,
         Oban.Notifiers.PG
@@ -161,8 +164,8 @@ defmodule Oban.MixProject do
   defp aliases do
     [
       bench: "run bench/bench_helper.exs",
-      "test.reset": ["ecto.drop", "test.setup"],
-      "test.setup": ["ecto.create", "ecto.migrate"],
+      "test.reset": ["ecto.drop --quiet", "test.setup"],
+      "test.setup": ["ecto.create --quiet", "ecto.migrate --quiet"],
       "test.ci": [
         "format --check-formatted",
         "deps.unlock --check-unused",

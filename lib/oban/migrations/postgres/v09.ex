@@ -1,4 +1,4 @@
-defmodule Oban.Migrations.V09 do
+defmodule Oban.Migrations.Postgres.V09 do
   @moduledoc false
 
   use Ecto.Migration
