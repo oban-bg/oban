@@ -33,7 +33,7 @@ defmodule Oban.Migrations.Postgres do
   end
 
   @impl Oban.Migration
-  def down(opts \\ []) when is_list(opts) do
+  def down(opts) do
     opts = with_defaults(opts, @initial_version)
     initial = max(migrated_version(opts), @initial_version)
 

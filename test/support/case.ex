@@ -29,15 +29,20 @@ defmodule Oban.Case do
   end
 
   setup context do
-    if context[:unboxed] do
-      on_exit(fn ->
-        UnboxedRepo.delete_all(Oban.Job)
-        UnboxedRepo.delete_all(Oban.Job, prefix: "private")
-      end)
-    else
-      pid = Sandbox.start_owner!(Repo, shared: not context[:async])
+    cond do
+      context[:unboxed] ->
+        on_exit(fn ->
+          UnboxedRepo.delete_all(Oban.Job)
+          UnboxedRepo.delete_all(Oban.Job, prefix: "private")
+        end)
 
-      on_exit(fn -> Sandbox.stop_owner(pid) end)
+      context[:lite] ->
+        :ok
+
+      true ->
+        pid = Sandbox.start_owner!(Repo, shared: not context[:async])
+
+        on_exit(fn -> Sandbox.stop_owner(pid) end)
     end
 
     :ok

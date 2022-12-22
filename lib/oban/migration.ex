@@ -192,8 +192,8 @@ defmodule Oban.Migration do
 
   defp migrator do
     case repo().__adapter__() do
-      Ecto.Adapters.Postgres ->
-        Oban.Migrations.Postgres
+      Ecto.Adapters.Postgres -> Oban.Migrations.Postgres
+      Ecto.Adapters.SQLite3 -> Oban.Migrations.SQLite
     end
   end
 end

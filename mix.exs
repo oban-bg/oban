@@ -148,6 +148,7 @@ defmodule Oban.MixProject do
   defp deps do
     [
       {:ecto_sql, "~> 3.6"},
+      {:ecto_sqlite3, "~> 0.9", optional: true},
       {:jason, "~> 1.1"},
       {:postgrex, "~> 0.16"},
       {:telemetry, "~> 0.4 or ~> 1.0"},
