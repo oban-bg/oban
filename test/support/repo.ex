@@ -18,6 +18,12 @@ defmodule Oban.Test.DynamicRepo do
   end
 end
 
+defmodule Oban.Test.LiteRepo do
+  @moduledoc false
+
+  use Ecto.Repo, otp_app: :oban, adapter: Ecto.Adapters.SQLite3
+end
+
 defmodule Oban.Test.UnboxedRepo do
   @moduledoc false
 
