@@ -2,6 +2,8 @@ if function_exported?(Code, :put_compiler_option, 2) do
   Code.put_compiler_option(:warnings_as_errors, true)
 end
 
+Application.ensure_all_started(:postgrex)
+
 Oban.Test.Repo.start_link()
 Oban.Test.LiteRepo.start_link()
 Oban.Test.UnboxedRepo.start_link()
