@@ -9,6 +9,13 @@ defmodule Oban.Engines.Lite do
   alias Ecto.Changeset
   alias Oban.{Config, Engine, Job, Repo}
 
+  # EctoSQLite3 doesn't implement `push` for updates, so a json_insert is required.
+  defmacrop json_push(column, value) do
+    quote do
+      fragment("json_insert(?, '$[#]', ?)", unquote(column), unquote(value))
+    end
+  end
+
   @impl Engine
   defdelegate init(conf, opts), to: Oban.Engines.Basic
 
@@ -77,17 +84,104 @@ defmodule Oban.Engines.Lite do
   end
 
   @impl Engine
-  defdelegate cancel_job(conf, job), to: Oban.Engines.Basic
+  def complete_job(conf, job) do
+    Repo.update_all(
+      conf,
+      where(Job, id: ^job.id),
+      set: [state: "completed", completed_at: utc_now()]
+    )
+
+    :ok
+  end
 
   @impl Engine
-  defdelegate complete_job(conf, job), to: Oban.Engines.Basic
+  def discard_job(conf, job) do
+    query =
+      Job
+      |> where(id: ^job.id)
+      |> update([j],
+        set: [
+          state: "discarded",
+          discarded_at: ^utc_now(),
+          errors: json_push(j.errors, ^encode_unsaved(job))
+        ]
+      )
+
+    Repo.update_all(conf, query, [])
+
+    :ok
+  end
 
   @impl Engine
-  defdelegate discard_job(conf, job), to: Oban.Engines.Basic
+  def error_job(conf, job, seconds) do
+    query =
+      Job
+      |> where(id: ^job.id)
+      |> update([j],
+        set: [
+          state: "retryable",
+          scheduled_at: ^seconds_from_now(seconds),
+          errors: json_push(j.errors, ^encode_unsaved(job))
+        ]
+      )
+
+    Repo.update_all(conf, query, [])
+
+    :ok
+  end
 
   @impl Engine
-  defdelegate error_job(conf, job, seconds), to: Oban.Engines.Basic
+  def snooze_job(conf, job, seconds) do
+    updates = [
+      set: [state: "scheduled", scheduled_at: seconds_from_now(seconds)],
+      inc: [max_attempts: 1]
+    ]
+
+    Repo.update_all(conf, where(Job, id: ^job.id), updates)
+
+    :ok
+  end
 
   @impl Engine
-  defdelegate snooze_job(conf, job, seconds), to: Oban.Engines.Basic
+  def cancel_job(conf, job) do
+    query =
+      Job
+      |> where(id: ^job.id)
+      |> where([j], j.state not in ["cancelled", "completed", "discarded"])
+
+    query =
+      if is_map(job.unsaved_error) do
+        update(query, [j],
+          set: [
+            state: "cancelled",
+            cancelled_at: ^utc_now(),
+            errors: json_push(j.errors, ^encode_unsaved(job))
+          ]
+        )
+      else
+        update(query, set: [state: "cancelled", cancelled_at: ^utc_now()])
+      end
+
+    Repo.update_all(conf, query, [])
+
+    :ok
+  end
+
+  defp seconds_from_now(seconds), do: DateTime.add(utc_now(), seconds, :second)
+
+  defp encode_unsaved(job) do
+    Jason.encode!(%{
+      attempt: job.attempt,
+      at: utc_now(),
+      error: format_blamed(job.unsaved_error)
+    })
+  end
+
+  # TODO: Share this somewhere, it is copied three times
+
+  defp format_blamed(%{kind: kind, reason: error, stacktrace: stacktrace}) do
+    {blamed, stacktrace} = Exception.blame(kind, error, stacktrace)
+
+    Exception.format(kind, blamed, stacktrace)
+  end
 end

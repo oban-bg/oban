@@ -1,20 +1,19 @@
 defmodule Oban.Migrations.SQLiteTest do
   use Oban.Case, async: true
 
-  alias Oban.Test.LiteRepo
+  defmodule MemoryRepo do
+    @moduledoc false
+
+    use Ecto.Repo, otp_app: :oban, adapter: Ecto.Adapters.SQLite3
+
+    alias Oban.Test.LiteRepo
+
+    def init(_, _) do
+      {:ok, Keyword.put(LiteRepo.config(), :database, ":memory:")}
+    end
+  end
 
   @moduletag :lite
-
-  setup_all do
-    conf = Keyword.put(LiteRepo.config(), :database, "priv/migrations.db")
-
-    LiteRepo.__adapter__().storage_down(conf)
-    LiteRepo.__adapter__().storage_up(conf)
-
-    on_exit(fn -> LiteRepo.__adapter__().storage_down(conf) end)
-
-    :ok
-  end
 
   defmodule Migration do
     use Ecto.Migration
@@ -28,13 +27,15 @@ defmodule Oban.Migrations.SQLiteTest do
     end
   end
 
-  @base_version 20_300_000_000_000
-
   test "migrating a sqlite database" do
-    assert :ok = Ecto.Migrator.up(LiteRepo, @base_version + 1, Migration)
+    start_supervised!(MemoryRepo)
+
+    MemoryRepo.__adapter__().storage_up(MemoryRepo.config())
+
+    assert :ok = Ecto.Migrator.up(MemoryRepo, 1, Migration)
     assert table_exists?()
 
-    assert :ok = Ecto.Migrator.down(LiteRepo, @base_version + 1, Migration)
+    assert :ok = Ecto.Migrator.down(MemoryRepo, 1, Migration)
     refute table_exists?()
   end
 
@@ -48,7 +49,7 @@ defmodule Oban.Migrations.SQLiteTest do
     )
     """
 
-    {:ok, %{rows: [[exists]]}} = LiteRepo.query(query)
+    {:ok, %{rows: [[exists]]}} = MemoryRepo.query(query)
 
     exists != 0
   end

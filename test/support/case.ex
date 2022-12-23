@@ -6,7 +6,7 @@ defmodule Oban.Case do
   alias Ecto.Adapters.SQL.Sandbox
   alias Oban.Integration.Worker
   alias Oban.Job
-  alias Oban.Test.{Repo, UnboxedRepo}
+  alias Oban.Test.{LiteRepo, Repo, UnboxedRepo}
 
   defmodule Peer do
     @moduledoc false
@@ -37,7 +37,9 @@ defmodule Oban.Case do
         end)
 
       context[:lite] ->
-        :ok
+        on_exit(fn ->
+          LiteRepo.delete_all(Oban.Job)
+        end)
 
       true ->
         pid = Sandbox.start_owner!(Repo, shared: not context[:async])
