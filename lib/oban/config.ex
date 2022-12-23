@@ -62,6 +62,17 @@ defmodule Oban.Config do
   def new(opts) when is_list(opts) do
     opts = normalize(opts)
 
+    # TODO: Change the peer to always enabled
+
+    opts =
+      if opts[:engine] == Oban.Engines.Lite do
+        opts
+        |> Keyword.put(:prefix, false)
+        |> Keyword.put(:peer, Oban.Peers.Global)
+      else
+        opts
+      end
+
     opts =
       if opts[:testing] in [:manual, :inline] do
         opts

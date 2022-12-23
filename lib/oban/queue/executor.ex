@@ -83,8 +83,7 @@ defmodule Oban.Queue.Executor do
     end
 
     if exec.safe do
-      complete.()
-      # Backoff.with_retry(complete)
+      Backoff.with_retry(complete)
     else
       complete.()
     end
