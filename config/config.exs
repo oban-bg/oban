@@ -14,7 +14,6 @@ config :oban, Oban.Test.Repo,
 config :oban, Oban.Test.LiteRepo,
   database: "priv/oban.db",
   priv: "test/support/sqlite",
-  journal_mode: :off,
   temp_store: :memory
 
 config :oban,
