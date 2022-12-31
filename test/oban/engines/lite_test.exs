@@ -1,9 +1,9 @@
-defmodule Oban.Integration.LiteTest do
+defmodule Oban.Engines.LiteTest do
   use Oban.Case, async: true
 
   alias Oban.Test.LiteRepo
 
-  @moduletag lite: true
+  @moduletag :lite
 
   test "inserting and executing jobs" do
     name =

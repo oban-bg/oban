@@ -1,7 +1,7 @@
 defmodule Oban.Queue.ExecutorTest do
   use Oban.Case, async: true
 
-  alias Oban.{CrashError, PerformError}
+  alias Oban.{CrashError, PerformError, TimeoutError}
   alias Oban.Queue.Executor
 
   defmodule Worker do
@@ -16,6 +16,11 @@ defmodule Oban.Queue.ExecutorTest do
     def perform(%{args: %{"mode" => "error"}}), do: {:error, "no reason"}
     def perform(%{args: %{"mode" => "sleep"}}), do: Process.sleep(10)
     def perform(%{args: %{"mode" => "discard"}}), do: {:discard, :no_reason}
+    def perform(%{args: %{"mode" => "timeout"}}), do: Process.sleep(10)
+
+    @impl Worker
+    def timeout(%_{args: %{"mode" => "timeout"}}), do: 1
+    def timeout(_job), do: :infinity
   end
 
   @conf Config.new(repo: Repo)
@@ -40,20 +45,28 @@ defmodule Oban.Queue.ExecutorTest do
       assert %{state: :failure, error: %PerformError{}} = call_with_mode("error")
     end
 
-    test "reporting a failure with exhausted retries as :exhaust" do
+    test "reporting a failure with exhausted retries as :exhausted" do
       job = %Job{args: %{"mode" => "error"}, worker: inspect(Worker), attempt: 1, max_attempts: 1}
 
       assert %{state: :exhausted, error: %PerformError{}} = exec(job)
     end
 
-    test "inability to resolve a worker is a failure" do
+    test "reporting missing workers as a :failure" do
       job = %Job{args: %{}, worker: "Not.A.Real.Worker"}
 
       assert %{state: :failure, error: %RuntimeError{message: "unknown worker" <> _}} =
                @conf
                |> Executor.new(job)
                |> Executor.resolve_worker()
-               |> Executor.start_timeout()
+    end
+
+    test "reporting timeouts when a job exceeds the configured time" do
+      Process.flag(:trap_exit, true)
+
+      call_with_mode("timeout")
+
+      assert_receive {:EXIT, _pid, %TimeoutError{message: message, reason: :timeout}}
+      assert message =~ "Worker timed out after 1ms"
     end
 
     test "reporting duration and queue_time measurements" do
@@ -91,7 +104,9 @@ defmodule Oban.Queue.ExecutorTest do
     @conf
     |> Executor.new(job)
     |> Executor.resolve_worker()
+    |> Executor.start_timeout()
     |> Executor.perform()
     |> Executor.normalize_state()
+    |> Executor.cancel_timeout()
   end
 end
