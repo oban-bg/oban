@@ -201,9 +201,7 @@ defmodule Oban.Engines.Basic do
 
   @impl Engine
   def retry_job(%Config{} = conf, %Job{id: id}) do
-    query = where(Job, [j], j.id == ^id)
-
-    retry_all_jobs(conf, query)
+    retry_all_jobs(conf, where(Job, [j], j.id == ^id))
 
     :ok
   end

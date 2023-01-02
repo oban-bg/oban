@@ -7,6 +7,7 @@ defmodule Oban.Engines.Lite do
   import Ecto.Query
 
   alias Ecto.Changeset
+  alias Oban.Engines.Basic
   alias Oban.{Config, Engine, Job, Repo}
 
   # EctoSQLite3 doesn't implement `push` for updates, so a json_insert is required.
@@ -17,19 +18,19 @@ defmodule Oban.Engines.Lite do
   end
 
   @impl Engine
-  defdelegate init(conf, opts), to: Oban.Engines.Basic
+  defdelegate init(conf, opts), to: Basic
 
   @impl Engine
-  defdelegate put_meta(conf, meta, key, value), to: Oban.Engines.Basic
+  defdelegate put_meta(conf, meta, key, value), to: Basic
 
   @impl Engine
-  defdelegate check_meta(conf, meta, running), to: Oban.Engines.Basic
+  defdelegate check_meta(conf, meta, running), to: Basic
 
   @impl Engine
-  defdelegate refresh(conf, meta), to: Oban.Engines.Basic
+  defdelegate refresh(conf, meta), to: Basic
 
   @impl Engine
-  defdelegate shutdown(conf, meta), to: Oban.Engines.Basic
+  defdelegate shutdown(conf, meta), to: Basic
 
   @impl Engine
   def insert_job(%Config{} = conf, %Changeset{} = changeset, _opts) do
@@ -84,15 +85,10 @@ defmodule Oban.Engines.Lite do
   end
 
   @impl Engine
-  def complete_job(conf, job) do
-    Repo.update_all(
-      conf,
-      where(Job, id: ^job.id),
-      set: [state: "completed", completed_at: utc_now()]
-    )
+  defdelegate complete_job(conf, job), to: Basic
 
-    :ok
-  end
+  @impl Engine
+  defdelegate snooze_job(conf, job, seconds), to: Basic
 
   @impl Engine
   def discard_job(conf, job) do
@@ -131,18 +127,6 @@ defmodule Oban.Engines.Lite do
   end
 
   @impl Engine
-  def snooze_job(conf, job, seconds) do
-    updates = [
-      set: [state: "scheduled", scheduled_at: seconds_from_now(seconds)],
-      inc: [max_attempts: 1]
-    ]
-
-    Repo.update_all(conf, where(Job, id: ^job.id), updates)
-
-    :ok
-  end
-
-  @impl Engine
   def cancel_job(conf, job) do
     query =
       Job
@@ -167,6 +151,42 @@ defmodule Oban.Engines.Lite do
     :ok
   end
 
+  @impl Engine
+  defdelegate cancel_all_jobs(conf, queryable), to: Basic
+
+  @impl Engine
+  def retry_job(conf, %Job{id: id}) do
+    retry_all_jobs(conf, where(Job, [j], j.id == ^id))
+
+    :ok
+  end
+
+  @impl Engine
+  def retry_all_jobs(conf, queryable) do
+    subquery = where(queryable, [j], j.state not in ["available", "executing"])
+
+    query =
+      Job
+      |> join(:inner, [j], x in subquery(subquery), on: j.id == x.id)
+      |> select([_, x], map(x, [:id, :queue, :state, :worker]))
+      |> update([j],
+        set: [
+          state: "available",
+          max_attempts: fragment("MAX(?, ? + 1)", j.max_attempts, j.attempt),
+          scheduled_at: ^utc_now(),
+          completed_at: nil,
+          cancelled_at: nil,
+          discarded_at: nil
+        ]
+      )
+
+    {_, jobs} = Repo.update_all(conf, query, [])
+
+    {:ok, jobs}
+  end
+
+  # Helpers
+
   defp seconds_from_now(seconds), do: DateTime.add(utc_now(), seconds, :second)
 
   defp encode_unsaved(job) do
@@ -176,8 +196,6 @@ defmodule Oban.Engines.Lite do
       error: format_blamed(job.unsaved_error)
     })
   end
-
-  # TODO: Share this somewhere, it is copied three times
 
   defp format_blamed(%{kind: kind, reason: error, stacktrace: stacktrace}) do
     {blamed, stacktrace} = Exception.blame(kind, error, stacktrace)
