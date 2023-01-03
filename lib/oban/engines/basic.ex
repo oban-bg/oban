@@ -124,7 +124,7 @@ defmodule Oban.Engines.Basic do
     updates = [
       set: [state: "discarded", discarded_at: utc_now()],
       push: [
-        errors: %{attempt: job.attempt, at: utc_now(), error: format_blamed(job.unsaved_error)}
+        errors: %{attempt: job.attempt, at: utc_now(), error: Job.format_error(job)}
       ]
     ]
 
@@ -138,7 +138,7 @@ defmodule Oban.Engines.Basic do
     updates = [
       set: [state: "retryable", scheduled_at: seconds_from_now(seconds)],
       push: [
-        errors: %{attempt: job.attempt, at: utc_now(), error: format_blamed(job.unsaved_error)}
+        errors: %{attempt: job.attempt, at: utc_now(), error: Job.format_error(job)}
       ]
     ]
 
@@ -165,7 +165,7 @@ defmodule Oban.Engines.Basic do
 
     updates =
       if is_map(job.unsaved_error) do
-        error = %{attempt: job.attempt, at: utc_now(), error: format_blamed(job.unsaved_error)}
+        error = %{attempt: job.attempt, at: utc_now(), error: Job.format_error(job)}
 
         Keyword.put(updates, :push, errors: error)
       else
@@ -380,13 +380,5 @@ defmodule Oban.Engines.Basic do
     end
   end
 
-  # Other Helpers
-
   defp seconds_from_now(seconds), do: DateTime.add(utc_now(), seconds, :second)
-
-  defp format_blamed(%{kind: kind, reason: error, stacktrace: stacktrace}) do
-    {blamed, stacktrace} = Exception.blame(kind, error, stacktrace)
-
-    Exception.format(kind, blamed, stacktrace)
-  end
 end
