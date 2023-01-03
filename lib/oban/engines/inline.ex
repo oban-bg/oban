@@ -101,19 +101,19 @@ defmodule Oban.Engines.Inline do
   end
 
   defp complete_job(%{job: job, state: :failure}) do
-    error = %{attempt: job.attempt, at: utc_now(), error: format_blamed(job.unsaved_error)}
+    error = %{attempt: job.attempt, at: utc_now(), error: Job.format_error(job)}
 
     %Job{job | errors: [error], state: "retryable", scheduled_at: utc_now()}
   end
 
   defp complete_job(%{job: job, state: :cancelled}) do
-    error = %{attempt: job.attempt, at: utc_now(), error: format_blamed(job.unsaved_error)}
+    error = %{attempt: job.attempt, at: utc_now(), error: Job.format_error(job)}
 
     %Job{job | errors: [error], state: "cancelled", cancelled_at: utc_now()}
   end
 
   defp complete_job(%{job: job, state: state}) when state in [:discard, :exhausted] do
-    error = %{attempt: job.attempt, at: utc_now(), error: format_blamed(job.unsaved_error)}
+    error = %{attempt: job.attempt, at: utc_now(), error: Job.format_error(job)}
 
     %Job{job | errors: [error], state: "discarded", discarded_at: utc_now()}
   end
@@ -123,14 +123,6 @@ defmodule Oban.Engines.Inline do
   end
 
   defp complete_job(%{job: job, result: {:snooze, snooze}, state: :snoozed}) do
-    %Job{job | state: "scheduled", scheduled_at: seconds_from_now(snooze)}
-  end
-
-  defp seconds_from_now(seconds), do: DateTime.add(utc_now(), seconds, :second)
-
-  defp format_blamed(%{kind: kind, reason: error, stacktrace: stacktrace}) do
-    {blamed, stacktrace} = Exception.blame(kind, error, stacktrace)
-
-    Exception.format(kind, blamed, stacktrace)
+    %Job{job | state: "scheduled", scheduled_at: DateTime.add(utc_now(), snooze, :second)}
   end
 end

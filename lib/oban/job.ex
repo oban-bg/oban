@@ -335,6 +335,21 @@ defmodule Oban.Job do
     end)
   end
 
+  @doc """
+  Normalize, blame, and format a job's `unsaved_error`.
+
+  Formatted errors are stored in a job's `errors` field.
+  """
+  @doc since: "2.14.0"
+  @spec format_error(t()) :: String.t()
+  def format_error(%__MODULE__{unsaved_error: unsaved}) do
+    %{kind: kind, reason: error, stacktrace: stacktrace} = unsaved
+
+    {blamed, stacktrace} = Exception.blame(kind, error, stacktrace)
+
+    Exception.format(kind, blamed, stacktrace)
+  end
+
   defp coerce_field(params, field, fun) do
     case Map.get(params, field) do
       value when is_atom(value) and not is_nil(value) ->
@@ -375,7 +390,7 @@ defmodule Oban.Job do
             when is_integer(value) or
                    (is_integer(elem(value, 0)) and elem(value, 1) in @time_units)
 
-  def put_replace(changeset, replace, replace_args) do
+  defp put_replace(changeset, replace, replace_args) do
     with_states = fn fields ->
       for state <- states(), do: {state, fields}
     end

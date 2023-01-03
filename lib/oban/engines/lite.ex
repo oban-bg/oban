@@ -268,21 +268,13 @@ defmodule Oban.Engines.Lite do
     end
   end
 
-  # Helpers
-
   defp seconds_from_now(seconds), do: DateTime.add(utc_now(), seconds, :second)
 
   defp encode_unsaved(job) do
     Jason.encode!(%{
       attempt: job.attempt,
       at: utc_now(),
-      error: format_blamed(job.unsaved_error)
+      error: Job.format_error(job)
     })
-  end
-
-  defp format_blamed(%{kind: kind, reason: error, stacktrace: stacktrace}) do
-    {blamed, stacktrace} = Exception.blame(kind, error, stacktrace)
-
-    Exception.format(kind, blamed, stacktrace)
   end
 end
