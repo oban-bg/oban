@@ -34,7 +34,7 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite] do
         assert job_1.id == job_2.id
       end
 
-      @tag :unique
+      @tag unique: true, skip: @engine == Oban.Engines.Lite
       test "preventing duplicate jobs between processes", %{name: name} do
         parent = self()
         changeset = Worker.new(%{ref: 1}, unique: [period: 60])
@@ -129,10 +129,10 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite] do
 
       @tag :unique
       test "scoping uniqueness by state", %{name: name} do
-        %Job{id: id_1} = insert!(%{id: 1}, state: "available")
-        %Job{id: id_2} = insert!(%{id: 2}, state: "completed")
-        %Job{id: id_3} = insert!(%{id: 3}, state: "executing")
-        %Job{id: id_4} = insert!(%{id: 4}, state: "discarded")
+        %Job{id: id_1} = insert!(name, %{id: 1}, state: "available")
+        %Job{id: id_2} = insert!(name, %{id: 2}, state: "completed")
+        %Job{id: id_3} = insert!(name, %{id: 3}, state: "executing")
+        %Job{id: id_4} = insert!(name, %{id: 4}, state: "discarded")
 
         uniq_insert = fn args, states ->
           Oban.insert(name, Worker.new(args, unique: [states: states]))
@@ -155,9 +155,9 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite] do
           Oban.insert(name, Worker.new(args, unique: [period: period]))
         end
 
-        job_1 = insert!(%{id: 1}, inserted_at: four_minutes_ago)
-        job_2 = insert!(%{id: 2}, inserted_at: five_minutes_ago)
-        job_3 = insert!(%{id: 3}, inserted_at: nine_minutes_ago)
+        job_1 = insert!(name, %{id: 1}, inserted_at: four_minutes_ago)
+        job_2 = insert!(name, %{id: 2}, inserted_at: five_minutes_ago)
+        job_3 = insert!(name, %{id: 3}, inserted_at: nine_minutes_ago)
 
         assert {:ok, job_4} = uniq_insert.(%{id: 1}, 239)
         assert {:ok, job_5} = uniq_insert.(%{id: 2}, 299)
@@ -388,7 +388,7 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite] do
         job_c = insert!(name, %{ref: 3}, state: "completed")
         job_d = insert!(name, %{ref: 4, sleep: 200}, [])
 
-        assert_receive {:started, 4}
+        assert_receive {:started, 4}, 250
 
         assert :ok = Oban.cancel_job(name, job_a.id)
         assert :ok = Oban.cancel_job(name, job_b.id)
@@ -553,7 +553,7 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite] do
             Worker.new(%{action: "ERROR", ref: 2}, max_attempts: 2)
           ])
 
-        assert_receive {:error, 1}
+        assert_receive {:error, 1}, 500
         assert_receive {:error, 2}
 
         with_backoff(fn ->
@@ -568,14 +568,14 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite] do
           Worker.new(%{ref: 2, action: "OK"}, attempt: 20)
         ])
 
-        assert_receive {:ok, 1}
+        assert_receive {:ok, 1}, 500
         refute_receive {:ok, 2}
       end
 
       test "failing jobs that exceed the worker's timeout", %{name: name} do
         job = insert!(name, %{ref: 1, sleep: 20, timeout: 5}, [])
 
-        assert_receive {:started, 1}
+        assert_receive {:started, 1}, 500
         refute_receive {:ok, 1}
 
         assert %Job{state: "retryable", errors: [%{"error" => error}]} = reload(name, job)

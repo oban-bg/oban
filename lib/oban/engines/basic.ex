@@ -59,13 +59,10 @@ defmodule Oban.Engines.Basic do
 
   @impl Engine
   def insert_all_jobs(%Config{} = conf, changesets, opts) do
-    entries = Enum.map(changesets, &Job.to_map/1)
-
+    jobs = Enum.map(changesets, &Job.to_map/1)
     opts = Keyword.merge(opts, on_conflict: :nothing, returning: true)
 
-    conf
-    |> Repo.insert_all(Job, entries, opts)
-    |> elem(1)
+    with {_count, jobs} <- Repo.insert_all(conf, Job, jobs, opts), do: jobs
   end
 
   @impl Engine
@@ -270,46 +267,39 @@ defmodule Oban.Engines.Basic do
   # Insertion
 
   defp insert_unique(conf, changeset, opts) do
-    query_opts = Keyword.put(opts, :on_conflict, :nothing)
+    opts = Keyword.put(opts, :on_conflict, :nothing)
 
     with {:ok, query, lock_key} <- unique_query(changeset),
          :ok <- acquire_lock(conf, lock_key),
-         {:ok, job} <- unprepared_one(conf, query, query_opts),
-         {:ok, job} <- return_or_replace(conf, query_opts, job, changeset) do
+         {:ok, job} <- fetch_job(conf, query, opts),
+         {:ok, job} <- resolve_conflict(conf, job, changeset, opts) do
       {:ok, %Job{job | conflict?: true}}
     else
       {:error, :locked} ->
         {:ok, Changeset.apply_changes(changeset)}
 
       nil ->
-        Repo.insert(conf, changeset, query_opts)
+        Repo.insert(conf, changeset, opts)
 
       error ->
         error
     end
   end
 
-  defp return_or_replace(conf, query_opts, %{state: state} = job, changeset) do
+  defp resolve_conflict(conf, job, changeset, opts) do
     case Changeset.fetch_change(changeset, :replace) do
       {:ok, replace} ->
-        job_state = String.to_existing_atom(state)
-        replace_keys = Keyword.get(replace, job_state, [])
+        keys = Keyword.get(replace, String.to_existing_atom(job.state), [])
 
-        replace_keys(conf, query_opts, job, changeset, replace_keys)
+        Repo.update(
+          conf,
+          Changeset.change(job, Map.take(changeset.changes, keys)),
+          opts
+        )
 
       :error ->
         {:ok, job}
     end
-  end
-
-  defp replace_keys(_conf, _query_opts, job, _changeset, []), do: {:ok, job}
-
-  defp replace_keys(conf, query_opts, job, changeset, replace_keys) do
-    Repo.update(
-      conf,
-      Ecto.Changeset.change(job, Map.take(changeset.changes, replace_keys)),
-      query_opts
-    )
   rescue
     error in [Ecto.StaleEntryError] ->
       {:error, error}
@@ -367,9 +357,7 @@ defmodule Oban.Engines.Basic do
   defp since_period(query, :infinity), do: query
 
   defp since_period(query, period) do
-    since = DateTime.add(utc_now(), period * -1, :second)
-
-    where(query, [j], j.inserted_at >= ^since)
+    where(query, [j], j.inserted_at >= ^seconds_from_now(-period))
   end
 
   defp acquire_lock(conf, base_key) do
@@ -385,16 +373,10 @@ defmodule Oban.Engines.Basic do
     end
   end
 
-  # With certain unique option combinations Postgres will decide to use a `generic plan` instead
-  # of a `custom plan`, which *drastically* impacts the unique query performance. Ecto doesn't
-  # provide a way to opt out of prepared statements for a single query, so this function works
-  # around the issue by forcing a raw SQL query.
-  defp unprepared_one(conf, query, opts) do
-    {raw_sql, bindings} = Repo.to_sql(conf, :all, query)
-
-    case Repo.query(conf, raw_sql, bindings, opts) do
-      {:ok, %{columns: columns, rows: [rows]}} -> {:ok, conf.repo.load(Job, {columns, rows})}
-      _ -> nil
+  defp fetch_job(conf, query, opts) do
+    case Repo.one(conf, query, Keyword.put(opts, :prepare, :unnamed)) do
+      nil -> nil
+      job -> {:ok, job}
     end
   end
 
