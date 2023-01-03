@@ -228,12 +228,12 @@ defmodule Oban.Plugins.Stager do
       Notifier.notify(state.conf.name, :stager, %{ping: :pong})
     end
 
-    if state.tick == state.swap_at_tick do
+    if state.mode == :global and state.tick == state.swap_at_tick do
       Logger.warn("""
       Oban job staging switched to local mode.
 
       Local mode places more load on the database because each queue polls for jobs every second.
-      To restore global mode, ensure PostgreSQL notifications work or switch to the PG notifier.
+      To restore global mode, ensure notifications work or switch to the PG notifier.
       """)
 
       %{state | mode: :local}
