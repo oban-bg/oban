@@ -20,12 +20,6 @@ end
 
 counter = :counters.new(1, [])
 
-Oban.Test.Repo.start_link()
-Oban.Test.LiteRepo.start_link()
-
-Oban.Test.Repo.query!("TRUNCATE oban_jobs", [], log: false)
-Oban.Test.LiteRepo.query!("DELETE FROM oban_jobs", [], log: false)
-
 insert_and_await = fn _engine ->
   :ok = :counters.put(counter, 1, 0)
 
@@ -53,8 +47,6 @@ Benchee.run(
     "Lite" => {Oban.Engines.Lite, Oban.Test.LiteRepo}
   },
   before_scenario: fn {engine, repo} ->
-    prefix = if engine == Oban.Engines.Lite, do: false, else: "public"
-
     Oban.start_link(
       engine: engine,
       peer: Oban.Peers.Global,
