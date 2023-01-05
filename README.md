@@ -158,6 +158,49 @@ details on installing and configuring Oban in your application.
 
 Oban requires Elixir 1.11+, Erlang 21+, and PostgreSQL 10.0+.
 
+### Configuring Queues
+
+Queues are specified as a keyword list where the key is the name of the queue
+and the value is the maximum number of concurrent jobs. The following
+configuration would start four queues with concurrency ranging from 5 to 50:
+
+```elixir
+queues: [default: 10, mailers: 20, events: 50, media: 5]
+```
+
+You may also use an expanded form to configure queues with individual overrides:
+
+```elixir
+queues: [
+  default: 10,
+  events: [limit: 50, paused: true]
+]
+```
+
+The `events` queue will now start in a paused state, which means it won't
+process anything until `Oban.resume_queue/2` is called to start it.
+
+There isn't a limit to the number of queues or how many jobs may execute
+concurrently in each queue. Some additional guidelines:
+
+#### Caveats & Guidelines
+
+* Each queue will run as many jobs as possible concurrently, up to the
+  configured limit. Make sure your system has enough resources (i.e. database
+  connections) to handle the concurrent load.
+
+* Queue limits are local (per-node), not global (per-cluster). For example,
+  running a queue with a local limit of one on three separate nodes is
+  effectively a global limit of three. If you require a global limit you must
+  restrict the number of nodes running a particular queue.
+
+* Only jobs in the configured queues will execute. Jobs in any other queue will
+  stay in the database untouched.
+
+* Be careful how many concurrent jobs make expensive system calls (i.e. FFMpeg,
+  ImageMagick). The BEAM ensures that the system stays responsive under load,
+  but those guarantees don't apply when using ports or shelling out commands.
+
 ### Defining Workers
 
 Worker modules do the work of processing a job. At a minimum they must define a
@@ -242,22 +285,6 @@ The worker's defaults may be overridden by passing options:
 |> Oban.insert()
 ```
 
-Jobs may be scheduled at a specific datetime in the future:
-
-```elixir
-%{id: 1}
-|> MyApp.Business.new(scheduled_at: ~U[2020-12-25 19:00:56.0Z])
-|> Oban.insert()
-```
-
-Jobs may also be scheduled down to the second any time in the future:
-
-```elixir
-%{id: 1}
-|> MyApp.Business.new(schedule_in: 5)
-|> Oban.insert()
-```
-
 Unique jobs can be configured in the worker, or when the job is built:
 
 ```elixir
@@ -311,48 +338,49 @@ application's `Repo.insert/2` function if necessary.
 
 See `Oban.Job.new/2` for a full list of job options.
 
-### Configuring Queues
+### Scheduling Jobs
 
-Queues are specified as a keyword list where the key is the name of the queue
-and the value is the maximum number of concurrent jobs. The following
-configuration would start four queues with concurrency ranging from 5 to 50:
+Jobs may be scheduled down to the second any time in the future:
 
 ```elixir
-queues: [default: 10, mailers: 20, events: 50, media: 5]
+%{id: 1}
+|> MyApp.Business.new(schedule_in: 5)
+|> Oban.insert()
 ```
 
-You may also use an expanded form to configure queues with individual overrides:
+Jobs may also be scheduled at a specific datetime in the future:
 
 ```elixir
-queues: [
-  default: 10,
-  events: [limit: 50, paused: true]
-]
+%{id: 1}
+|> MyApp.Business.new(scheduled_at: ~U[2020-12-25 19:00:56.0Z])
+|> Oban.insert()
 ```
 
-The `events` queue will now start in a paused state, which means it won't
-process anything until `Oban.resume_queue/2` is called to start it.
+Scheduling is _always_ in UTC. You'll have to shift timestamps in other zones to
+UTC before scheduling:
 
-There isn't a limit to the number of queues or how many jobs may execute
-concurrently in each queue. Some additional guidelines:
+```elixir
+%{id: 1}
+|> MyApp.Business.new(scheduled_at: DateTime.shift_zone!(datetime, "Etc/UTC"))
+|> Oban.insert()
+```
 
 #### Caveats & Guidelines
 
-* Each queue will run as many jobs as possible concurrently, up to the
-  configured limit. Make sure your system has enough resources (i.e. database
-  connections) to handle the concurrent load.
+Usually, scheduled job management operates in `global` mode and notifies queues
+of available jobs via PubSub to minimize database load. However, when PubSub
+isn't available, staging switches to a `local` mode where each queue polls
+independently.
 
-* Queue limits are local (per-node), not global (per-cluster). For example,
-  running a queue with a local limit of one on three separate nodes is
-  effectively a global limit of three. If you require a global limit you must
-  restrict the number of nodes running a particular queue.
+Local mode is less efficient and will only happen if you're running in an
+environment where neither `Postgres` nor `PG` notifications work. That situation
+should be rare and limited to the following conditions:
 
-* Only jobs in the configured queues will execute. Jobs in any other queue will
-  stay in the database untouched.
+1. Running with a connection pooler, i.e., `pg_bouncer`, in transaction mode.
+2. Running without clustering, i.e., without Distributed Erlang
 
-* Be careful how many concurrent jobs make expensive system calls (i.e. FFMpeg,
-  ImageMagick). The BEAM ensures that the system stays responsive under load,
-  but those guarantees don't apply when using ports or shelling out commands.
+If **both** of those criteria apply and PubSub notifications won't work, then
+staging will switch to polling in `local` mode.
 
 ### Pruning Historic Jobs
 

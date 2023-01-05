@@ -1,29 +1,5 @@
 # Troubleshooting
 
-## Jobs Stuck "Available" and Won't Execute
-
-In multi-node setups it's possible that queues won't execute jobs as expected
-and they'll be left `available`. Typically this is the result of advanced
-configuration that prevents plugins from running on the leader node. Only the
-leader node will run most plugins, including the `Stager` plugin that is
-responsible for notifying queues that jobs are available.
-
-There are a couple of options to fix this issue and keep jobs executing:
-
-1. Don't use `plugins: false` in your configuration. Simply omit any `plugins`
-   configuration and Oban will inject the `Stager` automatically. You can also
-   set `plugins: [Oban.Plugins.Stager]` to be more explicit.
-
-   Plugins only insert/update jobs and never execute them, leaving little reason
-   to disable them altogether.
-
-2. Set `peer: false` on any node that isn't executing plugins. That guarantees
-   that plugins like `Stager` will only run on the leader node.
-
-3. If plugins aren't disabled and leadership isn't overridden, then there's
-   probably an issue with notifications. See "No Notifications with PgBouncer"
-   for more tips.
-
 ## No Notifications with PgBouncer
 
 Using PgBouncer's "Transaction Pooling" setup disables all of PostgreSQL's

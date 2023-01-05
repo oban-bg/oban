@@ -17,6 +17,7 @@ defmodule Oban.ConfigTest do
 
       assert_valid(engine: Oban.Engines.Basic)
       assert_valid(engine: Oban.Engines.Inline)
+      assert_valid(engine: Oban.Engines.Lite)
     end
 
     test ":log is validated as `false` or a valid log level" do
