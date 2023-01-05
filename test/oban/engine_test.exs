@@ -1,6 +1,6 @@
 for engine <- [Oban.Engines.Basic, Oban.Engines.Lite] do
   defmodule Module.concat(engine, Test) do
-    use Oban.Case, async: true
+    use Oban.Case
 
     alias Ecto.Adapters.SQL.Sandbox
     alias Ecto.Multi
@@ -363,7 +363,7 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite] do
     describe "cancel_job/2" do
       setup :start_supervised_oban
 
-      @describetag oban_opts: [poll_interval: 10, queues: [alpha: 5], testing: :disabled]
+      @describetag oban_opts: [queues: [alpha: 5], stage_interval: 10, testing: :disabled]
 
       test "cancelling an executing job by its id", %{name: name} do
         TelemetryHandler.attach_events(span_type: [[:engine, :cancel_job]])
@@ -407,7 +407,7 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite] do
     describe "cancel_all_jobs/2" do
       setup :start_supervised_oban
 
-      @describetag oban_opts: [poll_interval: 10, queues: [alpha: 5], testing: :disabled]
+      @describetag oban_opts: [queues: [alpha: 5], stage_interval: 10, testing: :disabled]
 
       test "cancelling all jobs that may or may not be executing", %{name: name} do
         TelemetryHandler.attach_events(span_type: [[:engine, :cancel_all_jobs]])
@@ -435,7 +435,7 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite] do
     describe "retry_job/2" do
       setup :start_supervised_oban
 
-      @describetag oban_opts: [poll_interval: 10, queues: [alpha: 5], testing: :disabled]
+      @describetag oban_opts: [queues: [alpha: 5], stage_interval: 10, testing: :disabled]
 
       test "retrying jobs from multiple states", %{name: name} do
         job_a = insert!(name, %{ref: 1}, state: "discarded", max_attempts: 20, attempt: 20)
@@ -461,7 +461,7 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite] do
     describe "retry_all_jobs/2" do
       setup :start_supervised_oban
 
-      @describetag oban_opts: [poll_interval: 10, queues: [alpha: 5], testing: :disabled]
+      @describetag oban_opts: [queues: [alpha: 5], stage_interval: 10, testing: :disabled]
 
       test "retrying all retryable jobs", %{name: name} do
         TelemetryHandler.attach_events(span_type: [[:engine, :retry_all_jobs]])
@@ -485,7 +485,7 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite] do
     describe "integration" do
       setup :start_supervised_oban
 
-      @describetag oban_opts: [poll_interval: 10, queues: [alpha: 3], testing: :disabled]
+      @describetag oban_opts: [queues: [alpha: 3], stage_interval: 10, testing: :disabled]
 
       test "inserting and executing jobs", %{name: name} do
         changesets =
@@ -495,7 +495,7 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite] do
 
         [job_1, job_2, job_3, job_4, job_5] = Oban.insert_all(name, changesets)
 
-        assert_receive {:ok, 1}, 500
+        assert_receive {:ok, 1}
         assert_receive {:cancel, 2}
         assert_receive {:discard, 3}
         assert_receive {:error, 4}
@@ -519,7 +519,7 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite] do
 
         jobs = Oban.insert_all(name, changesets)
 
-        assert_receive {:exit, 1}, 500
+        assert_receive {:exit, 1}
         assert_receive {:kill, 2}
         assert_receive {:async, 3}
         assert_receive {:async, 4}
@@ -532,6 +532,18 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite] do
         end)
       end
 
+      test "executing jobs scheduled on or before the current time", %{name: name} do
+        Oban.insert_all(name, [
+          Worker.new(%{action: "OK", ref: 1}, schedule_in: -2),
+          Worker.new(%{action: "OK", ref: 2}, schedule_in: -1),
+          Worker.new(%{action: "OK", ref: 3}, schedule_in: 1),
+        ])
+
+        assert_receive {:ok, 1}
+        assert_receive {:ok, 2}
+        refute_receive {:ok, 3}
+      end
+
       test "executing jobs in order of priority", %{name: name} do
         Oban.insert_all(name, [
           Worker.new(%{action: "OK", ref: 1}, priority: 3),
@@ -540,20 +552,20 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite] do
           Worker.new(%{action: "OK", ref: 4}, priority: 0)
         ])
 
-        assert_receive {:ok, 1}, 500
+        assert_receive {:ok, 1}
         assert_received {:ok, 2}
         assert_received {:ok, 3}
         assert_received {:ok, 4}
       end
 
-      test "discarding jobs that exceed max attempts to", %{name: name} do
+      test "discarding jobs that exceed max attempts", %{name: name} do
         [job_1, job_2] =
           Oban.insert_all(name, [
             Worker.new(%{action: "ERROR", ref: 1}, max_attempts: 1),
             Worker.new(%{action: "ERROR", ref: 2}, max_attempts: 2)
           ])
 
-        assert_receive {:error, 1}, 500
+        assert_receive {:error, 1}
         assert_receive {:error, 2}
 
         with_backoff(fn ->
@@ -568,14 +580,14 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite] do
           Worker.new(%{ref: 2, action: "OK"}, attempt: 20)
         ])
 
-        assert_receive {:ok, 1}, 500
+        assert_receive {:ok, 1}
         refute_receive {:ok, 2}
       end
 
       test "failing jobs that exceed the worker's timeout", %{name: name} do
         job = insert!(name, %{ref: 1, sleep: 20, timeout: 5}, [])
 
-        assert_receive {:started, 1}, 500
+        assert_receive {:started, 1}
         refute_receive {:ok, 1}
 
         assert %Job{state: "retryable", errors: [%{"error" => error}]} = reload(name, job)

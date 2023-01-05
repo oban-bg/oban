@@ -11,7 +11,7 @@ defmodule Oban do
   use Supervisor
 
   alias Ecto.{Changeset, Multi}
-  alias Oban.{Config, Engine, Job, Midwife, Notifier, Peer, Registry, Telemetry}
+  alias Oban.{Config, Engine, Job, Midwife, Notifier, Peer, Registry, Stager, Telemetry}
   alias Oban.Queue.{Drainer, Producer}
   alias Oban.Queue.Supervisor, as: QueueSupervisor
 
@@ -214,7 +214,8 @@ defmodule Oban do
     children = [
       {Notifier, conf: conf, name: Registry.via(conf.name, Notifier)},
       {Midwife, conf: conf, name: Registry.via(conf.name, Midwife)},
-      {Peer, conf: conf, name: Registry.via(conf.name, Peer)}
+      {Peer, conf: conf, name: Registry.via(conf.name, Peer)},
+      {Stager, conf: conf, name: Registry.via(conf.name, Stager)}
     ]
 
     children = children ++ Enum.map(plugins, &plugin_child_spec(&1, conf))

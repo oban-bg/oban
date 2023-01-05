@@ -1,52 +1,5 @@
-defmodule Oban.Plugins.Stager do
-  @moduledoc """
-  Makes jobs available for execution and notifies the relevant queues.
-
-  An operational Stager is necessary for job processing, as it performs two essential functions:
-
-  1. Transitioning jobs from `:scheduled` or `:retryable` to the `:available` state on or after
-    the timestamp specified in `:scheduled_at`.
-  2. Alerting queues that there are jobs available for execution.
-
-  Each Oban instance starts a Stager automatically unless `plugins: false` or a testing mode is
-  specified.
-
-  ## Global and Local Modes
-
-  Usually, a Stager instance operates in `global` mode and notifies queues of available jobs via
-  PubSub to minimize database load. However, when PubSub isn't available, the Stager switches to a
-  `local` mode where each queue polls independently.
-
-  Local mode is a **last resort** and will only happen if you're running in an environment where
-  neither `Postgres` nor `PG` notifications work. That situation should be rare and limited to
-  the following conditions:
-
-  1. Running with a database connection pooler, i.e., pg_bouncer, in transaction mode.
-  2. Running without clustering, i.e., without Distributed Erlang
-
-  If **both** of those criteria apply and PubSub notifications won't work, then the Stager will
-  switch to polling in `local` mode.
-
-  ## Options
-
-  * `:interval` - the number of milliseconds between database updates. This is directly tied to
-    the resolution of _scheduled_ jobs. For example, with an `interval` of `5_000ms`, scheduled
-    jobs are checked every 5 seconds. The default is `1_000ms`.
-
-  * `:limit` — the number of jobs that will be staged each time the plugin runs. Defaults to
-    `5,000`, which you can increase if staging can't keep up with your insertion rate or decrease
-    if you're experiencing staging timeouts.
-
-  ## Instrumenting with Telemetry
-
-  The `Oban.Plugins.Stager` plugin adds the following metadata to the `[:oban, :plugin, :stop]` event:
-
-  * `:staged_jobs` - a list of jobs transitioned to `available`
-
-  _Note: jobs only include `id`, `queue`, `state`, and `worker` fields._
-  """
-
-  @behaviour Oban.Plugin
+defmodule Oban.Stager do
+  @moduledoc false
 
   use GenServer
 
@@ -61,7 +14,7 @@ defmodule Oban.Plugins.Stager do
       where: 3
     ]
 
-  alias Oban.{Job, Notifier, Peer, Plugin, Repo, Validation}
+  alias Oban.{Job, Notifier, Peer, Plugin, Repo}
 
   require Logger
 
@@ -83,34 +36,27 @@ defmodule Oban.Plugins.Stager do
     ]
   end
 
-  @impl Plugin
   @spec start_link([option()]) :: GenServer.on_start()
   def start_link(opts) do
     GenServer.start_link(__MODULE__, opts, name: opts[:name])
   end
 
-  @impl Plugin
-  def validate(opts) do
-    Validation.validate(opts, fn
-      {:conf, _} -> :ok
-      {:name, _} -> :ok
-      {:interval, interval} -> Validation.validate_integer(:interval, interval)
-      {:limit, limit} -> Validation.validate_integer(:limit, limit)
-      option -> {:error, "unknown option provided: #{inspect(option)}"}
-    end)
-  end
-
   @impl GenServer
   def init(opts) do
-    Validation.validate!(opts, &validate/1)
+    conf = Keyword.fetch!(opts, :conf)
+    state = %State{conf: conf, interval: conf.stage_interval, name: opts[:name]}
 
-    Process.flag(:trap_exit, true)
-
-    state = struct!(State, opts)
-
+    # Stager is no longer a plugin, but init event is essential for auto-allow and backward
+    # compatibility.
     :telemetry.execute([:oban, :plugin, :init], %{}, %{conf: state.conf, plugin: __MODULE__})
 
-    {:ok, state, {:continue, :start}}
+    if state.interval == :infinity do
+      :ignore
+    else
+      Process.flag(:trap_exit, true)
+
+      {:ok, state, {:continue, :start}}
+    end
   end
 
   @impl GenServer
@@ -155,6 +101,10 @@ defmodule Oban.Plugins.Stager do
   end
 
   def handle_info({:notification, :stager, _payload}, %State{} = state) do
+    if state.mode == :local do
+      Logger.info("Oban job staging switched back to global mode.")
+    end
+
     {:noreply, %{state | ping_at_tick: 60, mode: :global, swap_at_tick: 65, tick: 0}}
   end
 
@@ -162,11 +112,11 @@ defmodule Oban.Plugins.Stager do
     leader? = Peer.leader?(state.conf)
 
     Repo.transaction(state.conf, fn ->
-      sched_count = stage_scheduled(state, leader?: leader?)
+      counts = stage_scheduled(state, leader?: leader?)
 
       notify_queues(state, leader?: leader?)
 
-      sched_count
+      counts
     end)
   end
 
@@ -229,7 +179,7 @@ defmodule Oban.Plugins.Stager do
     end
 
     if state.mode == :global and state.tick == state.swap_at_tick do
-      Logger.warn("""
+      Logger.info("""
       Oban job staging switched to local mode.
 
       Local mode places more load on the database because each queue polls for jobs every second.
