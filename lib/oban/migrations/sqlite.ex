@@ -31,11 +31,15 @@ defmodule Oban.Migrations.SQLite do
     end
 
     create_if_not_exists index(:oban_jobs, [:state, :queue, :priority, :scheduled_at, :id])
+
+    :ok
   end
 
   @impl Oban.Migration
   def down(_opts) do
     drop_if_exists table(:oban_jobs)
+
+    :ok
   end
 
   @impl Oban.Migration
