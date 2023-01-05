@@ -2,10 +2,10 @@ defmodule Oban.Plugins.Repeater do
   @moduledoc """
   Forced polling mode for local queues.
 
-  This plugin is superseded by `Oban.Plugins.Stager`.
+  This plugin is superseded by the new hybrid staging.
   """
 
-  @moduledoc deprecated: "See Oban.Plugins.Stager"
+  @moduledoc deprecated: "Superseded by hybrid staging"
 
   @behaviour Oban.Plugin
 
