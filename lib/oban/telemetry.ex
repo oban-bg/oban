@@ -157,7 +157,6 @@ defmodule Oban.Telemetry do
   * `:leader` — whether the peer is the current leader
   * `:peer` — the module used for peering
 
-
   ## Default Logger
 
   A default log handler that emits structured JSON is provided, see `attach_default_logger/0` for

@@ -50,6 +50,7 @@ defmodule Oban do
           | {:queues, false | [{queue_name(), pos_integer() | Keyword.t()}]}
           | {:repo, module()}
           | {:shutdown_grace_period, timeout()}
+          | {:stage_interval, timeout()}
           | {:testing, :disabled | :inline | :manual}
 
   @type drain_option ::
@@ -87,20 +88,34 @@ defmodule Oban do
 
   ## Options
 
-  These options are required; without them the supervisor won't start
+  These options are required; without them the supervisor won't start:
 
   * `:repo` — specifies the Ecto repo used to insert and retrieve jobs
 
   ### Primary Options
 
-  These options determine what the system does at a high level, i.e. which queues to run.
+  These options determine what the system does at a high level, i.e. which queues to run:
+
+  * `:engine` — facilitates inserting, fetching, and otherwise managing jobs.
+
+    There are three built-in engines: `Oban.Engines.Basic` for Postgres databases,
+    `Oban.Engines.Lite` for SQLite3 databases, and `Oban.Engines.Inline` for simplified testing
+    (only available for `:inline` testing mode).
+
+    When the `Oban.Engines.Lite` engine is used the `:notifier` and `:peer` are automatically set
+    to `PG` and `isolated` mode, respectively.
+
+    Additional engines, such as Oban Pro's `SmartEngine` with advanced functionality for Postgres,
+    are also available as an add-on.
+
+    Defaults to the `Basic` engine for Postgres.
 
   * `:log` — either `false` to disable logging or a standard log level (`:error`, `:warn`,
     `:info`, `:debug`). This determines whether queries are logged or not; overriding the repo's
     configured log level. Defaults to `false`, where no queries are logged.
 
   * `:name` — used for supervisor registration, it must be unique across an entire VM instance.
-    Defaults to `Oban`
+    Defaults to `Oban` when no name is provided.
 
   * `:node` — used to identify the node that the supervision tree is running in. If no value is
     provided it will use the `node` name in a distributed system, or the `hostname` in an isolated
@@ -120,7 +135,7 @@ defmodule Oban do
     Leadership can be disabled by setting `peer: false`, but note that centralized plugins like
     `Cron` won't run without leadership.
 
-    Defaults to the Postgres peer.
+    Defaults to the `Postgres` peer.
 
   * `:plugins` — a list or modules or module/option tuples that are started as children of an Oban
     supervisor. Any supervisable module is a valid plugin, i.e. a `GenServer` or an `Agent`.
@@ -156,18 +171,47 @@ defmodule Oban do
     The default is `5ms` and the minimum is `1ms`, which is likely faster than the database can
     return new jobs to run.
 
-  * `:shutdown_grace_period` - the amount of time a queue will wait for executing jobs to complete
+  * `:shutdown_grace_period` — the amount of time a queue will wait for executing jobs to complete
     before hard shutdown, specified in milliseconds. The default is `15_000`, or 15 seconds.
+
+  * `:stage_interval` — the number of milliseconds between making scheduled jobs available and
+    notifying relevant queues that jobs are available. This is directly tied to the resolution of
+    `scheduled` or `retryable` jobs and how frequently the database is checked for jobs to run. To
+    minimize database load, only `5_000` jobs are staged at each interval.
+
+    Only the leader node stages jobs and notifies queues when the `:notifier's` pubsub
+    notifications are functional. If pubusb messages can't get through then staging switches to a
+    less efficient "local" mode in which all nodes poll for jobs to run.
+
+    Setting the interval to `:infinity` disables staging entirely. The default is `1_000ms`.
 
   ## Example
 
-  To start an `Oban` supervisor within an application's supervision tree:
+  Start a stand-alone `Oban` instance:
+
+      {:ok, pid} = Oban.start_link(repo: MyApp.Repo, queues: [default: 10])
+
+  To start an `Oban` instance within an application's supervision tree:
 
       def start(_type, _args) do
-        children = [MyApp.Repo, {Oban, queues: [default: 50]}]
+        children = [MyApp.Repo, {Oban, repo: MyApp.Repo, queues: [default: 10]}]
 
         Supervisor.start_link(children, strategy: :one_for_one, name: MyApp.Supervisor)
       end
+
+  Start multiple, named `Oban` supervisors within a supervision tree:
+
+        children = [
+          MyApp.Repo,
+          {Oban, name: Oban.A, repo: MyApp.Repo, queues: [default: 10]},
+          {Oban, name: Oban.B, repo: MyApp.Repo, queues: [special: 10]},
+        ]
+
+        Supervisor.start_link(children, strategy: :one_for_one, name: MyApp.Supervisor)
+
+  Start a local `Oban` instance for SQLite:
+
+      {:ok, pid} = Oban.start_link(engine: Oban.Engines.Lite, repo: MyApp.Repo)
 
   ## Node Name
 
