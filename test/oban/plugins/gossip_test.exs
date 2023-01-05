@@ -35,6 +35,9 @@ defmodule Oban.Plugins.GossipTest do
   end
 
   describe "integration" do
+    # This flickers on OTP 25 in CI, but it is also slated for removal.
+    @describetag :gossip
+
     test "queue producers periodically emit check meta as gossip" do
       name =
         start_supervised_oban!(
