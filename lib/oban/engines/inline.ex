@@ -1,5 +1,13 @@
 defmodule Oban.Engines.Inline do
-  @moduledoc false
+  @moduledoc """
+  A testing-specific engine that's used when Oban's started with `testing: :inline`.
+
+  ## Usage
+
+  This is meant for testing and shouldn't be configured directly:
+
+      Oban.start_link(repo: MyApp.Repo, testing: :inline)
+  """
 
   @behaviour Oban.Engine
 

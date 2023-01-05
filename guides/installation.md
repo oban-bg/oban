@@ -13,7 +13,9 @@ end
 ```
 
 Then run `mix deps.get` to install Oban and its dependencies, including
-[Ecto][ecto], [Jason][jason] and [Postgrex][postgrex].
+[Ecto][ecto] and [Jason][jason]. You'll optionally need to include either
+[Postgrex][postgrex] for use with Postgres, or [EctoSQLite3][sqlite] for
+SQLite3.
 
 After the packages are installed you must create a database migration to add the
 `oban_jobs` table to your database:
@@ -106,3 +108,4 @@ Oban.
 [ecto]: https://hex.pm/packages/ecto
 [jason]: https://hex.pm/packages/jason
 [postgrex]: https://hex.pm/packages/postgrex
+[ecto_sqlite3]: https://hex.pm/packages/ecto_sqlite3

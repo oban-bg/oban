@@ -128,6 +128,11 @@ defmodule Oban.MixProject do
       Peers: [
         Oban.Peers.Postgres,
         Oban.Peers.Global
+      ],
+      Engines: [
+        Oban.Engines.Basic,
+        Oban.Engines.Inline,
+        Oban.Engines.Lite
       ]
     ]
   end
