@@ -536,7 +536,7 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite] do
         Oban.insert_all(name, [
           Worker.new(%{action: "OK", ref: 1}, schedule_in: -2),
           Worker.new(%{action: "OK", ref: 2}, schedule_in: -1),
-          Worker.new(%{action: "OK", ref: 3}, schedule_in: 1),
+          Worker.new(%{action: "OK", ref: 3}, schedule_in: 1)
         ])
 
         assert_receive {:ok, 1}
