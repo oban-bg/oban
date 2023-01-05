@@ -2,7 +2,7 @@ defmodule Oban.ConfigTest do
   use Oban.Case, async: true
 
   alias Oban.Config
-  alias Oban.Plugins.{Cron, Pruner, Stager}
+  alias Oban.Plugins.{Cron, Pruner}
 
   doctest Config
 
@@ -131,12 +131,14 @@ defmodule Oban.ConfigTest do
     end
 
     test ":testing in :manual mode disables queues, peer, and plugins" do
-      assert %Config{queues: [], plugins: [], peer: Oban.Peers.Disabled} =
-               conf(queues: [alpha: 1], plugins: [Pruner], testing: :manual)
+      assert conf = conf(queues: [alpha: 1], plugins: [Pruner], testing: :manual)
+
+      assert %{queues: [], plugins: []} = conf
+      assert %{peer: Oban.Peers.Disabled, stage_interval: :infinity} = conf
     end
 
     test "normalizing plugins as a module options tuple" do
-      assert %Config{plugins: plugins} = conf(plugins: [Cron, Pruner, {Stager, []}])
+      assert %Config{plugins: plugins} = conf(plugins: [Cron, {Pruner, []}])
 
       for plugin <- plugins do
         assert {module, opts} = plugin
@@ -155,16 +157,25 @@ defmodule Oban.ConfigTest do
     end
 
     test "translating poll_interval config into plugin usage" do
-      assert has_plugin?(Stager, [])
-      assert has_plugin?(Stager, plugins: [])
-      assert has_plugin?(Stager, poll_interval: 2000)
-
-      refute has_plugin?(Stager, plugins: false, poll_interval: 2000)
+      assert %{stage_interval: 1_000} = conf([])
+      assert %{stage_interval: 2_000} = conf(poll_interval: 2_000)
+      assert %{stage_interval: 1_000} = conf(poll_interval: :infinity, stage_interval: 1_000)
+      assert %{stage_interval: 1_000} = conf(plugins: [Oban.Plugins.Stager])
+      assert %{stage_interval: 2_000} = conf(plugins: [{Oban.Plugins.Stager, interval: 2_000}])
     end
 
     test "translating peer false to the disabled module" do
       assert %Config{peer: Oban.Peers.Disabled} = conf(peer: false)
       assert %Config{peer: Oban.Peers.Disabled} = conf(plugins: false)
+      assert %Config{peer: Oban.Peers.Global} = conf(peer: Oban.Peers.Global, plugins: false)
+    end
+
+    test "setting sane defaults for the Lite engine" do
+      conf = conf(engine: Oban.Engines.Lite)
+
+      refute conf.prefix
+      assert conf.notifier == Oban.Notifiers.PG
+      assert conf.peer == Oban.Peers.Isolated
     end
   end
 

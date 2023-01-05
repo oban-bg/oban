@@ -8,14 +8,6 @@ defmodule Oban.Case do
   alias Oban.Job
   alias Oban.Test.{LiteRepo, Repo, UnboxedRepo}
 
-  defmodule Peer do
-    @moduledoc false
-
-    def start_link(opts), do: Agent.start_link(fn -> true end, name: opts[:name])
-
-    def leader?(_pid, _timeout \\ nil), do: true
-  end
-
   using do
     quote do
       use ExUnitProperties
@@ -23,7 +15,7 @@ defmodule Oban.Case do
       import Oban.Case
 
       alias Oban.Integration.Worker
-      alias Oban.{Config, Job, Peer}
+      alias Oban.{Config, Job}
       alias Oban.Test.{LiteRepo, Repo, UnboxedRepo}
     end
   end
@@ -55,8 +47,8 @@ defmodule Oban.Case do
       opts
       |> Keyword.put_new(:name, make_ref())
       |> Keyword.put_new(:notifier, Oban.Notifiers.PG)
-      |> Keyword.put_new(:peer, Oban.Case.Peer)
-      |> Keyword.put_new(:poll_interval, :infinity)
+      |> Keyword.put_new(:peer, Oban.Peers.Isolated)
+      |> Keyword.put_new(:stage_interval, :infinity)
       |> Keyword.put_new(:repo, Repo)
       |> Keyword.put_new(:shutdown_grace_period, 250)
 
