@@ -145,7 +145,7 @@ details on installing and configuring Oban in your application.
 
 ### Requirements
 
-Oban requires Elixir 1.11+, Erlang 21+, and PostgreSQL 10.0+ or SQLite3 3.37.0+.
+Oban requires Elixir 1.12+, Erlang 22+, and PostgreSQL 12.0+ or SQLite3 3.37.0+.
 
 ### Testing
 

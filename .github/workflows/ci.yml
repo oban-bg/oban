@@ -19,14 +19,14 @@ jobs:
       matrix:
         include:
           - pair:
-              elixir: '1.11'
-              otp: '21.3'
-              postgres: '10.19-alpine'
-            exclude_tags: 'reindex'
+              elixir: '1.12'
+              otp: '22.3'
+              postgres: '12.13-alpine'
+            exclude_tags: 'lite'
           - pair:
               elixir: '1.14'
-              otp: '25.0'
-              postgres: '14.5-alpine'
+              otp: '25.2'
+              postgres: '15.1-alpine'
             exclude_tags: 'nothing'
             lint: lint
 
@@ -89,7 +89,7 @@ jobs:
       - name: Run mix ecto.migrate
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:${{job.services.postgres.ports[5432]}}/oban_test
-        run: mix ecto.migrate -r Oban.Test.Repo
+        run: mix test.setup
 
       - name: Run mix test
         env:
