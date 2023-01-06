@@ -248,7 +248,8 @@ defmodule Oban.Engines.Lite do
     query =
       Job
       |> where([j], j.state in ^states)
-      |> where([j], fragment("datetime(?) >= datetime(?)", j.inserted_at, ^since))
+      # |> where([j], fragment("datetime(?) >= datetime(?)", j.inserted_at, ^since))
+      |> where([j], j.inserted_at >= ^since)
       |> where(^dynamic)
       |> limit(1)
 
@@ -280,7 +281,7 @@ defmodule Oban.Engines.Lite do
     end
   end
 
-  defp seconds_from_now(seconds), do: DateTime.add(utc_now(), seconds, :second)
+  defp seconds_from_now(seconds), do: NaiveDateTime.add(utc_now(), seconds, :second)
 
   defp encode_unsaved(job) do
     Jason.encode!(%{
