@@ -159,10 +159,7 @@ defmodule Oban.Engines.Lite do
 
   @impl Engine
   def cancel_job(conf, job) do
-    query =
-      Job
-      |> where(id: ^job.id)
-      |> where([j], j.state not in ["cancelled", "completed", "discarded"])
+    query = where(Job, id: ^job.id)
 
     query =
       if is_map(job.unsaved_error) do
@@ -174,7 +171,9 @@ defmodule Oban.Engines.Lite do
           ]
         )
       else
-        update(query, set: [state: "cancelled", cancelled_at: ^utc_now()])
+        query
+        |> where([j], j.state not in ["cancelled", "completed", "discarded"])
+        |> update(set: [state: "cancelled", cancelled_at: ^utc_now()])
       end
 
     Repo.update_all(conf, query, [])
@@ -183,7 +182,27 @@ defmodule Oban.Engines.Lite do
   end
 
   @impl Engine
-  defdelegate cancel_all_jobs(conf, queryable), to: Basic
+  def cancel_all_jobs(conf, queryable) do
+    base_query = where(queryable, [j], j.state not in ["cancelled", "completed", "discarded"])
+
+    # In SQLite3 an "UPDATE FROM" query returns the final value, not the original from a join. A
+    # separate query is needed to get the original state.
+    states_map =
+      base_query
+      |> select([j], {j.id, j.state})
+      |> then(&Repo.all(conf, &1))
+      |> Map.new()
+
+    query = select(base_query, [j], map(j, [:id, :queue, :state, :worker]))
+
+    jobs =
+      conf
+      |> Repo.update_all(query, set: [state: "cancelled", cancelled_at: utc_now()])
+      |> elem(1)
+      |> Enum.map(fn job -> %{job | state: Map.fetch!(states_map, job.id)} end)
+
+    {:ok, jobs}
+  end
 
   @impl Engine
   def retry_job(conf, %Job{id: id}) do

@@ -3,7 +3,7 @@ defmodule Oban.Queue.Producer do
 
   use GenServer
 
-  alias Oban.{Backoff, Engine, Notifier, TimeoutError}
+  alias Oban.{Backoff, Engine, Notifier, PerformError, TimeoutError}
   alias Oban.Queue.Executor
 
   defmodule State do
@@ -76,41 +76,35 @@ defmodule Oban.Queue.Producer do
     {:noreply, state}
   end
 
-  def handle_info({:DOWN, ref, :process, _pid, :shutdown}, %State{} = state) do
-    state =
-      state
-      |> release_ref(ref)
-      |> schedule_dispatch()
-
-    {:noreply, state}
-  end
-
-  # This message is only received when the job's task doesn't exit cleanly. This should be rare,
-  # but it can happen when nested processes crash.
   def handle_info({:DOWN, ref, :process, pid, reason}, %State{} = state) do
-    {_pid, exec} = Map.get(state.running, ref)
+    {^pid, exec} = Map.get(state.running, ref)
 
-    {error, stack} =
+    exec =
       case reason do
-        {error, stack} -> {error, stack}
-        _ -> {reason, []}
+        %TimeoutError{} ->
+          %{exec | kind: :error, error: reason, state: :failure}
+
+        :shutdown ->
+          result = {:cancel, :shutdown}
+          reason = PerformError.exception({exec.job.worker, result})
+
+          %{exec | result: result, error: reason, state: :cancelled}
+
+        {error, stack} ->
+          %{exec | kind: {:EXIT, pid}, error: error, stacktrace: stack, state: :failure}
+
+        _ ->
+          %{exec | kind: {:EXIT, pid}, error: reason, state: :failure}
       end
 
-    kind =
-      case reason do
-        %TimeoutError{} -> :error
-        _ -> {:EXIT, pid}
-      end
-
-    # Without this we may crash the producer if there are any db errors. Alternatively, we would
-    # block the producer while awaiting a retry.
     Task.Supervisor.async_nolink(state.foreman, fn ->
-      Backoff.with_retry(fn ->
-        %{exec | kind: kind, error: error, stacktrace: stack, state: :failure}
+      exec =
+        exec
         |> Executor.normalize_state()
         |> Executor.record_finished()
-        |> Executor.report_finished()
-      end)
+        |> Executor.cancel_timeout()
+
+      Backoff.with_retry(fn -> Executor.report_finished(exec) end)
     end)
 
     state =

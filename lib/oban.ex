@@ -964,9 +964,16 @@ defmodule Oban do
   @doc since: "1.3.0"
   @spec cancel_job(name(), job_id :: pos_integer()) :: :ok
   def cancel_job(name \\ __MODULE__, job_id) when is_integer(job_id) do
+    import Ecto.Query, only: [where: 3]
+
     conf = config(name)
 
-    Engine.cancel_job(conf, %Job{id: job_id})
+    # Cancelling all but an "executing" jobs allows the producer to handle cancellation with a
+    # proper error and telemetry event.
+    query = where(Job, [j], j.id == ^job_id and j.state != "executing")
+
+    Engine.cancel_all_jobs(conf, query)
+
     Notifier.notify(conf, :signal, %{action: :pkill, job_id: job_id})
   end
 

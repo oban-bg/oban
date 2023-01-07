@@ -4,12 +4,13 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite] do
 
     alias Ecto.Adapters.SQL.Sandbox
     alias Ecto.Multi
+    alias Oban.Engines.Lite
     alias Oban.TelemetryHandler
 
     @engine engine
-    @repo if engine == Oban.Engines.Lite, do: LiteRepo, else: Repo
+    @repo if engine == Lite, do: LiteRepo, else: Repo
 
-    @moduletag lite: engine == Oban.Engines.Lite
+    @moduletag lite: engine == Lite
 
     describe "insert/2" do
       setup :start_supervised_oban
@@ -34,7 +35,7 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite] do
         assert job_1.id == job_2.id
       end
 
-      @tag unique: true, skip: @engine == Oban.Engines.Lite
+      @tag unique: true, skip: @engine == Lite
       test "preventing duplicate jobs between processes", %{name: name} do
         parent = self()
         changeset = Worker.new(%{ref: 1}, unique: [period: 60])
@@ -366,7 +367,7 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite] do
       @describetag oban_opts: [queues: [alpha: 5], stage_interval: 10, testing: :disabled]
 
       test "cancelling an executing job by its id", %{name: name} do
-        TelemetryHandler.attach_events(span_type: [[:engine, :cancel_job]])
+        TelemetryHandler.attach_events(span_type: [:job, [:engine, :cancel_job]])
 
         job = insert!(name, %{ref: 1, sleep: 100}, [])
 
@@ -376,9 +377,10 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite] do
 
         refute_receive {:ok, 1}, 200
 
-        assert %Job{state: "cancelled", cancelled_at: %_{}} = reload(name, job)
+        assert %Job{state: "cancelled", errors: [_], cancelled_at: %_{}} = reload(name, job)
         assert %{running: []} = Oban.check_queue(name, queue: :alpha)
 
+        assert_receive {:event, :stop, _, %{job: _}}
         assert_receive {:event, [:cancel_job, :stop], _, %{job: _}}
       end
 
@@ -386,21 +388,21 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite] do
         job_a = insert!(name, %{ref: 1}, schedule_in: 10)
         job_b = insert!(name, %{ref: 2}, schedule_in: 10, state: "retryable")
         job_c = insert!(name, %{ref: 3}, state: "completed")
-        job_d = insert!(name, %{ref: 4, sleep: 200}, [])
+        job_d = insert!(name, %{ref: 4, sleep: 100}, [])
 
-        assert_receive {:started, 4}, 250
+        assert_receive {:started, 4}
 
         assert :ok = Oban.cancel_job(name, job_a.id)
         assert :ok = Oban.cancel_job(name, job_b.id)
         assert :ok = Oban.cancel_job(name, job_c.id)
         assert :ok = Oban.cancel_job(name, job_d.id)
 
-        refute_receive {:ok, 4}, 50
+        refute_receive {:ok, 4}, 150
 
-        assert %Job{state: "cancelled", cancelled_at: %_{}} = reload(name, job_a)
-        assert %Job{state: "cancelled", cancelled_at: %_{}} = reload(name, job_b)
-        assert %Job{state: "completed", cancelled_at: nil} = reload(name, job_c)
-        assert %Job{state: "cancelled", cancelled_at: %_{}} = reload(name, job_d)
+        assert %Job{state: "cancelled", errors: [], cancelled_at: %_{}} = reload(name, job_a)
+        assert %Job{state: "cancelled", errors: [], cancelled_at: %_{}} = reload(name, job_b)
+        assert %Job{state: "completed", errors: [], cancelled_at: nil} = reload(name, job_c)
+        assert %Job{state: "cancelled", errors: [_], cancelled_at: %_{}} = reload(name, job_d)
       end
     end
 
@@ -410,24 +412,25 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite] do
       @describetag oban_opts: [queues: [alpha: 5], stage_interval: 10, testing: :disabled]
 
       test "cancelling all jobs that may or may not be executing", %{name: name} do
-        TelemetryHandler.attach_events(span_type: [[:engine, :cancel_all_jobs]])
+        TelemetryHandler.attach_events(span_type: [:job, [:engine, :cancel_all_jobs]])
 
         job_a = insert!(name, %{ref: 1}, schedule_in: 10)
         job_b = insert!(name, %{ref: 2}, schedule_in: 10, state: "retryable")
         job_c = insert!(name, %{ref: 3}, state: "completed")
-        job_d = insert!(name, %{ref: 4, sleep: 200}, [])
+        job_d = insert!(name, %{ref: 4, sleep: 100}, [])
 
         assert_receive {:started, 4}
 
         assert {:ok, 3} = Oban.cancel_all_jobs(name, Job)
 
-        refute_receive {:ok, 4}, 50
+        refute_receive {:ok, 4}, 150
 
-        assert %Job{state: "cancelled", cancelled_at: %_{}} = reload(name, job_a)
-        assert %Job{state: "cancelled", cancelled_at: %_{}} = reload(name, job_b)
-        assert %Job{state: "completed", cancelled_at: nil} = reload(name, job_c)
-        assert %Job{state: "cancelled", cancelled_at: %_{}} = reload(name, job_d)
+        assert %Job{state: "cancelled", errors: [], cancelled_at: %_{}} = reload(name, job_a)
+        assert %Job{state: "cancelled", errors: [], cancelled_at: %_{}} = reload(name, job_b)
+        assert %Job{state: "completed", errors: [], cancelled_at: nil} = reload(name, job_c)
+        assert %Job{state: "cancelled", errors: [_], cancelled_at: %_{}} = reload(name, job_d)
 
+        assert_receive {:event, :stop, _, %{job: _}}
         assert_receive {:event, [:cancel_all_jobs, :stop], _, %{jobs: _jobs}}
       end
     end

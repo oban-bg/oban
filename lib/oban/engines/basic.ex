@@ -169,23 +169,23 @@ defmodule Oban.Engines.Basic do
 
   @impl Engine
   def cancel_job(%Config{} = conf, %Job{} = job) do
-    updates = [set: [state: "cancelled", cancelled_at: utc_now()]]
+    query = where(Job, id: ^job.id)
 
-    updates =
+    query =
       if is_map(job.unsaved_error) do
         error = %{attempt: job.attempt, at: utc_now(), error: Job.format_error(job)}
 
-        Keyword.put(updates, :push, errors: error)
+        update(query, [j],
+          set: [state: "cancelled", cancelled_at: ^utc_now()],
+          push: [errors: ^error]
+        )
       else
-        updates
+        query
+        |> where([j], j.state not in ["cancelled", "completed", "discarded"])
+        |> update(set: [state: "cancelled", cancelled_at: ^utc_now()])
       end
 
-    query =
-      Job
-      |> where(id: ^job.id)
-      |> where([j], j.state not in ["cancelled", "completed", "discarded"])
-
-    Repo.update_all(conf, query, updates)
+    Repo.update_all(conf, query, [])
 
     :ok
   end
