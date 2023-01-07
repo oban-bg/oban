@@ -159,8 +159,6 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite] do
         job_2 = insert!(name, %{id: 2}, inserted_at: five_minutes_ago)
         job_3 = insert!(name, %{id: 3}, inserted_at: nine_minutes_ago)
 
-        IO.inspect(@repo.query("SELECT inserted_at, scheduled_at FROM oban_jobs", []))
-
         assert {:ok, job_4} = uniq_insert.(%{id: 1}, 239)
         assert {:ok, job_5} = uniq_insert.(%{id: 2}, 299)
         assert {:ok, job_6} = uniq_insert.(%{id: 3}, 539)

@@ -125,7 +125,7 @@ defmodule Oban.Stager do
       Job
       |> where([j], j.state in ["scheduled", "retryable"])
       |> where([j], not is_nil(j.queue))
-      |> where([j], j.scheduled_at <= ^DateTime.utc_now())
+      |> where([j], type(j.scheduled_at, :utc_datetime) <= ^DateTime.utc_now())
       |> order_by(asc: :id)
       |> limit(^state.limit)
       |> lock("FOR UPDATE SKIP LOCKED")

@@ -150,9 +150,9 @@ defmodule Oban.Plugins.Pruner do
 
     subquery =
       Job
-      |> or_where([j], j.state == "completed" and j.attempted_at < ^time)
-      |> or_where([j], j.state == "cancelled" and j.cancelled_at < ^time)
-      |> or_where([j], j.state == "discarded" and j.discarded_at < ^time)
+      |> or_where([j], j.state == "completed" and type(j.attempted_at, :utc_datetime) < ^time)
+      |> or_where([j], j.state == "cancelled" and type(j.cancelled_at, :utc_datetime) < ^time)
+      |> or_where([j], j.state == "discarded" and type(j.discarded_at, :utc_datetime) < ^time)
       |> limit(^limit)
       |> lock("FOR UPDATE SKIP LOCKED")
 

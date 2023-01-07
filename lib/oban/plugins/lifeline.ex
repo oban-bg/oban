@@ -143,7 +143,11 @@ defmodule Oban.Plugins.Lifeline do
     if Peer.leader?(state.conf) do
       Repo.transaction(state.conf, fn ->
         time = DateTime.add(DateTime.utc_now(), -state.rescue_after, :millisecond)
-        base = where(Job, [j], j.state == "executing" and j.attempted_at < ^time)
+
+        base =
+          Job
+          |> where([j], j.state == "executing")
+          |> where([j], type(j.attempted_at, :utc_datetime) < ^time)
 
         {rescued_count, rescued} = transition_available(base, state)
         {discard_count, discard} = transition_discarded(base, state)

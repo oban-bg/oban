@@ -248,8 +248,7 @@ defmodule Oban.Engines.Lite do
     query =
       Job
       |> where([j], j.state in ^states)
-      # |> where([j], fragment("datetime(?) >= datetime(?)", j.inserted_at, ^since))
-      |> where([j], j.inserted_at >= ^since)
+      |> where([j], type(j.inserted_at, :utc_datetime) >= ^since)
       |> where(^dynamic)
       |> limit(1)
 
