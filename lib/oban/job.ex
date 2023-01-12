@@ -336,18 +336,19 @@ defmodule Oban.Job do
   end
 
   @doc """
-  Normalize, blame, and format a job's `unsaved_error`.
+  Normalize, blame, and format a job's `unsaved_error` into the stored error format.
 
   Formatted errors are stored in a job's `errors` field.
   """
   @doc since: "2.14.0"
-  @spec format_error(t()) :: String.t()
-  def format_error(%__MODULE__{unsaved_error: unsaved}) do
+  def format_attempt(%__MODULE__{attempt: attempt, unsaved_error: unsaved}) do
     %{kind: kind, reason: error, stacktrace: stacktrace} = unsaved
 
     {blamed, stacktrace} = Exception.blame(kind, error, stacktrace)
 
-    Exception.format(kind, blamed, stacktrace)
+    error = Exception.format(kind, blamed, stacktrace)
+
+    %{attempt: attempt, at: DateTime.utc_now(), error: error}
   end
 
   defp coerce_field(params, field, fun) do

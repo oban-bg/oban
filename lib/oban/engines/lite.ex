@@ -302,10 +302,8 @@ defmodule Oban.Engines.Lite do
   defp seconds_from_now(seconds), do: DateTime.add(utc_now(), seconds, :second)
 
   defp encode_unsaved(job) do
-    Jason.encode!(%{
-      attempt: job.attempt,
-      at: utc_now(),
-      error: Job.format_error(job)
-    })
+    job
+    |> Job.format_attempt()
+    |> Jason.encode!()
   end
 end

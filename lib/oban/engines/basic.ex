@@ -131,9 +131,7 @@ defmodule Oban.Engines.Basic do
   def discard_job(%Config{} = conf, %Job{} = job) do
     updates = [
       set: [state: "discarded", discarded_at: utc_now()],
-      push: [
-        errors: %{attempt: job.attempt, at: utc_now(), error: Job.format_error(job)}
-      ]
+      push: [errors: Job.format_attempt(job)]
     ]
 
     Repo.update_all(conf, where(Job, id: ^job.id), updates)
@@ -145,9 +143,7 @@ defmodule Oban.Engines.Basic do
   def error_job(%Config{} = conf, %Job{} = job, seconds) when is_integer(seconds) do
     updates = [
       set: [state: "retryable", scheduled_at: seconds_from_now(seconds)],
-      push: [
-        errors: %{attempt: job.attempt, at: utc_now(), error: Job.format_error(job)}
-      ]
+      push: [errors: Job.format_attempt(job)]
     ]
 
     Repo.update_all(conf, where(Job, id: ^job.id), updates)
@@ -173,11 +169,9 @@ defmodule Oban.Engines.Basic do
 
     query =
       if is_map(job.unsaved_error) do
-        error = %{attempt: job.attempt, at: utc_now(), error: Job.format_error(job)}
-
         update(query, [j],
           set: [state: "cancelled", cancelled_at: ^utc_now()],
-          push: [errors: ^error]
+          push: [errors: ^Job.format_attempt(job)]
         )
       else
         query
