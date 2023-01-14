@@ -438,8 +438,6 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite] do
     describe "retry_job/2" do
       setup :start_supervised_oban
 
-      @describetag oban_opts: [queues: [alpha: 5], stage_interval: 10, testing: :disabled]
-
       test "retrying jobs from multiple states", %{name: name} do
         job_a = insert!(name, %{ref: 1}, state: "discarded", max_attempts: 20, attempt: 20)
         job_b = insert!(name, %{ref: 2}, state: "completed", max_attempts: 20)
@@ -463,8 +461,6 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite] do
 
     describe "retry_all_jobs/2" do
       setup :start_supervised_oban
-
-      @describetag oban_opts: [queues: [alpha: 5], stage_interval: 10, testing: :disabled]
 
       test "retrying all retryable jobs", %{name: name} do
         TelemetryHandler.attach_events(span_type: [[:engine, :retry_all_jobs]])
