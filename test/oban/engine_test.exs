@@ -441,23 +441,25 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite] do
       @describetag oban_opts: [queues: [alpha: 5], stage_interval: 10, testing: :disabled]
 
       test "retrying jobs from multiple states", %{name: name} do
-        job_a = insert!(name, %{ref: 1}, state: "discarded", max_attempts: 20, attempt: 20)
-        job_b = insert!(name, %{ref: 2}, state: "completed", max_attempts: 20)
-        job_c = insert!(name, %{ref: 3}, state: "available", max_attempts: 20)
-        job_d = insert!(name, %{ref: 4}, state: "retryable", max_attempts: 20)
-        job_e = insert!(name, %{ref: 5}, state: "executing", max_attempts: 1, attempt: 1)
+        @repo.transaction(fn ->
+          job_a = insert!(name, %{ref: 1}, state: "discarded", max_attempts: 20, attempt: 20)
+          job_b = insert!(name, %{ref: 2}, state: "completed", max_attempts: 20)
+          job_c = insert!(name, %{ref: 3}, state: "available", max_attempts: 20)
+          job_d = insert!(name, %{ref: 4}, state: "retryable", max_attempts: 20)
+          job_e = insert!(name, %{ref: 5}, state: "executing", max_attempts: 1, attempt: 1)
 
-        assert :ok = Oban.retry_job(name, job_a.id)
-        assert :ok = Oban.retry_job(name, job_b.id)
-        assert :ok = Oban.retry_job(name, job_c.id)
-        assert :ok = Oban.retry_job(name, job_d.id)
-        assert :ok = Oban.retry_job(name, job_e.id)
+          assert :ok = Oban.retry_job(name, job_a.id)
+          assert :ok = Oban.retry_job(name, job_b.id)
+          assert :ok = Oban.retry_job(name, job_c.id)
+          assert :ok = Oban.retry_job(name, job_d.id)
+          assert :ok = Oban.retry_job(name, job_e.id)
 
-        assert %Job{state: "available", max_attempts: 21} = reload(name, job_a)
-        assert %Job{state: "available", max_attempts: 20} = reload(name, job_b)
-        assert %Job{state: "available", max_attempts: 20} = reload(name, job_c)
-        assert %Job{state: "available", max_attempts: 20} = reload(name, job_d)
-        assert %Job{state: "executing", max_attempts: 1} = reload(name, job_e)
+          assert %Job{state: "available", max_attempts: 21} = reload(name, job_a)
+          assert %Job{state: "available", max_attempts: 20} = reload(name, job_b)
+          assert %Job{state: "available", max_attempts: 20} = reload(name, job_c)
+          assert %Job{state: "available", max_attempts: 20} = reload(name, job_d)
+          assert %Job{state: "executing", max_attempts: 1} = reload(name, job_e)
+        end)
       end
     end
 
