@@ -52,7 +52,7 @@ Oban.Testing.with_testing_mode(:manual, fn ->
 end)
 ```
 
-Or visa-versa, switch to `:inline` mode when the application is configured for
+Or vice-versa, switch to `:inline` mode when the application is configured for
 `:manual` mode:
 
 ```elixir
