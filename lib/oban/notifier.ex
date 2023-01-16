@@ -44,13 +44,13 @@ defmodule Oban.Notifier do
       def insert_and_listen(args) do
         :ok = Oban.Notifier.listen([:gossip])
 
-        {:ok, job} =
+        {:ok, %{id: job_id} = job} =
           args
           |> MyApp.Worker.new()
           |> Oban.insert()
 
         receive do
-          {:notification, :gossip, %{"complete" => ^job.id}} ->
+          {:notification, :gossip, %{"complete" => ^job_id}} ->
             IO.puts("Other job complete!")
         after
           30_000 ->
