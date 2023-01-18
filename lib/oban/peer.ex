@@ -11,7 +11,7 @@ defmodule Oban.Peer do
   * Each peer checks for leadership at a 30 second interval. When the leader exits it broadcasts a
     message to all other peers to encourage another one to assume leadership.
 
-  * Each Oban instances supervises a distinct `Oban.Peer` instance. That means that with multiple
+  * Each Oban instance supervises a distinct `Oban.Peer` instance. That means that with multiple
     Oban instances on the same node one instance may be the leader, while the others aren't.
 
   * Without leadership, global plugins (Cron, Lifeline, Stager, etc.), will not run on any node.
