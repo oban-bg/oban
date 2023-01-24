@@ -51,9 +51,10 @@ defmodule Oban.Validation do
   defp unknown_error(name, module) when is_atom(module) do
     name = to_string(name)
 
-    :struct
-    |> module.__info__()
-    |> Enum.map(fn %{field: known} -> {String.jaro_distance(name, to_string(known)), known} end)
+    module
+    |> struct([])
+    |> Map.from_struct()
+    |> Enum.map(fn {known, _} -> {String.jaro_distance(name, to_string(known)), known} end)
     |> Enum.sort(:desc)
     |> case do
       [{score, known} | _] when score > 0.7 ->

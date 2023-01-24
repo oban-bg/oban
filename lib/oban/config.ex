@@ -28,7 +28,6 @@ defmodule Oban.Config do
           testing: :disabled | :inline | :manual
         }
 
-  @enforce_keys [:node, :repo]
   defstruct dispatch_cooldown: 5,
             engine: Oban.Engines.Basic,
             get_dynamic_repo: nil,
