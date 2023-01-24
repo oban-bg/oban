@@ -1,173 +1,156 @@
-# Changelog for Oban v2.13
+# Changelog for Oban v2.14
 
 _🌟 Looking for changes to Web or Pro? Check the [Oban.Pro Changelog][opc] or
 the [Oban.Web Changelog][owc]. 🌟_
 
-## Cancel Directly from Job Execution
+Time marches on, and we minimally support Elixir 1.12+, PostgreSQL 12+, and SQLite 3.37.0+
 
-Discard was initially intended to mean "a job exhausted all retries." Later, it
-was added as a return type for `perform/1`, and it came to mean either "stop
-retrying" or "exhausted retries" ambiguously, with no clear way to
-differentiate. Even later, we introduced cancel with a `cancelled` state as a
-way to stop jobs at runtime.
+## 🪶 SQLite3 Support with the Lite Engine
 
-To repair this dichotomy, we're introducing a new `{:cancel, reason}` return
-type that transitions jobs to the `cancelled` state:
+Increasingly, developers are choosing SQLite for small to medium-sized projects, not just in the
+embedded space where it's had utility for many years. Many of Oban's features, such as isolated
+queues, scheduling, cron, unique jobs, and observability, are valuable in smaller or embedded
+environments. That's why we've added a new SQLite3 storage engine to bring Oban to smaller,
+stand-alone, or embedded environments where PostgreSQL isn't ideal (or possible).
 
-```diff
-case do_some_work(job) do
-  {:ok, _result} = ok ->
-    ok
+There's frighteningly little configuration needed to run with SQLite3. Migrations, queues, and
+plugins all "Just Work™".
 
-  {:error, :invalid} ->
--   {:discard, :invalid}
-+   {:cancel, :invalid}
+To get started, add the `ecto_sqlite3` package to your deps and configure Oban to use the
+`Oban.Engines.Lite` engine:
 
-  {:error, _reason} = error ->
-    error
-end
+```elixir
+config :my_app, Oban,
+  engine: Oban.Engines.Lite,
+  queues: [default: 10],
+  repo: MyApp.Repo
 ```
 
-With this change we're also deprecating the use of discard from `perform/1`
-entirely! The meaning of each action/state is now:
+Presto! Run the migrations, include Oban in your application's supervision tree, and then start
+inserting and executing jobs as normal.
 
-* `cancel`—this job was purposefully stopped from retrying, either from a return
-  value or the cancel command triggered by a _human_
+⚠️ SQLite3 support is new, and while not experimental, there may be sharp edges. Please report any
+issues or gaps in documentation.
 
-* `discard`—this job has exhausted all retries and transitioned by the _system_
+## 👩‍🔬 Smarter Job Fetching
 
-You're encouraged to replace usage of `:discard` with `:cancel` throughout your
-application's workers, but `:discard` is only soft-deprecated and undocumented
-now.
+The most common cause of "jobs not processing" is when PubSub isn't available. Our troubleshooting
+section instructed people to investigate their PubSub and optionally include the `Repeater`
+plugin. That kind of manual remediation isn't necessary now! Instead, we automatically switch back
+to local polling mode when PubSub isn't available—if it is a temporary glitch, then fetching
+returns to the optimized global mode after the next health check.
 
-## Public Engine Behaviour
+Along with smarter fetching, `Stager` is no longer a plugin. It wasn't ever _really_ a plugin, as
+it's core to Oban's operation, but it was treated as a plugin to simplify configuration and
+testing. If you're in the minority that tweaked the staging interval, don't worry, the existing
+plugin configuration is automatically translated for backward compatibility. However, if you're a
+stickler for avoiding deprecated options, you can switch to the top-level `stage_interval`:
 
-Engines are responsible for all non-plugin database interaction, from inserting
-through executing jobs. They're also the intermediate layer that makes Pro's
-SmartEngine possible.
+```diff
+config :my_app, Oban,
+  queues: [default: 10],
+- plugins: [{Stager, interval: 5_000}]
++ stage_interval: 5_000
+```
 
-Along with documenting the Engine this also flattens its name for parity with
-other "extension" modules. For the sake of consistency with notifiers and peers,
-the Basic and Inline engines are now `Oban.Engines.Basic` and
-`Oban.Engines.Inline`, respectively.
+## 📡 Comprehensive Telemetry Data
 
-## v2.13.3 — 2022-09-07
+Oban has exposed telemetry data that allows you to collect and track metrics about jobs and queues
+since the very beginning. Telemetry events followed a job's lifecycle from insertion through
+execution. Still, there were holes in the data—it wasn't possible to track the exact state of your
+entire Oban system through telemetry data.
 
-### Bug Fixes
+Now that's changed. All operations that change job state, whether inserting, deleting, scheduling,
+or processing jobs report complete state-change events for _every_ job including `queue`, `state`,
+and `worker` details. Even bulk operations such as `insert_all_jobs`, `cancel_all_jobs`, and
+`retry_all_jobs` return a subset of fields for _all modified jobs_, rather than a simple count.
 
-- [Oban] Fix dialyzer for `insert/2` and `insert_all/2`, again.
+See the [2.14 upgrade guide](v2-14.html) for step-by-step instructions (all two of them).
 
-  The recent addition of a `@spec` for `Oban.insert/2` broke dialyzer in some
-  situations. To prevent this regression in the future we now include a compiled
-  module that exercises all `Oban.insert` function clauses for dialyzer.
-
-## v2.13.2 — 2022-08-19
-
-### Bug Fixes
-
-- [Oban] Fix `insert/3` and `insert_all/3` when using options.
-
-  Multiple default arguments caused a conflict for function calls with options
-  but without an Oban instance name, e.g. `Oban.insert(changeset, timeout: 500)`
-
-- [Reindexer] Fix the unused index repair query and correctly report errors.
-
-  Reindexing and deindexing would faily silently because the results weren't
-  checked and no exceptions were raised.
-
-## v2.13.1 — 2022-08-09
-
-### Bug Fixes
-
-- [Oban] Expand `insert`/`insert_all` typespecs for multi arity
-
-  This fixes dialyzer issues from the introduction of `opts` to `Oban.insert` and
-  `Oban.insert_all` functions.
-
-- [Reindexer] Allow specifying timeouts for all queries
-
-  In some cases, applying `REINDEX INDEX CONCURRENTLY` on the indexes
-  `oban_jobs_args_index`, and `oban_jobs_meta_index` takes more than the default
-  value (15 seconds). This new option allows clients to specify other values
-  than the default.
-
-## v2.13.0 — 2022-07-22
+## v2.14.0 — 2023-01-25
 
 ### Enhancements
 
-- [Telemetry] Add `encode` option to make JSON encoding for `attach_default_logger/1`.
+- [Oban] Store a `{:cancel, :shutdown}` error and emit `[:oban, :job, :stop]` telemetry when jobs
+  are manually cancelled with `cancel_job/1` or `cancel_all_jobs/1`.
 
-  Now it's possible to use the default logger in applications that prefer
-  structured logging or use a standard JSON log formatter.
+- [Oban] Include "did you mean" suggestions for `Oban.start_link/1` and all nested plugins when a
+  similar option is available.
 
-- [Oban] Accept a `DateTime` for the `:with_scheduled` option when draining.
+  ```
+  Oban.start_link(rep: MyApp.Repo, queues: [default: 10])
+  ** (ArgumentError) unknown option :rep, did you mean :repo?
+      (oban 2.14.0-dev) lib/oban/validation.ex:46: Oban.Validation.validate!/2
+      (oban 2.14.0-dev) lib/oban/config.ex:88: Oban.Config.new/1
+      (oban 2.14.0-dev) lib/oban.ex:227: Oban.start_link/1
+      iex:1: (file)
+  ```
 
-   When a `DateTime` is provided, drains all jobs scheduled up to, and
-   including, that point in time.
+- [Oban] Support scoping queue actions to a particular node.
 
-- [Oban] Accept extra options for `insert/2,4` and `insert_all/2,4`.
+  In addition to scoping to the current node with `:local_only`, it is now possible to scope
+  `pause`, `resume`, `scale`, `start`, and `stop` queues on a single node using the `:node`
+  option.
 
-  These are typically the Ecto's standard "Shared Options" such as `log` and
-  `timeout`. Other engines, such as Pro's `SmartEngine` may support additional
-  options.
+  ```elixir
+  Oban.scale_queue(queue: :default, node: "worker.123")
+  ```
 
-- [Repo] Add `aggregate/4` wrapper to facilitate aggregates from plugins or
-  other extensions that use `Oban.Repo`.
+- [Oban] Remove `retry_job/1` and `retry_all_jobs/1` restriction around retrying `scheduled` jobs.
+
+- [Job] Restrict `replace` option to specific states when unique job's have a conflict.
+
+  ```elixir
+  # Replace the scheduled time only if the job is still scheduled
+  SomeWorker.new(args, replace: [scheduled: [:schedule_in]], schedule_in: 60)
+
+  # Change the args only if the job is still available
+  SomeWorker.new(args, replace: [available: [:args]])
+  ```
+
+- [Job] Introduce `format_attempt/1` helper to standardize error and attempt formatting
+  across engines
+
+- [Repo] Wrap _nearly_ all `Ecto.Repo` callbacks.
+
+  Now every `Ecto.Repo` callback, aside from a handful that are only used to manage a `Repo`
+  instance, are wrapped with code generation that omits any typespecs. Slight inconsistencies
+  between the wrapper's specs and `Ecto.Repo`'s own specs caused dialyzer failures when nothing
+  was genuinely broken. Furthermore, many functions were missing because it was tedious to
+  manually define every wrapper function.
+
+- [Peer] Emit telemetry events for peer leadership elections.
+
+  Both peer modules, `Postgres` and `Global`, now emit `[:oban, :peer, :election]` events during
+  leader election. The telemetry meta includes a `leader?` field for start and stop events to
+  indicate if a leadership change took place.
+
+- [Notifier] Allow passing a single channel to `listen/2` rather than a list.
+
+- [Registry] Add `lookup/2` for conveniently fetching registered `{pid, value}` pairs.
 
 ### Bug Fixes
 
-- [Oban] Prevent empty maps from matching non-empty maps during uniqueness checks.
+- [Basic] Capture `StaleEntryError` on unique replace.
 
-- [Oban] Handle discarded and exhausted states for inline testing mode.
+  Replacing while a job is updated externally, e.g. it starts executing, could occasionally raise
+  an `Ecto.StaleEntryError` within the Basic engine. Now, that exception is translated into an
+  error tuple and bubbles up to the `insert` call site.
 
-  Previously, returning a `:discard` tuple or exhausting attempts would cause an
-  error.
-
-- [Peer] Default `leader?` check to false on peer timeout.
-
-  Timeouts should be rare, as they're symptoms of application/database overload.
-  If leadership can't be established it's safe to assume an instance isn't
-  leader and log a warning.
-
-- [Peer] Use node-specific lock requester id for Global peers.
-
-  Occasionally a peer module may hang while establishing leadership. In this
-  case the peer isn't yet a leader, and we can fallback to `false`.
-
-- [Config] Validate options only after applying normalizations.
-
-- [Migrations] Allow any viable `prefix` in migrations.
-
-- [Reindexer] Drop invalid Oban indexes before reindexing again.
-
-  Table contention that occurs during concurrent reindexing may leave indexes in
-  an invalid, and unusable state. Those indexes aren't used by Postgres and they
-  take up disk space. Now the Reindexer will drop any invalid indexes before
-  attempting to reindex.
-
-- [Reindexer] Only rebuild `args` and `meta` GIN indexes concurrently.
-
-  The new `indexes` option can be used to override the reindexed indexes rather
-  than the defaults.
-
-  The other two standard indexes (primary key and compound fields) are BTREE
-  based and not as subject to bloat.
-
-- [Testing] Fix testing mode for `perform_job` and alt engines, e.g. Inline
-
-  A couple of changes enabled this compound fix:
-
-  1. Removing the engine override within config and exposing a centralized
-     engine lookup instead.
-  2. Controlling post-execution db interaction with a new `ack` option for
-     the Executor module.
+- [Job] Update `t:Oban.Job/0` to indicate timestamp fields are nullable.
 
 ### Deprecations
 
-- [Oban] Soft replace discard with cancel return value (#730) [Parker Selbert]
+- [Stager] Deprecate the `Stager` plugin as it's part of the core supervision tree and may be
+  configured with the top-level `stage_interval` option.
 
-For changes prior to v2.13 see the [v2.12][prv] docs.
+- [Repeater] Deprecate the `Repeater` plugin as it's no longer necessary with hybrid staging.
+
+- [Migration] Rename `Migrations` to `Migration`, but continue delegating functions for backward
+  compatibility.
+
+For changes prior to v2.14 see the [v2.13][prv] docs.
 
 [opc]: https://getoban.pro/docs/pro/changelog.html
 [owc]: https://getoban.pro/docs/web/changelog.html
-[prv]: https://hexdocs.pm/oban/2.12.1/changelog.html
+[prv]: https://hexdocs.pm/oban/2.13.6/changelog.html

@@ -2,13 +2,13 @@ defmodule Oban.MixProject do
   use Mix.Project
 
   @source_url "https://github.com/sorentwo/oban"
-  @version "2.14.0-dev"
+  @version "2.14.0"
 
   def project do
     [
       app: :oban,
       version: @version,
-      elixir: "~> 1.11",
+      elixir: "~> 1.12",
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
       deps: deps(),
@@ -73,6 +73,7 @@ defmodule Oban.MixProject do
       "guides/upgrading/v2.6.md",
       "guides/upgrading/v2.11.md",
       "guides/upgrading/v2.12.md",
+      "guides/upgrading/v2.14.md",
 
       # Recipes
       "guides/recipes/recursive-jobs.md",

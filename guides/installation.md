@@ -7,7 +7,7 @@ dependencies in `mix.exs`:
 # mix.exs
 def deps do
   [
-    {:oban, "~> 2.13"}
+    {:oban, "~> 2.14"}
   ]
 end
 ```
