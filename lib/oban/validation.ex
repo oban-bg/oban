@@ -1,7 +1,11 @@
 defmodule Oban.Validation do
   @moduledoc false
 
-  @type validator :: ({atom(), term()} -> :ok | {:error, term()})
+  @type validator ::
+          ({atom(), term()} ->
+             :ok
+             | {:unknown, atom() | {atom(), term()}, module()}
+             | {:error, term()})
 
   @doc """
   A utility to help validate options without resorting to `throw` or `raise` for control flow.
@@ -25,6 +29,7 @@ defmodule Oban.Validation do
       case validator.(opt) do
         :ok -> {:cont, acc}
         {:error, _reason} = error -> {:halt, error}
+        {:unknown, field, module} -> {:halt, unknown_error(field, module)}
       end
     end)
   end
@@ -39,6 +44,24 @@ defmodule Oban.Validation do
   @spec validate!(opts :: Keyword.t(), validator()) :: :ok
   def validate!(opts, validator) do
     with {:error, reason} <- validator.(opts), do: raise(ArgumentError, reason)
+  end
+
+  defp unknown_error({name, _value}, known), do: unknown_error(name, known)
+
+  defp unknown_error(name, module) when is_atom(module) do
+    name = to_string(name)
+
+    :struct
+    |> module.__info__()
+    |> Enum.map(fn %{field: known} -> {String.jaro_distance(name, to_string(known)), known} end)
+    |> Enum.sort(:desc)
+    |> case do
+      [{score, known} | _] when score > 0.7 ->
+        {:error, "unknown option :#{name}, did you mean :#{known}?"}
+
+      _ ->
+        {:error, "unknown option :#{name}"}
+    end
   end
 
   # Shared Validations

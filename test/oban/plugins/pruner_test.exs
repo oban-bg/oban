@@ -16,6 +16,11 @@ defmodule Oban.Plugins.PrunerTest do
       assert :ok = Pruner.validate(max_age: 60)
       assert :ok = Pruner.validate(limit: 1_000)
     end
+
+    test "providing suggestions for unknown options" do
+      assert {:error, "unknown option :inter, did you mean :interval?"} =
+               Pruner.validate(inter: 1)
+    end
   end
 
   describe "integration" do

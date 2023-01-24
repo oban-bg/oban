@@ -87,7 +87,7 @@ defmodule Oban.Plugins.Cron do
       {:crontab, crontab} -> Validation.validate(:crontab, crontab, &validate_crontab/1)
       {:name, _} -> :ok
       {:timezone, timezone} -> Validation.validate_timezone(:timezone, timezone)
-      option -> {:error, "unknown option provided: #{inspect(option)}"}
+      option -> {:unknown, option, State}
     end)
   end
 

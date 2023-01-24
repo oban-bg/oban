@@ -116,6 +116,13 @@ defmodule Oban.ConfigTest do
       assert_valid(testing: :manual)
       assert_valid(testing: :disabled)
     end
+
+    test "alternatives are suggested for unknown options when they match" do
+      assert {:error, "unknown option :queue, did you mean :queues?"} =
+               Config.validate(queue: false)
+
+      assert {:error, "unknown option :nam, did you mean :name?"} = Config.validate(nam: :web)
+    end
   end
 
   describe "new/1" do

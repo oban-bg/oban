@@ -83,7 +83,7 @@ defmodule Oban.Plugins.Pruner do
       {:interval, interval} -> Validation.validate_integer(:interval, interval)
       {:limit, limit} -> Validation.validate_integer(:limit, limit)
       {:max_age, max_age} -> Validation.validate_integer(:max_age, max_age)
-      option -> {:error, "unknown option provided: #{inspect(option)}"}
+      option -> {:unknown, option, State}
     end)
   end
 

@@ -87,7 +87,7 @@ defmodule Oban.Plugins.Lifeline do
       {:name, _} -> :ok
       {:interval, interval} -> Validation.validate_integer(:interval, interval)
       {:rescue_after, interval} -> Validation.validate_integer(:rescue_after, interval)
-      option -> {:error, "unknown option provided: #{inspect(option)}"}
+      option -> {:unknown, option, State}
     end)
   end
 

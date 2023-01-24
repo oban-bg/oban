@@ -280,7 +280,7 @@ defmodule Oban.Config do
   end
 
   defp validate_opt(_opts, option) do
-    {:error, "unknown option provided #{inspect(option)}"}
+    {:unknown, option, __MODULE__}
   end
 
   defp validate_plugin(plugin) when not is_tuple(plugin), do: validate_plugin({plugin, []})

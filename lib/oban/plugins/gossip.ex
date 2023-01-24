@@ -61,7 +61,7 @@ defmodule Oban.Plugins.Gossip do
       {:conf, _} -> :ok
       {:name, _} -> :ok
       {:interval, interval} -> Validation.validate_integer(:interval, interval)
-      option -> {:error, "unknown option provided: #{inspect(option)}"}
+      option -> {:unknown, option, State}
     end)
   end
 

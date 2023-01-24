@@ -12,6 +12,11 @@ defmodule Oban.Plugins.LifelineTest do
       assert :ok = Lifeline.validate(interval: :timer.seconds(30))
       assert :ok = Lifeline.validate(rescue_after: :timer.minutes(30))
     end
+
+    test "providing suggestions for unknown options" do
+      assert {:error, "unknown option :inter, did you mean :interval?"} =
+               Lifeline.validate(inter: 1)
+    end
   end
 
   describe "integration" do

@@ -36,6 +36,11 @@ defmodule Oban.Plugins.ReindexerTest do
 
       assert :ok = Reindexer.validate(timeout: :timer.minutes(1))
     end
+
+    test "providing suggestions for unknown options" do
+      assert {:error, "unknown option :timeo, did you mean :timeout?"} =
+               Reindexer.validate(timeo: 1)
+    end
   end
 
   describe "integration" do

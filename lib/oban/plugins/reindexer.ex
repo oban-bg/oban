@@ -81,7 +81,7 @@ defmodule Oban.Plugins.Reindexer do
       {:schedule, schedule} -> validate_schedule(schedule)
       {:timezone, timezone} -> Validation.validate_timezone(:timezone, timezone)
       {:timeout, timeout} -> Validation.validate_timeout(:timeout, timeout)
-      option -> {:error, "unknown option provided: #{inspect(option)}"}
+      option -> {:unknown, option, State}
     end)
   end
 

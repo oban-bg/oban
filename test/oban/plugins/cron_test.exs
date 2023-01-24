@@ -51,6 +51,11 @@ defmodule Oban.Plugins.CronTest do
       assert_valid(timezone: "Europe/Copenhagen")
       assert_valid(timezone: "America/Chicago")
     end
+
+    test "providing suggestions for unknown options" do
+      assert {:error, "unknown option :cronta, did you mean :crontab?"} =
+               Cron.validate(cronta: [])
+    end
   end
 
   describe "parse/1" do
