@@ -2,7 +2,7 @@ defmodule Oban.Telemetry do
   @moduledoc """
   Telemetry integration for event metrics, logging and error reporting.
 
-  ### Initialization Events
+  ## Initialization Events
 
   Oban emits the following telemetry event when an Oban supervisor is started:
 
@@ -17,7 +17,7 @@ defmodule Oban.Telemetry do
   * `:conf` - The configuration used for the Oban supervisor instance
   * `:pid` - The PID of the supervisor instance
 
-  ### Job Events
+  ## Job Events
 
   Oban emits the following telemetry events for each job:
 
@@ -35,7 +35,7 @@ defmodule Oban.Telemetry do
   | `:stop`      | `:duration`, `:queue_time` | `:conf`, `:job`, `:state`, `:result`                         |
   | `:exception` | `:duration`, `:queue_time` | `:conf`, `:job`, `:state`, `:kind`, `:reason`, `:stacktrace` |
 
-  #### Metadata
+  ### Metadata
 
   * `:conf` — the executing Oban instance's config
   * `:job` — the executing `Oban.Job`
@@ -52,18 +52,13 @@ defmodule Oban.Telemetry do
   * `:throw` — from a caught value, this doesn't necessarily mean that an error occurred and the
     error value is unpredictable
 
-  ### Engine Events
+  ## Engine Events
 
   Oban emits telemetry span events for the following Engine operations:
 
   * `[:oban, :engine, :init, :start | :stop | :exception]`
   * `[:oban, :engine, :refresh, :start | :stop | :exception]`
   * `[:oban, :engine, :put_meta, :start | :stop | :exception]`
-  * `[:oban, :engine, :insert_job, :start | :stop | :exception]`
-  * `[:oban, :engine, :insert_all_job, :start | :stop | :exception]`
-  * `[:oban, :engine, :fetch_jobs, :start | :stop | :exception]`
-  * `[:oban, :engine, :cancel_all_jobs, :start | :stop | :exception]`
-  * `[:oban, :engine, :retry_all_jobs, :start | :stop | :exception]`
 
   | event        | measures       | metadata                                              |
   | ------------ | -------------- | ----------------------------------------------------- |
@@ -71,14 +66,28 @@ defmodule Oban.Telemetry do
   | `:stop`      | `:duration`    | `:conf`, `:engine`                                    |
   | `:exception` | `:duration`    | `:conf`, `:engine`, `:kind`, `:reason`, `:stacktrace` |
 
+  Events for bulk operations also include `:jobs` for the `:stop` event:
+
+  * `[:oban, :engine, :cancel_all_jobs, :start | :stop | :exception]`
+  * `[:oban, :engine, :fetch_jobs, :start | :stop | :exception]`
+  * `[:oban, :engine, :insert_all_job, :start | :stop | :exception]`
+  * `[:oban, :engine, :retry_all_jobs, :start | :stop | :exception]`
+
+  | event        | measures       | metadata                                              |
+  | ------------ | -------------- | ----------------------------------------------------- |
+  | `:start`     | `:system_time` | `:conf`, `:engine`                                    |
+  | `:stop`      | `:duration`    | `:conf`, `:engine`, `:jobs`                                    |
+  | `:exception` | `:duration`    | `:conf`, `:engine`, `:kind`, `:reason`, `:stacktrace` |
+
   Events for job-level Engine operations also include the `job`
 
+  * `[:oban, :engine, :cancel_job, :start | :stop | :exception]`
   * `[:oban, :engine, :complete_job, :start | :stop | :exception]`
   * `[:oban, :engine, :discard_job, :start | :stop | :exception]`
   * `[:oban, :engine, :error_job, :start | :stop | :exception]`
-  * `[:oban, :engine, :snooze_job, :start | :stop | :exception]`
-  * `[:oban, :engine, :cancel_job, :start | :stop | :exception]`
+  * `[:oban, :engine, :insert_job, :start | :stop | :exception]`
   * `[:oban, :engine, :retry_job, :start | :stop | :exception]`
+  * `[:oban, :engine, :snooze_job, :start | :stop | :exception]`
 
   | event        | measures       | metadata                                                      |
   | ------------ | -------------- | ------------------------------------------------------------- |
@@ -86,14 +95,15 @@ defmodule Oban.Telemetry do
   | `:stop`      | `:duration`    | `:conf`, `:engine`, `:job`                                    |
   | `:exception` | `:duration`    | `:conf`, `:engine`, `:job`, `:kind`, `:reason`, `:stacktrace` |
 
-  #### Metadata
+  ### Metadata
 
   * `:conf` — the Oban supervisor's config
   * `:engine` — the module of the engine used
   * `:job` - the `Oban.Job` in question
+  * `:jobs` — zero or more maps with the `queue`, `state`, and `worker` for each modified job
   * `:kind`, `:reason`, `:stacktrace` — see the explanation in job metadata above
 
-  ### Notifier Events
+  ## Notifier Events
 
   Oban emits a telemetry span event each time the Notifier is triggered:
 
@@ -105,14 +115,14 @@ defmodule Oban.Telemetry do
   | `:stop`      | `:duration`    | `:conf`, `:channel`, `:payload`                                     |
   | `:exception` | `:duration`    | `:conf`, `:channel`, `:payload`, `:kind`, `:reason`, `:stacktrace`  |
 
-  #### Metadata
+  ### Metadata
 
   * `:conf` — the Oban supervisor's config
   * `:channel` — the channel on which the notification was sent
   * `:payload` - the decoded payload that was sent
   * `:kind`, `:reason`, `:stacktrace` — see the explanation in job metadata above
 
-  ### Plugin Events
+  ## Plugin Events
 
   All the Oban plugins emit telemetry events under the `[:oban, :plugin, *]` pattern (where `*` is
   either `:init`, `:start`, `:stop`, or `:exception`). You can filter out for plugin events by
@@ -139,7 +149,7 @@ defmodule Oban.Telemetry do
   | `:stop`      | `:duration`     | `:conf`, `:plugin`                                    |
   | `:exception` | `:duration`     | `:conf`, `:plugin`, `:kind`, `:reason`, `:stacktrace` |
 
-  ### Peer Events
+  ## Peer Events
 
   Oban emits a telemetry span event each time an Oban Peer election occurs:
 
@@ -151,7 +161,7 @@ defmodule Oban.Telemetry do
   | `:stop`      | `:duration`    | `:conf`, `:leader`, `:peer`,                        |
   | `:exception` | `:duration`    | `:conf`, `:leader`, `:peer`, `:kind`, `:reason`, `:stacktrace` |
 
-  #### Metadata
+  ### Metadata
 
   * `:conf`, `:kind`, `:reason`, `:stacktrace` — see the explanation in notifier metadata above
   * `:leader` — whether the peer is the current leader

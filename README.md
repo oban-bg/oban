@@ -61,7 +61,12 @@ _Note: This README is for the unreleased main branch, please reference the
 
 Oban's primary goals are **reliability**, **consistency** and **observability**.
 
-It is fundamentally different from other background job processing tools because
+Oban is a powerful and flexible library that can handle a wide range of
+background job use cases, and it is well-suited for systems of any size. It
+provides a simple and consistent API for scheduling and performing jobs, and it
+is built to be fault-tolerant and easy to monitor.
+
+Oban is fundamentally different from other background job processing tools because
 _it retains job data for historic metrics and inspection_. You can leave your
 application running indefinitely without worrying about jobs being lost or
 orphaned due to crashes.
@@ -178,6 +183,11 @@ config :my_app, Oban,
   queues: [default: 10],
   repo: MyApp.Repo
 ```
+
+_Please note that SQLite3 may not be suitable for high-concurrency systems or for systems that need
+to handle large amounts of data. If you expect your background jobs to generate high loads, it
+would be better to use a more robust database solution that supports horizontal scalability, like
+Postgres._
 
 ## Configuring Queues
 
