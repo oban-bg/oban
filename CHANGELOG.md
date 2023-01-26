@@ -67,6 +67,16 @@ and `worker` details. Even bulk operations such as `insert_all_jobs`, `cancel_al
 
 See the [2.14 upgrade guide](v2-14.html) for step-by-step instructions (all two of them).
 
+## v2.14.1 — 2023-01-26
+
+### Bug Fixes
+
+- [Repo] Prevent logging SQL queries by correctly handling default opts
+
+  The query dispatch call included opts in the args list, rather than
+  separately. That passed options to `Repo.query` correctly, but it missed any
+  default options such as `log: false`, which made for noisy development logs.
+
 ## v2.14.0 — 2023-01-25
 
 ### Enhancements
