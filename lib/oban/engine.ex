@@ -5,11 +5,12 @@ defmodule Oban.Engine do
   Engines are responsible for all non-plugin database interaction, from inserting through
   executing jobs.
 
-  Oban ships with two Engine implementations:
+  Oban ships with three Engine implementations:
 
   1. `Basic` — The default engine for development, production, and manual testing mode.
   2. `Inline` — Designed specifically for testing, it executes jobs immediately, in-memory, as
      they are inserted.
+  3. `Lite` - The engine for running Oban using SQLite3.
 
   > #### 🌟 SmartEngine {: .info}
   >
