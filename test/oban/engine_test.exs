@@ -504,7 +504,6 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite] do
         assert_receive {:error, 4}
         assert_receive {:snooze, 5}
 
-
         with_backoff(fn ->
           assert %{state: "completed", completed_at: %_{}} = reload(name, job_1)
           assert %{state: "cancelled", cancelled_at: %_{}} = reload(name, job_2)
