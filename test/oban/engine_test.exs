@@ -487,6 +487,8 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite] do
       @describetag oban_opts: [queues: [alpha: 3], stage_interval: 10, testing: :disabled]
 
       test "inserting and executing jobs", %{name: name} do
+        TelemetryHandler.attach_events()
+
         changesets =
           ~w(OK CANCEL DISCARD ERROR SNOOZE)
           |> Enum.with_index(1)
@@ -494,11 +496,14 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite] do
 
         [job_1, job_2, job_3, job_4, job_5] = Oban.insert_all(name, changesets)
 
+        assert_receive {:event, [:fetch_jobs, :stop], _, %{jobs: _}}
+
         assert_receive {:ok, 1}
         assert_receive {:cancel, 2}
         assert_receive {:discard, 3}
         assert_receive {:error, 4}
         assert_receive {:snooze, 5}
+
 
         with_backoff(fn ->
           assert %{state: "completed", completed_at: %_{}} = reload(name, job_1)

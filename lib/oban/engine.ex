@@ -206,7 +206,8 @@ defmodule Oban.Engine do
   @doc false
   def fetch_jobs(%Config{} = conf, %{} = meta, %{} = running) do
     with_span(:fetch_jobs, conf, fn engine ->
-      engine.fetch_jobs(conf, meta, running)
+      {:ok, {meta, jobs}} = engine.fetch_jobs(conf, meta, running)
+      {:meta, {:ok, {meta, jobs}}, %{jobs: jobs}}
     end)
   end
 
