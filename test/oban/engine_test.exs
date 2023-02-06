@@ -487,12 +487,16 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite] do
       @describetag oban_opts: [queues: [alpha: 3], stage_interval: 10, testing: :disabled]
 
       test "inserting and executing jobs", %{name: name} do
+        TelemetryHandler.attach_events()
+
         changesets =
           ~w(OK CANCEL DISCARD ERROR SNOOZE)
           |> Enum.with_index(1)
           |> Enum.map(fn {act, ref} -> Worker.new(%{action: act, ref: ref}) end)
 
         [job_1, job_2, job_3, job_4, job_5] = Oban.insert_all(name, changesets)
+
+        assert_receive {:event, [:fetch_jobs, :stop], _, %{jobs: _}}
 
         assert_receive {:ok, 1}
         assert_receive {:cancel, 2}
