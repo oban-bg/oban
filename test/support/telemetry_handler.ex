@@ -12,6 +12,7 @@ defmodule Oban.TelemetryHandler do
     :plugin,
     [:engine, :insert_job],
     [:engine, :insert_all_jobs],
+    [:engine, :fetch_jobs],
     [:peer, :election]
   ]
 
