@@ -27,7 +27,7 @@ defmodule Oban.Peers.PostgresTest do
 
     logged =
       capture_log(fn ->
-        name = start_supervised_oban!(peer: Postgres, plugins: false)
+        name = start_supervised_oban!(peer: Postgres)
         conf = Oban.config(name)
 
         start_supervised!({Peer, conf: conf, name: Peer})

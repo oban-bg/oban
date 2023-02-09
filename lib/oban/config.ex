@@ -384,7 +384,7 @@ defmodule Oban.Config do
   end
 
   defp peer_to_disabled(opts) do
-    if opts[:peer] == false or (is_nil(opts[:peer]) and opts[:plugins] == false) do
+    if opts[:peer] == false or opts[:plugins] == false do
       Keyword.put(opts, :peer, Oban.Peers.Disabled)
     else
       opts
