@@ -8,8 +8,8 @@ defmodule Oban.Peers.GlobalTest do
   test "only a single peer is leader" do
     TelemetryHandler.attach_events()
 
-    name_1 = start_supervised_oban!(peer: Global, node: "worker.1", plugins: false)
-    name_2 = start_supervised_oban!(peer: Global, node: "worker.2", plugins: false)
+    name_1 = start_supervised_oban!(peer: Global, node: "worker.1")
+    name_2 = start_supervised_oban!(peer: Global, node: "worker.2")
 
     conf_1 = %{Oban.config(name_1) | name: Oban}
     conf_2 = %{Oban.config(name_2) | name: Oban}

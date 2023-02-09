@@ -175,7 +175,7 @@ defmodule Oban.ConfigTest do
     test "translating peer false to the disabled module" do
       assert %Config{peer: Oban.Peers.Disabled} = conf(peer: false)
       assert %Config{peer: Oban.Peers.Disabled} = conf(plugins: false)
-      assert %Config{peer: Oban.Peers.Global} = conf(peer: Oban.Peers.Global, plugins: false)
+      assert %Config{peer: Oban.Peers.Disabled} = conf(peer: Oban.Peers.Global, plugins: false)
     end
 
     test "setting sane defaults for the Lite engine" do
