@@ -73,7 +73,7 @@ defmodule Oban.Notifiers.Postgres do
   """
   @spec listen(GenServer.server(), channels :: list(Oban.Notifier.channel())) :: :ok
   def listen(server, channels) do
-    Simple.call(server, {:listen, channels})
+    Simple.call(server, {:listen, self(), channels})
   end
 
   @doc """
@@ -81,7 +81,7 @@ defmodule Oban.Notifiers.Postgres do
   """
   @spec unlisten(GenServer.server(), channels :: list(Oban.Notifier.channel())) :: :ok
   def unlisten(server, channels) do
-    Simple.call(server, {:unlisten, channels})
+    Simple.call(server, {:unlisten, self(), channels})
   end
 
   ## Server Callbacks
@@ -150,7 +150,7 @@ defmodule Oban.Notifiers.Postgres do
     {:noreply, state}
   end
 
-  def handle_call({:listen, channels}, {pid, _} = from, %State{} = state) do
+  def handle_call({:listen, pid, channels}, from, %State{} = state) do
     channels = to_full_channels(state.conf, channels)
     new_channels = channels -- Map.keys(state.channels)
 
@@ -171,7 +171,7 @@ defmodule Oban.Notifiers.Postgres do
     end
   end
 
-  def handle_call({:unlisten, channels}, {pid, _} = from, %State{} = state) do
+  def handle_call({:unlisten, pid, channels}, from, %State{} = state) do
     channels = to_full_channels(state.conf, channels)
 
     state =
