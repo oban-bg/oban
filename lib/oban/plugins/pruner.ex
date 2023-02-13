@@ -47,9 +47,7 @@ defmodule Oban.Plugins.Pruner do
 
   use GenServer
 
-  import Ecto.Query, only: [join: 5, limit: 2, lock: 2, or_where: 3, select: 3]
-
-  alias Oban.{Job, Peer, Plugin, Repo, Validation}
+  alias Oban.{Config, Engine, Job, Peer, Plugin, Repo, Validation}
 
   @type option ::
           Plugin.option()
@@ -127,15 +125,18 @@ defmodule Oban.Plugins.Pruner do
     {:noreply, schedule_prune(state)}
   end
 
-  # Scheduling
-
   defp check_leadership_and_delete_jobs(state) do
     if Peer.leader?(state.conf) do
       Repo.transaction(state.conf, fn ->
-        delete_jobs(state.conf, state.max_age, state.limit)
+        conf = with_compatible_engine(state.conf)
+        opts = [limit: state.limit, max_age: state.max_age]
+
+        {:ok, jobs} = Engine.prune_jobs(conf, Job, opts)
+
+        %{pruned_count: length(jobs), pruned_jobs: jobs}
       end)
     else
-      {:ok, %{}}
+      {:ok, %{pruned_count: 0, pruned_jobs: []}}
     end
   end
 
@@ -143,26 +144,13 @@ defmodule Oban.Plugins.Pruner do
     %{state | timer: Process.send_after(self(), :prune, state.interval)}
   end
 
-  # Query
-
-  defp delete_jobs(conf, seconds, limit) do
-    time = DateTime.add(DateTime.utc_now(), -seconds)
-
-    subquery =
-      Job
-      |> or_where([j], j.state == "completed" and j.attempted_at < ^time)
-      |> or_where([j], j.state == "cancelled" and j.cancelled_at < ^time)
-      |> or_where([j], j.state == "discarded" and j.discarded_at < ^time)
-      |> limit(^limit)
-      |> lock("FOR UPDATE SKIP LOCKED")
-
-    query =
-      Job
-      |> join(:inner, [j], x in subquery(subquery), on: j.id == x.id)
-      |> select([_, x], map(x, [:id, :queue, :state, :worker]))
-
-    {pruned_count, pruned} = Repo.delete_all(conf, query)
-
-    %{pruned_count: pruned_count, pruned_jobs: pruned}
+  # External engines aren't guaranteed to implement prune_jobs/3, but we can assume they were
+  # built for Postgres and safely fall back to the Basic engine.
+  defp with_compatible_engine(%{engine: engine} = conf) do
+    if function_exported?(engine, :prune_jobs, 3) do
+      conf
+    else
+      %Config{conf | engine: Oban.Engines.Basic}
+    end
   end
 end

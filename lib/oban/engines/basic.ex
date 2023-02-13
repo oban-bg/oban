@@ -117,6 +117,30 @@ defmodule Oban.Engines.Basic do
   end
 
   @impl Engine
+  def prune_jobs(%Config{} = conf, queryable, opts) do
+    max_age = Keyword.fetch!(opts, :max_age)
+    limit = Keyword.fetch!(opts, :limit)
+    time = DateTime.add(DateTime.utc_now(), -max_age)
+
+    subquery =
+      queryable
+      |> or_where([j], j.state == "completed" and j.attempted_at < ^time)
+      |> or_where([j], j.state == "cancelled" and j.cancelled_at < ^time)
+      |> or_where([j], j.state == "discarded" and j.discarded_at < ^time)
+      |> limit(^limit)
+      |> lock("FOR UPDATE SKIP LOCKED")
+
+    query =
+      Job
+      |> join(:inner, [j], x in subquery(subquery), on: j.id == x.id)
+      |> select([_, x], map(x, [:id, :queue, :state, :worker]))
+
+    {_count, pruned} = Repo.delete_all(conf, query)
+
+    {:ok, pruned}
+  end
+
+  @impl Engine
   def complete_job(%Config{} = conf, %Job{} = job) do
     Repo.update_all(
       conf,

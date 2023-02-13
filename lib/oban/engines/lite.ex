@@ -116,6 +116,27 @@ defmodule Oban.Engines.Lite do
   end
 
   @impl Engine
+  def prune_jobs(conf, queryable, opts) do
+    max_age = Keyword.fetch!(opts, :max_age)
+    limit = Keyword.fetch!(opts, :limit)
+    time = DateTime.add(DateTime.utc_now(), -max_age)
+
+    select_query =
+      queryable
+      |> or_where([j], j.state == "completed" and j.attempted_at < ^time)
+      |> or_where([j], j.state == "cancelled" and j.cancelled_at < ^time)
+      |> or_where([j], j.state == "discarded" and j.discarded_at < ^time)
+      |> limit(^limit)
+      |> select([j], map(j, [:id, :queue, :state, :worker]))
+
+    pruned = Repo.all(conf, select_query)
+
+    Repo.delete_all(conf, where(Job, [j], j.id in ^Enum.map(pruned, & &1.id)))
+
+    {:ok, pruned}
+  end
+
+  @impl Engine
   defdelegate complete_job(conf, job), to: Basic
 
   @impl Engine

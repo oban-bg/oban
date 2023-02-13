@@ -361,6 +361,44 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite] do
       end
     end
 
+    describe "prune_jobs/3" do
+      setup :start_supervised_oban
+
+      test "deleting jobs in prunable states", %{name: name} do
+        TelemetryHandler.attach_events(span_type: [:job, [:engine, :prune_jobs]])
+
+        for state <- Job.states(), seconds <- 59..61 do
+          state = to_string(state)
+          stamp = seconds_ago(seconds)
+
+          opts =
+            case state do
+              "cancelled" -> [state: state, cancelled_at: stamp]
+              "discarded" -> [state: state, discarded_at: stamp]
+              _all_others -> [state: state, attempted_at: stamp]
+            end
+
+          # Insert one job at a time to avoid a "Cell-wise defaults" error in SQLite.
+          Oban.insert(name, Worker.new(%{}, opts))
+        end
+
+        {:ok, jobs} =
+          name
+          |> Oban.config()
+          |> Oban.Engine.prune_jobs(Job, limit: 100, max_age: 60)
+
+        assert 6 == length(jobs)
+
+        assert ~w(cancelled completed discarded) =
+                 jobs
+                 |> Enum.map(& &1.state)
+                 |> Enum.uniq()
+                 |> Enum.sort()
+
+        assert_receive {:event, [:prune_jobs, :stop], _, %{jobs: ^jobs}}
+      end
+    end
+
     describe "cancel_job/2" do
       setup :start_supervised_oban
 

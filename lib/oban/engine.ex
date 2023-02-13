@@ -84,6 +84,11 @@ defmodule Oban.Engine do
   @callback fetch_jobs(conf(), meta(), running()) :: {:ok, {meta(), [Job.t()]}} | {:error, term()}
 
   @doc """
+  Delete completed, cancelled and discarded jobs.
+  """
+  @callback prune_jobs(conf(), queryable(), opts()) :: {:ok, [Job.t()]}
+
+  @doc """
   Record that a job completed successfully.
   """
   @callback complete_job(conf(), Job.t()) :: :ok
@@ -128,7 +133,7 @@ defmodule Oban.Engine do
   """
   @callback retry_all_jobs(conf(), queryable()) :: {:ok, [Job.t()]}
 
-  @optional_callbacks [insert_all_jobs: 5, insert_job: 5]
+  @optional_callbacks [insert_all_jobs: 5, insert_job: 5, prune_jobs: 3]
 
   @doc false
   def init(%Config{} = conf, [_ | _] = opts) do
@@ -208,6 +213,15 @@ defmodule Oban.Engine do
     with_span(:fetch_jobs, conf, fn engine ->
       {:ok, {meta, jobs}} = engine.fetch_jobs(conf, meta, running)
       {:meta, {:ok, {meta, jobs}}, %{jobs: jobs}}
+    end)
+  end
+
+  @doc false
+  def prune_jobs(%Config{} = conf, queryable, opts) when is_list(opts) do
+    # Pruning telemetry data is also exposed through the Pruner plugin.
+    with_span(:prune_jobs, conf, fn engine ->
+      {:ok, jobs} = engine.prune_jobs(conf, queryable, opts)
+      {:meta, {:ok, jobs}, %{jobs: jobs}}
     end)
   end
 
