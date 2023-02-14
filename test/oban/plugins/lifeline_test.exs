@@ -27,9 +27,9 @@ defmodule Oban.Plugins.LifelineTest do
     test "rescuing executing jobs older than the rescue window" do
       name = start_supervised_oban!(plugins: [{Lifeline, rescue_after: 5_000}])
 
-      job_a = insert!(%{}, state: "executing", attempted_at: seconds_ago(3))
-      job_b = insert!(%{}, state: "executing", attempted_at: seconds_ago(7))
-      job_c = insert!(%{}, state: "executing", attempted_at: seconds_ago(8), attempt: 20)
+      job_1 = insert!(%{}, state: "executing", attempted_at: seconds_ago(3))
+      job_2 = insert!(%{}, state: "executing", attempted_at: seconds_ago(7))
+      job_3 = insert!(%{}, state: "executing", attempted_at: seconds_ago(8), attempt: 20)
 
       send_rescue(name)
 
@@ -39,9 +39,9 @@ defmodule Oban.Plugins.LifelineTest do
       assert %{rescued_count: 1, rescued_jobs: [_ | _]} = meta
       assert %{discarded_count: 1, discarded_jobs: [_ | _]} = meta
 
-      assert %{state: "executing"} = Repo.reload(job_a)
-      assert %{state: "available"} = Repo.reload(job_b)
-      assert %{state: "discarded"} = Repo.reload(job_c)
+      assert %{state: "executing"} = Repo.reload(job_1)
+      assert %{state: "available"} = Repo.reload(job_2)
+      assert %{state: "discarded"} = Repo.reload(job_3)
 
       stop_supervised(name)
     end
@@ -49,15 +49,15 @@ defmodule Oban.Plugins.LifelineTest do
     test "rescuing jobs within a custom prefix" do
       name = start_supervised_oban!(prefix: "private", plugins: [{Lifeline, rescue_after: 5_000}])
 
-      job_a = insert!(name, %{}, state: "executing", attempted_at: seconds_ago(1))
-      job_b = insert!(name, %{}, state: "executing", attempted_at: seconds_ago(7))
+      job_1 = insert!(name, %{}, state: "executing", attempted_at: seconds_ago(1))
+      job_2 = insert!(name, %{}, state: "executing", attempted_at: seconds_ago(7))
 
       send_rescue(name)
 
       assert_receive {:event, :stop, _meta, %{plugin: Lifeline, rescued_count: 1}}
 
-      assert %{state: "executing"} = Repo.reload(job_a)
-      assert %{state: "available"} = Repo.reload(job_b)
+      assert %{state: "executing"} = Repo.reload(job_1)
+      assert %{state: "available"} = Repo.reload(job_2)
 
       stop_supervised(name)
     end

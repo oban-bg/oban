@@ -423,24 +423,24 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite] do
       end
 
       test "cancelling jobs that may or may not be executing", %{name: name} do
-        job_a = insert!(name, %{ref: 1}, schedule_in: 10)
-        job_b = insert!(name, %{ref: 2}, schedule_in: 10, state: "retryable")
-        job_c = insert!(name, %{ref: 3}, state: "completed")
-        job_d = insert!(name, %{ref: 4, sleep: 100}, [])
+        job_1 = insert!(name, %{ref: 1}, schedule_in: 10)
+        job_2 = insert!(name, %{ref: 2}, schedule_in: 10, state: "retryable")
+        job_3 = insert!(name, %{ref: 3}, state: "completed")
+        job_4 = insert!(name, %{ref: 4, sleep: 100}, [])
 
         assert_receive {:started, 4}
 
-        assert :ok = Oban.cancel_job(name, job_a.id)
-        assert :ok = Oban.cancel_job(name, job_b.id)
-        assert :ok = Oban.cancel_job(name, job_c.id)
-        assert :ok = Oban.cancel_job(name, job_d.id)
+        assert :ok = Oban.cancel_job(name, job_1.id)
+        assert :ok = Oban.cancel_job(name, job_2.id)
+        assert :ok = Oban.cancel_job(name, job_3.id)
+        assert :ok = Oban.cancel_job(name, job_4.id)
 
         refute_receive {:ok, 4}, 150
 
-        assert %Job{state: "cancelled", errors: [], cancelled_at: %_{}} = reload(name, job_a)
-        assert %Job{state: "cancelled", errors: [], cancelled_at: %_{}} = reload(name, job_b)
-        assert %Job{state: "completed", errors: [], cancelled_at: nil} = reload(name, job_c)
-        assert %Job{state: "cancelled", errors: [_], cancelled_at: %_{}} = reload(name, job_d)
+        assert %Job{state: "cancelled", errors: [], cancelled_at: %_{}} = reload(name, job_1)
+        assert %Job{state: "cancelled", errors: [], cancelled_at: %_{}} = reload(name, job_2)
+        assert %Job{state: "completed", errors: [], cancelled_at: nil} = reload(name, job_3)
+        assert %Job{state: "cancelled", errors: [_], cancelled_at: %_{}} = reload(name, job_4)
       end
     end
 
@@ -452,10 +452,10 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite] do
       test "cancelling all jobs that may or may not be executing", %{name: name} do
         TelemetryHandler.attach_events(span_type: [:job, [:engine, :cancel_all_jobs]])
 
-        job_a = insert!(name, %{ref: 1}, schedule_in: 10)
-        job_b = insert!(name, %{ref: 2}, schedule_in: 10, state: "retryable")
-        job_c = insert!(name, %{ref: 3}, state: "completed")
-        job_d = insert!(name, %{ref: 4, sleep: 100}, [])
+        job_1 = insert!(name, %{ref: 1}, schedule_in: 10)
+        job_2 = insert!(name, %{ref: 2}, schedule_in: 10, state: "retryable")
+        job_3 = insert!(name, %{ref: 3}, state: "completed")
+        job_4 = insert!(name, %{ref: 4, sleep: 100}, [])
 
         assert_receive {:started, 4}
 
@@ -463,10 +463,10 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite] do
 
         refute_receive {:ok, 4}, 150
 
-        assert %Job{state: "cancelled", errors: [], cancelled_at: %_{}} = reload(name, job_a)
-        assert %Job{state: "cancelled", errors: [], cancelled_at: %_{}} = reload(name, job_b)
-        assert %Job{state: "completed", errors: [], cancelled_at: nil} = reload(name, job_c)
-        assert %Job{state: "cancelled", errors: [_], cancelled_at: %_{}} = reload(name, job_d)
+        assert %Job{state: "cancelled", errors: [], cancelled_at: %_{}} = reload(name, job_1)
+        assert %Job{state: "cancelled", errors: [], cancelled_at: %_{}} = reload(name, job_2)
+        assert %Job{state: "completed", errors: [], cancelled_at: nil} = reload(name, job_3)
+        assert %Job{state: "cancelled", errors: [_], cancelled_at: %_{}} = reload(name, job_4)
 
         assert_receive {:event, :stop, _, %{job: _}}
         assert_receive {:event, [:cancel_all_jobs, :stop], _, %{jobs: _jobs}}
@@ -477,23 +477,23 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite] do
       setup :start_supervised_oban
 
       test "retrying jobs from multiple states", %{name: name} do
-        job_a = insert!(name, %{ref: 1}, state: "discarded", max_attempts: 20, attempt: 20)
-        job_b = insert!(name, %{ref: 2}, state: "completed", max_attempts: 20)
-        job_c = insert!(name, %{ref: 3}, state: "available", max_attempts: 20)
-        job_d = insert!(name, %{ref: 4}, state: "retryable", max_attempts: 20)
-        job_e = insert!(name, %{ref: 5}, state: "executing", max_attempts: 1, attempt: 1)
+        job_1 = insert!(name, %{ref: 1}, state: "discarded", max_attempts: 20, attempt: 20)
+        job_2 = insert!(name, %{ref: 2}, state: "completed", max_attempts: 20)
+        job_3 = insert!(name, %{ref: 3}, state: "available", max_attempts: 20)
+        job_4 = insert!(name, %{ref: 4}, state: "retryable", max_attempts: 20)
+        job_5 = insert!(name, %{ref: 5}, state: "executing", max_attempts: 1, attempt: 1)
 
-        assert :ok = Oban.retry_job(name, job_a.id)
-        assert :ok = Oban.retry_job(name, job_b.id)
-        assert :ok = Oban.retry_job(name, job_c.id)
-        assert :ok = Oban.retry_job(name, job_d.id)
-        assert :ok = Oban.retry_job(name, job_e.id)
+        assert :ok = Oban.retry_job(name, job_1.id)
+        assert :ok = Oban.retry_job(name, job_2.id)
+        assert :ok = Oban.retry_job(name, job_3.id)
+        assert :ok = Oban.retry_job(name, job_4.id)
+        assert :ok = Oban.retry_job(name, job_5.id)
 
-        assert %Job{state: "available", max_attempts: 21} = reload(name, job_a)
-        assert %Job{state: "available", max_attempts: 20} = reload(name, job_b)
-        assert %Job{state: "available", max_attempts: 20} = reload(name, job_c)
-        assert %Job{state: "available", max_attempts: 20} = reload(name, job_d)
-        assert %Job{state: "executing", max_attempts: 1} = reload(name, job_e)
+        assert %Job{state: "available", max_attempts: 21} = reload(name, job_1)
+        assert %Job{state: "available", max_attempts: 20} = reload(name, job_2)
+        assert %Job{state: "available", max_attempts: 20} = reload(name, job_3)
+        assert %Job{state: "available", max_attempts: 20} = reload(name, job_4)
+        assert %Job{state: "executing", max_attempts: 1} = reload(name, job_5)
       end
     end
 
@@ -503,17 +503,17 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite] do
       test "retrying all retryable jobs", %{name: name} do
         TelemetryHandler.attach_events(span_type: [[:engine, :retry_all_jobs]])
 
-        job_a = insert!(name, %{ref: 1}, state: "discarded", max_attempts: 20, attempt: 20)
-        job_b = insert!(name, %{ref: 2}, state: "completed", max_attempts: 20)
-        job_c = insert!(name, %{ref: 3}, state: "available", max_attempts: 20)
-        job_d = insert!(name, %{ref: 4}, state: "retryable", max_attempts: 20)
+        job_1 = insert!(name, %{ref: 1}, state: "discarded", max_attempts: 20, attempt: 20)
+        job_2 = insert!(name, %{ref: 2}, state: "completed", max_attempts: 20)
+        job_3 = insert!(name, %{ref: 3}, state: "available", max_attempts: 20)
+        job_4 = insert!(name, %{ref: 4}, state: "retryable", max_attempts: 20)
 
         assert {:ok, 3} = Oban.retry_all_jobs(name, Job)
 
-        assert %Job{state: "available", max_attempts: 21} = reload(name, job_a)
-        assert %Job{state: "available", max_attempts: 20} = reload(name, job_b)
-        assert %Job{state: "available", max_attempts: 20} = reload(name, job_c)
-        assert %Job{state: "available", max_attempts: 20} = reload(name, job_d)
+        assert %Job{state: "available", max_attempts: 21} = reload(name, job_1)
+        assert %Job{state: "available", max_attempts: 20} = reload(name, job_2)
+        assert %Job{state: "available", max_attempts: 20} = reload(name, job_3)
+        assert %Job{state: "available", max_attempts: 20} = reload(name, job_4)
 
         assert_receive {:event, [:retry_all_jobs, :stop], _, %{jobs: _}}
       end
