@@ -20,7 +20,7 @@ defmodule Oban.Engines.Lite do
 
   alias Ecto.Changeset
   alias Oban.Engines.Basic
-  alias Oban.{Engine, Job, Repo}
+  alias Oban.{Config, Engine, Job, Repo}
 
   @forever 60 * 60 * 24 * 365 * 99
 
@@ -59,7 +59,7 @@ defmodule Oban.Engines.Lite do
   defdelegate shutdown(conf, meta), to: Basic
 
   @impl Engine
-  def insert_job(conf, %Changeset{} = changeset, _opts) do
+  def insert_job(%Config{} = conf, %Changeset{} = changeset, _opts) do
     with {:ok, job} <- fetch_unique(conf, changeset),
          {:ok, job} <- resolve_conflict(conf, job, changeset) do
       {:ok, %Job{job | conflict?: true}}
@@ -84,7 +84,7 @@ defmodule Oban.Engines.Lite do
     {:ok, {meta, []}}
   end
 
-  def fetch_jobs(conf, meta, running) do
+  def fetch_jobs(%Config{} = conf, meta, running) do
     demand = meta.limit - map_size(running)
 
     subset =
@@ -116,7 +116,7 @@ defmodule Oban.Engines.Lite do
   end
 
   @impl Engine
-  def prune_jobs(conf, queryable, opts) do
+  def prune_jobs(%Config{} = conf, queryable, opts) do
     max_age = Keyword.fetch!(opts, :max_age)
     limit = Keyword.fetch!(opts, :limit)
     time = DateTime.add(DateTime.utc_now(), -max_age)
@@ -143,7 +143,7 @@ defmodule Oban.Engines.Lite do
   defdelegate snooze_job(conf, job, seconds), to: Basic
 
   @impl Engine
-  def discard_job(conf, job) do
+  def discard_job(%Config{} = conf, job) do
     query =
       Job
       |> where(id: ^job.id)
@@ -161,7 +161,7 @@ defmodule Oban.Engines.Lite do
   end
 
   @impl Engine
-  def error_job(conf, job, seconds) do
+  def error_job(%Config{} = conf, job, seconds) do
     query =
       Job
       |> where(id: ^job.id)
@@ -179,7 +179,7 @@ defmodule Oban.Engines.Lite do
   end
 
   @impl Engine
-  def cancel_job(conf, job) do
+  def cancel_job(%Config{} = conf, job) do
     query = where(Job, id: ^job.id)
 
     query =
@@ -203,7 +203,7 @@ defmodule Oban.Engines.Lite do
   end
 
   @impl Engine
-  def cancel_all_jobs(conf, queryable) do
+  def cancel_all_jobs(%Config{} = conf, queryable) do
     base_query = where(queryable, [j], j.state not in ["cancelled", "completed", "discarded"])
 
     # In SQLite3 an "UPDATE FROM" query returns the final value, not the original from a join. A
@@ -226,14 +226,14 @@ defmodule Oban.Engines.Lite do
   end
 
   @impl Engine
-  def retry_job(conf, %Job{id: id}) do
+  def retry_job(%Config{} = conf, %Job{id: id}) do
     retry_all_jobs(conf, where(Job, [j], j.id == ^id))
 
     :ok
   end
 
   @impl Engine
-  def retry_all_jobs(conf, queryable) do
+  def retry_all_jobs(%Config{} = conf, queryable) do
     subquery = where(queryable, [j], j.state not in ["available", "executing"])
 
     query =
