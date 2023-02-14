@@ -229,6 +229,7 @@ defmodule Oban do
     Supervisor.start_link(__MODULE__, conf, name: Registry.via(conf.name, nil, conf))
   end
 
+  @doc false
   @spec child_spec([option]) :: Supervisor.child_spec()
   def child_spec(opts) do
     opts
