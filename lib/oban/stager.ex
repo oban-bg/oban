@@ -9,7 +9,7 @@ defmodule Oban.Stager do
       join: 5,
       limit: 2,
       lock: 2,
-      order_by: 2,
+      select: 2,
       select: 3,
       where: 3
     ]
@@ -123,17 +123,18 @@ defmodule Oban.Stager do
   defp stage_scheduled(state, leader?: true) do
     subquery =
       Job
+      |> select([:id, :state])
       |> where([j], j.state in ["scheduled", "retryable"])
       |> where([j], not is_nil(j.queue))
+      |> where([j], j.priority in [0, 1, 2, 3])
       |> where([j], j.scheduled_at <= ^DateTime.utc_now())
-      |> order_by(asc: :id)
       |> limit(^state.limit)
       |> lock("FOR UPDATE SKIP LOCKED")
 
     query =
       Job
       |> join(:inner, [j], x in subquery(subquery), on: j.id == x.id)
-      |> select([_j, x], map(x, [:id, :queue, :state, :worker]))
+      |> select([j, x], %{id: j.id, queue: j.queue, state: x.state, worker: j.worker})
 
     {staged_count, staged} = Repo.update_all(state.conf, query, set: [state: "available"])
 
