@@ -126,6 +126,7 @@ defmodule Oban.Stager do
       |> select([j], %{id: j.id})
       |> where([j], j.state in ["scheduled", "retryable"])
       |> where([j], not is_nil(j.queue))
+      |> where([j], j.priority >= 0 and j.priority <= 3)
       |> where([j], j.scheduled_at <= ^DateTime.utc_now())
       |> limit(^state.limit)
       |> lock("FOR UPDATE SKIP LOCKED")
