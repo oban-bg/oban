@@ -18,7 +18,7 @@ defmodule Oban.Peers.Global do
 
   use GenServer
 
-  alias Oban.Backoff
+  alias Oban.{Backoff, Notifier}
 
   defmodule State do
     @moduledoc false
@@ -52,13 +52,23 @@ defmodule Oban.Peers.Global do
   @impl GenServer
   def terminate(_reason, %State{timer: timer} = state) do
     if is_reference(timer), do: Process.cancel_timer(timer)
-    if state.leader?, do: :global.del_lock(key(state), nodes())
+
+    if state.leader? do
+      try do
+        delete_self(state)
+        notify_down(state)
+      catch
+        :exit, _reason -> :ok
+      end
+    end
 
     :ok
   end
 
   @impl GenServer
   def handle_continue(:start, %State{} = state) do
+    Notifier.listen(state.conf.name, [:leader])
+
     handle_info(:election, state)
   end
 
@@ -81,13 +91,29 @@ defmodule Oban.Peers.Global do
     {:noreply, schedule_election(%{state | leader?: locked?})}
   end
 
+  def handle_info({:notification, :leader, %{"down" => name}}, %State{conf: conf} = state) do
+    if name == inspect(conf.name) do
+      handle_info(:election, state)
+    else
+      {:noreply, state}
+    end
+  end
+
+  # Helpers
+
   defp schedule_election(%State{interval: interval} = state) do
     time = Backoff.jitter(interval, mode: :dec)
 
     %{state | timer: Process.send_after(self(), :election, time)}
   end
 
-  # Helpers
+  defp delete_self(state) do
+    :global.del_lock(key(state), nodes())
+  end
+
+  defp notify_down(%{conf: conf}) do
+    Notifier.notify(conf, :leader, %{down: inspect(conf.name)})
+  end
 
   defp key(state), do: {state.conf.name, state.conf.node}
 

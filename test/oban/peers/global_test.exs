@@ -6,7 +6,8 @@ defmodule Oban.Peers.GlobalTest do
   alias Oban.TelemetryHandler
 
   test "only a single peer is leader" do
-    TelemetryHandler.attach_events()
+    # Start an instance just to provide a notifier under the Oban name
+    start_supervised_oban!(name: Oban, peer: false)
 
     name_1 = start_supervised_oban!(peer: Global, node: "worker.1")
     name_2 = start_supervised_oban!(peer: Global, node: "worker.2")
@@ -17,7 +18,37 @@ defmodule Oban.Peers.GlobalTest do
     peer_1 = start_supervised!({Peer, conf: conf_1, name: A})
     peer_2 = start_supervised!({Peer, conf: conf_2, name: B})
 
-    assert [_leader] = Enum.filter([peer_1, peer_2], &Global.leader?/1)
+    assert [_pid] = Enum.filter([peer_1, peer_2], &Global.leader?/1)
+  end
+
+  test "leadership changes when a peer terminates" do
+    start_supervised_oban!(name: Oban, peer: false)
+
+    :ok = Oban.Notifier.listen(Oban, :leader)
+
+    conf =
+      [peer: false, node: "worker.1"]
+      |> start_supervised_oban!()
+      |> Oban.config()
+      |> Map.put(:peer, Global)
+
+    peer_1 = start_supervised!({Peer, name: A, conf: %{conf | name: Oban, node: "web.1"}})
+    peer_2 = start_supervised!({Peer, name: B, conf: %{conf | name: Oban, node: "web.2"}})
+
+    assert leader = Enum.find([peer_1, peer_2], &Global.leader?/1)
+    assert :ok = GenServer.stop(leader)
+
+    assert_receive {:notification, :leader, %{"down" => _}}
+
+    with_backoff(fn ->
+      assert Enum.find([peer_1, peer_2] -- [leader], &Global.leader?/1)
+    end)
+  end
+
+  test "emitting elemetry events for elections" do
+    TelemetryHandler.attach_events()
+
+    start_supervised_oban!(peer: Global, node: "worker.1")
 
     assert_receive {:event, [:election, :start], _measure, %{leader: _, peer: Oban.Peers.Global}}
     assert_receive {:event, [:election, :stop], _measure, %{leader: _, peer: Oban.Peers.Global}}
