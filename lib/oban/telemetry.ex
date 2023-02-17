@@ -235,7 +235,7 @@ defmodule Oban.Telemetry do
 
   require Logger
 
-  @handlerID "oban-default-logger"
+  @handler_id "oban-default-logger"
 
   @doc """
   Attaches a default structured JSON Telemetry handler for logging.
@@ -297,7 +297,7 @@ defmodule Oban.Telemetry do
       |> Keyword.put_new(:encode, true)
       |> Keyword.put_new(:level, :info)
 
-    :telemetry.attach_many(@handlerID, events, &__MODULE__.handle_event/4, opts)
+    :telemetry.attach_many(@handler_id, events, &__MODULE__.handle_event/4, opts)
   end
 
   @doc """
@@ -307,7 +307,7 @@ defmodule Oban.Telemetry do
   @doc since: "2.14.2"
   @spec detach_default_logger() :: :ok | {:error, :not_found}
   def detach_default_logger do
-    :telemetry.detach(@handlerID)
+    :telemetry.detach(@handler_id)
   end
 
   @doc false
