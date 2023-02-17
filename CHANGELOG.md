@@ -67,6 +67,31 @@ and `worker` details. Even bulk operations such as `insert_all_jobs`, `cancel_al
 
 See the [2.14 upgrade guide](v2-14.html) for step-by-step instructions (all two of them).
 
+## v2.14.2 — 2023-02-17
+
+### Bug Fixes
+
+- [Oban] Always disable peering with `plugins: false`. There's no reason to
+  enable peering when plugins are fully disabled.
+
+- [Notifier] Notify `Global` peers when the leader terminates.
+
+  Now the `Global` leader sends a `down` message to all connected nodes when the
+  process terminates cleanly. This behaviour prevents up to 30s of downtime
+  without a leader and matches how the Postgres peer operates.
+
+- [Notifier] Allow compiliation in a SQLite application when the `postgrex`
+  package isn't available.
+
+- [Engine] Include `jobs` in `fetch_jobs` event metadata
+
+### Changes
+
+- [Notifier] Pass `pid` in instead of relying on `from` for Postgres notifications.
+
+  This prepares Oban for the upcoming `Postgrex.SimpleConnection` switch to use
+  `gen_statem`.
+
 ## v2.14.1 — 2023-01-26
 
 ### Bug Fixes
