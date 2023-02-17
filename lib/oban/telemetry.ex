@@ -301,10 +301,20 @@ defmodule Oban.Telemetry do
   end
 
   @doc """
-  Undoes `Oban.Telemetry.attach_default_logger/1`; detaches the attached
-  logger.
+  Undoes `Oban.Telemetry.attach_default_logger/1` by detaching the attached logger.
+
+  ## Examples
+
+  Detach a previously attached logger:
+
+      :ok = Oban.Telemetry.attach_default_logger()
+      :ok = Oban.Telemetry.detach_default_logger()
+
+  Attempt to detach when a logger wasn't attached:
+
+      {:error, :not_found} = Oban.Telemetry.detach_default_logger()
   """
-  @doc since: "2.14.2"
+  @doc since: "2.15.0"
   @spec detach_default_logger() :: :ok | {:error, :not_found}
   def detach_default_logger do
     :telemetry.detach(@handler_id)

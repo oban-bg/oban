@@ -67,10 +67,6 @@ and `worker` details. Even bulk operations such as `insert_all_jobs`, `cancel_al
 
 See the [2.14 upgrade guide](v2-14.html) for step-by-step instructions (all two of them).
 
-## v2.14.2 — Unreleased
-
-- [Oban.Telemetry] - Add `Oban.Telemetry.detach_default_logger/0`
-
 ## v2.14.1 — 2023-01-26
 
 ### Bug Fixes
