@@ -135,7 +135,30 @@ defmodule Oban.TelemetryTest do
     assert logged =~ ~s("state":"failure")
     assert logged =~ ~s|"error":"** (Oban.PerformError)|
   after
-    :telemetry.detach("oban-default-logger")
+    Telemetry.detach_default_logger()
+  end
+
+  test "detaching the logger prevents logging" do
+    :ok = Telemetry.attach_default_logger(:warn)
+
+    start_supervised_oban!(stage_interval: 10, queues: [alpha: 3])
+
+    :ok = Telemetry.detach_default_logger()
+
+    logged =
+      capture_log(fn ->
+        insert!(ref: 1, action: "OK")
+        insert!(ref: 2, action: "ERROR")
+
+        assert_receive {:ok, 1}
+        assert_receive {:error, 2}
+
+        Process.sleep(50)
+      end)
+
+    Logger.flush()
+
+    assert logged == ""
   end
 
   test "disabling encoding on the default logger" do
@@ -155,6 +178,6 @@ defmodule Oban.TelemetryTest do
     assert logged =~ ~s(source: "oban")
     assert logged =~ ~s(event: "job:start")
   after
-    :telemetry.detach("oban-default-logger")
+    Telemetry.detach_default_logger()
   end
 end
