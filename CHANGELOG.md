@@ -65,7 +65,7 @@ or processing jobs report complete state-change events for _every_ job including
 and `worker` details. Even bulk operations such as `insert_all_jobs`, `cancel_all_jobs`, and
 `retry_all_jobs` return a subset of fields for _all modified jobs_, rather than a simple count.
 
-See the [2.14 upgrade guide](v2-14.html) for step-by-step instructions (all two of them).
+See the [2.14 upgrade guide](https://hexdocs.pm/oban/v2-14.html) for step-by-step instructions (all two of them).
 
 ## v2.14.1 — 2023-01-26
 
