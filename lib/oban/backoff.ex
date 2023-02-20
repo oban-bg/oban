@@ -1,10 +1,9 @@
 defmodule Oban.Backoff do
   @moduledoc false
 
-  @max_retries 10
-  @min_delay 100
-  @default_jitter_mult 0.10
   @default_jitter_mode :both
+  @default_jitter_mult 0.10
+  @min_delay 100
 
   @spec jitter(time :: pos_integer(), opts :: Keyword.t()) :: pos_integer()
   def jitter(time, opts \\ []) do
@@ -29,25 +28,24 @@ defmodule Oban.Backoff do
     end
   end
 
-  @spec with_retry(fun(), integer()) :: term()
-  def with_retry(fun, retries \\ 0)
-
-  def with_retry(fun, @max_retries), do: fun.()
-
-  def with_retry(fun, retries) do
-    fun.()
-  catch
-    _kind, _value -> lazy_retry(fun, retries)
+  @spec with_retry((() -> term()), pos_integer()) :: term()
+  def with_retry(fun, retries \\ 10) when is_function(fun, 0) and retries > 0 do
+    with_retry(fun, retries, 1)
   end
 
-  defp lazy_retry(fun, retries) do
-    time = @min_delay * :math.pow(2, retries)
+  defp with_retry(fun, retries, attempt) do
+    fun.()
+  rescue
+    error in [DBConnection.ConnectionError, Postgrex.Error] ->
+      if attempt < retries do
+        (@min_delay * :math.pow(2, attempt))
+        |> trunc()
+        |> jitter()
+        |> Process.sleep()
 
-    time
-    |> trunc()
-    |> jitter()
-    |> Process.sleep()
-
-    with_retry(fun, retries + 1)
+        with_retry(fun, retries, attempt + 1)
+      else
+        reraise error, __STACKTRACE__
+      end
   end
 end
