@@ -7,8 +7,8 @@ concurrency.
 
 ## Using Config Providers
 
-If you are using Elixir Releases, this is straight forward to do using [Module
-Config Providers][mcp]:
+If you are using Elixir Releases, this is straight forward to do using [Config 
+Providers][mcp]:
 
 
 ```elixir
