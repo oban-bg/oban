@@ -126,6 +126,10 @@ defmodule Oban.ConfigTest do
   end
 
   describe "new/1" do
+    test ":name defaults to Oban" do
+      assert %Config{name: Oban} = conf(queues: [])
+    end
+
     test ":notifier translates to the correct postgres module" do
       assert %Config{notifier: Oban.Notifiers.Postgres} = conf(notifier: Oban.PostgresNotifier)
     end

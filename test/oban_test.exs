@@ -19,11 +19,6 @@ defmodule ObanTest do
       assert {:ok, _} = start_supervised({Oban, opts})
     end
 
-    test "name defaults to `Oban`" do
-      assert {:ok, pid} = start_supervised({Oban, @opts})
-      assert Oban.whereis(Oban) == pid
-    end
-
     test "name must be unique" do
       name = make_ref()
       opts = Keyword.put(@opts, :name, name)
@@ -76,6 +71,30 @@ defmodule ObanTest do
 
       assert Repo.get(Job, id_1).state == "completed"
       assert Repo.get(Job, id_2).state == "available"
+    end
+
+    test "queue shutdown grace period applies comprehensively to all queues" do
+      insert!([ref: 1, sleep: 500], queue: :alpha)
+      insert!([ref: 2, sleep: 500], queue: :alpha)
+      insert!([ref: 3, sleep: 500], queue: :omega)
+      insert!([ref: 3, sleep: 500], queue: :omega)
+
+      name =
+        start_supervised_oban!(
+          queues: [alpha: 1, omega: 1],
+          shutdown_grace_period: 50,
+          stage_interval: 10
+        )
+
+      assert_receive {:started, 1}
+      assert_receive {:started, 3}
+
+      {time, _} = :timer.tc(fn -> stop_supervised(name) end)
+
+      assert_in_delta System.convert_time_unit(time, :microsecond, :millisecond), 50, 10
+
+      refute_receive {:started, 2}, 50
+      refute_receive {:started, 4}, 50
     end
   end
 

@@ -21,7 +21,7 @@ defmodule Oban.Config do
           peer: false | module(),
           plugins: false | [module() | {module() | Keyword.t()}],
           prefix: false | String.t(),
-          queues: false | [{atom() | binary(), pos_integer() | Keyword.t()}],
+          queues: false | Keyword.t(Keyword.t()),
           repo: module(),
           shutdown_grace_period: timeout(),
           stage_interval: timeout(),

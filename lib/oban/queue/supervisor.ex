@@ -3,32 +3,19 @@ defmodule Oban.Queue.Supervisor do
 
   use Supervisor
 
-  alias Oban.{Config, Registry}
+  alias Oban.Registry
   alias Oban.Queue.{Producer, Watchman}
 
-  @type option ::
-          {:name, module()}
-          | {:conf, Config.t()}
-          | {:queue, binary()}
-          | {:limit, pos_integer()}
-
-  @type queue_name :: atom() | binary()
-  @type queue_opts :: integer() | Keyword.t()
-
-  @spec start_link([option]) :: Supervisor.on_start()
+  @spec start_link(Keyword.t()) :: Supervisor.on_start()
   def start_link(opts) when is_list(opts) do
-    name = Keyword.get(opts, :name, __MODULE__)
-
-    Supervisor.start_link(__MODULE__, opts, name: name)
+    Supervisor.start_link(__MODULE__, opts, name: opts[:name])
   end
 
-  @spec child_spec({queue_name(), queue_opts()}, Config.t()) :: Supervisor.child_spec()
-  def child_spec({queue, opts}, conf) do
-    queue = to_string(queue)
-    name = Registry.via(conf.name, {:supervisor, queue})
-    opts = Keyword.merge(opts, conf: conf, queue: queue, name: name)
+  @spec child_spec(Keyword.t()) :: Supervisor.child_spec()
+  def child_spec(opts) do
+    name = Keyword.fetch!(opts, :name)
 
-    Supervisor.child_spec({__MODULE__, opts}, id: queue)
+    %{super(opts) | id: name}
   end
 
   @impl Supervisor
@@ -51,7 +38,6 @@ defmodule Oban.Queue.Supervisor do
     watch_opts = [
       foreman: fore_name,
       name: watch_name,
-      producer: prod_name,
       shutdown: conf.shutdown_grace_period
     ]
 

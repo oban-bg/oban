@@ -3,10 +3,7 @@ defmodule Oban.Midwife do
 
   use GenServer
 
-  alias Oban.{Config, Notifier, Registry}
-  alias Oban.Queue.Supervisor, as: QueueSupervisor
-
-  @type option :: {:name, module()} | {:conf, Config.t()}
+  alias Oban.{Config, Notifier, Queue, Registry}
 
   defmodule State do
     @moduledoc false
@@ -14,16 +11,57 @@ defmodule Oban.Midwife do
     defstruct [:conf]
   end
 
-  @spec start_link([option]) :: GenServer.on_start()
+  @spec start_link(Keyword.t()) :: GenServer.on_start()
   def start_link(opts) do
     {name, opts} = Keyword.pop(opts, :name, __MODULE__)
 
     GenServer.start_link(__MODULE__, opts, name: name)
   end
 
+  @spec start_queue(Config.t(), Keyword.t()) :: Supervisor.on_start_child()
+  def start_queue(conf, opts) when is_list(opts) do
+    queue =
+      opts
+      |> Keyword.fetch!(:queue)
+      |> to_string()
+
+    opts =
+      opts
+      |> Keyword.put(:conf, conf)
+      |> Keyword.put(:queue, queue)
+      |> Keyword.put(:name, Registry.via(conf.name, {:queue, queue}))
+
+    conf
+    |> foreman()
+    |> DynamicSupervisor.start_child({Queue.Supervisor, opts})
+  end
+
+  @spec stop_queue(Config.t(), atom() | String.t()) :: :ok | {:error, :not_found}
+  def stop_queue(conf, queue) do
+    case Registry.whereis(conf.name, {:queue, queue}) do
+      pid when is_pid(pid) ->
+        conf
+        |> foreman()
+        |> DynamicSupervisor.terminate_child(pid)
+
+      nil ->
+        {:error, :not_found}
+    end
+  end
+
   @impl GenServer
   def init(opts) do
-    {:ok, struct!(State, opts), {:continue, :start}}
+    state = struct!(State, opts)
+
+    start_all_queues(state.conf)
+
+    {:ok, state, {:continue, :start}}
+  end
+
+  defp start_all_queues(conf) do
+    for {queue, opts} <- conf.queues do
+      {:ok, _pid} = start_queue(conf, Keyword.put(opts, :queue, queue))
+    end
   end
 
   @impl GenServer
@@ -37,15 +75,15 @@ defmodule Oban.Midwife do
   def handle_info({:notification, :signal, payload}, %State{conf: conf} = state) do
     case payload do
       %{"action" => "start"} ->
-        conf.name
-        |> Registry.via()
-        |> Supervisor.start_child(queue_spec(conf, payload))
+        opts =
+          payload
+          |> Map.drop(["action", "ident", "local_only"])
+          |> Keyword.new(fn {key, val} -> {String.to_existing_atom(key), val} end)
 
-      %{"action" => "stop"} ->
-        %{id: child_id} = queue_spec(conf, payload)
+        start_queue(conf, opts)
 
-        Supervisor.terminate_child(Registry.via(conf.name), child_id)
-        Supervisor.delete_child(Registry.via(conf.name), child_id)
+      %{"action" => "stop", "queue" => queue} ->
+        stop_queue(conf, queue)
 
       _ ->
         :ok
@@ -58,12 +96,5 @@ defmodule Oban.Midwife do
     {:noreply, state}
   end
 
-  defp queue_spec(conf, %{"queue" => queue} = payload) do
-    spec_opts =
-      payload
-      |> Map.drop(["action", "ident", "local_only"])
-      |> Keyword.new(fn {key, val} -> {String.to_existing_atom(key), val} end)
-
-    QueueSupervisor.child_spec({queue, spec_opts}, conf)
-  end
+  defp foreman(conf), do: Registry.via(conf.name, Foreman)
 end

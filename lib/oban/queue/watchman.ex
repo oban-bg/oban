@@ -3,18 +3,15 @@ defmodule Oban.Queue.Watchman do
 
   use GenServer
 
-  alias Oban.Queue.Producer
-
   @type option ::
           {:name, module()}
           | {:foreman, identifier()}
-          | {:producer, identifier()}
           | {:shutdown, timeout()}
 
   defmodule State do
     @moduledoc false
 
-    defstruct [:foreman, :producer, :shutdown]
+    defstruct [:foreman, :shutdown, interval: 10]
   end
 
   @spec child_spec([option]) :: Supervisor.child_spec()
@@ -35,21 +32,22 @@ defmodule Oban.Queue.Watchman do
   def start_link(opts) do
     {name, opts} = Keyword.pop(opts, :name)
 
-    GenServer.start_link(__MODULE__, Map.new(opts), name: name)
+    GenServer.start_link(__MODULE__, opts, name: name)
   end
 
   @impl GenServer
-  def init(%{foreman: foreman, producer: producer}) do
+  def init(opts) do
     Process.flag(:trap_exit, true)
 
-    {:ok, %State{foreman: foreman, producer: producer}}
+    {:ok, struct!(State, opts)}
   end
 
   @impl GenServer
-  def terminate(_reason, %State{foreman: foreman, producer: producer}) do
+  def terminate(_reason, %State{} = state) do
+    # There is a chance that the foreman doesn't exist, and we never want to raise another error
+    # as part of the shut down process.
     try do
-      :ok = Producer.shutdown(producer)
-      :ok = wait_for_executing(foreman)
+      :ok = wait_for_executing(state)
     catch
       :exit, _reason -> :ok
     end
@@ -57,24 +55,15 @@ defmodule Oban.Queue.Watchman do
     :ok
   end
 
-  defp wait_for_executing(foreman, interval \\ 50) do
-    # There is a chance that the consumer process doesn't exist, and we never want to raise
-    # another error as part of the shut down process.
-    children =
-      try do
-        Supervisor.count_children(foreman)
-      catch
-        _ -> %{active: 0}
-      end
-
-    case children do
+  defp wait_for_executing(state) do
+    case DynamicSupervisor.count_children(state.foreman) do
       %{active: 0} ->
         :ok
 
       _ ->
-        :ok = Process.sleep(interval)
+        :ok = Process.sleep(state.interval)
 
-        wait_for_executing(foreman, interval)
+        wait_for_executing(state)
     end
   end
 end

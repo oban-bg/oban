@@ -13,7 +13,6 @@ defmodule Oban do
   alias Ecto.{Changeset, Multi}
   alias Oban.{Config, Engine, Job, Midwife, Notifier, Peer, Registry, Stager, Telemetry}
   alias Oban.Queue.{Drainer, Producer}
-  alias Oban.Queue.Supervisor, as: QueueSupervisor
 
   @type name :: term()
 
@@ -255,16 +254,16 @@ defmodule Oban do
   def whereis(name), do: Registry.whereis(name)
 
   @impl Supervisor
-  def init(%Config{plugins: plugins, queues: queues} = conf) do
+  def init(%Config{plugins: plugins} = conf) do
     children = [
       {Notifier, conf: conf, name: Registry.via(conf.name, Notifier)},
-      {Midwife, conf: conf, name: Registry.via(conf.name, Midwife)},
       {Peer, conf: conf, name: Registry.via(conf.name, Peer)},
-      {Stager, conf: conf, name: Registry.via(conf.name, Stager)}
+      {Stager, conf: conf, name: Registry.via(conf.name, Stager)},
+      {DynamicSupervisor, name: Registry.via(conf.name, Foreman)},
+      {Midwife, conf: conf, name: Registry.via(conf.name, Midwife)}
     ]
 
     children = children ++ Enum.map(plugins, &plugin_child_spec(&1, conf))
-    children = children ++ Enum.map(queues, &QueueSupervisor.child_spec(&1, conf))
     children = children ++ event_child_spec(conf)
 
     Supervisor.init(children, strategy: :one_for_one)
@@ -1022,11 +1021,7 @@ defmodule Oban do
 
   defp plugin_child_spec({module, opts}, conf) do
     name = Registry.via(conf.name, {:plugin, module})
-
-    opts =
-      opts
-      |> Keyword.put_new(:conf, conf)
-      |> Keyword.put_new(:name, name)
+    opts = Keyword.merge(opts, conf: conf, name: name)
 
     Supervisor.child_spec({module, opts}, id: {:plugin, module})
   end
