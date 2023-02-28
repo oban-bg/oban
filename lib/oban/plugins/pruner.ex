@@ -20,7 +20,7 @@ defmodule Oban.Plugins.Pruner do
   > #### 🌟 DynamicPruner {: .info}
   >
   > To prune on a cron-style schedule, retain jobs by a limit, or provide overrides for specific
-  > queues, workers, and job states; see Oban Pro's [DynamicPruner][dyn].
+  > queues, workers, and job states; see Oban Pro's [DynamicPruner](https://getoban.pro/docs/pro/Oban.Pro.Plugins.DynamicPruner.html).
 
   ## Options
 
@@ -39,8 +39,6 @@ defmodule Oban.Plugins.Pruner do
   * `:pruned_jobs` - the jobs that were deleted from the database
 
   _Note: jobs only include `id`, `queue`, `state`, and `worker` fields._
-
-  [dyn]: https://getoban.pro/docs/pro/dynamic_pruner.html.
   """
 
   @behaviour Oban.Plugin
