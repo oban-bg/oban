@@ -259,7 +259,7 @@ defmodule Oban do
       {Notifier, conf: conf, name: Registry.via(conf.name, Notifier)},
       {Peer, conf: conf, name: Registry.via(conf.name, Peer)},
       {Stager, conf: conf, name: Registry.via(conf.name, Stager)},
-      {DynamicSupervisor, name: Registry.via(conf.name, Foreman)},
+      {DynamicSupervisor, name: Registry.via(conf.name, Foreman), strategy: :one_for_one},
       {Midwife, conf: conf, name: Registry.via(conf.name, Midwife)}
     ]
 
