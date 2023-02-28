@@ -24,7 +24,7 @@ if Code.ensure_loaded?(Postgrex) do
 
     @behaviour Postgrex.SimpleConnection
 
-    alias Oban.{Config, Repo}
+    alias Oban.{Config, Notifier, Repo}
     alias Postgrex.SimpleConnection, as: Simple
 
     defmodule State do
@@ -64,7 +64,7 @@ if Code.ensure_loaded?(Postgrex) do
     @doc """
     Register current process to receive messages from some channels
     """
-    @spec listen(GenServer.server(), channels :: list(Oban.Notifier.channel())) :: :ok
+    @spec listen(GenServer.server(), channels :: [Notifier.channel()]) :: :ok
     def listen(server, channels) do
       Simple.call(server, {:listen, self(), channels})
     end
@@ -72,7 +72,7 @@ if Code.ensure_loaded?(Postgrex) do
     @doc """
     Unregister current process from channels
     """
-    @spec unlisten(GenServer.server(), channels :: list(Oban.Notifier.channel())) :: :ok
+    @spec unlisten(GenServer.server(), channels :: [Notifier.channel()]) :: :ok
     def unlisten(server, channels) do
       Simple.call(server, {:unlisten, self(), channels})
     end
@@ -85,6 +85,13 @@ if Code.ensure_loaded?(Postgrex) do
     end
 
     @impl Simple
+    def notify(full_channel, payload, %State{} = state) when is_binary(full_channel) do
+      listeners = Map.get(state.channels, full_channel, [])
+
+      Notifier.relay(state.conf, listeners, reverse_channel(full_channel), payload)
+    end
+
+    # This is a Notifier callback, but it has the same name and arity as SimpleConnection
     def notify(server, channel, payload) when is_atom(channel) do
       with %State{conf: conf} <- Simple.call(server, :get_state) do
         full_channel = to_full_channel(channel, conf)
@@ -97,20 +104,6 @@ if Code.ensure_loaded?(Postgrex) do
 
         :ok
       end
-    end
-
-    def notify(full_channel, payload, %State{} = state) when is_binary(full_channel) do
-      decoded = Jason.decode!(payload)
-
-      if in_scope?(decoded, state.conf) do
-        channel = reverse_channel(full_channel)
-
-        for pid <- Map.get(state.channels, full_channel, []) do
-          send(pid, {:notification, channel, decoded})
-        end
-      end
-
-      :ok
     end
 
     @impl Simple
@@ -224,10 +217,6 @@ if Code.ensure_loaded?(Postgrex) do
 
       String.to_existing_atom(shortcut)
     end
-
-    defp in_scope?(%{"ident" => "any"}, _conf), do: true
-    defp in_scope?(%{"ident" => ident}, conf), do: Config.match_ident?(conf, ident)
-    defp in_scope?(_decoded, _conf), do: true
 
     ## Listener Helpers
 

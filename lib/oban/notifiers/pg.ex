@@ -36,7 +36,7 @@ defmodule Oban.Notifiers.PG do
 
   use GenServer
 
-  alias Oban.Config
+  alias Oban.Notifier
 
   defmodule State do
     @moduledoc false
@@ -44,24 +44,24 @@ defmodule Oban.Notifiers.PG do
     defstruct [:conf, :name, listeners: %{}]
   end
 
-  @impl Oban.Notifier
+  @impl Notifier
   def start_link(opts) do
     {name, opts} = Keyword.pop(opts, :name, __MODULE__)
 
     GenServer.start_link(__MODULE__, opts, name: name)
   end
 
-  @impl Oban.Notifier
+  @impl Notifier
   def listen(server, channels) do
     GenServer.call(server, {:listen, channels})
   end
 
-  @impl Oban.Notifier
+  @impl Notifier
   def unlisten(server, channels) do
     GenServer.call(server, {:unlisten, channels})
   end
 
-  @impl Oban.Notifier
+  @impl Notifier
   def notify(server, channel, payload) do
     with %State{} = state <- GenServer.call(server, :get_state),
          [_ | _] = pids <- members(state.conf.prefix) do
@@ -111,13 +111,9 @@ defmodule Oban.Notifiers.PG do
 
   @impl GenServer
   def handle_info({:notification, channel, payload}, %State{} = state) do
-    decoded = Jason.decode!(payload)
+    listeners = for {pid, channels} <- state.listeners, channel in channels, do: pid
 
-    if in_scope?(decoded, state.conf) do
-      for {pid, channels} <- state.listeners, channel in channels do
-        send(pid, {:notification, channel, decoded})
-      end
-    end
+    Notifier.relay(state.conf, listeners, channel, payload)
 
     {:noreply, state}
   end
@@ -162,8 +158,4 @@ defmodule Oban.Notifiers.PG do
   defp payload_to_messages(channel, payload) do
     Enum.map(payload, &{:notification, channel, &1})
   end
-
-  defp in_scope?(%{"ident" => "any"}, _conf), do: true
-  defp in_scope?(%{"ident" => ident}, conf), do: Config.match_ident?(conf, ident)
-  defp in_scope?(_payload, _conf), do: true
 end

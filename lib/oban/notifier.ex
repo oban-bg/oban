@@ -68,16 +68,24 @@ defmodule Oban.Notifier do
   @type option :: {:name, module()} | {:conf, Config.t()}
   @type channel :: atom()
 
-  @doc "Starts a notifier"
+  @doc """
+  Starts a notifier instance.
+  """
   @callback start_link([option]) :: GenServer.on_start()
 
-  @doc "Register current process to receive messages from some channels"
+  @doc """
+  Register the current process to receive messages from one or more channels.
+  """
   @callback listen(server(), channels :: list(channel())) :: :ok
 
-  @doc "Unregister current process from channels"
+  @doc """
+  Unregister current process from channels.
+  """
   @callback unlisten(server(), channels :: list(channel())) :: :ok
 
-  @doc "Broadcast a notification in a channel"
+  @doc """
+  Broadcast a notification to all subscribers of a channel.
+  """
   @callback notify(server(), channel :: channel(), payload :: [map()]) :: :ok
 
   @doc false
@@ -112,20 +120,20 @@ defmodule Oban.Notifier do
       Oban.Notifier.listen(MyApp.MyOban, [:gossip, :signal])
   """
   @spec listen(server(), channel() | [channel()]) :: :ok
-  def listen(server \\ Oban, channels)
+  def listen(name \\ Oban, channels)
 
-  def listen(server, channel) when is_atom(channel) do
-    listen(server, [channel])
+  def listen(name, channel) when is_atom(channel) do
+    listen(name, [channel])
   end
 
-  def listen(server, channels) when is_list(channels) do
+  def listen(name, channels) when is_list(channels) do
     unless Enum.all?(channels, &is_atom/1) do
       raise ArgumentError, "expected channels to be a list of atoms, got: #{inspect(channels)}"
     end
 
-    conf = Oban.config(server)
+    conf = Oban.config(name)
 
-    server
+    name
     |> Registry.whereis(Oban.Notifier)
     |> conf.notifier.listen(channels)
   end
@@ -144,10 +152,10 @@ defmodule Oban.Notifier do
       Oban.Notifier.unlisten(MyApp.MyOban, [:gossip])
   """
   @spec unlisten(server(), [channel]) :: :ok
-  def unlisten(server \\ Oban, channels) when is_list(channels) do
-    conf = Oban.config(server)
+  def unlisten(name \\ Oban, channels) when is_list(channels) do
+    conf = Oban.config(name)
 
-    server
+    name
     |> Registry.whereis(Oban.Notifier)
     |> conf.notifier.unlisten(channels)
   end
@@ -168,7 +176,7 @@ defmodule Oban.Notifier do
       Oban.Notifier.notify(:gossip, %{message: "hi!"})
   """
   @spec notify(Config.t() | server(), channel :: channel(), payload :: map() | [map()]) :: :ok
-  def notify(conf_or_server \\ Oban, channel, payload)
+  def notify(conf_or_name \\ Oban, channel, payload)
 
   def notify(%Config{} = conf, channel, payload) when is_atom(channel) do
     with_span(conf, channel, payload, fn ->
@@ -178,8 +186,8 @@ defmodule Oban.Notifier do
     end)
   end
 
-  def notify(server, channel, payload) when is_atom(channel) do
-    server
+  def notify(name, channel, payload) when is_atom(channel) do
+    name
     |> Oban.config()
     |> notify(channel, payload)
   end
@@ -198,13 +206,43 @@ defmodule Oban.Notifier do
     |> Enum.map(&encode/1)
   end
 
+  @doc false
+  @spec relay(Config.t(), [pid()], atom(), binary()) :: :ok
+  def relay(_conf, [], _channel, _payload), do: :ok
+
+  def relay(conf, listeners, channel, payload) when is_atom(channel) and is_binary(payload) do
+    decoded = decode(payload)
+
+    if in_scope?(decoded, conf) do
+      for pid <- listeners, do: send(pid, {:notification, channel, decoded})
+    end
+  end
+
   defp encode(payload) do
     payload
     |> to_encodable()
     |> Jason.encode!()
+    |> :zlib.gzip()
+    |> Base.encode64()
   end
 
-  defp to_encodable(%_{} = term), do: term
+  defp decode(payload) do
+    case Base.decode64(payload) do
+      {:ok, decoded} ->
+        decoded
+        |> :zlib.gunzip()
+        |> Jason.decode!()
+
+      # Messages emitted by the insert trigger aren't compressed.
+      :error ->
+        Jason.decode!(payload)
+    end
+  end
+
+  defp to_encodable(%Date{} = date), do: date
+  defp to_encodable(%DateTime{} = datetime), do: datetime
+  defp to_encodable(%NaiveDateTime{} = naive), do: naive
+  defp to_encodable(%Time{} = time), do: time
 
   defp to_encodable(map) when is_map(map) do
     for {key, val} <- map, into: %{}, do: {key, to_encodable(val)}
@@ -221,4 +259,8 @@ defmodule Oban.Notifier do
   end
 
   defp to_encodable(term), do: term
+
+  defp in_scope?(%{"ident" => "any"}, _conf), do: true
+  defp in_scope?(%{"ident" => ident}, conf), do: Config.match_ident?(conf, ident)
+  defp in_scope?(_payload, _conf), do: true
 end
