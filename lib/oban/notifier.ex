@@ -4,23 +4,26 @@ defmodule Oban.Notifier do
   channels.
 
   Every Oban supervision tree contains a notifier process, registered as `Oban.Notifier`, which
-  can be any implementation of the `Oban.Notifier` behaviour. The default is
-  `Oban.Notifiers.Postgres`, which relies on Postgres `LISTEN/NOTIFY`. All incoming notifications
-  are relayed through the notifier to other processes.
+  must be an implementation of the `Oban.Notifier` behaviour. The default implementation is uses
+  the `LISTEN/NOTIFY` operations built into Postgres.
+
+  All incoming notifications are relayed through the notifier to other processes.
 
   ## Channels
 
-  The notifier recognizes four predefined channels, each with a distinct responsibility:
+  Internally, Oban uses a variety of predefined channels with distinct responsibilities:
 
-  * `gossip` — arbitrary communication between nodes or jobs are sent on the `gossip` channel
   * `insert` — as jobs are inserted into the database an event is published on the `insert`
     channel. Processes such as queue producers use this as a signal to dispatch new jobs.
-  * `leader` — messages regarding node leadership exchanged between peers
-  * `signal` — instructions to take action, such as scale a queue or kill a running job, are sent
-    through the `signal` channel.
 
-  The `insert` and `signal` channels are primarily for internal use. Use the `gossip` channel to
-  send notifications between jobs or processes in your application.
+  * `leader` — messages regarding node leadership exchanged between peers
+
+  * `signal` — instructions to take action, such as scale a queue or kill a running job, are sent
+    through the `signal` channel
+
+  * `gossip` — arbitrary communication for coordination between nodes
+
+  * `stager` — messages regarding job staging, e.g. notifying queues that jobs are ready for execution
 
   ## Examples
 
@@ -33,7 +36,7 @@ defmodule Oban.Notifier do
         def perform(job) do
           :ok = MyApp.do_work(job.args)
 
-          Oban.Notifier.notify(Oban, :gossip, %{complete: job.id})
+          Oban.Notifier.notify(Oban, :my_app_jobs, %{complete: job.id})
 
           :ok
         end
@@ -42,7 +45,7 @@ defmodule Oban.Notifier do
   Listening for job complete events from another process:
 
       def insert_and_listen(args) do
-        :ok = Oban.Notifier.listen([:gossip])
+        :ok = Oban.Notifier.listen([:my_app_jobs])
 
         {:ok, %{id: job_id} = job} =
           args
@@ -50,7 +53,7 @@ defmodule Oban.Notifier do
           |> Oban.insert()
 
         receive do
-          {:notification, :gossip, %{"complete" => ^job_id}} ->
+          {:notification, :my_app_jobs, %{"complete" => ^job_id}} ->
             IO.puts("Other job complete!")
         after
           30_000 ->
@@ -63,7 +66,7 @@ defmodule Oban.Notifier do
 
   @type server :: GenServer.server()
   @type option :: {:name, module()} | {:conf, Config.t()}
-  @type channel :: :gossip | :insert | :leader | :signal | :stager
+  @type channel :: atom()
 
   @doc "Starts a notifier"
   @callback start_link([option]) :: GenServer.on_start()
@@ -76,8 +79,6 @@ defmodule Oban.Notifier do
 
   @doc "Broadcast a notification in a channel"
   @callback notify(server(), channel :: channel(), payload :: [map()]) :: :ok
-
-  defguardp is_channel(channel) when channel in [:gossip, :insert, :leader, :signal, :stager]
 
   @doc false
   def child_spec(opts) do
@@ -102,7 +103,7 @@ defmodule Oban.Notifier do
 
       Oban.Notifier.listen(:gossip)
 
-  Listen for messages on all channels:
+  Listen for messages on multiple channels:
 
       Oban.Notifier.listen([:gossip, :insert, :leader, :signal, :stager])
 
@@ -118,7 +119,9 @@ defmodule Oban.Notifier do
   end
 
   def listen(server, channels) when is_list(channels) do
-    :ok = validate_channels!(channels)
+    unless Enum.all?(channels, &is_atom/1) do
+      raise ArgumentError, "expected channels to be a list of atoms, got: #{inspect(channels)}"
+    end
 
     conf = Oban.config(server)
 
@@ -167,7 +170,7 @@ defmodule Oban.Notifier do
   @spec notify(Config.t() | server(), channel :: channel(), payload :: map() | [map()]) :: :ok
   def notify(conf_or_server \\ Oban, channel, payload)
 
-  def notify(%Config{} = conf, channel, payload) when is_channel(channel) do
+  def notify(%Config{} = conf, channel, payload) when is_atom(channel) do
     with_span(conf, channel, payload, fn ->
       conf.name
       |> Registry.whereis(Oban.Notifier)
@@ -175,7 +178,7 @@ defmodule Oban.Notifier do
     end)
   end
 
-  def notify(server, channel, payload) when is_channel(channel) do
+  def notify(server, channel, payload) when is_atom(channel) do
     server
     |> Oban.config()
     |> notify(channel, payload)
@@ -188,10 +191,6 @@ defmodule Oban.Notifier do
       {fun.(), tele_meta}
     end)
   end
-
-  defp validate_channels!([]), do: :ok
-  defp validate_channels!([head | tail]) when is_channel(head), do: validate_channels!(tail)
-  defp validate_channels!([head | _]), do: raise(ArgumentError, "unexpected channel: #{head}")
 
   defp normalize_payload(payload) do
     payload

@@ -27,14 +27,6 @@ if Code.ensure_loaded?(Postgrex) do
     alias Oban.{Config, Repo}
     alias Postgrex.SimpleConnection, as: Simple
 
-    @mappings %{
-      gossip: "oban_gossip",
-      insert: "oban_insert",
-      leader: "oban_leader",
-      signal: "oban_signal",
-      stager: "oban_stager"
-    }
-
     defmodule State do
       @moduledoc false
 
@@ -95,12 +87,12 @@ if Code.ensure_loaded?(Postgrex) do
     @impl Simple
     def notify(server, channel, payload) when is_atom(channel) do
       with %State{conf: conf} <- Simple.call(server, :get_state) do
-        full_channel = Map.fetch!(@mappings, channel)
+        full_channel = to_full_channel(channel, conf)
 
         Repo.query(
           conf,
           "SELECT pg_notify($1, payload) FROM json_array_elements_text($2::json) AS payload",
-          ["#{conf.prefix}.#{full_channel}", payload]
+          [full_channel, payload]
         )
 
         :ok
@@ -152,7 +144,7 @@ if Code.ensure_loaded?(Postgrex) do
     end
 
     def handle_call({:listen, pid, channels}, from, %State{} = state) do
-      channels = to_full_channels(state.conf, channels)
+      channels = Enum.map(channels, &to_full_channel(&1, state.conf))
       new_channels = channels -- Map.keys(state.channels)
 
       state =
@@ -173,7 +165,7 @@ if Code.ensure_loaded?(Postgrex) do
     end
 
     def handle_call({:unlisten, pid, channels}, from, %State{} = state) do
-      channels = to_full_channels(state.conf, channels)
+      channels = Enum.map(channels, &to_full_channel(&1, state.conf))
 
       state =
         state
@@ -223,11 +215,8 @@ if Code.ensure_loaded?(Postgrex) do
 
     ## Channel Helpers
 
-    defp to_full_channels(%Config{prefix: prefix}, channels) do
-      @mappings
-      |> Map.take(channels)
-      |> Map.values()
-      |> Enum.map(&Enum.join([prefix, &1], "."))
+    defp to_full_channel(channel, %Config{prefix: prefix}) do
+      "#{prefix}.oban_#{channel}"
     end
 
     defp reverse_channel(full_channel) do
