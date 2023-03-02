@@ -239,10 +239,7 @@ defmodule Oban.Notifier do
     end
   end
 
-  defp to_encodable(%Date{} = date), do: date
-  defp to_encodable(%DateTime{} = datetime), do: datetime
-  defp to_encodable(%NaiveDateTime{} = naive), do: naive
-  defp to_encodable(%Time{} = time), do: time
+  defp to_encodable(%_{} = struct), do: struct
 
   defp to_encodable(map) when is_map(map) do
     for {key, val} <- map, into: %{}, do: {key, to_encodable(val)}
