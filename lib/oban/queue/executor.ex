@@ -20,7 +20,7 @@ defmodule Oban.Queue.Executor do
           start_time: integer(),
           stop_mono: integer(),
           safe: boolean(),
-          snooze: pos_integer(),
+          snooze: non_neg_integer(),
           stacktrace: Exception.stacktrace(),
           state: :unset | state(),
           timer: reference(),
@@ -145,7 +145,7 @@ defmodule Oban.Queue.Executor do
       {:error, _reason} = result ->
         %{exec | result: result, state: :failure, error: perform_error(worker, result)}
 
-      {:snooze, seconds} = result when is_integer(seconds) and seconds > 0 ->
+      {:snooze, seconds} = result when is_integer(seconds) and seconds >= 0 ->
         %{exec | result: result, state: :snoozed, snooze: seconds}
 
       returned ->
