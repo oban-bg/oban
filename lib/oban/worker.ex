@@ -251,7 +251,7 @@ defmodule Oban.Worker do
           | {:discard, reason :: term()}
           | {:ok, ignored :: term()}
           | {:error, reason :: term()}
-          | {:snooze, seconds :: pos_integer()}
+          | {:snooze, seconds :: non_neg_integer()}
 
   @doc """
   Build a job changeset for this worker with optional overrides.

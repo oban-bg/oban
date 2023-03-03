@@ -28,7 +28,7 @@ defmodule Oban.Engine do
   @type opts :: Keyword.t()
   @type queryable :: Ecto.Queryable.t()
   @type running :: map()
-  @type seconds :: pos_integer()
+  @type seconds :: non_neg_integer()
 
   @doc """
   Initialize metadata for a queue engine.

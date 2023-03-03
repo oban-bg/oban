@@ -10,6 +10,7 @@ defmodule Oban.Queue.ExecutorTest do
     @impl Worker
     def perform(%{args: %{"mode" => "ok"}}), do: :ok
     def perform(%{args: %{"mode" => "result"}}), do: {:ok, :result}
+    def perform(%{args: %{"mode" => "snooze_zero"}}), do: {:snooze, 0}
     def perform(%{args: %{"mode" => "snooze"}}), do: {:snooze, 1}
     def perform(%{args: %{"mode" => "raise"}}), do: raise(ArgumentError)
     def perform(%{args: %{"mode" => "catch"}}), do: throw(:no_reason)
@@ -32,6 +33,7 @@ defmodule Oban.Queue.ExecutorTest do
     end
 
     test "reporting :snooze status" do
+      assert %{state: :snoozed, snooze: 0} = call_with_mode("snooze_zero")
       assert %{state: :snoozed, snooze: 1} = call_with_mode("snooze")
     end
 
