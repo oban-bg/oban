@@ -60,6 +60,7 @@ defmodule Oban.Queue.ExecutorTest do
                @conf
                |> Executor.new(job)
                |> Executor.resolve_worker()
+               |> Executor.perform()
     end
 
     test "reporting timeouts when a job exceeds the configured time" do

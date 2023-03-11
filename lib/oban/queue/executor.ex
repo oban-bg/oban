@@ -105,7 +105,7 @@ defmodule Oban.Queue.Executor do
       {:error, error} ->
         unless exec.safe, do: raise(error)
 
-        %{exec | state: :failure, error: error}
+        %{exec | result: {:error, error}, state: :failure, error: error}
     end
   end
 
@@ -162,6 +162,8 @@ defmodule Oban.Queue.Executor do
 
       %{exec | state: :failure, error: error, stacktrace: __STACKTRACE__}
   end
+
+  def perform(exec), do: exec
 
   @spec normalize_state(t()) :: t()
   def normalize_state(%__MODULE__{state: :failure, job: job} = exec)
