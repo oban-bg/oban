@@ -70,7 +70,7 @@ defmodule Oban.WorkerTest do
     end
 
     property "the default algorithm never exceeds an upper bound" do
-      maximum_with_jitter = 2 ** 20 * 1.1
+      maximum_with_jitter = Integer.pow(2, 20) * 1.1
 
       check all attempt <- integer(1..999),
                 max_diff <- integer(0..999) do

@@ -6,7 +6,7 @@ defmodule Oban.BackoffTest do
   alias Oban.Backoff
 
   property "exponential backoff is clamped within a fixed range" do
-    maximum = 2 ** 10 * 10
+    maximum = Integer.pow(2, 10) * 10
 
     check all mult <- integer(1..10),
               attempt <- integer(1..20) do
