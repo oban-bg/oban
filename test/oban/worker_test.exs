@@ -58,22 +58,25 @@ defmodule Oban.WorkerTest do
 
   describe "backoff/1" do
     property "the backoff increases with subsequent attempts" do
+      base_backoff = 15
+
       check all attempt <- integer(1..19) do
         first = BasicWorker.backoff(%Job{attempt: attempt, max_attempts: 20})
-        second = BasicWorker.backoff(%Job{attempt: attempt + 2, max_attempts: 20})
+        second = BasicWorker.backoff(%Job{attempt: attempt + 1, max_attempts: 20})
 
+        assert first > base_backoff
         assert first < second
       end
     end
 
     property "the default algorithm never exceeds an upper bound" do
+      maximum_with_jitter = 2 ** 20 * 1.1
+
       check all attempt <- integer(1..999),
                 max_diff <- integer(0..999) do
         job = %Job{attempt: attempt, max_attempts: attempt + max_diff}
-        backoff = BasicWorker.backoff(job)
-        backoff_for_twenty_attempts = 2_097_167
 
-        assert backoff <= backoff_for_twenty_attempts
+        assert BasicWorker.backoff(job) <= maximum_with_jitter
       end
     end
   end

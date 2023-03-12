@@ -295,8 +295,7 @@ defmodule Oban.Worker do
   """
   @callback perform(job :: Job.t()) :: result()
 
-  @max_for_backoff 20
-  @backoff_base 15
+  @clamped_max 20
 
   @doc false
   defmacro __using__(opts) do
@@ -349,15 +348,15 @@ defmodule Oban.Worker do
   @doc false
   def backoff(%Job{attempt: attempt, max_attempts: max_attempts}) do
     clamped_attempt =
-      if max_attempts <= @max_for_backoff do
+      if max_attempts <= @clamped_max do
         attempt
       else
-        round(attempt / max_attempts * @max_for_backoff)
+        round(attempt / max_attempts * @clamped_max)
       end
 
-    time = trunc(:math.pow(2, clamped_attempt) + @backoff_base)
-
-    Backoff.jitter(time)
+    clamped_attempt
+    |> Backoff.exponential(mult: 1, max_pow: 100, min_pad: 15)
+    |> Backoff.jitter(mode: :inc)
   end
 
   @doc false

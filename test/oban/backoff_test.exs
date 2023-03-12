@@ -8,9 +8,9 @@ defmodule Oban.BackoffTest do
   property "exponential backoff is clamped within a fixed range" do
     maximum = 2 ** 10 * 10
 
-    check all multiplier <- integer(1..10),
+    check all mult <- integer(1..10),
               attempt <- integer(1..20) do
-      result = Backoff.exponential(attempt, mult_ms: multiplier)
+      result = Backoff.exponential(attempt, mult: mult)
 
       assert result >= 2
       assert result <= maximum

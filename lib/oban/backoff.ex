@@ -21,10 +21,11 @@ defmodule Oban.Backoff do
   """
   @spec exponential(pos_integer(), opts :: keyword()) :: pos_integer()
   def exponential(attempt, opts \\ []) do
-    mult_ms = Keyword.get(opts, :mult_ms, 100)
     max_pow = Keyword.get(opts, :max_pow, 10)
+    min_pad = Keyword.get(opts, :min_pad, 0)
+    mult = Keyword.get(opts, :mult, 1)
 
-    mult_ms * Integer.pow(2, min(attempt, max_pow))
+    min_pad + mult * Integer.pow(2, min(attempt, max_pow))
   end
 
   @doc """
@@ -88,7 +89,7 @@ defmodule Oban.Backoff do
     error in [DBConnection.ConnectionError, Postgrex.Error] ->
       if retries == :infinity or attempt < retries do
         attempt
-        |> exponential()
+        |> exponential(mult: 100)
         |> jitter()
         |> Process.sleep()
 
