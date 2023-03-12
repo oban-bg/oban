@@ -11,13 +11,19 @@ defmodule Oban.Backoff do
   ## Examples
 
       iex> Oban.Backoff.exponential(1)
+      2
+
+      iex> Oban.Backoff.exponential(1, mult: 100)
       200
 
+      iex> Oban.Backoff.exponential(1, min_pad: 10)
+      12
+
       iex> Oban.Backoff.exponential(10)
-      102_400
+      1024
 
       iex> Oban.Backoff.exponential(11)
-      102_400
+      1024
   """
   @spec exponential(pos_integer(), opts :: keyword()) :: pos_integer()
   def exponential(attempt, opts \\ []) do
@@ -45,7 +51,7 @@ defmodule Oban.Backoff do
       ...> jitter in 180..200
       true
   """
-  @spec jitter(time :: pos_integer(), [mode: jitter_mode(), mult: float()]) :: pos_integer()
+  @spec jitter(time :: pos_integer(), mode: jitter_mode(), mult: float()) :: pos_integer()
   def jitter(time, opts \\ []) do
     mode = Keyword.get(opts, :mode, :both)
     mult = Keyword.get(opts, :mult, 0.1)
@@ -70,16 +76,27 @@ defmodule Oban.Backoff do
   end
 
   @doc """
-  Attempt a function repeatedly until it succeeds or retries are exhausted.
+  Attempt a database interraction repeatedly until it succeeds or retries are exhausted.
 
   Failed attempts are spaced out using exponential backoff with jitter. By default, functions are
-  tried 10 times over the course of approximately 3 minutes.
+  retried _infinitely_ with a maximum of ~100 seconds between retries.
 
   This function is designed to guard against flickering database errors and retry safety only
   applies `DBConnection.ConnectionError` and `Postgrex.Error`.
+
+  ## Examples
+
+      iex> Oban.Backoff.with_retry(fn -> :ok end)
+      :ok
+
+      iex> Oban.Backoff.with_retry(fn -> :ok end, :infinity)
+      :ok
+
+      iex> Oban.Backoff.with_retry(fn -> :ok end, 10)
+      :ok
   """
   @spec with_retry((() -> term()), :infinity | pos_integer()) :: term()
-  def with_retry(fun, retries \\ 10) when is_function(fun, 0) and retries > 0 do
+  def with_retry(fun, retries \\ :infinity) when is_function(fun, 0) do
     with_retry(fun, retries, 1)
   end
 
