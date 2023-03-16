@@ -711,7 +711,7 @@ the following keys:
 * `attempt` The attempt number when the error occurred
 * `error` A formatted error message and stacktrace
 
-See the [Instrumentation](#Instrumentation-and-Logging) docs for an example of
+See the [Instrumentation](#instrumentation-error-reporting-and-logging) docs for an example of
 integrating with external error reporting systems.
 
 ### Limiting Retries
