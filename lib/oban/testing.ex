@@ -116,7 +116,7 @@ defmodule Oban.Testing do
   @moduledoc since: "0.3.0"
 
   import ExUnit.Assertions, only: [assert: 2, refute: 2]
-  import Ecto.Query, only: [limit: 2, order_by: 2, select: 2, where: 2, where: 3]
+  import Ecto.Query, only: [order_by: 2, select: 2, where: 2, where: 3]
 
   alias Ecto.Changeset
 
@@ -128,6 +128,7 @@ defmodule Oban.Testing do
           | {:prefix, binary()}
           | {:repo, module()}
 
+  @timestamp_fields ~w(attempted_at cancelled_at completed_at discarded_at inserted_at scheduled_at)a
   @wait_interval 10
 
   @doc false
@@ -296,7 +297,7 @@ defmodule Oban.Testing do
     #{inspect(available_jobs(repo, opts), pretty: true)}
     """
 
-    assert get_job(repo, opts), error_message
+    assert job_exists?(repo, opts), error_message
   end
 
   @doc """
@@ -340,7 +341,7 @@ defmodule Oban.Testing do
     to be enqueued in the #{inspect(opts[:prefix])} schema
     """
 
-    refute get_job(repo, opts), error_message
+    refute job_exists?(repo, opts), error_message
   end
 
   @doc """
@@ -495,25 +496,23 @@ defmodule Oban.Testing do
 
   # Enqueued Helpers
 
-  defp get_job(repo, opts) do
+  defp job_exists?(repo, opts) do
     {conf, opts} = extract_conf(repo, opts)
 
-    Repo.one(conf, opts |> base_query() |> limit(1) |> select([:id]))
+    Repo.exists?(conf, base_query(opts))
   end
 
   defp wait_for_job(repo, opts, timeout) when timeout > 0 do
-    case get_job(repo, opts) do
-      nil ->
-        Process.sleep(@wait_interval)
+    if job_exists?(repo, opts) do
+      true
+    else
+      Process.sleep(@wait_interval)
 
-        wait_for_job(repo, opts, timeout - @wait_interval)
-
-      job ->
-        job
+      wait_for_job(repo, opts, timeout - @wait_interval)
     end
   end
 
-  defp wait_for_job(_repo, _opts, _timeout), do: nil
+  defp wait_for_job(_repo, _opts, _timeout), do: false
 
   defp available_jobs(repo, opts) do
     {conf, opts} = extract_conf(repo, opts)
@@ -545,14 +544,6 @@ defmodule Oban.Testing do
     {conf, opts}
   end
 
-  defp extract_field_opts({key, {value, field_opts}}, field_opts_acc) do
-    {{key, value}, [{key, field_opts} | field_opts_acc]}
-  end
-
-  defp extract_field_opts({key, value}, field_opts_acc) do
-    {{key, value}, field_opts_acc}
-  end
-
   defp normalize_fields(opts) do
     {fields, field_opts} = Enum.map_reduce(opts, [], &extract_field_opts/2)
 
@@ -567,13 +558,18 @@ defmodule Oban.Testing do
     |> Enum.map(fn {key, value} -> {key, value, Keyword.get(field_opts, key, [])} end)
   end
 
-  @timestamp_fields ~W(attempted_at completed_at inserted_at scheduled_at)a
-  @timestamp_default_delta_seconds 1
+  defp extract_field_opts({key, {value, field_opts}}, field_opts_acc) do
+    {{key, value}, [{key, field_opts} | field_opts_acc]}
+  end
+
+  defp extract_field_opts({key, value}, field_opts_acc) do
+    {{key, value}, field_opts_acc}
+  end
 
   defp apply_where_clauses(query, []), do: query
 
   defp apply_where_clauses(query, [{key, value, opts} | rest]) when key in @timestamp_fields do
-    delta = Keyword.get(opts, :delta, @timestamp_default_delta_seconds)
+    delta = Keyword.get(opts, :delta, 1)
 
     window_start = DateTime.add(value, -delta, :second)
     window_end = DateTime.add(value, delta, :second)
