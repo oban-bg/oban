@@ -404,14 +404,14 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite] do
 
       @describetag oban_opts: [queues: [alpha: 5], stage_interval: 10, testing: :disabled]
 
-      test "cancelling an executing job by its id", %{name: name} do
+      test "cancelling an executing job", %{name: name} do
         TelemetryHandler.attach_events(span_type: [:job, [:engine, :cancel_job]])
 
         job = insert!(name, %{ref: 1, sleep: 100}, [])
 
         assert_receive {:started, 1}
 
-        Oban.cancel_job(name, job.id)
+        Oban.cancel_job(name, job)
 
         refute_receive {:ok, 1}, 200
 
@@ -483,9 +483,9 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite] do
         job_4 = insert!(name, %{ref: 4}, state: "retryable", max_attempts: 20)
         job_5 = insert!(name, %{ref: 5}, state: "executing", max_attempts: 1, attempt: 1)
 
-        assert :ok = Oban.retry_job(name, job_1.id)
-        assert :ok = Oban.retry_job(name, job_2.id)
-        assert :ok = Oban.retry_job(name, job_3.id)
+        assert :ok = Oban.retry_job(name, job_1)
+        assert :ok = Oban.retry_job(name, job_2)
+        assert :ok = Oban.retry_job(name, job_3)
         assert :ok = Oban.retry_job(name, job_4.id)
         assert :ok = Oban.retry_job(name, job_5.id)
 

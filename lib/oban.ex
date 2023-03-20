@@ -897,23 +897,26 @@ defmodule Oban do
   end
 
   @doc """
-  Sets a job as `available`, adding attempts if already maxed out. If the job is currently
-  `available`, `executing` or `scheduled` it will be ignored. The job is scheduled for immediate
-  execution.
+  Sets a job as `available`, adding attempts if already maxed out. Jobs currently `available`,
+  `executing` or `scheduled` are ignored. The job is scheduled for immediate execution.
 
   ## Example
 
-  Retry a discarded job with the id `1`:
+  Retry a job:
 
-      Oban.retry_job(1)
+      Oban.retry_job(job)
       :ok
   """
   @doc since: "2.2.0"
-  @spec retry_job(name :: atom(), job_id :: pos_integer()) :: :ok
-  def retry_job(name \\ __MODULE__, job_id) when is_integer(job_id) do
-    name
-    |> config()
-    |> Engine.retry_job(%Job{id: job_id})
+  @spec retry_job(name(), job_or_id :: Job.t() | integer()) :: :ok
+  def retry_job(name \\ __MODULE__, job_or_id) do
+    conf = config(name)
+
+    if is_integer(job_or_id) do
+      Engine.retry_job(conf, %Job{id: job_or_id})
+    else
+      Engine.retry_job(conf, job_or_id)
+    end
   end
 
   @doc """
@@ -956,25 +959,21 @@ defmodule Oban do
 
   ## Example
 
-  Cancel a scheduled job with the id `1`:
+  Cancel a job:
 
-      Oban.cancel_job(1)
+      Oban.cancel_job(job)
       :ok
   """
   @doc since: "1.3.0"
-  @spec cancel_job(name(), job_id :: pos_integer()) :: :ok
-  def cancel_job(name \\ __MODULE__, job_id) when is_integer(job_id) do
-    import Ecto.Query, only: [where: 3]
+  @spec cancel_job(name(), job_or_id :: Job.t() | integer()) :: :ok
+  def cancel_job(name \\ __MODULE__, job_or_id)
 
-    conf = config(name)
+  def cancel_job(name, %Job{id: job_id}), do: cancel_job(name, job_id)
 
-    # Cancelling all but an "executing" jobs allows the producer to handle cancellation with a
-    # proper error and telemetry event.
-    query = where(Job, [j], j.id == ^job_id and j.state != "executing")
+  def cancel_job(name, job_id) when is_integer(job_id) do
+    import Ecto.Query, only: [where: 2]
 
-    Engine.cancel_all_jobs(conf, query)
-
-    Notifier.notify(conf, :signal, %{action: :pkill, job_id: job_id})
+    with {:ok, _count} <- cancel_all_jobs(name, where(Job, id: ^job_id)), do: :ok
   end
 
   @doc """
