@@ -97,7 +97,7 @@ defmodule Oban.Job do
           attempted_by: [binary()] | nil,
           max_attempts: pos_integer(),
           meta: map(),
-          priority: pos_integer(),
+          priority: non_neg_integer(),
           inserted_at: DateTime.t(),
           scheduled_at: DateTime.t(),
           attempted_at: DateTime.t() | nil,
