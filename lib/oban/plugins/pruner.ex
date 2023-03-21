@@ -38,7 +38,7 @@ defmodule Oban.Plugins.Pruner do
 
   * `:pruned_jobs` - the jobs that were deleted from the database
 
-  _Note: jobs only include `id`, `queue`, `state`, and `worker` fields._
+  _Note: jobs only include `id`, `queue`, `state` fields._
   """
 
   @behaviour Oban.Plugin

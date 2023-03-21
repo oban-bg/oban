@@ -102,7 +102,7 @@ defmodule Oban.Telemetry do
   * `:conf` — the Oban supervisor's config
   * `:engine` — the module of the engine used
   * `:job` - the `Oban.Job` in question
-  * `:jobs` — zero or more maps with the `queue`, `state`, and `worker` for each modified job
+  * `:jobs` — zero or more maps with the `queue`, `state` for each modified job
   * `:kind`, `:reason`, `:stacktrace` — see the explanation in job metadata above
 
   ## Notifier Events

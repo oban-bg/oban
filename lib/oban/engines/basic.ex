@@ -137,7 +137,7 @@ defmodule Oban.Engines.Basic do
     query =
       Job
       |> join(:inner, [j], x in subquery(subquery), on: j.id == x.id)
-      |> select([j, x], %{id: j.id, queue: j.queue, state: x.state, worker: j.worker})
+      |> select([j, x], %{id: j.id, queue: j.queue, state: x.state})
 
     {_count, staged} = Repo.update_all(conf, query, set: [state: "available"])
 
@@ -161,7 +161,7 @@ defmodule Oban.Engines.Basic do
     query =
       Job
       |> join(:inner, [j], x in subquery(subquery), on: j.id == x.id)
-      |> select([_, x], map(x, [:id, :queue, :state, :worker]))
+      |> select([_, x], map(x, [:id, :queue, :state]))
 
     {_count, pruned} = Repo.delete_all(conf, query)
 
@@ -243,7 +243,7 @@ defmodule Oban.Engines.Basic do
     query =
       Job
       |> join(:inner, [j], x in subquery(subquery), on: j.id == x.id)
-      |> select([_, x], map(x, [:id, :queue, :state, :worker]))
+      |> select([_, x], map(x, [:id, :queue, :state]))
 
     {_, jobs} = Repo.update_all(conf, query, set: [state: "cancelled", cancelled_at: utc_now()])
 
@@ -264,7 +264,7 @@ defmodule Oban.Engines.Basic do
     query =
       Job
       |> join(:inner, [j], x in subquery(subquery), on: j.id == x.id)
-      |> select([_, x], map(x, [:id, :queue, :state, :worker]))
+      |> select([_, x], map(x, [:id, :queue, :state]))
       |> update([j],
         set: [
           state: "available",

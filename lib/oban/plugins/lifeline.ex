@@ -46,7 +46,7 @@ defmodule Oban.Plugins.Lifeline do
 
   * `:discarded_jobs` — a list of jobs transitioned to `discarded`
 
-  _Note: jobs only include `id`, `queue`, `state`, and `worker` fields._
+  _Note: jobs only include `id`, `queue`, `state` fields._
   """
 
   @behaviour Oban.Plugin
@@ -164,7 +164,7 @@ defmodule Oban.Plugins.Lifeline do
     query =
       base
       |> where([j], j.attempt < j.max_attempts)
-      |> select([j], map(j, [:id, :queue, :state, :worker]))
+      |> select([j], map(j, [:id, :queue, :state]))
 
     Repo.update_all(state.conf, query, set: [state: "available"])
   end
@@ -173,7 +173,7 @@ defmodule Oban.Plugins.Lifeline do
     query =
       base
       |> where([j], j.attempt >= j.max_attempts)
-      |> select([j], map(j, [:id, :queue, :state, :worker]))
+      |> select([j], map(j, [:id, :queue, :state]))
 
     Repo.update_all(state.conf, query, set: [state: "discarded", discarded_at: DateTime.utc_now()])
   end

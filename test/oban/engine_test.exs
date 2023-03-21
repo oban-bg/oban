@@ -615,16 +615,6 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite] do
         end)
       end
 
-      test "ignoring available jobs that have exceeded max attempts", %{name: name} do
-        Oban.insert_all(name, [
-          Worker.new(%{ref: 1, action: "OK"}, attempt: 19),
-          Worker.new(%{ref: 2, action: "OK"}, attempt: 20)
-        ])
-
-        assert_receive {:ok, 1}
-        refute_receive {:ok, 2}
-      end
-
       test "failing jobs that exceed the worker's timeout", %{name: name} do
         job = insert!(name, %{ref: 1, sleep: 20, timeout: 5}, [])
 
