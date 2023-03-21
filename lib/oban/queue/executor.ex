@@ -2,7 +2,7 @@ defmodule Oban.Queue.Executor do
   @moduledoc false
 
   alias Oban.{Backoff, Config, CrashError, Engine, Job}
-  alias Oban.{PerformError, Telemetry, TimeoutError, Worker}
+  alias Oban.{PerformError, TimeoutError, Worker}
 
   require Logger
 
@@ -91,7 +91,7 @@ defmodule Oban.Queue.Executor do
 
   @spec record_started(t()) :: t()
   def record_started(%__MODULE__{} = exec) do
-    Telemetry.execute([:oban, :job, :start], %{system_time: exec.start_time}, exec.meta)
+    :telemetry.execute([:oban, :job, :start], %{system_time: exec.start_time}, exec.meta)
 
     exec
   end
@@ -262,7 +262,7 @@ defmodule Oban.Queue.Executor do
         state: state
       })
 
-    Telemetry.execute([:oban, :job, :exception], measurements, meta)
+    :telemetry.execute([:oban, :job, :exception], measurements, meta)
 
     exec
   end
@@ -278,7 +278,7 @@ defmodule Oban.Queue.Executor do
         result: exec.result
       })
 
-    Telemetry.execute([:oban, :job, :stop], measurements, meta)
+    :telemetry.execute([:oban, :job, :stop], measurements, meta)
 
     exec
   end

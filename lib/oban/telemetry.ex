@@ -321,53 +321,6 @@ defmodule Oban.Telemetry do
   end
 
   @doc false
-  def span(name, fun, meta \\ %{}) when is_atom(name) and is_function(fun, 0) do
-    start_time = System.system_time()
-    start_mono = System.monotonic_time()
-
-    execute([:oban, name, :start], %{system_time: start_time}, meta)
-
-    try do
-      result = fun.()
-
-      execute([:oban, name, :stop], %{duration: duration(start_mono)}, meta)
-
-      result
-    catch
-      kind, reason ->
-        execute(
-          [:oban, name, :exception],
-          %{duration: duration(start_mono)},
-          Map.merge(meta, %{kind: kind, reason: reason, stacktrace: __STACKTRACE__})
-        )
-
-        :erlang.raise(kind, reason, __STACKTRACE__)
-    end
-  end
-
-  defp duration(start_mono), do: System.monotonic_time() - start_mono
-
-  @doc false
-  def execute(event_name, measurements, meta) do
-    :telemetry.execute(event_name, measurements, normalize_meta(meta))
-  end
-
-  defp normalize_meta(%{name: {:via, Registry, {Oban.Registry, {_pid, name}}}} = meta) do
-    name =
-      with {role, name} <- name do
-        Module.concat([
-          Oban.Queue,
-          Macro.camelize(to_string(name)),
-          Macro.camelize(to_string(role))
-        ])
-      end
-
-    %{meta | name: name}
-  end
-
-  defp normalize_meta(meta), do: meta
-
-  @doc false
   @spec handle_event([atom()], map(), map(), Keyword.t()) :: :ok
   def handle_event([:oban, :job, event], measure, meta, opts) do
     level = Keyword.fetch!(opts, :level)

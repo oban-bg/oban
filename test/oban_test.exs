@@ -53,7 +53,7 @@ defmodule ObanTest do
     end
 
     test "additional jobs aren't started after shutdown starts" do
-      %Job{id: id_1} = insert!(ref: 1, sleep: 40)
+      %Job{id: id_1} = insert!(ref: 1, sleep: 45)
       %Job{id: id_2} = insert!(ref: 2, sleep: 1)
 
       name =

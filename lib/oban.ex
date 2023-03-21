@@ -11,7 +11,7 @@ defmodule Oban do
   use Supervisor
 
   alias Ecto.{Changeset, Multi}
-  alias Oban.{Config, Engine, Job, Midwife, Notifier, Peer, Registry, Stager, Telemetry}
+  alias Oban.{Config, Engine, Job, Midwife, Notifier, Peer, Registry, Stager}
   alias Oban.Queue.{Drainer, Producer}
 
   @type name :: term()
@@ -1029,7 +1029,7 @@ defmodule Oban do
     time = %{system_time: System.system_time()}
     meta = %{pid: self(), conf: conf}
 
-    [Task.child_spec(fn -> Telemetry.execute([:oban, :supervisor, :init], time, meta) end)]
+    [Task.child_spec(fn -> :telemetry.execute([:oban, :supervisor, :init], time, meta) end)]
   end
 
   ## Signal Helper
