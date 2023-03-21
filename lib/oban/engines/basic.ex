@@ -85,35 +85,39 @@ defmodule Oban.Engines.Basic do
   def fetch_jobs(%Config{} = conf, %{} = meta, running) do
     demand = meta.limit - map_size(running)
 
-    subset =
+    subset_query =
       Job
       |> select([:id])
       |> where([j], j.state == "available")
       |> where([j], j.queue == ^meta.queue)
-      |> where([j], j.attempt < j.max_attempts)
       |> order_by([j], asc: j.priority, asc: j.scheduled_at, asc: j.id)
       |> limit(^demand)
       |> lock("FOR UPDATE SKIP LOCKED")
+
+    # The Postgres planner may choose to generate a plan that executes a nested loop over the
+    # LIMITing subquery, causing more UPDATEs than LIMIT. That could cause unexpected updates,
+    # including attempts > max_attempts in some cases. The solution is to use a CTE as an
+    # "optimization fence" that forces Postgres _not_ to optimize the query.
+    #
+    # The odd "subset" fragment is required to prevent Ecto from applying the prefix to the name
+    # of the CTE, e.g. "public"."subset".
+    query =
+      Job
+      |> with_cte("subset", as: ^subset_query)
+      |> join(:inner, [j], x in fragment(~s("subset")), on: true)
+      |> where([j, x], j.id == x.id)
+      |> select([j, _], j)
 
     updates = [
       set: [state: "executing", attempted_at: utc_now(), attempted_by: [meta.node]],
       inc: [attempt: 1]
     ]
 
-    Repo.transaction(
-      conf,
-      fn ->
-        query =
-          Job
-          |> where([j], j.id in subquery(subset))
-          |> select([j, _], j)
+    Repo.transaction(conf, fn ->
+      {_count, jobs} = Repo.update_all(conf, query, updates)
 
-        case Repo.update_all(conf, query, updates) do
-          {0, nil} -> {meta, []}
-          {_count, jobs} -> {meta, jobs}
-        end
-      end
-    )
+      {meta, jobs}
+    end)
   end
 
   @impl Engine
