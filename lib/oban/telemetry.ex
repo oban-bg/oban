@@ -73,6 +73,7 @@ defmodule Oban.Telemetry do
   * `[:oban, :engine, :insert_all_jobs, :start | :stop | :exception]`
   * `[:oban, :engine, :prune_jobs, :start | :stop | :exception]`
   * `[:oban, :engine, :retry_all_jobs, :start | :stop | :exception]`
+  * `[:oban, :engine, :stage_jobs, :start | :stop | :exception]`
 
   | event        | measures       | metadata                                              |
   | ------------ | -------------- | ----------------------------------------------------- |

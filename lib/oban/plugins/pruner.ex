@@ -45,7 +45,7 @@ defmodule Oban.Plugins.Pruner do
 
   use GenServer
 
-  alias Oban.{Config, Engine, Job, Peer, Plugin, Repo, Validation}
+  alias Oban.{Engine, Job, Peer, Plugin, Repo, Validation}
 
   @type option ::
           Plugin.option()
@@ -126,10 +126,8 @@ defmodule Oban.Plugins.Pruner do
   defp check_leadership_and_delete_jobs(state) do
     if Peer.leader?(state.conf) do
       Repo.transaction(state.conf, fn ->
-        conf = with_compatible_engine(state.conf)
-        opts = [limit: state.limit, max_age: state.max_age]
-
-        {:ok, jobs} = Engine.prune_jobs(conf, Job, opts)
+        {:ok, jobs} =
+          Engine.prune_jobs(state.conf, Job, limit: state.limit, max_age: state.max_age)
 
         %{pruned_count: length(jobs), pruned_jobs: jobs}
       end)
@@ -140,15 +138,5 @@ defmodule Oban.Plugins.Pruner do
 
   defp schedule_prune(state) do
     %{state | timer: Process.send_after(self(), :prune, state.interval)}
-  end
-
-  # External engines aren't guaranteed to implement prune_jobs/3, but we can assume they were
-  # built for Postgres and safely fall back to the Basic engine.
-  defp with_compatible_engine(%{engine: engine} = conf) do
-    if function_exported?(engine, :prune_jobs, 3) do
-      conf
-    else
-      %Config{conf | engine: Oban.Engines.Basic}
-    end
   end
 end

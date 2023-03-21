@@ -116,6 +116,24 @@ defmodule Oban.Engines.Lite do
   end
 
   @impl Engine
+  def stage_jobs(%Config{} = conf, queryable, opts) do
+    limit = Keyword.fetch!(opts, :limit)
+
+    select_query =
+      queryable
+      |> where([j], j.state in ["scheduled", "retryable"])
+      |> where([j], j.scheduled_at <= ^DateTime.utc_now())
+      |> limit(^limit)
+      |> select([j], map(j, [:id, :queue, :state, :worker]))
+
+    staged = Repo.all(conf, select_query)
+
+    Repo.update_all(conf, where(Job, [j], j.id in ^Enum.map(staged, & &1.id)), set: [state: "available"])
+
+    {:ok, staged}
+  end
+
+  @impl Engine
   def prune_jobs(%Config{} = conf, queryable, opts) do
     max_age = Keyword.fetch!(opts, :max_age)
     limit = Keyword.fetch!(opts, :limit)

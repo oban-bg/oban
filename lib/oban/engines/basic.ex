@@ -117,6 +117,30 @@ defmodule Oban.Engines.Basic do
   end
 
   @impl Engine
+  def stage_jobs(%Config{} = conf, queryable, opts) do
+    limit = Keyword.fetch!(opts, :limit)
+
+    subquery =
+      queryable
+      |> select([:id, :state])
+      |> where([j], j.state in ["scheduled", "retryable"])
+      |> where([j], not is_nil(j.queue))
+      |> where([j], j.priority in [0, 1, 2, 3])
+      |> where([j], j.scheduled_at <= ^DateTime.utc_now())
+      |> limit(^limit)
+      |> lock("FOR UPDATE SKIP LOCKED")
+
+    query =
+      Job
+      |> join(:inner, [j], x in subquery(subquery), on: j.id == x.id)
+      |> select([j, x], %{id: j.id, queue: j.queue, state: x.state, worker: j.worker})
+
+    {_count, staged} = Repo.update_all(conf, query, set: [state: "available"])
+
+    {:ok, staged}
+  end
+
+  @impl Engine
   def prune_jobs(%Config{} = conf, queryable, opts) do
     max_age = Keyword.fetch!(opts, :max_age)
     limit = Keyword.fetch!(opts, :limit)

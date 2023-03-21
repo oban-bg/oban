@@ -3,18 +3,9 @@ defmodule Oban.Stager do
 
   use GenServer
 
-  import Ecto.Query,
-    only: [
-      distinct: 2,
-      join: 5,
-      limit: 2,
-      lock: 2,
-      select: 2,
-      select: 3,
-      where: 3
-    ]
+  import Ecto.Query, only: [distinct: 2, select: 3, where: 3]
 
-  alias Oban.{Job, Notifier, Peer, Plugin, Repo}
+  alias Oban.{Engine, Job, Notifier, Peer, Plugin, Repo}
 
   require Logger
 
@@ -112,36 +103,19 @@ defmodule Oban.Stager do
     leader? = Peer.leader?(state.conf)
 
     Repo.transaction(state.conf, fn ->
-      counts = stage_scheduled(state, leader?: leader?)
+      {:ok, staged} = stage_scheduled(state, leader?: leader?)
 
       notify_queues(state, leader?: leader?)
 
-      counts
+      %{staged_count: length(staged), staged_jobs: staged}
     end)
   end
 
   defp stage_scheduled(state, leader?: true) do
-    subquery =
-      Job
-      |> select([:id, :state])
-      |> where([j], j.state in ["scheduled", "retryable"])
-      |> where([j], not is_nil(j.queue))
-      |> where([j], j.priority in [0, 1, 2, 3])
-      |> where([j], j.scheduled_at <= ^DateTime.utc_now())
-      |> limit(^state.limit)
-      |> lock("FOR UPDATE SKIP LOCKED")
-
-    query =
-      Job
-      |> join(:inner, [j], x in subquery(subquery), on: j.id == x.id)
-      |> select([j, x], %{id: j.id, queue: j.queue, state: x.state, worker: j.worker})
-
-    {staged_count, staged} = Repo.update_all(state.conf, query, set: [state: "available"])
-
-    %{staged_count: staged_count, staged_jobs: staged}
+    Engine.stage_jobs(state.conf, Job, limit: state.limit)
   end
 
-  defp stage_scheduled(_state, _leader), do: 0
+  defp stage_scheduled(_state, _leader), do: {:ok, []}
 
   defp notify_queues(%State{conf: conf, mode: :global}, leader?: true) do
     query =

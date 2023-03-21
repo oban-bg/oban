@@ -79,6 +79,11 @@ defmodule Oban.Engine do
               Multi.t()
 
   @doc """
+  Transition scheduled or retryable jobs to available prior to execution.
+  """
+  @callback stage_jobs(conf(), queryable(), opts()) :: {:ok, [Job.t()]}
+
+  @doc """
   Fetch available jobs for the given queue, up to configured limits.
   """
   @callback fetch_jobs(conf(), meta(), running()) :: {:ok, {meta(), [Job.t()]}} | {:error, term()}
@@ -133,7 +138,7 @@ defmodule Oban.Engine do
   """
   @callback retry_all_jobs(conf(), queryable()) :: {:ok, [Job.t()]}
 
-  @optional_callbacks [insert_all_jobs: 5, insert_job: 5, prune_jobs: 3]
+  @optional_callbacks [insert_all_jobs: 5, insert_job: 5, prune_jobs: 3, stage_jobs: 3]
 
   @doc false
   def init(%Config{} = conf, [_ | _] = opts) do
@@ -217,8 +222,19 @@ defmodule Oban.Engine do
   end
 
   @doc false
-  def prune_jobs(%Config{} = conf, queryable, opts) when is_list(opts) do
-    # Pruning telemetry data is also exposed through the Pruner plugin.
+  def stage_jobs(%Config{} = conf, queryable, opts) do
+    conf = with_compatible_engine(conf, :stage_jobs)
+
+    with_span(:stage_jobs, conf, fn engine ->
+      {:ok, jobs} = engine.stage_jobs(conf, queryable, opts)
+      {:meta, {:ok, jobs}, %{jobs: jobs}}
+    end)
+  end
+
+  @doc false
+  def prune_jobs(%Config{} = conf, queryable, opts) do
+    conf = with_compatible_engine(conf, :prune_jobs)
+
     with_span(:prune_jobs, conf, fn engine ->
       {:ok, jobs} = engine.prune_jobs(conf, queryable, opts)
       {:meta, {:ok, jobs}, %{jobs: jobs}}
@@ -303,5 +319,15 @@ defmodule Oban.Engine do
           {result, base_meta}
       end
     end)
+  end
+
+  # External engines aren't guaranteed to implement stage_jobs/3 or prune_jobs/3, but we can
+  # assume they were built for Postgres and safely fall back to the Basic engine.
+  defp with_compatible_engine(%{engine: engine} = conf, function) do
+    if function_exported?(engine, function, 3) do
+      conf
+    else
+      %Config{conf | engine: Oban.Engines.Basic}
+    end
   end
 end
