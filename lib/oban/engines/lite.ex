@@ -128,7 +128,9 @@ defmodule Oban.Engines.Lite do
 
     staged = Repo.all(conf, select_query)
 
-    Repo.update_all(conf, where(Job, [j], j.id in ^Enum.map(staged, & &1.id)), set: [state: "available"])
+    Repo.update_all(conf, where(Job, [j], j.id in ^Enum.map(staged, & &1.id)),
+      set: [state: "available"]
+    )
 
     {:ok, staged}
   end
