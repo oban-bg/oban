@@ -115,7 +115,7 @@ defmodule Oban.Testing do
   """
   @moduledoc since: "0.3.0"
 
-  import ExUnit.Assertions, only: [assert: 2, refute: 2]
+  import ExUnit.Assertions, only: [assert: 2, refute: 2, flunk: 1]
   import Ecto.Query, only: [order_by: 2, select: 2, where: 2, where: 3]
 
   alias Ecto.Changeset
@@ -287,17 +287,19 @@ defmodule Oban.Testing do
   @doc since: "0.3.0"
   @spec assert_enqueued(repo :: module(), opts :: Keyword.t()) :: true
   def assert_enqueued(repo, [_ | _] = opts) do
-    error_message = """
-    Expected a job matching:
+    if job_exists?(repo, opts) do
+      true
+    else
+      flunk("""
+      Expected a job matching:
 
-    #{inspect_opts(opts)}
+      #{inspect_opts(opts)}
 
-    to be enqueued in the #{inspect(opts[:prefix])} schema. Instead found:
+      to be enqueued in the #{inspect(opts[:prefix])} schema. Instead found:
 
-    #{inspect(available_jobs(repo, opts), pretty: true)}
-    """
-
-    assert job_exists?(repo, opts), error_message
+      #{inspect(available_jobs(repo, opts), pretty: true)}
+      """)
+    end
   end
 
   @doc """
