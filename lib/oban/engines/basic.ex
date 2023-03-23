@@ -132,7 +132,6 @@ defmodule Oban.Engines.Basic do
       |> where([j], j.priority in [0, 1, 2, 3])
       |> where([j], j.scheduled_at <= ^DateTime.utc_now())
       |> limit(^limit)
-      |> lock("FOR UPDATE SKIP LOCKED")
 
     query =
       Job
