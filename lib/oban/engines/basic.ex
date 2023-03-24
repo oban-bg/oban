@@ -90,7 +90,7 @@ defmodule Oban.Engines.Basic do
       |> select([:id])
       |> where([j], j.state == "available")
       |> where([j], j.queue == ^meta.queue)
-      |> order_by([j], asc: j.priority, asc: j.scheduled_at, asc: j.id)
+      |> order_by(asc: :priority, asc: :scheduled_at, asc: :id)
       |> limit(^demand)
       |> lock("FOR UPDATE SKIP LOCKED")
 
@@ -155,7 +155,6 @@ defmodule Oban.Engines.Basic do
       |> or_where([j], j.state == "cancelled" and j.cancelled_at < ^time)
       |> or_where([j], j.state == "discarded" and j.discarded_at < ^time)
       |> limit(^limit)
-      |> lock("FOR UPDATE SKIP LOCKED")
 
     query =
       Job
