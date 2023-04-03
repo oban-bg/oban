@@ -250,7 +250,7 @@ defmodule Oban do
       Oban.whereis({:oban, 1})
   """
   @doc since: "2.2.0"
-  @spec whereis(name()) :: pid() | nil
+  @spec whereis(name()) :: pid() | {atom(), node()} | nil
   def whereis(name), do: Registry.whereis(name)
 
   @impl Supervisor

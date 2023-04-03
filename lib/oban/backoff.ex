@@ -25,7 +25,7 @@ defmodule Oban.Backoff do
       iex> Oban.Backoff.exponential(11)
       1024
   """
-  @spec exponential(pos_integer(), opts :: keyword()) :: pos_integer()
+  @spec exponential(pos_integer(), opts :: keyword()) :: number()
   def exponential(attempt, opts \\ []) do
     max_pow = Keyword.get(opts, :max_pow, 10)
     min_pad = Keyword.get(opts, :min_pad, 0)
@@ -51,7 +51,7 @@ defmodule Oban.Backoff do
       ...> jitter in 180..200
       true
   """
-  @spec jitter(time :: pos_integer(), mode: jitter_mode(), mult: float()) :: pos_integer()
+  @spec jitter(time :: pos_integer(), mode: jitter_mode(), mult: float()) :: number()
   def jitter(time, opts \\ []) do
     mode = Keyword.get(opts, :mode, :both)
     mult = Keyword.get(opts, :mult, 0.1)

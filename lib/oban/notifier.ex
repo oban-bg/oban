@@ -216,6 +216,8 @@ defmodule Oban.Notifier do
     if in_scope?(decoded, conf) do
       for pid <- listeners, do: send(pid, {:notification, channel, decoded})
     end
+
+    :ok
   end
 
   defp encode(payload) do

@@ -81,7 +81,7 @@ defmodule Oban.Registry do
 
       Oban.Registry.whereis(Oban, {:producer, "default"})
   """
-  @spec whereis(Oban.name(), role()) :: pid() | nil
+  @spec whereis(Oban.name(), role()) :: pid() | {atom(), node()} | nil
   def whereis(oban_name, role \\ nil) do
     oban_name
     |> via(role)

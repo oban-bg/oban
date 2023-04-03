@@ -30,7 +30,7 @@ defmodule Oban.MixProject do
       dialyzer: [
         plt_add_apps: [:ex_unit, :postgrex],
         plt_core_path: "_build/#{Mix.env()}",
-        flags: [:error_handling, :underspecs]
+        flags: [:error_handling, :missing_return, :underspecs]
       ],
 
       # Docs

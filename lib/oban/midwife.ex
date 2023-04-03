@@ -18,7 +18,7 @@ defmodule Oban.Midwife do
     GenServer.start_link(__MODULE__, opts, name: name)
   end
 
-  @spec start_queue(Config.t(), Keyword.t()) :: Supervisor.on_start_child()
+  @spec start_queue(Config.t(), Keyword.t()) :: DynamicSupervisor.on_start_child()
   def start_queue(conf, opts) when is_list(opts) do
     queue =
       opts
