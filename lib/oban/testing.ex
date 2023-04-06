@@ -297,7 +297,7 @@ defmodule Oban.Testing do
 
       to be enqueued in the #{inspect(opts[:prefix])} schema. Instead found:
 
-      #{inspect(available_jobs(repo, opts), pretty: true)}
+      #{inspect(available_jobs(repo, opts), charlists: :as_lists, pretty: true)}
       """)
     end
   end
@@ -411,7 +411,7 @@ defmodule Oban.Testing do
     opts
     |> Map.new()
     |> Map.drop([:prefix])
-    |> inspect(pretty: true)
+    |> inspect(charlists: :as_lists, pretty: true)
   end
 
   # Perform Helpers
