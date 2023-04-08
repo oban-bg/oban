@@ -29,6 +29,24 @@ defmodule Oban.Notifiers.PG do
   * For compatibility, message payloads are always serialized to JSON before
     broadcast and deserialized before relay to local processes.
 
+  ## Migrating from `Oban.Notifiers.Postgres`
+
+  When migrating from `Oban.Notifiers.Postgres` you may want to remove
+  `oban_notify` trigger. To do so, you could use the following migration:
+
+  ```elixir
+  defmodule MyApp.Repo.Migrations.DropObanJobsNotifyTrigger do
+    use Ecto.Migration
+
+    def change do
+      execute(
+        "DROP TRIGGER IF EXISTS oban_notify ON public.oban_jobs",
+        "CREATE TRIGGER oban_notify AFTER INSERT ON public.oban_jobs FOR EACH ROW EXECUTE PROCEDURE public.oban_jobs_notify()"
+      )
+    end
+  end
+  ```
+
   [de]: https://elixir-lang.org/getting-started/mix-otp/distributed-tasks.html#our-first-distributed-code
   """
 
