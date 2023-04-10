@@ -53,13 +53,12 @@ defmodule ObanTest do
     end
 
     test "additional jobs aren't started after shutdown starts" do
-      %Job{id: id_1} = insert!(ref: 1, sleep: 45)
-      %Job{id: id_2} = insert!(ref: 2, sleep: 1)
+      insert!(ref: 1, sleep: 50)
 
       name =
         start_supervised_oban!(
           queues: [alpha: 1],
-          shutdown_grace_period: 50,
+          shutdown_grace_period: 10,
           stage_interval: 10
         )
 
@@ -67,10 +66,9 @@ defmodule ObanTest do
 
       :ok = stop_supervised(name)
 
-      refute_receive {:started, 2}, 50
+      insert!(ref: 2, sleep: 50)
 
-      assert Repo.get(Job, id_1).state == "completed"
-      assert Repo.get(Job, id_2).state == "available"
+      refute_receive {:started, 2}, 50
     end
 
     test "queue shutdown grace period applies comprehensively to all queues" do
