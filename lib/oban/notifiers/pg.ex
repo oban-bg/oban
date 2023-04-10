@@ -31,8 +31,8 @@ defmodule Oban.Notifiers.PG do
 
   ## Migrating from `Oban.Notifiers.Postgres`
 
-  When migrating from `Oban.Notifiers.Postgres` you may want to remove
-  `oban_notify` trigger. To do so, you could use the following migration:
+  After switching from `Oban.Notifiers.Postgres`, you may remove the unused `oban_notify` trigger.
+  Use the following migration to drop the trigger while retaining the `oban_jobs_notify` function:
 
   ```elixir
   defmodule MyApp.Repo.Migrations.DropObanJobsNotifyTrigger do
