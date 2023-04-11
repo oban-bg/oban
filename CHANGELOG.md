@@ -1,191 +1,110 @@
-# Changelog for Oban v2.14
+# Changelog for Oban v2.15
 
 _🌟 Looking for changes to Web or Pro? Check the [Oban.Pro Changelog][opc] or
 the [Oban.Web Changelog][owc]. 🌟_
 
-Time marches on, and we minimally support Elixir 1.12+, PostgreSQL 12+, and SQLite 3.37.0+
+## 🗜️ Notification Compression
 
-## 🪶 SQLite3 Support with the Lite Engine
+Oban uses notifications across most core functionality, from job staging to cancellation. Some
+notifications, such as gossip, contain massive redundancy that compresses nicely. For example,
+this table breaks down the compression ratios for a fairly standard gossip payload
+containing data from ten queues:
 
-Increasingly, developers are choosing SQLite for small to medium-sized projects, not just in the
-embedded space where it's had utility for many years. Many of Oban's features, such as isolated
-queues, scheduling, cron, unique jobs, and observability, are valuable in smaller or embedded
-environments. That's why we've added a new SQLite3 storage engine to bring Oban to smaller,
-stand-alone, or embedded environments where PostgreSQL isn't ideal (or possible).
+| Mode      | Bytes | % of Original |
+| --------- | ----- | ------------- |
+| Original  | 4720  | 100%          |
+| Gzip      | 307   |   7%          |
+| Encode 64 | 412   |   9%          |
 
-There's frighteningly little configuration needed to run with SQLite3. Migrations, queues, and
-plugins all "Just Work™".
+Minimizing notification payloads is especially important for Postgres because it applies an 8kb
+limit to all messages. Now all pub/sub notifications are compressed automatically, with a safety
+mechanism for compatibility with external notifiers, namely Postgres triggers.
 
-To get started, add the `ecto_sqlite3` package to your deps and configure Oban to use the
-`Oban.Engines.Lite` engine:
+## 🗃️ Query Improvements
 
-```elixir
-config :my_app, Oban,
-  engine: Oban.Engines.Lite,
-  queues: [default: 10],
-  repo: MyApp.Repo
-```
+There has been an ongoing issue with systems recording a job attempt twice, when it only executed
+once. While that sounds minor, it could break an entire queue when the attempt exceeded max
+attempts because it would violate a database constraint.
 
-Presto! Run the migrations, include Oban in your application's supervision tree, and then start
-inserting and executing jobs as normal.
+Apparently, the Postgres planner may choose to generate a plan that executes a nested loop over
+the LIMITing subquery, causing more UPDATEs than LIMIT. That could cause unexpected updates,
+including attempts > max_attempts in some cases. The solution is to use a CTE as an "optimization
+fence" that forces Postgres _not_ to optimize the query.
 
-⚠️ SQLite3 support is new, and while not experimental, there may be sharp edges. Please report any
-issues or gaps in documentation.
+We also worked in a few additional query improvements:
 
-## 👩‍🔬 Smarter Job Fetching
+* Use an index only scan for job staging to safely handle tables with millions of scheduled jobs.
+* Remove unnecessary row locking from staging and pruning queries.
 
-The most common cause of "jobs not processing" is when PubSub isn't available. Our troubleshooting
-section instructed people to investigate their PubSub and optionally include the `Repeater`
-plugin. That kind of manual remediation isn't necessary now! Instead, we automatically switch back
-to local polling mode when PubSub isn't available—if it is a temporary glitch, then fetching
-returns to the optimized global mode after the next health check.
+## 🪶 New Engine Callbacks for SQL Compatibility
 
-Along with smarter fetching, `Stager` is no longer a plugin. It wasn't ever _really_ a plugin, as
-it's core to Oban's operation, but it was treated as a plugin to simplify configuration and
-testing. If you're in the minority that tweaked the staging interval, don't worry, the existing
-plugin configuration is automatically translated for backward compatibility. However, if you're a
-stickler for avoiding deprecated options, you can switch to the top-level `stage_interval`:
+We're pleased to share improvements in Oban's SQLite integration. A few SQLite pioneers identified
+pruning and staging compatibility bugs, and instead of simply patching around the issues with
+conditional logic, we tackled them with new engine callbacks: `stage_jobs/3` and `prune_jobs/3`.
+The result is safer, optimized queries for each specific database.
 
-```diff
-config :my_app, Oban,
-  queues: [default: 10],
-- plugins: [{Stager, interval: 5_000}]
-+ stage_interval: 5_000
-```
+Introducing new engine callbacks with database-specific queries paves the way for working with
+other databases. There's even an [open issue for MySQL support][mysql]...
 
-## 📡 Comprehensive Telemetry Data
+[mysql]: https://github.com/sorentwo/oban/issues/836
 
-Oban has exposed telemetry data that allows you to collect and track metrics about jobs and queues
-since the very beginning. Telemetry events followed a job's lifecycle from insertion through
-execution. Still, there were holes in the data—it wasn't possible to track the exact state of your
-entire Oban system through telemetry data.
-
-Now that's changed. All operations that change job state, whether inserting, deleting, scheduling,
-or processing jobs report complete state-change events for _every_ job including `queue`, `state`,
-and `worker` details. Even bulk operations such as `insert_all_jobs`, `cancel_all_jobs`, and
-`retry_all_jobs` return a subset of fields for _all modified jobs_, rather than a simple count.
-
-See the [2.14 upgrade guide](v2-14.html) for step-by-step instructions (all two of them).
-
-## v2.14.2 — 2023-02-17
-
-### Bug Fixes
-
-- [Oban] Always disable peering with `plugins: false`. There's no reason to
-  enable peering when plugins are fully disabled.
-
-- [Notifier] Notify `Global` peers when the leader terminates.
-
-  Now the `Global` leader sends a `down` message to all connected nodes when the
-  process terminates cleanly. This behaviour prevents up to 30s of downtime
-  without a leader and matches how the Postgres peer operates.
-
-- [Notifier] Allow compiliation in a SQLite application when the `postgrex`
-  package isn't available.
-
-- [Engine] Include `jobs` in `fetch_jobs` event metadata
-
-### Changes
-
-- [Notifier] Pass `pid` in instead of relying on `from` for Postgres notifications.
-
-  This prepares Oban for the upcoming `Postgrex.SimpleConnection` switch to use
-  `gen_statem`.
-
-## v2.14.1 — 2023-01-26
-
-### Bug Fixes
-
-- [Repo] Prevent logging SQL queries by correctly handling default opts
-
-  The query dispatch call included opts in the args list, rather than
-  separately. That passed options to `Repo.query` correctly, but it missed any
-  default options such as `log: false`, which made for noisy development logs.
-
-## v2.14.0 — 2023-01-25
+## v2.15.0 — 2023-04-13
 
 ### Enhancements
 
-- [Oban] Store a `{:cancel, :shutdown}` error and emit `[:oban, :job, :stop]` telemetry when jobs
-  are manually cancelled with `cancel_job/1` or `cancel_all_jobs/1`.
+- [Oban] Use DynamicSupervisor to supervise queues for optimal shutdown
 
-- [Oban] Include "did you mean" suggestions for `Oban.start_link/1` and all nested plugins when a
-  similar option is available.
+  Standard supervisors shut down in a fixed order, which could make shutting down queues with
+  active jobs and a lengthy grace period very slow. This switches to a `DynamicSupervisor` for
+  queue supervision so queues can shut down simultaneously while still respecting the grace
+  period.
 
-  ```
-  Oban.start_link(rep: MyApp.Repo, queues: [default: 10])
-  ** (ArgumentError) unknown option :rep, did you mean :repo?
-      (oban 2.14.0-dev) lib/oban/validation.ex:46: Oban.Validation.validate!/2
-      (oban 2.14.0-dev) lib/oban/config.ex:88: Oban.Config.new/1
-      (oban 2.14.0-dev) lib/oban.ex:227: Oban.start_link/1
-      iex:1: (file)
-  ```
+- [Executor] Retry acking infinitely after job execution
 
-- [Oban] Support scoping queue actions to a particular node.
+  After jobs execute the producer must record their status in the database. Previously, if acking
+  failed due to a connection error after 10 retries it would orphan the job. Now, acking retries
+  infinitely (with backoff) until the function succeeds. The result is stronger execution
+  guarantees with backpressure during periods of database fragility.
 
-  In addition to scoping to the current node with `:local_only`, it is now possible to scope
-  `pause`, `resume`, `scale`, `start`, and `stop` queues on a single node using the `:node`
-  option.
+- [Oban] Accept a `Job` struct as well as a job id for `cancel_job/1` and `retry_job/1`
 
-  ```elixir
-  Oban.scale_queue(queue: :default, node: "worker.123")
-  ```
+  Now it's possible to write `Oban.cancel_job(job)` directly, rather than
+  `Oban.cancel_job(job.id)`.
 
-- [Oban] Remove `retry_job/1` and `retry_all_jobs/1` restriction around retrying `scheduled` jobs.
+- [Worker] Allow snoozing jobs for zero seconds.
 
-- [Job] Restrict `replace` option to specific states when unique job's have a conflict.
+  Returning `{:snooze, 0}` immediately reschedules a job without any delay.
 
-  ```elixir
-  # Replace the scheduled time only if the job is still scheduled
-  SomeWorker.new(args, replace: [scheduled: [:schedule_in]], schedule_in: 60)
+- [Notifier] Accept arbitrary channel names for notifications, e.g. "my-channel" 
 
-  # Change the args only if the job is still available
-  SomeWorker.new(args, replace: [available: [:args]])
-  ```
+- [Telemetry] Add 'detach_default_logger/0' to programmatically disable an attached logger.
 
-- [Job] Introduce `format_attempt/1` helper to standardize error and attempt formatting
-  across engines
+- [Testing] Avoid unnecessary query for "happy path" assertion errors in `assert_enqueued/2`
 
-- [Repo] Wrap _nearly_ all `Ecto.Repo` callbacks.
+- [Testing] Inspect charlists as lists in testing assertions
 
-  Now every `Ecto.Repo` callback, aside from a handful that are only used to manage a `Repo`
-  instance, are wrapped with code generation that omits any typespecs. Slight inconsistencies
-  between the wrapper's specs and `Ecto.Repo`'s own specs caused dialyzer failures when nothing
-  was genuinely broken. Furthermore, many functions were missing because it was tedious to
-  manually define every wrapper function.
-
-- [Peer] Emit telemetry events for peer leadership elections.
-
-  Both peer modules, `Postgres` and `Global`, now emit `[:oban, :peer, :election]` events during
-  leader election. The telemetry meta includes a `leader?` field for start and stop events to
-  indicate if a leadership change took place.
-
-- [Notifier] Allow passing a single channel to `listen/2` rather than a list.
-
-- [Registry] Add `lookup/2` for conveniently fetching registered `{pid, value}` pairs.
+  Args frequently contain lists of integers like `[123]`, which was curiously displayed as `'{'`.
 
 ### Bug Fixes
 
-- [Basic] Capture `StaleEntryError` on unique replace.
+- [Executor] Correctly raise "unknown worker" errors.
 
-  Replacing while a job is updated externally, e.g. it starts executing, could occasionally raise
-  an `Ecto.StaleEntryError` within the Basic engine. Now, that exception is translated into an
-  error tuple and bubbles up to the `insert` call site.
+  Unknown workers triggered an unknown case error rather than the appropriate "unknown worker"
+  runtime error.
 
-- [Job] Update `t:Oban.Job/0` to indicate timestamp fields are nullable.
+- [Testing] Allow `assert_enqueued` with a `scheduled_at` time for `available` jobs
 
-### Deprecations
+  The use of `Job.new` to normalize query fields would change assertions with a "scheduled_at"
+  date to _only_ check scheduled, never "available"
 
-- [Stager] Deprecate the `Stager` plugin as it's part of the core supervision tree and may be
-  configured with the top-level `stage_interval` option.
+- [Telemetry] Remove `:worker` from engine and plugin query meta.
 
-- [Repeater] Deprecate the `Repeater` plugin as it's no longer necessary with hybrid staging.
+  The `worker` isn't part of any query indexes and prevents optimal index usage.
 
-- [Migration] Rename `Migrations` to `Migration`, but continue delegating functions for backward
-  compatibility.
+- [Job] Correct priority type to cover default of 0
 
-For changes prior to v2.14 see the [v2.13][prv] docs.
+For changes prior to v2.15 see the [v2.14][prv] docs.
 
 [opc]: https://getoban.pro/docs/pro/changelog.html
 [owc]: https://getoban.pro/docs/web/changelog.html
-[prv]: https://hexdocs.pm/oban/2.13.6/changelog.html
+[prv]: https://hexdocs.pm/oban/2.14.2/changelog.html
