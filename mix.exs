@@ -37,6 +37,7 @@ defmodule Oban.MixProject do
       name: "Oban",
       docs: [
         main: "Oban",
+        api_reference: false,
         logo: "assets/oban-logo.png",
         source_ref: "v#{@version}",
         source_url: @source_url,
@@ -62,8 +63,6 @@ defmodule Oban.MixProject do
 
   defp extras do
     [
-      "CHANGELOG.md",
-
       # Guides
       "guides/installation.md",
       "guides/troubleshooting.md",
@@ -86,7 +85,9 @@ defmodule Oban.MixProject do
       "guides/testing/testing.md",
       "guides/testing/testing_workers.md",
       "guides/testing/testing_queues.md",
-      "guides/testing/testing_config.md"
+      "guides/testing/testing_config.md",
+
+      "CHANGELOG.md": [title: "Changelog"]
     ]
   end
 
