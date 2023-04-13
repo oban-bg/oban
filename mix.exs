@@ -86,7 +86,6 @@ defmodule Oban.MixProject do
       "guides/testing/testing_workers.md",
       "guides/testing/testing_queues.md",
       "guides/testing/testing_config.md",
-
       "CHANGELOG.md": [title: "Changelog"]
     ]
   end
