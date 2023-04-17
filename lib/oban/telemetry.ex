@@ -158,9 +158,9 @@ defmodule Oban.Telemetry do
   * `[:oban, :peer, :election, :start | :stop | :exception]`
 
   | event        | measures       | metadata                                                       |
-  | ------------ | -------------- | -------------------------------------------------------        |
-  | `:start`     | `:system_time` | `:conf`, `:leader`, `:peer`,                        |
-  | `:stop`      | `:duration`    | `:conf`, `:leader`, `:peer`,                        |
+  | ------------ | -------------- | -------------------------------------------------------------- |
+  | `:start`     | `:system_time` | `:conf`, `:leader`, `:peer`,                                   |
+  | `:stop`      | `:duration`    | `:conf`, `:leader`, `:peer`,                                   |
   | `:exception` | `:duration`    | `:conf`, `:leader`, `:peer`, `:kind`, `:reason`, `:stacktrace` |
 
   ### Metadata
@@ -168,6 +168,21 @@ defmodule Oban.Telemetry do
   * `:conf`, `:kind`, `:reason`, `:stacktrace` — see the explanation in notifier metadata above
   * `:leader` — whether the peer is the current leader
   * `:peer` — the module used for peering
+
+  ## Stager Events
+
+  Oban emits an event any time the Stager switches between `local` and `global` modes:
+
+  * `[:oban, :stager, :switch]`
+
+  | event        | measures  | metadata         |
+  | ------------ | --------- | ---------------- |
+  | `:switch`    |           | `:conf`, `:mode` |
+
+  ### Metadata
+
+  * `:conf` — see the explanation in metadata above
+  * `:mode` — either `local` for polling mode or `global` in the more efficient pub-sub mode
 
   ## Default Logger
 
@@ -241,12 +256,12 @@ defmodule Oban.Telemetry do
   @doc """
   Attaches a default structured JSON Telemetry handler for logging.
 
-  This function attaches a handler that outputs logs with the following fields:
+  This function attaches a handler that outputs logs with the following fields for job events:
 
   * `args` — a map of the job's raw arguments
   * `attempt` — the job's execution atttempt
   * `duration` — the job's runtime duration, in the native time unit
-  * `event` — either `job:stop` or `job:exception` depending on reporting telemetry event
+  * `event` — `job:start`, `job:stop`, `job:exception` depending on reporting telemetry event
   * `error` — a formatted error banner, without the extended stacktrace
   * `id` — the job's id
   * `meta` — a map of the job's raw metadata
@@ -258,10 +273,16 @@ defmodule Oban.Telemetry do
   * `tags` — the job's tags
   * `worker` — the job's worker module
 
+  And the following fields for stager events:
+
+  * `event` — always `stager:switch`
+  * `message` — information about the mode switch
+  * `mode` — either `"local"` or `"global"`
+  * `source` — always "oban"
+
   ## Options
 
-  * `:level` — The log level to use for logging output, defaults to `:info`.
-
+  * `:level` — The log level to use for logging output, defaults to `:info`
   * `:encode` — Whether to encode log output as JSON, defaults to `true`
 
   ## Examples
@@ -290,7 +311,8 @@ defmodule Oban.Telemetry do
     events = [
       [:oban, :job, :start],
       [:oban, :job, :stop],
-      [:oban, :job, :exception]
+      [:oban, :job, :exception],
+      [:oban, :stager, :switch]
     ]
 
     opts =
@@ -324,19 +346,18 @@ defmodule Oban.Telemetry do
   @doc false
   @spec handle_event([atom()], map(), map(), Keyword.t()) :: :ok
   def handle_event([:oban, :job, event], measure, meta, opts) do
-    level = Keyword.fetch!(opts, :level)
-
-    Logger.log(level, fn ->
+    log(opts, fn ->
       details = Map.take(meta.job, ~w(attempt args id max_attempts meta queue tags worker)a)
 
-      timing =
+      extra =
         case event do
           :start ->
-            %{system_time: measure.system_time}
+            %{event: "job:start", system_time: measure.system_time}
 
           :stop ->
             %{
               duration: convert(measure.duration),
+              event: "job:stop",
               queue_time: convert(measure.queue_time),
               state: meta.state
             }
@@ -344,17 +365,44 @@ defmodule Oban.Telemetry do
           :exception ->
             %{
               error: Exception.format_banner(meta.kind, meta.reason, meta.stacktrace),
+              event: "job:exception",
               duration: convert(measure.duration),
               queue_time: convert(measure.queue_time),
               state: meta.state
             }
         end
 
-      output =
-        details
-        |> Map.put(:event, "job:#{event}")
-        |> Map.put(:source, "oban")
-        |> Map.merge(timing)
+      Map.merge(details, extra)
+    end)
+  end
+
+  def handle_event([:oban, :stager, :switch], _measure, %{mode: mode}, opts) do
+    log(opts, fn ->
+      case mode do
+        :local ->
+          %{
+            event: "stager:switch",
+            mode: "local",
+            message:
+              "job staging switched to local mode. local mode polls for jobs for every queue; " <>
+                "restore global mode with a functional notifier"
+          }
+
+        :global ->
+          %{
+            event: "stager:switch",
+            mode: "global",
+            message: "job staging switched back to global mode"
+          }
+      end
+    end)
+  end
+
+  defp log(opts, fun) do
+    level = Keyword.fetch!(opts, :level)
+
+    Logger.log(level, fn ->
+      output = Map.put(fun.(), :source, "oban")
 
       if Keyword.fetch!(opts, :encode) do
         Jason.encode_to_iodata!(output)

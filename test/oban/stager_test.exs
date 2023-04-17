@@ -31,8 +31,9 @@ defmodule Oban.StagerTest do
                |> Enum.sort()
     end
 
-    @tag :capture_log
     test "switching to local mode without functional pubsub" do
+      ref = :telemetry_test.attach_event_handlers(self(), [[:oban, :stager, :switch]])
+
       name =
         start_supervised_oban!(
           stage_interval: 2,
@@ -45,6 +46,8 @@ defmodule Oban.StagerTest do
       Registry.register(Oban.Registry, prod_name, nil)
 
       assert_receive {:notification, :insert, %{"queue" => "staging_test"}}
+
+      assert_receive {[:oban, :stager, :switch], ^ref, %{}, %{mode: :local}}
     end
   end
 end

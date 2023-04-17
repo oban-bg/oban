@@ -7,8 +7,6 @@ defmodule Oban.Stager do
 
   alias Oban.{Engine, Job, Notifier, Peer, Plugin, Repo}
 
-  require Logger
-
   @type option :: Plugin.option() | {:interval, pos_integer()}
 
   defmodule State do
@@ -93,7 +91,7 @@ defmodule Oban.Stager do
 
   def handle_info({:notification, :stager, _payload}, %State{} = state) do
     if state.mode == :local do
-      Logger.info("Oban job staging switched back to global mode.")
+      :telemetry.execute([:oban, :stager, :switch], %{}, %{conf: state.conf, mode: :global})
     end
 
     {:noreply, %{state | ping_at_tick: 60, mode: :global, swap_at_tick: 65, tick: 0}}
@@ -154,12 +152,7 @@ defmodule Oban.Stager do
     end
 
     if state.mode == :global and state.tick == state.swap_at_tick do
-      Logger.info("""
-      Oban job staging switched to local mode.
-
-      Local mode places more load on the database because each queue polls for jobs every second.
-      To restore global mode, ensure notifications work or switch to the PG notifier.
-      """)
+      :telemetry.execute([:oban, :stager, :switch], %{}, %{conf: state.conf, mode: :local})
 
       %{state | mode: :local}
     else

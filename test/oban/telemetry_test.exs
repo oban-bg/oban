@@ -138,6 +138,21 @@ defmodule Oban.TelemetryTest do
     Telemetry.detach_default_logger()
   end
 
+  test "the default handler logs stager switch events" do
+    :ok = Telemetry.attach_default_logger(:warn)
+
+    logged =
+      capture_log(fn ->
+        :telemetry.execute([:oban, :stager, :switch], %{}, %{mode: :local})
+      end)
+
+    assert logged =~ ~s("source":"oban")
+    assert logged =~ ~s("event":"stager:switch")
+    assert logged =~ ~s("message":"job staging switched to local mode)
+  after
+    Telemetry.detach_default_logger()
+  end
+
   test "detaching the logger prevents logging" do
     :ok = Telemetry.attach_default_logger(:warn)
 
