@@ -311,10 +311,10 @@ defmodule Oban.Job do
   """
   @doc since: "2.1.0"
   def states, do: @unique_states ++ [:discarded, :cancelled]
-  def states(:up), do: :scheduled, :available, :executing, :retryable
-  def states(:final), do: :completed, :discarded, :cancelled
-  def states(:fail), do: :discarded, :cancelled
-  def states(:waiting), do: :scheduled, :available, :retryable
+  def states(:up), do: [:scheduled, :available, :executing, :retryable]
+  def states(:final), do: [:completed, :discarded, :cancelled]
+  def states(:fail), do: [:discarded, :cancelled]
+  def states(:waiting), do: [:scheduled, :available, :retryable]
 
   @doc """
   Convert a Job changeset into a map suitable for database insertion.
