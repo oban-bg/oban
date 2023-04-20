@@ -49,6 +49,7 @@ defmodule Oban.Plugins.Pruner do
 
   @type option ::
           Plugin.option()
+          | {:interval, pos_integer()}
           | {:limit, pos_integer()}
           | {:max_age, pos_integer()}
 
