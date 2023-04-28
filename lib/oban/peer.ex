@@ -27,6 +27,14 @@ defmodule Oban.Peer do
   * `Oban.Peers.Global` — coordinates global locks through distributed Erlang, requires
     distributed Erlang.
 
+  You can specify the peering module to use in your Oban configuration:
+
+      config :my_app, Oban,
+        peer: Oban.Peers.Postgres, # default value
+        ...
+
+  If in doubt, you can call `Oban.config()` to see which module is being used.
+
   ## Examples
 
   Check leadership for the default Oban instance:
