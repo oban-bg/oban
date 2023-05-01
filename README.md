@@ -430,6 +430,17 @@ a job by assigning a numerical `priority`.
   priority. Within a particular priority jobs are executed in their scheduled
   order.
 
+#### Caveats & Guidelines
+
+The default priority is defined in the jobs table. The least intrusive way to
+change it for all jobs is to change the column default:
+
+```elixir
+alter table("oban_jobs") do
+  modify :priority, :integer, default: 1, from: {:integer, default: 0}
+end
+```
+
 ## Unique Jobs
 
 The unique jobs feature lets you specify constraints to prevent enqueueing
