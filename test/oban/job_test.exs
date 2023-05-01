@@ -128,7 +128,7 @@ defmodule Oban.JobTest do
   end
 
   describe "to_map/1" do
-    @keys_with_defaults ~w(args attempt errors max_attempts meta priority queue state tags)a
+    @keys_with_defaults ~w(args attempt errors max_attempts meta queue state tags)a
 
     defp to_keys(opts) do
       %{}
