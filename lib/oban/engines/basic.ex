@@ -106,6 +106,7 @@ defmodule Oban.Engines.Basic do
       |> with_cte("subset", as: ^subset_query)
       |> join(:inner, [j], x in fragment(~s("subset")), on: true)
       |> where([j, x], j.id == x.id)
+      |> where([j, _], j.attempt < j.max_attempts)
       |> select([j, _], j)
 
     updates = [
