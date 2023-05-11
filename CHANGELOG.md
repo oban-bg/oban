@@ -48,6 +48,27 @@ other databases. There's even an [open issue for MySQL support][mysql]...
 
 [mysql]: https://github.com/sorentwo/oban/issues/836
 
+## v2.15.1 — 2023-05-11
+
+### Enhancements
+
+- [Telemetry] Add `[:oban, :stager, :switch]` telemetry event and use it for logging changes.
+
+  Aside from an instrumentable event, the new logs are structured for consistent parsing on
+  external aggregators.
+
+- [Job] Remove default priority from job schema to allow changing defaults through the database
+    
+### Bug Fixes
+
+- [Basic] Restore `attempt < max_attempts` condition when fetching jobs
+
+  In some situations, a condition to ensure the attempts don't exceed max attempts is still
+  necessary. By checking the attempts _outside_ the CTE we maintain optimal query performance for
+  the large scan that finds jobs, and only apply the check in the small outer query.
+
+- [Pruner] Add missing `:interval` to `t:Oban.Plugins.Pruner.option/0`
+
 ## v2.15.0 — 2023-04-13
 
 ### Enhancements
