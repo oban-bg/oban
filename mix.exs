@@ -142,6 +142,7 @@ defmodule Oban.MixProject do
     [
       maintainers: ["Parker Selbert"],
       licenses: ["Apache-2.0"],
+      files: ~w(lib .formatter.exs mix.exs README* CHANGELOG* LICENSE*),
       links: %{
         Website: "https://getoban.pro",
         Changelog: "#{@source_url}/blob/main/CHANGELOG.md",
