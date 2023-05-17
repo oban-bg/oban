@@ -81,8 +81,9 @@ defmodule Oban.Notifiers.PG do
 
   @impl Notifier
   def notify(server, channel, payload) do
-    with %State{} = state <- GenServer.call(server, :get_state),
-         [_ | _] = pids <- members(state.conf.prefix) do
+    with %State{conf: conf} <- get_state(server) do
+      pids = :pg.get_members(__MODULE__, conf.prefix)
+
       for pid <- pids, message <- payload_to_messages(channel, payload) do
         send(pid, message)
       end
@@ -95,11 +96,25 @@ defmodule Oban.Notifiers.PG do
   def init(opts) do
     state = struct!(State, opts)
 
-    start_pg()
+    put_state(state)
 
-    :ok = join(state.conf.prefix)
+    :pg.start_link(__MODULE__)
+    :pg.join(__MODULE__, state.conf.prefix, self())
 
     {:ok, state}
+  end
+
+  defp put_state(state) do
+    Registry.update_value(Oban.Registry, {state.conf.name, Oban.Notifier}, fn _ -> state end)
+  end
+
+  defp get_state(server) do
+    [name] = Registry.keys(Oban.Registry, server)
+
+    case Oban.Registry.lookup(name) do
+      {_pid, state} -> state
+      nil -> :error
+    end
   end
 
   @impl GenServer
@@ -125,8 +140,6 @@ defmodule Oban.Notifiers.PG do
     {:reply, :ok, %{state | listeners: listeners}}
   end
 
-  def handle_call(:get_state, _from, state), do: {:reply, state, state}
-
   @impl GenServer
   def handle_info({:notification, channel, payload}, %State{} = state) do
     listeners = for {pid, channels} <- state.listeners, channel in channels, do: pid
@@ -138,37 +151,6 @@ defmodule Oban.Notifiers.PG do
 
   def handle_info(_message, state) do
     {:noreply, state}
-  end
-
-  ## PG Helpers
-
-  if Code.ensure_loaded?(:pg) do
-    defp start_pg do
-      :pg.start_link(__MODULE__)
-    end
-
-    defp members(prefix) do
-      :pg.get_members(__MODULE__, prefix)
-    end
-
-    defp join(prefix) do
-      :ok = :pg.join(__MODULE__, prefix, self())
-    end
-  else
-    defp start_pg, do: :ok
-
-    defp members(prefix) do
-      :pg2.get_members(namespace(prefix))
-    end
-
-    defp join(prefix) do
-      namespace = namespace(prefix)
-
-      :ok = :pg2.create(namespace)
-      :ok = :pg2.join(namespace, self())
-    end
-
-    defp namespace(prefix), do: {:oban, prefix}
   end
 
   ## Message Helpers
