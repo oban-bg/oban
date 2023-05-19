@@ -72,7 +72,7 @@ defmodule MyApp.Plugins.Breakdown do
     {:noreply, schedule_poll(state)}
   end
 
-  defp schedule_poll(%{interval: interval}) do
+  defp schedule_poll(%{interval: interval} = state) do
     Process.send_after(self(), :poll, interval)
 
     state
