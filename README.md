@@ -975,6 +975,35 @@ init, allowing jobs to process as expected.
 
 [dynamic]: https://hexdocs.pm/ecto/replicas-and-dynamic-repositories.html#dynamic-repositories
 
+### Ecto Multi-tenancy
+
+If you followed the Ecto guide on setting up multi-tenancy with foreign keys, you need to add an
+exception for queries originating from Oban. All of Oban's queries have the custom option `oban:
+true` to help you identify them in `prepare_query/3` or other instrumentation:
+
+```elixir
+# Sample code, only relevant if you followed the Ecto guide on multi tenancy with foreign keys.
+defmodule MyApp.Repo do
+  use Ecto.Repo, otp_app: :my_app
+
+  require Ecto.Query
+
+  @impl true
+  def prepare_query(_operation, query, opts) do
+    cond do
+      opts[:skip_org_id] || opts[:schema_migration] || opts[:oban] ->
+        {query, opts}
+
+      org_id = opts[:org_id] ->
+        {Ecto.Query.where(query, org_id: ^org_id), opts}
+
+      true ->
+        raise "expected org_id or skip_org_id to be set"
+    end
+  end
+end
+```
+
 <!-- MDOC -->
 
 ## Community
