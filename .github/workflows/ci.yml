@@ -20,12 +20,12 @@ jobs:
         include:
           - pair:
               elixir: '1.12'
-              otp: '22.3'
+              otp: '23.3'
               postgres: '12.13-alpine'
             exclude_tags: 'lite'
           - pair:
               elixir: '1.14'
-              otp: '25.2'
+              otp: '26.0'
               postgres: '15.1-alpine'
             exclude_tags: 'gossip'
             lint: lint
