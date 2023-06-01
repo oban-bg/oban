@@ -1013,12 +1013,14 @@ There are a few places to connect and communicate with other Oban users:
 - [Request an invitation][invite] and join the *#oban* channel on [Slack][slack]
 - Ask questions and discuss Oban on the [Elixir Forum][forum]
 - Learn about bug reports and upcoming features in the [issue tracker][issues]
-- Follow @sorentwo [genserver.social][social] (Mastodon)
+- Follow [@sorentwo][twitter] (Twitter)
+- Follow [@sorentwo@genserver.social][social] (Mastodon)
 
 [invite]: https://elixir-slackin.herokuapp.com/
 [slack]: https://elixir-lang.slack.com/
 [forum]: https://elixirforum.com/
 [issues]: https://github.com/sorentwo/oban/issues
+[twitter]: https://twitter.com/sorentwo
 [social]: https://genserver.social/sorentwo
 
 ## Contributing
