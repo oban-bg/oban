@@ -269,8 +269,8 @@ defmodule MyApp.Business do
 end
 ```
 
-The `use` macro also accepts options to customize max attempts, priority, tags,
-and uniqueness:
+The `use` macro also accepts options to customize `max_attempts`, `priority`, `tags`, and `unique`
+options:
 
 ```elixir
 defmodule MyApp.LazyBusiness do
@@ -290,12 +290,20 @@ defmodule MyApp.LazyBusiness do
 end
 ```
 
-Successful jobs should return `:ok` or an `{:ok, value}` tuple. The value
-returned from `perform/1` is used to control whether the job is treated as a
-success, a failure, cancelled or deferred for retrying later.
+Like all `use` macros, options are defined at compile time. Avoid using `Application.get_env/2` to
+define worker options. Instead, pass dynamic options at runtime by passing them to
+`MyWorker.new/2`:
 
-See the `Oban.Worker` docs for more details on failure conditions and
-`Oban.Telemetry` for details on job reporting.
+```elixir
+MyApp.MyWorker.new(args, queue: dynamic_queue)
+```
+
+Successful jobs should return `:ok` or an `{:ok, value}` tuple. The value returned from
+`perform/1` is used to control whether the job is treated as a success, a failure, cancelled or
+deferred for retrying later.
+
+See the `Oban.Worker` docs for more details on failure conditions and `Oban.Telemetry` for details
+on job reporting.
 
 ## Enqueueing Jobs
 
