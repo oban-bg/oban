@@ -135,6 +135,7 @@ defmodule Oban.JobTest do
       |> Job.new(opts)
       |> Job.to_map()
       |> Map.keys()
+      |> Enum.sort()
     end
 
     defp default_keys_with(extra_keys) do
