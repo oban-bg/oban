@@ -1,5 +1,19 @@
 # Troubleshooting
 
+## Jobs or Plugins aren't Running
+
+Sometimes `Cron` or `Pruner` plugins appear to stop working unexpectedly. Typically, this happens in
+systems with multi-node setups where "web" nodes only enqueue jobs while "worker" nodes are
+configured to run queues and plugins. Most plugins require leadership to function, so When a "web"
+node becomes leader the plugins go dormant.
+
+The solution is to disable leadership with `peer: false` on any node that doesn't run plugins, or
+only runs decentralized plugins like `Gossip`:
+
+```elixir
+config :my_app, Oban, peer: false, ...
+```
+
 ## No Notifications with PgBouncer
 
 Using PgBouncer's "Transaction Pooling" setup disables all of PostgreSQL's
