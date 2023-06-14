@@ -26,6 +26,7 @@ defmodule Oban.Engines.Basic do
           |> Map.new()
           |> Map.put_new(:paused, false)
           |> Map.put_new(:refresh_interval, :timer.seconds(30))
+          |> Map.put_new(:uuid, Ecto.UUID.generate())
           |> Map.merge(%{name: conf.name, node: conf.node})
           |> Map.merge(%{started_at: utc_now(), updated_at: utc_now()})
 
@@ -110,7 +111,7 @@ defmodule Oban.Engines.Basic do
       |> select([j, _], j)
 
     updates = [
-      set: [state: "executing", attempted_at: utc_now(), attempted_by: [meta.node]],
+      set: [state: "executing", attempted_at: utc_now(), attempted_by: [meta.node, meta.uuid]],
       inc: [attempt: 1]
     ]
 
