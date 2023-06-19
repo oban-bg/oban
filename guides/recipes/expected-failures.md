@@ -78,7 +78,7 @@ defmodule MyApp.ErrorReporter do
 
   def maybe_get_worker_struct(worker) do
     try do
-      {:ok, module} = Oban.Worker.from_string()
+      {:ok, module} = Oban.Worker.from_string(worker)
 
       struct(module)
     rescue
