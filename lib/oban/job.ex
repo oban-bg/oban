@@ -324,7 +324,7 @@ defmodule Oban.Job do
   @spec to_map(Ecto.Changeset.t(t())) :: map()
   def to_map(%Ecto.Changeset{} = changeset) do
     changeset
-    |> Ecto.Changeset.apply_changes()
+    |> Ecto.Changeset.apply_action!(:insert)
     |> Map.from_struct()
     |> Enum.reduce(%{}, fn {key, val}, acc ->
       if key in @permitted_params and not is_nil(val) do

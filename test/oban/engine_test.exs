@@ -307,6 +307,14 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite] do
       test "handling empty changesets list from a wrapper", %{name: name} do
         assert [] = Oban.insert_all(name, %{changesets: []})
       end
+
+      test "inserting jobs with an invalid changeset raises an exception", %{name: name} do
+        changesets = [Worker.new(%{ref: 0}), Worker.new(%{ref: 1}, priority: -1)]
+
+        assert_raise Ecto.InvalidChangesetError, fn ->
+          Oban.insert_all(name, changesets)
+        end
+      end
     end
 
     describe "insert_all/3" do

@@ -330,7 +330,7 @@ defmodule Oban.Engines.Basic do
       {:ok, %Job{job | conflict?: true}}
     else
       {:error, :locked} ->
-        {:ok, Changeset.apply_changes(changeset)}
+        Changeset.apply_action(changeset, :insert)
 
       nil ->
         Repo.insert(conf, changeset, opts)

@@ -128,29 +128,7 @@ defmodule Oban.JobTest do
   end
 
   describe "to_map/1" do
-    @keys_with_defaults ~w(args attempt errors max_attempts meta queue state tags)a
-
-    defp to_keys(opts) do
-      %{}
-      |> Job.new(opts)
-      |> Job.to_map()
-      |> Map.keys()
-      |> Enum.sort()
-    end
-
-    defp default_keys_with(extra_keys) do
-      (@keys_with_defaults ++ extra_keys) |> Enum.sort() |> Enum.uniq()
-    end
-
-    test "nil values are not retained" do
-      assert to_keys([]) == @keys_with_defaults
-      assert to_keys(worker: MyWorker) == default_keys_with([:worker])
-
-      assert to_keys(schedule_in: 1, worker: MyWorker) ==
-               default_keys_with([:scheduled_at, :worker])
-    end
-
-    test "retains all non-nil permitted attributes" do
+    test "retaining all non-nil permitted attributes" do
       opts = [
         attempt: 1,
         attempted_by: ["foo"],
@@ -162,6 +140,7 @@ defmodule Oban.JobTest do
         queue: "default",
         scheduled_at: DateTime.utc_now(),
         state: "scheduled",
+        tags: nil,
         worker: "Fake"
       ]
 
@@ -171,6 +150,7 @@ defmodule Oban.JobTest do
         |> Job.to_map()
 
       assert %{foo: "bar"} == map[:args]
+      refute Map.has_key?(map, :tags)
 
       for {key, val} <- opts, do: assert(map[key] == val)
     end
