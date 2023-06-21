@@ -104,7 +104,7 @@ defmodule Oban.Peers.Postgres do
   rescue
     error in [Postgrex.Error] ->
       if error.postgres.code == :undefined_table do
-        Logger.warn("""
+        Logger.warning("""
         The `oban_peers` table is undefined and leadership is disabled.
 
         Run migrations up to v11 to restore peer leadership. In the meantime, distributed plugins
@@ -124,7 +124,7 @@ defmodule Oban.Peers.Postgres do
   end
 
   def handle_info(message, state) do
-    Logger.warn("Received unexpected message: #{inspect(message)}")
+    Logger.warning("Received unexpected message: #{inspect(message)}")
 
     {:noreply, state}
   end
