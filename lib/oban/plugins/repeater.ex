@@ -17,7 +17,7 @@ defmodule Oban.Plugins.Repeater do
 
   @impl Plugin
   def start_link(_opts) do
-    Logger.warn("""
+    Logger.warning("""
     Repeater is deprecated.
 
     Stager automatically forces polling when notifications aren't available. You can safely remove

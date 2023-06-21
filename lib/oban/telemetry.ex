@@ -221,7 +221,7 @@ defmodule Oban.Telemetry do
     require Logger
 
     def handle_event([:oban, :job, :exception], %{duration: duration}, meta, nil) do
-      Logger.warn("[#\{meta.queue}] #\{meta.worker} failed in #\{duration}")
+      Logger.warning("[#\{meta.queue}] #\{meta.worker} failed in #\{duration}")
     end
   end
 

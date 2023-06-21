@@ -103,7 +103,7 @@ defmodule Oban.Peer do
     end
   catch
     :exit, {:timeout, _} = reason ->
-      Logger.warn("""
+      Logger.warning("""
       Oban.Peer.leader?/2 check failed due to #{inspect(reason)}.
       """)
 
