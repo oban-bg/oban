@@ -7,7 +7,8 @@ defmodule Oban.Migrations.SQLite do
 
   @impl Oban.Migration
   def up(_opts) do
-    create_if_not_exists table(:oban_jobs) do
+    create_if_not_exists table(:oban_jobs, primary_key: false) do
+      add :id, :bigserial, primary_key: true
       add :state, :text, null: false, default: "available"
       add :queue, :text, null: false, default: "default"
       add :worker, :text, null: false
