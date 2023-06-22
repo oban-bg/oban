@@ -42,7 +42,7 @@ defmodule Oban.ConfigTest do
 
     test ":node is validated as a binary" do
       refute_valid(node: nil)
-      refute_valid(node: '')
+      refute_valid(node: ~c"")
       refute_valid(node: "")
       refute_valid(node: "  ")
       refute_valid(node: MyNode)

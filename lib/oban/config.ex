@@ -13,7 +13,7 @@ defmodule Oban.Config do
   @type t :: %__MODULE__{
           dispatch_cooldown: pos_integer(),
           engine: module(),
-          get_dynamic_repo: nil | (() -> pid() | atom()),
+          get_dynamic_repo: nil | (-> pid() | atom()),
           log: false | Logger.level(),
           name: Oban.name(),
           node: String.t(),
