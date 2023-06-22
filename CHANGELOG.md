@@ -48,6 +48,44 @@ other databases. There's even an [open issue for MySQL support][mysql]...
 
 [mysql]: https://github.com/sorentwo/oban/issues/836
 
+## v2.15.2 — 2023-06-22
+
+### Enhancements
+
+- [Repo] Pass `oban: true` option to all queries.
+
+  Telemetry options are exposed in Ecto instrumentation, but they aren't obviously available in the
+  opts passed to `prepare_query`. Now all queries have an `oban: true` option so users can ignore
+  them in multi-tenancy setups.
+
+- [Engine] Generate a UUID for all `Basic` and `Lite` queue instances to aid in identifying
+  orphaned jobs or churning queue producers.
+
+- [Oban] Use `Logger.warning/2` and replace deprecated use of `:warn` level with `:warning`
+  across all modules.
+
+### Bug Fixes
+
+- [Job] Validate changesets during `Job.to_map/1` conversion
+
+  The `Job.to_map/1` function converts jobs to a map "entry" suitable for use in `insert_all`.
+  Previously, that function didn't perform any validation and would allow inserting (or attempting
+  to insert) invalid jobs during `insert_all`. Aside from inconsistency with `insert` and
+  `insert!`, `insert_all` could insert invalid jobs that would never run successfully.
+  
+  Now `to_map/1` uses `apply_action!/2` to apply the changeset with validation and raises an
+  exception identical to `insert!`, but before calling the database.
+
+- [Notifier] Store PG notifier state in the registry for non-blocking lookup
+
+  To avoid `GenServer.call` timeouts when the system is under high load we pull the state from the
+  notifier's registry metadata.
+
+- [Migration] Add `primary_key` explicitly during SQLite3 migrations
+
+  If a user has configured Ecto's `:migration_primary_key` to something other than `bigserial` the
+  schema is incompatible with Oban's job schema.
+
 ## v2.15.1 — 2023-05-11
 
 ### Enhancements
