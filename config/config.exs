@@ -2,7 +2,7 @@ import Config
 
 config :elixir, :time_zone_database, Tz.TimeZoneDatabase
 
-config :logger, level: :warn
+config :logger, level: :warning
 
 config :oban, Oban.Test.Repo,
   migration_lock: false,

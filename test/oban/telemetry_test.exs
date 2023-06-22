@@ -93,7 +93,7 @@ defmodule Oban.TelemetryTest do
   end
 
   test "the default handler logs detailed event information" do
-    :ok = Telemetry.attach_default_logger(:warn)
+    :ok = Telemetry.attach_default_logger(:warning)
 
     start_supervised_oban!(stage_interval: 10, queues: [alpha: 3])
 
@@ -139,7 +139,7 @@ defmodule Oban.TelemetryTest do
   end
 
   test "the default handler logs stager switch events" do
-    :ok = Telemetry.attach_default_logger(:warn)
+    :ok = Telemetry.attach_default_logger(:warning)
 
     logged =
       capture_log(fn ->
@@ -154,7 +154,7 @@ defmodule Oban.TelemetryTest do
   end
 
   test "detaching the logger prevents logging" do
-    :ok = Telemetry.attach_default_logger(:warn)
+    :ok = Telemetry.attach_default_logger(:warning)
 
     start_supervised_oban!(stage_interval: 10, queues: [alpha: 3])
 
@@ -179,7 +179,7 @@ defmodule Oban.TelemetryTest do
   test "disabling encoding on the default logger" do
     start_supervised_oban!(stage_interval: 10, queues: [alpha: 3])
 
-    :ok = Telemetry.attach_default_logger(encode: false, level: :warn)
+    :ok = Telemetry.attach_default_logger(encode: false, level: :warning)
 
     logged =
       capture_log(fn ->

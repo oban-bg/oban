@@ -28,7 +28,6 @@ defmodule Oban.ConfigTest do
       refute_valid(log: true)
 
       assert_valid(log: false)
-      assert_valid(log: :warn)
       assert_valid(log: :warning)
       assert_valid(log: :alert)
       assert_valid(log: :debug)

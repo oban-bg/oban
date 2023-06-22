@@ -109,9 +109,9 @@ defmodule Oban do
 
     Defaults to the `Basic` engine for Postgres.
 
-  * `:log` — either `false` to disable logging or a standard log level (`:error`, `:warn`,
-    `:info`, `:debug`). This determines whether queries are logged or not; overriding the repo's
-    configured log level. Defaults to `false`, where no queries are logged.
+  * `:log` — either `false` to disable logging or a standard log level (`:error`, `:warning`,
+    `:info`, `:debug`, etc.). This determines whether queries are logged or not; overriding the
+    repo's configured log level. Defaults to `false`, where no queries are logged.
 
   * `:name` — used for supervisor registration, it must be unique across an entire VM instance.
     Defaults to `Oban` when no name is provided.
