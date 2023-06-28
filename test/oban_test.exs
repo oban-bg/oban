@@ -58,7 +58,7 @@ defmodule ObanTest do
       name =
         start_supervised_oban!(
           queues: [alpha: 1],
-          shutdown_grace_period: 10,
+          shutdown_grace_period: 40,
           stage_interval: 10
         )
 

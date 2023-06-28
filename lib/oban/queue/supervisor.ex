@@ -38,6 +38,7 @@ defmodule Oban.Queue.Supervisor do
     watch_opts = [
       foreman: fore_name,
       name: watch_name,
+      producer: prod_name,
       shutdown: conf.shutdown_grace_period
     ]
 

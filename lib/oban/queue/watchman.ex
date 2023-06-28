@@ -3,15 +3,18 @@ defmodule Oban.Queue.Watchman do
 
   use GenServer
 
+  alias Oban.Queue.Producer
+
   @type option ::
-          {:name, module()}
-          | {:foreman, identifier()}
+          {:foreman, GenServer.name()}
+          | {:name, module()}
+          | {:producer, GenServer.name()}
           | {:shutdown, timeout()}
 
   defmodule State do
     @moduledoc false
 
-    defstruct [:foreman, :shutdown, interval: 10]
+    defstruct [:foreman, :producer, :shutdown, interval: 10]
   end
 
   @spec child_spec([option]) :: Supervisor.child_spec()
@@ -47,6 +50,7 @@ defmodule Oban.Queue.Watchman do
     # There is a chance that the foreman doesn't exist, and we never want to raise another error
     # as part of the shut down process.
     try do
+      :ok = Producer.shutdown(state.producer)
       :ok = wait_for_executing(state)
     catch
       :exit, _reason -> :ok
