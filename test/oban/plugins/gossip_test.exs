@@ -1,5 +1,5 @@
 defmodule Oban.Plugins.GossipTest do
-  use Oban.Case, async: true
+  use Oban.Case
 
   alias Oban.Plugins.Gossip
   alias Oban.{Notifier, Registry, TelemetryHandler}
