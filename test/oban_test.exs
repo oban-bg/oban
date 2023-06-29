@@ -2,6 +2,7 @@ defmodule ObanTest do
   use Oban.Case, async: true
 
   alias Oban.Registry
+  alias Oban.Test.MyOban
 
   @opts [repo: Repo, testing: :manual]
 
@@ -487,6 +488,11 @@ defmodule ObanTest do
     test "returning nil if root process not found" do
       refute Oban.whereis(make_ref())
     end
+  end
+
+  test "config/0 of a given instance" do
+    start_supervised!({MyOban, []})
+    assert %{name: MyOban, repo: Oban.Test.Repo} = MyOban.config()
   end
 
   defp start_supervised_oban(context) do
