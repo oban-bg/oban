@@ -456,23 +456,21 @@ duplicate jobs.  Uniqueness is based on a combination of `args`, `queue`,
 `worker`, `state` and insertion time. It is configured at the worker or job
 level using the following options:
 
-* `:period` — The number of seconds until a job is no longer considered
-  duplicate. You should always specify a period, otherwise Oban will default to
-  60 seconds. `:infinity` can be used to indicate the job be considered a
-  duplicate as long as jobs are retained.
+* `:period` — The number of seconds until a job is no longer considered duplicate. You should
+  always specify a period, otherwise Oban will default to 60 seconds. `:infinity` can be used to
+  indicate the job be considered a duplicate as long as jobs are retained.
 
-* `:fields` — The fields to compare when evaluating uniqueness. The available
-  fields are `:args`, `:queue` and `:worker`, by default all three are used.
+* `:fields` — The fields to compare when evaluating uniqueness. The available fields are `:args`,
+  `:queue`, `:worker`, and `:meta`. By default, fields is set to `[:worker, :queue, :args]`.
 
-* `:keys` — A specific subset of the `:args` to consider when comparing against
-  historic jobs. This allows a job with multiple key/value pairs in the args to
-  be compared using only a subset of them.
+* `:keys` — A specific subset of the `:args` or `:meta` to consider when comparing against
+  historic jobs. This allows a job with multiple key/value pairs in the args to be compared using
+  only a subset of them.
 
-* `:states` — The job states that are checked for duplicates. The available
-  states are `:available`, `:scheduled`, `:executing`, `:retryable`,
-  `:completed`, `:cancelled` and `:discarded`. By default all states except for
-  `:discarded` and `:cancelled` are checked, which prevents duplicates even if
-  the previous job has been completed.
+* `:states` — The job states that are checked for duplicates. The available states are
+  `:available`, `:scheduled`, `:executing`, `:retryable`, `:completed`, `:cancelled` and
+  `:discarded`. By default all states except for `:discarded` and `:cancelled` are checked, which
+  prevents duplicates even if the previous job has been completed.
 
 For example, configure a worker to be unique across all fields and states for 60
 seconds:
