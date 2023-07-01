@@ -20,14 +20,15 @@ defmodule Oban.JobTest do
       assert changeset.changes[:scheduled_at]
     end
 
-    property "scheduling a job for the future using a tuple" do
+    test "scheduling a job for the future using a time unit tuple" do
       now = DateTime.utc_now()
 
-      check all schedule_in <- tuple({positive_integer(), time_unit()}) do
-        assert %{changes: %{scheduled_at: %DateTime{} = scheduled_at, state: "scheduled"}} =
-                 Job.new(%{}, worker: Fake, schedule_in: schedule_in)
+      for unit <- ~w(second seconds minute minutes hour hours day days week weeks)a do
+        %{changes: changes} = Job.new(%{}, worker: Fake, schedule_in: {1, unit})
 
-        assert DateTime.compare(scheduled_at, now) == :gt
+        assert changes[:state] == "scheduled"
+        assert changes[:scheduled_at]
+        assert DateTime.compare(changes[:scheduled_at], now) == :gt
       end
     end
 
@@ -154,9 +155,5 @@ defmodule Oban.JobTest do
 
       for {key, val} <- opts, do: assert(map[key] == val)
     end
-  end
-
-  defp time_unit do
-    one_of([:second, :seconds, :minute, :minutes, :hour, :hours, :day, :days, :week, :weeks])
   end
 end
