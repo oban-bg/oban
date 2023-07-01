@@ -121,10 +121,10 @@ defmodule Oban.Engines.Lite do
 
     select_query =
       queryable
-      |> where([j], j.state in ["scheduled", "retryable"])
+      |> select([j], map(j, [:id, :queue, :state, :worker]))
+      |> where([j], j.state in ~w(scheduled retryable))
       |> where([j], j.scheduled_at <= ^DateTime.utc_now())
       |> limit(^limit)
-      |> select([j], map(j, [:id, :queue, :state, :worker]))
 
     staged = Repo.all(conf, select_query)
 
@@ -143,11 +143,10 @@ defmodule Oban.Engines.Lite do
 
     select_query =
       queryable
-      |> or_where([j], j.state == "completed" and j.attempted_at < ^time)
-      |> or_where([j], j.state == "cancelled" and j.cancelled_at < ^time)
-      |> or_where([j], j.state == "discarded" and j.discarded_at < ^time)
+      |> select([j], map(j, [:id, :queue, :state]))
+      |> where([j], j.state in ~w(completed cancelled discarded))
+      |> where([j], j.scheduled_at < ^time)
       |> limit(^limit)
-      |> select([j], map(j, [:id, :queue, :state, :worker]))
 
     pruned = Repo.all(conf, select_query)
 

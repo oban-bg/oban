@@ -129,7 +129,7 @@ defmodule Oban.Engines.Basic do
     subquery =
       queryable
       |> select([:id, :state])
-      |> where([j], j.state in ["scheduled", "retryable"])
+      |> where([j], j.state in ~w(scheduled retryable))
       |> where([j], not is_nil(j.queue))
       |> where([j], j.priority in [0, 1, 2, 3])
       |> where([j], j.scheduled_at <= ^DateTime.utc_now())
@@ -153,9 +153,11 @@ defmodule Oban.Engines.Basic do
 
     subquery =
       queryable
-      |> or_where([j], j.state == "completed" and j.attempted_at < ^time)
-      |> or_where([j], j.state == "cancelled" and j.cancelled_at < ^time)
-      |> or_where([j], j.state == "discarded" and j.discarded_at < ^time)
+      |> select([:id, :queue, :state])
+      |> where([j], j.state in ~w(completed cancelled discarded))
+      |> where([j], not is_nil(j.queue))
+      |> where([j], j.priority in [0, 1, 2, 3])
+      |> where([j], j.scheduled_at < ^time)
       |> limit(^limit)
 
     query =

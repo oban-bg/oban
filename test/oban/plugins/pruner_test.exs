@@ -27,10 +27,10 @@ defmodule Oban.Plugins.PrunerTest do
     test "historic jobs are pruned when they are older than the configured age" do
       TelemetryHandler.attach_events()
 
-      %Job{id: _id_} = insert!(%{}, state: "completed", attempted_at: seconds_ago(61))
-      %Job{id: _id_} = insert!(%{}, state: "cancelled", cancelled_at: seconds_ago(61))
-      %Job{id: _id_} = insert!(%{}, state: "discarded", discarded_at: seconds_ago(61))
-      %Job{id: id_1} = insert!(%{}, state: "completed", attempted_at: seconds_ago(59))
+      %Job{id: _id_} = insert!(%{}, state: "completed", scheduled_at: seconds_ago(61))
+      %Job{id: _id_} = insert!(%{}, state: "cancelled", scheduled_at: seconds_ago(61))
+      %Job{id: _id_} = insert!(%{}, state: "discarded", scheduled_at: seconds_ago(61))
+      %Job{id: id_1} = insert!(%{}, state: "completed", scheduled_at: seconds_ago(59))
 
       start_supervised_oban!(plugins: [{Pruner, interval: 10, max_age: 60}])
 
