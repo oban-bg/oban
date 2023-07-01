@@ -24,7 +24,7 @@ defmodule Oban.JobTest do
       now = DateTime.utc_now()
 
       for unit <- ~w(second seconds minute minutes hour hours day days week weeks)a do
-        %{changes: changes} = Job.new(%{}, worker: Fake, schedule_in: {1, unit})
+        %{changes: changes} = Job.new(%{}, schedule_in: {1, unit})
 
         assert changes[:state] == "scheduled"
         assert changes[:scheduled_at]
@@ -33,11 +33,17 @@ defmodule Oban.JobTest do
     end
 
     test ":schedule_in does not accept other types of values" do
-      assert Job.new(%{}, worker: Fake, schedule_in: true).errors[:schedule_in]
-      assert Job.new(%{}, worker: Fake, schedule_in: "10").errors[:schedule_in]
-      assert Job.new(%{}, worker: Fake, schedule_in: 0.12).errors[:schedule_in]
-      assert Job.new(%{}, worker: Fake, schedule_in: {6, :units}).errors[:schedule_in]
-      assert Job.new(%{}, worker: Fake, schedule_in: {6.0, :hours}).errors[:schedule_in]
+      assert Job.new(%{}, schedule_in: true).errors[:schedule_in]
+      assert Job.new(%{}, schedule_in: "10").errors[:schedule_in]
+      assert Job.new(%{}, schedule_in: 0.12).errors[:schedule_in]
+      assert Job.new(%{}, schedule_in: {6, :units}).errors[:schedule_in]
+      assert Job.new(%{}, schedule_in: {6.0, :hours}).errors[:schedule_in]
+    end
+
+    test "automatically setting the state to scheduled" do
+      assert %{changes: %{state: "scheduled"}} = Job.new(%{}, schedule_in: 1)
+      assert %{changes: %{state: "scheduled"}} = Job.new(%{}, schedule_in: 1, state: "available")
+      assert %{changes: %{state: "completed"}} = Job.new(%{}, schedule_in: 1, state: "completed")
     end
   end
 

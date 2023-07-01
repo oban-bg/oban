@@ -430,9 +430,9 @@ defmodule Oban.Job do
   end
 
   defp put_state(changeset) do
-    case fetch_change(changeset, :scheduled_at) do
-      {:ok, _} -> put_change(changeset, :state, "scheduled")
-      :error -> changeset
+    case {get_change(changeset, :state), get_change(changeset, :scheduled_at)} do
+      {nil, %_{}} -> put_change(changeset, :state, "scheduled")
+      _ -> changeset
     end
   end
 
