@@ -31,7 +31,7 @@ defmodule Oban.Telemetry do
 
   | event        | measures                   | metadata                                                     |
   | ------------ | -------------------------- | ------------------------------------------------------------ |
-  | `:start`     | `:system_time`             | `:conf`, `:job`, `:state`                                    |
+  | `:start`     | `:system_time`             | `:conf`, `:job`                                              |
   | `:stop`      | `:duration`, `:queue_time` | `:conf`, `:job`, `:state`, `:result`                         |
   | `:exception` | `:duration`, `:queue_time` | `:conf`, `:job`, `:state`, `:kind`, `:reason`, `:stacktrace` |
 
