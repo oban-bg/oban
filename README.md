@@ -1,26 +1,29 @@
 <p align="center">
-  <a href="https://github.com/sorentwo/oban">
-    <img alt="oban" src="https://raw.githubusercontent.com/sorentwo/oban/main/assets/oban-logotype-large.png" width="435">
-  </a>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/sorentwo/oban/main/assets/oban-logotype-dark.png">
+    <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/sorentwo/oban/main/assets/oban-logotype-light.png">
+    <img alt="Oban logo" src="https://raw.githubusercontent.com/sorentwo/oban/main/assets/oban-logotype-light.png" width="320">
+  </picture>
 </p>
 
 <p align="center">
   Robust job processing in Elixir, backed by modern PostgreSQL or SQLite3.
-  Reliable, <br /> observable and loaded with <a href="#Features">enterprise grade features</a>.
+  Reliable, <br /> observable, and loaded with <a href="#Features">enterprise grade features</a>.
 </p>
 
 <p align="center">
   <a href="https://hex.pm/packages/oban">
     <img alt="Hex Version" src="https://img.shields.io/hexpm/v/oban.svg">
   </a>
+
   <a href="https://hexdocs.pm/oban">
     <img alt="Hex Docs" src="http://img.shields.io/badge/hex.pm-docs-green.svg?style=flat">
   </a>
-</p>
-<p align="center">
+
   <a href="https://github.com/sorentwo/oban/actions">
     <img alt="CI Status" src="https://github.com/sorentwo/oban/workflows/ci/badge.svg">
   </a>
+
   <a href="https://opensource.org/licenses/Apache-2.0">
     <img alt="Apache 2 License" src="https://img.shields.io/hexpm/l/oban">
   </a>
