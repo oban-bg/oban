@@ -128,9 +128,11 @@ defmodule Oban.Engines.Lite do
 
     staged = Repo.all(conf, select_query)
 
-    Repo.update_all(conf, where(Job, [j], j.id in ^Enum.map(staged, & &1.id)),
-      set: [state: "available"]
-    )
+    unless staged == [] do
+      Repo.update_all(conf, where(Job, [j], j.id in ^Enum.map(staged, & &1.id)),
+        set: [state: "available"]
+      )
+    end
 
     {:ok, staged}
   end
@@ -150,7 +152,9 @@ defmodule Oban.Engines.Lite do
 
     pruned = Repo.all(conf, select_query)
 
-    Repo.delete_all(conf, where(Job, [j], j.id in ^Enum.map(pruned, & &1.id)))
+    unless pruned == [] do
+      Repo.delete_all(conf, where(Job, [j], j.id in ^Enum.map(pruned, & &1.id)))
+    end
 
     {:ok, pruned}
   end
