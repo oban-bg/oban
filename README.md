@@ -8,7 +8,7 @@
 
 <p align="center">
   Robust job processing in Elixir, backed by modern PostgreSQL or SQLite3.
-  Reliable, <br /> observable, and loaded with <a href="#Features">enterprise grade features</a>.
+  Reliable, <br /> observable, and loaded with <a href="#features">enterprise grade features</a>.
 </p>
 
 <p align="center">
