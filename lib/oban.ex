@@ -920,19 +920,27 @@ defmodule Oban do
   end
 
   @doc """
-  Retries all jobs that match on the given queryable. Please note that no matter the
-  queryable constraints, it will never retry `available`, `executing` or `scheduled` jobs.
+  Retries all jobs that match on the given queryable.
 
-  If no queryable is given, Oban will retry all jobs in retryable states.
+  If no queryable is given, Oban will retry all jobs that aren't currently `available` or
+  `executing`. Note that regardless of constraints, it will never retry `available` or
+  `executing` jobs.
 
   ## Example
 
-  Retries all retryable jobs
+  Retries jobs in _any state_ other than `available` or `executing`:
 
       Oban.retry_all_jobs(Oban.Job)
       {:ok, 9}
 
-  Retries all retryable jobs with priority 0
+  Retries jobs with the `retryable` state:
+
+      Oban.Job
+      |> Ecto.Query.where(state: "retryable")
+      |> Oban.retry_all_jobs()
+      {:ok, 3}
+
+  Retries all inactive jobs with priority 0
 
       Oban.Job
       |> Ecto.Query.where(priority: 0)
