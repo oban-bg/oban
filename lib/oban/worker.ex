@@ -453,7 +453,7 @@ defmodule Oban.Worker do
   end
 
   defp validate_opt!({:unique, unique}) do
-    unless is_list(unique) and Enum.all?(unique, &Job.valid_unique_opt?/1) do
+    unless is_nil(unique) or (is_list(unique) and Enum.all?(unique, &Job.valid_unique_opt?/1)) do
       raise ArgumentError, "unexpected unique options: #{inspect(unique)}"
     end
   end
