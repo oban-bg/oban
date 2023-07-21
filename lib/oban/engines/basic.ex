@@ -364,6 +364,8 @@ defmodule Oban.Engines.Basic do
   defp unique_query(%{changes: %{unique: %{} = unique}} = changeset) do
     %{fields: fields, keys: keys, period: period, states: states} = unique
 
+    job = Changeset.apply_changes(changeset)
+
     keys = Enum.map(keys, &to_string/1)
     states = Enum.map(states, &to_string/1)
     dynamic = Enum.reduce(fields, true, &unique_field({changeset, &1, keys}, &2))
@@ -372,7 +374,7 @@ defmodule Oban.Engines.Basic do
     query =
       Job
       |> where([j], j.state in ^states)
-      |> since_period(period)
+      |> since_period(period, job)
       |> where(^dynamic)
       |> limit(1)
 
@@ -410,10 +412,32 @@ defmodule Oban.Engines.Basic do
     end
   end
 
-  defp since_period(query, :infinity), do: query
+  defp since_period(query, period_opts, job) when is_list(period_opts) do
+    Enum.reduce(
+      period_opts,
+      query,
+      fn period, query -> since_period(query, period, job) end
+    )
+  end
 
-  defp since_period(query, period) do
+  defp since_period(query, {_field, :infinity}, _job), do: query
+
+  defp since_period(query, {:inserted_at, period}, _job) do
     where(query, [j], j.inserted_at >= ^seconds_from_now(-period))
+  end
+
+  defp since_period(query, {field, period}, job) do
+    current_value = Map.get(job, field)
+
+    IO.inspect({job, field, current_value, period})
+
+    query
+    |> where([j], field(j, ^field) <= ^seconds_from(current_value, period))
+    |> where([j], field(j, ^field) >= ^seconds_from(current_value, -period))
+  end
+
+  defp since_period(query, period, job) when is_atom(period) or is_integer(period) do
+    since_period(query, {:inserted_at, period}, job)
   end
 
   defp acquire_lock(conf, base_key) do
@@ -436,5 +460,7 @@ defmodule Oban.Engines.Basic do
     end
   end
 
-  defp seconds_from_now(seconds), do: DateTime.add(utc_now(), seconds, :second)
+  defp seconds_from(datetime, seconds), do: DateTime.add(datetime, seconds, :second)
+
+  defp seconds_from_now(seconds), do: seconds_from(utc_now(), seconds)
 end
