@@ -369,10 +369,21 @@ defmodule Oban.Job do
   def valid_unique_opt?({:fields, [_ | _] = fields}), do: fields -- [:meta | @unique_fields] == []
   def valid_unique_opt?({:keys, []}), do: true
   def valid_unique_opt?({:keys, [_ | _] = keys}), do: Enum.all?(keys, &is_atom/1)
-  def valid_unique_opt?({:period, :infinity}), do: true
-  def valid_unique_opt?({:period, period}), do: is_integer(period) and period > 0
+  def valid_unique_opt?({:period, [_ | _] = period}), do: Enum.all?(period, &valid_period_opt?/1)
+  def valid_unique_opt?({:period, period}), do: valid_period_opt?(period)
   def valid_unique_opt?({:states, [_ | _] = states}), do: states -- states() == []
   def valid_unique_opt?(_option), do: false
+
+  @doc false
+  @spec valid_period_opt?({atom() | integer} | integer()) :: boolean()
+  def valid_period_opt?({:inserted_at, period}), do: valid_period_opt?(period)
+  def valid_period_opt?({:scheduled_at, period}), do: valid_period_opt?(period)
+  def valid_period_opt?({:attempted_at, period}), do: valid_period_opt?(period)
+  def valid_period_opt?({:completed_at, period}), do: valid_period_opt?(period)
+  def valid_period_opt?({:discarded_at, period}), do: valid_period_opt?(period)
+  def valid_period_opt?(period) when is_integer(period) and period > 0, do: true
+  def valid_period_opt?(:infinity), do: true
+  def valid_period_opt?(_period), do: false
 
   @time_units ~w(
     second
