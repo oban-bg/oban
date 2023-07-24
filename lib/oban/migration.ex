@@ -25,9 +25,9 @@ defmodule Oban.Migration do
   defmodule MyApp.Repo.Migrations.AddOban do
     use Ecto.Migration
 
-    def up, do: Oban.Migration.up()
+    def up, do: Oban.Migrations.up()
 
-    def down, do: Oban.Migration.down()
+    def down, do: Oban.Migrations.down()
   end
   ```
 
@@ -53,9 +53,9 @@ defmodule Oban.Migration do
   defmodule MyApp.Repo.Migrations.UpgradeObanToV11 do
     use Ecto.Migration
 
-    def up, do: Oban.Migration.up(version: 11)
+    def up, do: Oban.Migrations.up(version: 11)
 
-    def down, do: Oban.Migration.down(version: 11)
+    def down, do: Oban.Migrations.down(version: 11)
   end
   ```
 
