@@ -35,6 +35,7 @@ defmodule Oban.Job do
           | {:keys, [atom()]}
           | {:period, unique_period()}
           | {:states, [unique_state()]}
+          | {:timestamp, :inserted_at | :scheduled_at}
 
   @type replace_option :: [
           :args
@@ -206,46 +207,46 @@ defmodule Oban.Job do
       |> Oban.Job.new(queue: :default, worker: MyApp.Worker)
       |> Oban.insert()
 
-  Generate a pre-configured job for `MyApp.Worker` and push it:
+  Generate a pre-configured job for `MyApp.Worker`:
 
-      %{id: 1, user_id: 2} |> MyApp.Worker.new() |> Oban.insert()
+      MyApp.Worker.new(%{id: 1, user_id: 2})
 
   Schedule a job to run in 5 seconds:
 
-      %{id: 1} |> MyApp.Worker.new(schedule_in: 5) |> Oban.insert()
+      MyApp.Worker.new(%{id: 1}, schedule_in: 5)
 
   Schedule a job to run in 5 minutes:
 
-      %{id: 1} |> MyApp.Worker.new(schedule_in: {5, :minutes}) |> Oban.insert()
+      MyApp.Worker.new(%{id: 1}, schedule_in: {5, :minutes})
 
   Insert a job, ensuring that it is unique within the past minute:
 
-      %{id: 1} |> MyApp.Worker.new(unique: [period: 60]) |> Oban.insert()
+      MyApp.Worker.new(%{id: 1}, unique: [period: 60])
+
+  Insert a unique job where the period is compared to the `scheduled_at` timestamp rather than
+  `inserted_at`:
+
+      MyApp.Worker.new(%{id: 1}, unique: [period: 60, timestamp: :scheduled_at])
 
   Insert a unique job based only on the worker field, and within multiple states:
 
       fields = [:worker]
       states = [:available, :scheduled, :executing, :retryable, :completed]
 
-      %{id: 1}
-      |> MyApp.Worker.new(unique: [fields: fields, period: 60, states: states])
-      |> Oban.insert()
+      MyApp.Worker.new(%{id: 1}, unique: [fields: fields, period: 60, states: states])
 
   Insert a unique job considering only the worker and specified keys in the args:
 
       keys = [:account_id, :url]
+      args = %{account_id: 1, url: "https://example.com"}
 
-      %{account_id: 1, url: "https://example.com"}
-      |> MyApp.Worker.new(unique: [fields: [:args, :worker], keys: keys])
-      |> Oban.insert()
+      MyApp.Worker.new(args, unique: [fields: [:args, :worker], keys: keys])
 
   Insert a unique job considering only specified keys in the meta:
 
       unique = [fields: [:meta], keys: [:slug]]
 
-      %{id: 1}
-      |> MyApp.Worker.new(meta: %{slug: "unique-key"}, unique: unique)
-      |> Oban.insert()
+      MyApp.Worker.new(%{id: 1}, meta: %{slug: "unique-key"}, unique: unique)
   """
   @doc since: "0.1.0"
   @spec new(args(), [option()]) :: changeset()
@@ -279,6 +280,7 @@ defmodule Oban.Job do
   @unique_fields ~w(args queue worker)a
   @unique_period 60
   @unique_states ~w(scheduled available executing retryable completed)a
+  @unique_timestamp :inserted_at
 
   @doc """
   A canonical list of all possible job states.
@@ -372,6 +374,7 @@ defmodule Oban.Job do
   def valid_unique_opt?({:period, :infinity}), do: true
   def valid_unique_opt?({:period, period}), do: is_integer(period) and period > 0
   def valid_unique_opt?({:states, [_ | _] = states}), do: states -- states() == []
+  def valid_unique_opt?({:timestamp, stamp}), do: stamp in ~w(inserted_at scheduled_at)a
   def valid_unique_opt?(_option), do: false
 
   @time_units ~w(
@@ -446,6 +449,7 @@ defmodule Oban.Job do
           |> Map.put_new(:keys, [])
           |> Map.put_new(:period, @unique_period)
           |> Map.put_new(:states, @unique_states)
+          |> Map.put_new(:timestamp, @unique_timestamp)
 
         case validate_unique_opts(unique) do
           :ok ->

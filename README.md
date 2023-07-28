@@ -454,10 +454,9 @@ end
 
 ## Unique Jobs
 
-The unique jobs feature lets you specify constraints to prevent enqueueing
-duplicate jobs.  Uniqueness is based on a combination of `args`, `queue`,
-`worker`, `state` and insertion time. It is configured at the worker or job
-level using the following options:
+The unique jobs feature lets you specify constraints to prevent enqueueing duplicate jobs.
+Uniqueness is based on a combination of `args`, `queue`, `worker`, `state` and insertion time. It
+is configured at the worker or job level using the following options:
 
 * `:period` — The number of seconds until a job is no longer considered duplicate. You should
   always specify a period, otherwise Oban will default to 60 seconds. `:infinity` can be used to
@@ -475,6 +474,9 @@ level using the following options:
   `:discarded`. By default all states except for `:discarded` and `:cancelled` are checked, which
   prevents duplicates even if the previous job has been completed.
 
+* `:timestamp` — Which timestamp to check the period against. The available timestamps are
+  `:inserted_at` or `:scheduled_at`, and it defaults to `:inserted_at` for legacy reasons.
+
 For example, configure a worker to be unique across all fields and states for 60
 seconds:
 
@@ -486,6 +488,12 @@ Configure the worker to be unique only by `:worker` and `:queue`:
 
 ```elixir
 use Oban.Worker, unique: [fields: [:queue, :worker], period: 60]
+```
+
+Check the `:scheduled_at` timestamp instead of `:inserted_at` for uniqueness:
+
+```elixir
+use Oban.Worker, unique: [period: 120, timestamp: :scheduled_at]
 ```
 
 Or, configure a worker to be unique until it has executed:

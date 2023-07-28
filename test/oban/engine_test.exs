@@ -178,6 +178,21 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite] do
       end
 
       @tag :unique
+      test "scoping uniqueness by period compared to the scheduled time", %{name: name} do
+        job_1 = insert!(name, %{id: 1}, scheduled_at: seconds_ago(120))
+
+        uniq_insert = fn args, period, timestamp ->
+          Oban.insert(name, Worker.new(args, unique: [period: period, timestamp: timestamp]))
+        end
+
+        assert {:ok, job_2} = uniq_insert.(%{id: 1}, 121, :scheduled_at)
+        assert {:ok, job_3} = uniq_insert.(%{id: 1}, 119, :scheduled_at)
+
+        assert job_1.id == job_2.id
+        assert job_1.id != job_3.id
+      end
+
+      @tag :unique
       test "replacing fields on unique conflict", %{name: name} do
         four_seconds = seconds_from_now(4)
         five_seconds = seconds_from_now(5)

@@ -362,7 +362,7 @@ defmodule Oban.Engines.Basic do
   end
 
   defp unique_query(%{changes: %{unique: %{} = unique}} = changeset) do
-    %{fields: fields, keys: keys, period: period, states: states} = unique
+    %{fields: fields, keys: keys, period: period, states: states, timestamp: timestamp} = unique
 
     keys = Enum.map(keys, &to_string/1)
     states = Enum.map(states, &to_string/1)
@@ -372,7 +372,7 @@ defmodule Oban.Engines.Basic do
     query =
       Job
       |> where([j], j.state in ^states)
-      |> since_period(period)
+      |> since_period(period, timestamp)
       |> where(^dynamic)
       |> limit(1)
 
@@ -410,10 +410,10 @@ defmodule Oban.Engines.Basic do
     end
   end
 
-  defp since_period(query, :infinity), do: query
+  defp since_period(query, :infinity, _timestamp), do: query
 
-  defp since_period(query, period) do
-    where(query, [j], j.inserted_at >= ^seconds_from_now(-period))
+  defp since_period(query, period, timestamp) do
+    where(query, [j], field(j, ^timestamp) >= ^seconds_from_now(-period))
   end
 
   defp acquire_lock(conf, base_key) do

@@ -68,19 +68,24 @@ defmodule Oban.JobTest do
                fields: [:args, :queue, :worker],
                keys: [],
                period: 60,
-               states: [:scheduled, :available, :executing, :retryable, :completed]
+               states: [:scheduled, :available, :executing, :retryable, :completed],
+               timestamp: :inserted_at
              }
     end
 
     test "overriding unique defaults" do
       changeset =
-        Job.new(%{}, worker: Fake, unique: [fields: [:meta, :worker], states: [:available]])
+        Job.new(%{},
+          worker: Fake,
+          unique: [fields: [:meta, :worker], states: [:available], timestamp: :scheduled_at]
+        )
 
       assert changeset.changes[:unique] == %{
                fields: [:meta, :worker],
                keys: [],
                period: 60,
-               states: [:available]
+               states: [:available],
+               timestamp: :scheduled_at
              }
     end
 
@@ -92,6 +97,7 @@ defmodule Oban.JobTest do
       assert Job.new(%{}, worker: Fake, unique: [keys: [[]]]).errors[:unique]
       assert Job.new(%{}, worker: Fake, unique: [period: :bogus]).errors[:unique]
       assert Job.new(%{}, worker: Fake, unique: [states: [:random]]).errors[:unique]
+      assert Job.new(%{}, worker: Fake, unique: [timestamp: :updated_at]).errors[:unique]
     end
   end
 

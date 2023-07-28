@@ -282,7 +282,7 @@ defmodule Oban.Engines.Lite do
   # Insertion
 
   defp fetch_unique(conf, %{changes: %{unique: %{} = unique}} = changeset) do
-    %{fields: fields, keys: keys, period: period, states: states} = unique
+    %{fields: fields, keys: keys, period: period, states: states, timestamp: timestamp} = unique
 
     keys = Enum.map(keys, &to_string/1)
     states = Enum.map(states, &to_string/1)
@@ -311,7 +311,7 @@ defmodule Oban.Engines.Lite do
     query =
       Job
       |> where([j], j.state in ^states)
-      |> where([j], fragment("datetime(?) >= datetime(?)", j.inserted_at, ^since))
+      |> where([j], fragment("datetime(?) >= datetime(?)", field(j, ^timestamp), ^since))
       |> where(^dynamic)
       |> limit(1)
 
