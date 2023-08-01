@@ -419,6 +419,17 @@ defmodule Oban do
   1. This function always returns a list rather than a tuple of `{count, records}`
   2. This function accepts a list of changesets rather than a list of maps or keyword lists
 
+  > #### 🌟 Error handling and rollbacks {: .info}
+  >
+  > If the insert query encounters an issue, the function will raise an error based on your database adapter. This behavior proves valuable, especially when used in conjunction with `c:Ecto.Repo.transaction/2`, allowing for rollbacks.
+  >
+  > Example:
+  >  ```
+  >  ** (Postgrex.Error) ERROR 42501 (insufficient_privilege) permission denied for table oban_jobs
+  >  # or
+  >  ** (Ecto.InvalidChangesetError) could not perform insert because changeset is invalid.
+  >  ```
+
   > #### 🌟 Unique Jobs and Batching {: .warning}
   >
   > Only the [SmartEngine](https://getoban.pro/docs/pro/smart_engine.html) in [Oban
