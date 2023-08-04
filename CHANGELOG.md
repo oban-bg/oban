@@ -48,6 +48,36 @@ other databases. There's even an [open issue for MySQL support][mysql]...
 
 [mysql]: https://github.com/sorentwo/oban/issues/836
 
+## v2.15.3 — 2023-08-04
+
+### Enhancements
+
+- [Pruner] Prune jobs using the `scheduled_at` timestamp regardless of state.
+
+  The previous pruning query checked a different timestamp field for each prunable state, e.g.
+  `cancelled` used `cancelled_at`. There aren't any indexes for those timestamps, let alone the
+  combination of each state and timestamp, which led to slow pruning queries in larger databases.
+
+  In a database with a mixture of ~1.2m prunable jobs the updated query is 130x faster, reducing
+  the query time from 177ms down to 1.3ms.
+
+- [Lite] Avoid unnecessary transactions during staging and pruning operations
+
+  Contention between SQLite3 transactions causes deadlocks that lead to period errors. Avoiding
+  transactions when there isn't anything to write minimizes contention.
+
+### Bug Fixes
+
+- [Foreman] Explicitly pause queues when shutdown begins.
+
+  A call to `Producer.shutdown/1` was erroneously removed during the `DynamicSupervisor` queue
+  refactor.
+
+- [Job] Preserve explicit state set along with `scheduled_in` time.
+
+  The presence of a `scheduled_in` timestamp would always set the state to `scheduled`, even when
+  an explicit state was passed.
+
 ## v2.15.2 — 2023-06-22
 
 ### Enhancements
