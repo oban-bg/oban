@@ -131,6 +131,11 @@ defmodule Oban.Testing do
   @timestamp_fields ~w(attempted_at cancelled_at completed_at discarded_at inserted_at scheduled_at)a
   @wait_interval 10
 
+  @conf_keys []
+             |> Config.new()
+             |> Map.from_struct()
+             |> Map.keys()
+
   @doc false
   defmacro __using__(opts) do
     repo = Keyword.fetch!(opts, :repo)
@@ -219,7 +224,7 @@ defmodule Oban.Testing do
   def perform_job(worker, args, opts) when is_atom(worker) do
     assert_valid_worker(worker)
 
-    {conf_opts, opts} = Keyword.split(opts, [:log, :prefix, :repo])
+    {conf_opts, opts} = Keyword.split(opts, @conf_keys)
 
     utc_now = DateTime.utc_now()
 
