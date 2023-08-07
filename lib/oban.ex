@@ -420,11 +420,11 @@ defmodule Oban do
   2. This function accepts a list of changesets rather than a list of maps or keyword lists
 
   #### Error Handling and Rollbacks
-  
+
   If `insert_all` encounters an issue, the function will raise an error based on your database
   adapter. This behavior is valuable in conjunction with `c:Ecto.Repo.transaction/2` because it
   allows for rollbacks.
-  
+
   For example, an invalid changeset raises:
 
   `* (Ecto.InvalidChangesetError) could not perform insert because changeset is invalid.`
