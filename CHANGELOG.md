@@ -48,6 +48,24 @@ other databases. There's even an [open issue for MySQL support][mysql]...
 
 [mysql]: https://github.com/sorentwo/oban/issues/836
 
+## v2.15.4 — 2023-08-07
+
+### Enhancements
+
+- [Testing] Accept all config options in perform_job/3
+
+  Testing with `perform_job/3` requires building a viable config object. Previously, only a few
+  select options like `repo` were forwarded, which hampered the ability to tweak config for
+  testing.
+
+### Bug Fixes
+
+- [PG] Remove monitored processes from listeners list
+
+  The PG notifier monitored listener processes but didn't remove them from the set when a listener
+  exited. Busy systems would gradually accumulate dead pids and kept dispatching to them,
+  bottlnecking the PG process and eventually calling timeouts for new listeners.
+
 ## v2.15.3 — 2023-08-04
 
 ### Enhancements
