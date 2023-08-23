@@ -178,37 +178,7 @@ defmodule Oban.Worker do
         end
       end
 
-  ## Snoozing Jobs
-
-  When returning `{:snooze, snooze_time}` in `c:perform/1`, the job is postponed for at least
-  `snooze_time` seconds. Snoozing is done by incrementing the job's `max_attempts` field and
-  scheduling execution for `snooze_time` seconds in the future.
-
-  Snoozing does not change the number of retries remaining on the job, but it does increment the
-  `attempt` number each time the job snoozes, which will affect the default backoff retry
-  algorithm.
-
-  The example below demonstrates a `c:backoff/1` that compensates for snoozing:
-
-      defmodule MyApp.SnoozingWorker do
-        @max_attempts 20
-
-        use Oban.Worker, max_attempts: @max_attempts
-
-        @impl Worker
-        def backoff(%Job{} = job) do
-          corrected_attempt = @max_attempts - (job.max_attempts - job.attempt)
-
-          Worker.backoff(%{job | attempt: corrected_attempt})
-        end
-
-        @impl Worker
-        def perform(job) do
-          if MyApp.something?(job), do: :ok, else: {:snooze, 60}
-        end
-      end
-
-  ## Limiting Execution Time
+  ## Execution Timeout
 
   By default, individual jobs may execute indefinitely. If this is undesirable you may define a
   timeout in milliseconds with the `c:timeout/1` callback on your worker module.
@@ -239,6 +209,36 @@ defmodule Oban.Worker do
   Define the `timeout` based on the number of attempts:
 
       def timeout(%_{attempt: attempt}), do: attempt * :timer.seconds(5)
+
+  ## Snoozing Jobs
+
+  When returning `{:snooze, snooze_time}` in `c:perform/1`, the job is postponed for at least
+  `snooze_time` seconds. Snoozing is done by incrementing the job's `max_attempts` field and
+  scheduling execution for `snooze_time` seconds in the future.
+
+  Snoozing does not change the number of retries remaining on the job, but it does increment the
+  `attempt` number each time the job snoozes, which will affect the default backoff retry
+  algorithm.
+
+  The example below demonstrates a `c:backoff/1` that compensates for snoozing:
+
+      defmodule MyApp.SnoozingWorker do
+        @max_attempts 20
+
+        use Oban.Worker, max_attempts: @max_attempts
+
+        @impl Worker
+        def backoff(%Job{} = job) do
+          corrected_attempt = @max_attempts - (job.max_attempts - job.attempt)
+
+          Worker.backoff(%{job | attempt: corrected_attempt})
+        end
+
+        @impl Worker
+        def perform(job) do
+          if MyApp.something?(job), do: :ok, else: {:snooze, 60}
+        end
+      end
   """
   @moduledoc since: "0.1.0"
 
