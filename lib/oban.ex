@@ -15,7 +15,8 @@ defmodule Oban do
   alias Oban.Queue.{Drainer, Producer}
 
   @typedoc """
-  The name of the Oban instance. This is used to identify the instance configuration in the application environment.
+  The name of an Oban instance. This is used to identify instances in the internal registry for
+  configuration lookup.
   """
   @type name :: term()
 
@@ -1105,7 +1106,8 @@ defmodule Oban do
   end
 
   @doc """
-  It creates a facade for the `Oban` functions.
+  Creates a facade for `Oban` functions and automates fetching configuration from the application
+  environment.
 
   It allows you to avoid having to pass the `t:Oban.name/0` value to the `Oban` functions, as it is automatically set to
   the module name. As well as allowing you to configure the `Oban` instance in the application's configuration using
