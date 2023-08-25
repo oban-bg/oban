@@ -2,7 +2,6 @@ defmodule ObanTest do
   use Oban.Case, async: true
 
   alias Oban.Registry
-  alias Oban.Test.MyOban
 
   @opts [repo: Repo, testing: :manual]
 
@@ -488,8 +487,13 @@ defmodule ObanTest do
     end
   end
 
-  test "config/0 of a given instance" do
-    start_supervised!({MyOban, []})
+  test "config/0 of a facade instance" do
+    defmodule MyOban do
+      use Oban, otp_app: :oban, repo: Oban.Test.Repo
+    end
+
+    start_supervised!({MyOban, testing: :inline})
+
     assert %{name: MyOban, repo: Oban.Test.Repo} = MyOban.config()
   end
 

@@ -87,6 +87,145 @@ defmodule Oban do
                    is_function(cw, 1)
 
   @doc """
+  Creates a facade for `Oban` functions and automates fetching configuration from the application
+  environment.
+
+  Facade modules support configuration via the application environment under an OTP application
+  key. For example, the facade:
+
+      defmodule MyApp.Oban do
+        use Oban, otp_app: MyApp
+      end
+
+  Could be configured with:
+
+      config :my_app, Oban, repo: MyApp.Repo
+
+  Then you can include `MyApp.Oban` in your application's supervision tree without passing extra
+  options:
+
+      defmodule MyApp.Application do
+        use Application
+
+        def start(_type, _args) do
+          children = [
+            MyApp.Repo,
+            MyApp.Oban
+          ]
+
+          opts = [strategy: :one_for_one, name: MyApp.Supervisor]
+          Supervisor.start_link(children, opts)
+        end
+      end
+
+  ### Calling Functions
+
+  Facade modules allow you to call `Oban` functions on instances with custom names, e.g. not
+  `Oban`, without passing a `t:Oban.name/0` as the first argument.
+
+  For example, rather than calling `Oban.config/1` you'd call `MyOban.config/0`:
+
+      MyOban.config()
+
+  It also makes piping into Oban functions far more convenient: 
+
+      %{some: :args}
+      |> MyWorker.new()
+      |> MyOban.insert()
+
+  ### Merging Configuration
+
+  All configuration can be provided through the `use` macro or application config, and options
+  from the application supersedes those passed through `use`. Configuration is prioritized in
+  order:
+
+  1. Options passed through `use`
+  2. Options pulled from the OTP app via `Application.get_env/3`
+  3. Options passed through a child spec in the supervisor
+  """
+  defmacro __using__(opts \\ []) do
+    {otp_app, child_opts} = Keyword.pop!(opts, :otp_app)
+
+    quote do
+      def child_spec(opts) do
+        unquote(child_opts)
+        |> Keyword.merge(Application.get_env(unquote(otp_app), __MODULE__, []))
+        |> Keyword.merge(opts)
+        |> Keyword.put(:name, __MODULE__)
+        |> Oban.child_spec()
+      end
+
+      def cancel_all_jobs(queryable) do
+        Oban.cancel_all_jobs(__MODULE__, queryable)
+      end
+
+      def cancel_job(job_or_id) do
+        Oban.cancel_job(__MODULE__, job_or_id)
+      end
+
+      def check_queue(opts) do
+        Oban.check_queue(__MODULE__, opts)
+      end
+
+      def config do
+        Oban.config(__MODULE__)
+      end
+
+      def drain_queue(opts) do
+        Oban.drain_queue(__MODULE__, opts)
+      end
+
+      def insert(changeset, opts \\ []) do
+        Oban.insert(__MODULE__, changeset, opts)
+      end
+
+      def insert(multi, multi_name, changeset, opts \\ []) do
+        Oban.insert(__MODULE__, multi, multi_name, changeset, opts)
+      end
+
+      def insert!(changeset, opts \\ []) do
+        Oban.insert!(__MODULE__, changeset, opts)
+      end
+
+      def insert_all(changesets, opts) do
+        Oban.insert_all(__MODULE__, changesets, opts)
+      end
+
+      def insert_all(multi, multi_name, changesets, opts) do
+        Oban.insert_all(__MODULE__, multi, multi_name, changesets, opts)
+      end
+
+      def start_queue(opts) do
+        Oban.start_queue(__MODULE__, opts)
+      end
+
+      def pause_queue(opts) do
+        Oban.pause_queue(__MODULE__, opts)
+      end
+
+      def resume_queue(opts) do
+        Oban.resume_queue(__MODULE__, opts)
+      end
+
+      def scale_queue(opts) do
+        Oban.scale_queue(__MODULE__, opts)
+      end
+
+      def stop_queue(opts) do
+        Oban.stop_queue(__MODULE__, opts)
+      end
+
+      def retry_job(job_or_id) do
+        Oban.retry_job(__MODULE__, job_or_id)
+      end
+
+      def retry_all_jobs(queryable) do
+        Oban.retry_all_jobs(__MODULE__, queryable)
+      end
+    end
+  end
+
+  @doc """
   Starts an `Oban` supervision tree linked to the current process.
 
   ## Options
@@ -1120,130 +1259,6 @@ defmodule Oban do
 
     if local_only && is_nil(Registry.whereis(name, {:producer, to_string(queue)})) do
       raise ArgumentError, "queue #{inspect(queue)} does not exist locally"
-    end
-  end
-
-  @doc """
-  Creates a facade for `Oban` functions and automates fetching configuration from the application
-  environment.
-
-  It allows you to avoid having to pass the `t:Oban.name/0` value to the `Oban` functions, as it is automatically set to
-  the module name. As well as allowing you to configure the `Oban` instance in the application's configuration using
-  the module name under a given OTP application key.
-
-  ## Examples
-
-  ### In an application module
-
-      defmodule MyApp.Oban do
-        use Oban.Instance,
-          otp_app: :my_app,
-          repo: MyApp.Repo
-      end
-
-  Now you can register the `MyApp.Oban` module in the application's supervision tree:
-
-      defmodule MyApp.Application do
-        use Application
-
-        def start(_type, _args) do
-          children = [
-            MyApp.Repo,
-            MyApp.Oban
-          ]
-
-          opts = [strategy: :one_for_one, name: MyApp.Supervisor]
-          Supervisor.start_link(children, opts)
-        end
-      end
-
-  ### Avoiding the need of passing the `Oban` instance
-
-  Instead of calling `Oban` functions passing the `Oban` instance, you can use the `Oban.Instance` module directly:
-
-      Oban.Instance.insert(MyApp.MyJob.new(args: %{ "field" => "value" }))
-  """
-  defmacro __using__(opts \\ []) do
-    {opts, child_opts} = Keyword.split(opts, [:otp_app])
-    otp_app = Keyword.fetch!(opts, :otp_app)
-
-    # credo:disable-for-next-line Credo.Check.Refactor.LongQuoteBlocks
-    quote do
-      def child_spec(opts) do
-        unquote(child_opts)
-        |> Keyword.merge(Application.get_env(unquote(otp_app), __MODULE__, []))
-        |> Keyword.merge(opts)
-        |> Keyword.put(:name, __MODULE__)
-        |> Oban.child_spec()
-      end
-
-      def cancel_all_jobs(queryable) do
-        Oban.cancel_all_jobs(__MODULE__, queryable)
-      end
-
-      def cancel_job(job_or_id) do
-        Oban.cancel_job(__MODULE__, job_or_id)
-      end
-
-      def check_queue(opts) do
-        Oban.check_queue(__MODULE__, opts)
-      end
-
-      def config do
-        Oban.config(__MODULE__)
-      end
-
-      def drain_queue(opts) do
-        Oban.drain_queue(__MODULE__, opts)
-      end
-
-      def insert(changeset, opts \\ []) do
-        Oban.insert(__MODULE__, changeset, opts)
-      end
-
-      def insert(multi, multi_name, changeset, opts \\ []) do
-        Oban.insert(__MODULE__, multi, multi_name, changeset, opts)
-      end
-
-      def insert!(changeset, opts \\ []) do
-        Oban.insert!(__MODULE__, changeset, opts)
-      end
-
-      def insert_all(changesets, opts) do
-        Oban.insert_all(__MODULE__, changesets, opts)
-      end
-
-      def insert_all(multi, multi_name, changesets, opts) do
-        Oban.insert_all(__MODULE__, multi, multi_name, changesets, opts)
-      end
-
-      def start_queue(opts) do
-        Oban.start_queue(__MODULE__, opts)
-      end
-
-      def pause_queue(opts) do
-        Oban.pause_queue(__MODULE__, opts)
-      end
-
-      def resume_queue(opts) do
-        Oban.resume_queue(__MODULE__, opts)
-      end
-
-      def scale_queue(opts) do
-        Oban.scale_queue(__MODULE__, opts)
-      end
-
-      def stop_queue(opts) do
-        Oban.stop_queue(__MODULE__, opts)
-      end
-
-      def retry_job(job_or_id) do
-        Oban.retry_job(__MODULE__, job_or_id)
-      end
-
-      def retry_all_jobs(queryable) do
-        Oban.retry_all_jobs(__MODULE__, queryable)
-      end
     end
   end
 end
