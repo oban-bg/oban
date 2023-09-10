@@ -288,6 +288,19 @@ defmodule Oban.Testing do
 
   Only values for the provided arguments will be checked. For example, an assertion made on
   `worker: "MyWorker"` will match _any_ jobs for that worker, regardless of the queue or args.
+
+  Additionally, be mindful that matches must be exhaustive for nested structures, such as args,
+  otherwise it will fail to match.
+
+  ```elixir
+  Oban.insert(MyWorker.new(%{foo: "a", bar: "b"}))
+
+  # Fails because :bar isn't specified
+  assert_enqueued worker: MyWorker, args: %{foo: "a"}
+
+  # Passes
+  assert_enqueued worker: MyWorker, args: %{foo: "a", bar: "b"}
+  ```
   """
   @doc since: "0.3.0"
   @spec assert_enqueued(repo :: module(), opts :: Keyword.t()) :: true
