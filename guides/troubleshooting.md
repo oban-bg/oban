@@ -75,19 +75,3 @@ COMMENT ON TABLE public.oban_jobs IS '10'"
 
 Once the comment is in place only the migrations from that version onward will
 run.
-
-### Elixir and Erlang Versions
-
-If your app crashes on launch, be sure to confirm you are running the correct version of Elixir
-and Erlang ([view requirements][reqs]). If using the *hashnuke/elixir* buildpack, you can update
-the `elixir_buildpack.config` file in your application's root directory to something like:
-
-```
-# Elixir version
-elixir_version=1.13.0
-
-# Erlang version
-erlang_version=24.2
-```
-
-[reqs]: Oban.html#requirements
