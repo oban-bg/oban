@@ -15,8 +15,8 @@ defmodule Oban.Engine do
   > #### 🌟 SmartEngine {: .info}
   >
   > The Basic engine lacks advanced functionality such as global limits, rate limits, and
-  > unique bulk insert. For those features and more, see the [`SmartEngine` in Oban
-  > Pro](https://getoban.pro/docs/pro/smart_engine.html).
+  > unique bulk insert. For those features and more, see the [`Smart` engine in Oban
+  > Pro](https://getoban.pro/docs/pro/Oban.Pro.Engines.Smart.html).
   """
 
   alias Ecto.{Changeset, Multi}
