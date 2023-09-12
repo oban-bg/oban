@@ -237,6 +237,7 @@ defmodule Oban.TestingTest do
 
   describe "assert_enqueued/1" do
     test "checking for jobs with matching properties" do
+      insert!(%{}, worker: Ping, queue: :omega)
       insert!(%{id: 1, xd: 1}, worker: Ping, queue: :alpha)
       insert!(%{id: 2, xd: 2}, worker: Pong, queue: :gamma)
       insert!(%{message: "hello"}, worker: Pong, queue: :gamma)
@@ -247,6 +248,7 @@ defmodule Oban.TestingTest do
       assert_enqueued worker: Pong
       assert_enqueued worker: "Pong", queue: "gamma"
       assert_enqueued worker: "Pong", queue: "gamma", args: %{message: "hello"}
+      assert_enqueued args: %{}, queue: :omega
       assert_enqueued args: %{id: 1}
       assert_enqueued args: %{id: 1, xd: 1}
       assert_enqueued args: %{message: "hello"}

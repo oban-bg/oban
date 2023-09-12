@@ -586,7 +586,11 @@ defmodule Oban.Testing do
   defp apply_where({:worker, worker}, query), do: where(query, worker: ^Worker.to_string(worker))
 
   defp apply_where({key, val}, query) when key in @json_fields do
-    where(query, [j], fragment("? @> ?", field(j, ^key), ^val))
+    if val == %{} do
+      where(query, [j], fragment("? <@ ?", field(j, ^key), ^val))
+    else
+      where(query, [j], fragment("? @> ?", field(j, ^key), ^val))
+    end
   end
 
   defp apply_where({key, val}, query) when key in @timestamp_fields do
