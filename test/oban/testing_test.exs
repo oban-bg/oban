@@ -237,8 +237,8 @@ defmodule Oban.TestingTest do
 
   describe "assert_enqueued/1" do
     test "checking for jobs with matching properties" do
-      insert!(%{id: 1}, worker: Ping, queue: :alpha)
-      insert!(%{id: 2}, worker: Pong, queue: :gamma)
+      insert!(%{id: 1, xd: 1}, worker: Ping, queue: :alpha)
+      insert!(%{id: 2, xd: 2}, worker: Pong, queue: :gamma)
       insert!(%{message: "hello"}, worker: Pong, queue: :gamma)
 
       assert_enqueued worker: Ping
@@ -248,6 +248,7 @@ defmodule Oban.TestingTest do
       assert_enqueued worker: "Pong", queue: "gamma"
       assert_enqueued worker: "Pong", queue: "gamma", args: %{message: "hello"}
       assert_enqueued args: %{id: 1}
+      assert_enqueued args: %{id: 1, xd: 1}
       assert_enqueued args: %{message: "hello"}
       assert_enqueued worker: Ping, prefix: "public"
     end
@@ -298,10 +299,10 @@ defmodule Oban.TestingTest do
 
   describe "refute_enqueued/1" do
     test "refuting jobs with specific properties have been enqueued" do
-      insert!(%{id: 1}, worker: Ping, queue: :alpha)
-      insert!(%{id: 2}, worker: Pong, queue: :gamma)
-      insert!(%{id: 3}, worker: Pong, queue: :gamma, state: "completed")
-      insert!(%{id: 4}, worker: Pong, queue: :gamma, state: "discarded")
+      insert!(%{id: 1, xd: 1}, worker: Ping, queue: :alpha)
+      insert!(%{id: 2, xd: 2}, worker: Pong, queue: :gamma)
+      insert!(%{id: 3, xd: 3}, worker: Pong, queue: :gamma, state: "completed")
+      insert!(%{id: 4, xd: 4}, worker: Pong, queue: :gamma, state: "discarded")
       insert!(%{message: "hello"}, worker: Pong, queue: :gamma)
 
       refute_enqueued worker: Pongo

@@ -63,18 +63,20 @@ defmodule Oban.Testing do
 
   The behaviour can be exercised in your test code:
 
-      defmodule MyApp.BusinessTest do
-        use ExUnit.Case, async: true
-        use Oban.Testing, repo: MyApp.Repo
+  ```elixir
+  defmodule MyApp.BusinessTest do
+    use ExUnit.Case, async: true
+    use Oban.Testing, repo: MyApp.Repo
 
-        alias MyApp.Business
+    alias MyApp.Business
 
-        test "jobs are enqueued with provided arguments" do
-          Business.work(%{id: 1, message: "Hello!"})
+    test "jobs are enqueued with provided arguments" do
+      Business.work(%{id: 1, message: "Hello!"})
 
-          assert_enqueued worker: MyApp.Worker, args: %{id: 1, message: "Hello!"}
-        end
-      end
+      assert_enqueued worker: MyApp.Worker, args: %{id: 1, message: "Hello!"}
+    end
+  end
+  ```
 
   ## Matching Scheduled Jobs and Timestamps
 
@@ -113,6 +115,7 @@ defmodule Oban.Testing do
   end
   ```
   """
+
   @moduledoc since: "0.3.0"
 
   import ExUnit.Assertions, only: [assert: 2, refute: 2, flunk: 1]
@@ -128,10 +131,10 @@ defmodule Oban.Testing do
           | {:prefix, binary()}
           | {:repo, module()}
 
+  @conf_keys ~w(log prefix repo)a
+  @json_fields ~w(args meta)a
   @timestamp_fields ~w(attempted_at cancelled_at completed_at discarded_at inserted_at scheduled_at)a
   @wait_interval 10
-
-  @conf_keys ~w(log prefix repo)a
 
   @doc false
   defmacro __using__(repo_opts) do
@@ -578,11 +581,13 @@ defmodule Oban.Testing do
     Enum.reduce(opts, query, &apply_where/2)
   end
 
-  defp apply_where({:args, args}, query), do: where(query, args: ^json_encode_decode(args))
-  defp apply_where({:meta, meta}, query), do: where(query, meta: ^json_encode_decode(meta))
   defp apply_where({:queue, queue}, query), do: where(query, queue: ^to_string(queue))
   defp apply_where({:state, state}, query), do: where(query, state: ^to_string(state))
   defp apply_where({:worker, worker}, query), do: where(query, worker: ^Worker.to_string(worker))
+
+  defp apply_where({key, val}, query) when key in @json_fields do
+    where(query, [j], fragment("? @> ?", field(j, ^key), ^val))
+  end
 
   defp apply_where({key, val}, query) when key in @timestamp_fields do
     {time, delta} =
