@@ -131,51 +131,44 @@ defmodule Oban.Testing do
   @timestamp_fields ~w(attempted_at cancelled_at completed_at discarded_at inserted_at scheduled_at)a
   @wait_interval 10
 
-  @conf_keys []
-             |> Config.new()
-             |> Map.from_struct()
-             |> Map.keys()
+  @conf_keys ~w(log prefix repo)a
 
   @doc false
-  defmacro __using__(opts) do
-    repo = Keyword.fetch!(opts, :repo)
-    prefix = Keyword.get(opts, :prefix, "public")
+  defmacro __using__(repo_opts) do
+    _repo = Keyword.fetch!(repo_opts, :repo)
 
     quote do
       alias Oban.Testing
 
       def perform_job(worker, args, opts \\ []) do
-        opts =
-          opts
-          |> Keyword.put_new(:repo, unquote(repo))
-          |> Keyword.put_new(:prefix, unquote(prefix))
+        opts = Keyword.merge(unquote(repo_opts), opts)
 
         Testing.perform_job(worker, args, opts)
       end
 
       def all_enqueued(opts \\ []) do
-        opts = Keyword.put_new(opts, :prefix, unquote(prefix))
-
-        Testing.all_enqueued(unquote(repo), opts)
+        unquote(repo_opts)
+        |> Keyword.merge(opts)
+        |> Testing.all_enqueued()
       end
 
       def assert_enqueued(opts, timeout \\ :none) do
-        opts = Keyword.put_new(opts, :prefix, unquote(prefix))
+        opts = Keyword.merge(unquote(repo_opts), opts)
 
         if timeout == :none do
-          Testing.assert_enqueued(unquote(repo), opts)
+          Testing.assert_enqueued(opts)
         else
-          Testing.assert_enqueued(unquote(repo), opts, timeout)
+          Testing.assert_enqueued(opts, timeout)
         end
       end
 
       def refute_enqueued(opts, timeout \\ :none) do
-        opts = Keyword.put_new(opts, :prefix, unquote(prefix))
+        opts = Keyword.merge(unquote(repo_opts), opts)
 
         if timeout == :none do
-          Testing.refute_enqueued(unquote(repo), opts)
+          Testing.refute_enqueued(opts)
         else
-          Testing.refute_enqueued(unquote(repo), opts, timeout)
+          Testing.refute_enqueued(opts, timeout)
         end
       end
     end
@@ -275,12 +268,19 @@ defmodule Oban.Testing do
 
       assert [] = all_enqueued()
   """
-  @doc since: "0.6.0"
-  @spec all_enqueued(repo :: module(), opts :: Keyword.t()) :: [Job.t()]
-  def all_enqueued(repo, opts) when is_list(opts) do
-    {conf, opts} = extract_conf(repo, opts)
+  @spec all_enqueued(opts :: Keyword.t()) :: [Job.t()]
+  def all_enqueued(opts) when is_list(opts) do
+    {conf, opts} = extract_conf(opts)
 
     Repo.all(conf, base_query(opts))
+  end
+
+  @doc false
+  @spec all_enqueued(repo :: module(), opts :: Keyword.t()) :: [Job.t()]
+  def all_enqueued(repo, opts) do
+    opts
+    |> Keyword.put(:repo, repo)
+    |> all_enqueued()
   end
 
   @doc """
@@ -288,24 +288,13 @@ defmodule Oban.Testing do
 
   Only values for the provided arguments will be checked. For example, an assertion made on
   `worker: "MyWorker"` will match _any_ jobs for that worker, regardless of the queue or args.
-
-  Additionally, be mindful that matches must be exhaustive for nested structures, such as args,
-  otherwise it will fail to match.
-
-  ```elixir
-  Oban.insert(MyWorker.new(%{foo: "a", bar: "b"}))
-
-  # Fails because :bar isn't specified
-  assert_enqueued worker: MyWorker, args: %{foo: "a"}
-
-  # Passes
-  assert_enqueued worker: MyWorker, args: %{foo: "a", bar: "b"}
-  ```
   """
   @doc since: "0.3.0"
-  @spec assert_enqueued(repo :: module(), opts :: Keyword.t()) :: true
-  def assert_enqueued(repo, [_ | _] = opts) do
-    if job_exists?(repo, opts) do
+  @spec assert_enqueued(opts :: Keyword.t()) :: true
+  def assert_enqueued([_ | _] = opts) do
+    {conf, opts} = extract_conf(opts)
+
+    if job_exists?(conf, opts) do
       true
     else
       flunk("""
@@ -313,11 +302,19 @@ defmodule Oban.Testing do
 
       #{inspect_opts(opts)}
 
-      to be enqueued in the #{inspect(opts[:prefix])} schema. Instead found:
+      to be enqueued in the #{inspect(conf.prefix)} schema. Instead found:
 
-      #{inspect(available_jobs(repo, opts), charlists: :as_lists, pretty: true)}
+      #{inspect(available_jobs(conf, opts), charlists: :as_lists, pretty: true)}
       """)
     end
+  end
+
+  @doc false
+  @spec assert_enqueued(repo :: module(), opts :: Keyword.t()) :: true
+  def assert_enqueued(repo, opts) when is_list(opts) do
+    opts
+    |> Keyword.put(:repo, repo)
+    |> assert_enqueued()
   end
 
   @doc """
@@ -332,17 +329,26 @@ defmodule Oban.Testing do
       assert_enqueued [worker: MyWorker], 100
   """
   @doc since: "1.2.0"
-  @spec assert_enqueued(repo :: module(), opts :: Keyword.t(), timeout :: pos_integer()) :: true
-  def assert_enqueued(repo, [_ | _] = opts, timeout) when timeout > 0 do
+  @spec assert_enqueued(opts :: Keyword.t(), timeout :: timeout()) :: true
+  def assert_enqueued([_ | _] = opts, timeout) when timeout > 0 do
+    {conf, opts} = extract_conf(opts)
+
     error_message = """
     Expected a job matching:
 
     #{inspect_opts(opts)}
 
-    to be enqueued in the #{inspect(opts[:prefix])} schema within #{timeout}ms
+    to be enqueued in the #{inspect(conf.prefix)} schema within #{timeout}ms
     """
 
-    assert wait_for_job(repo, opts, timeout), error_message
+    assert wait_for_job(conf, opts, timeout), error_message
+  end
+
+  @doc false
+  def assert_enqueued(repo, [_ | _] = opts, timeout) when timeout > 0 do
+    opts
+    |> Keyword.put(:repo, repo)
+    |> assert_enqueued(timeout)
   end
 
   @doc """
@@ -351,17 +357,26 @@ defmodule Oban.Testing do
   See `assert_enqueued/2` for additional details.
   """
   @doc since: "0.3.0"
-  @spec refute_enqueued(repo :: module(), opts :: Keyword.t()) :: false
-  def refute_enqueued(repo, [_ | _] = opts) do
+  @spec refute_enqueued(opts :: Keyword.t()) :: false
+  def refute_enqueued([_ | _] = opts) do
+    {conf, opts} = extract_conf(opts)
+
     error_message = """
     Expected no jobs matching:
 
     #{inspect_opts(opts)}
 
-    to be enqueued in the #{inspect(opts[:prefix])} schema
+    to be enqueued in the #{inspect(conf.prefix)} schema
     """
 
-    refute job_exists?(repo, opts), error_message
+    refute job_exists?(conf, opts), error_message
+  end
+
+  @doc false
+  def refute_enqueued(repo, [_ | _] = opts) do
+    opts
+    |> Keyword.put(:repo, repo)
+    |> refute_enqueued()
   end
 
   @doc """
@@ -378,17 +393,25 @@ defmodule Oban.Testing do
       refute_enqueued [worker: MyWorker], 100
   """
   @doc since: "1.2.0"
-  @spec refute_enqueued(repo :: module(), opts :: Keyword.t(), timeout :: pos_integer()) :: false
-  def refute_enqueued(repo, [_ | _] = opts, timeout) when timeout >= 10 do
+  @spec refute_enqueued(opts :: Keyword.t(), timeout :: timeout()) :: false
+  def refute_enqueued([_ | _] = opts, timeout) when timeout >= 10 do
+    {conf, opts} = extract_conf(opts)
+
     error_message = """
     Expected no jobs matching:
 
     #{inspect_opts(opts)}
 
-    to be enqueued in the #{inspect(opts[:prefix])} schema within #{timeout}ms
+    to be enqueued in the #{inspect(conf.prefix)} schema within #{timeout}ms
     """
 
-    refute wait_for_job(repo, opts, timeout), error_message
+    refute wait_for_job(conf, opts, timeout), error_message
+  end
+
+  def refute_enqueued(repo, [_ | _] = opts, timeout) when timeout >= 10 do
+    opts
+    |> Keyword.put(:repo, repo)
+    |> refute_enqueued(timeout)
   end
 
   @doc """
@@ -428,7 +451,6 @@ defmodule Oban.Testing do
   defp inspect_opts(opts) do
     opts
     |> Map.new()
-    |> Map.drop([:prefix])
     |> inspect(charlists: :as_lists, pretty: true)
   end
 
@@ -514,40 +536,31 @@ defmodule Oban.Testing do
     """
   end
 
-  defp extract_conf(repo, opts) do
-    {conf_opts, opts} = Keyword.split(opts, [:prefix])
+  defp extract_conf(opts) do
+    {conf_opts, opts} = Keyword.split(opts, @conf_keys)
 
-    conf =
-      conf_opts
-      |> Keyword.put(:repo, repo)
-      |> Config.new()
-
-    {conf, opts}
+    {Config.new(conf_opts), opts}
   end
 
   # Enqueued Helpers
 
-  defp job_exists?(repo, opts) do
-    {conf, opts} = extract_conf(repo, opts)
-
+  defp job_exists?(conf, opts) do
     Repo.exists?(conf, base_query(opts))
   end
 
-  defp wait_for_job(repo, opts, timeout) when timeout > 0 do
-    if job_exists?(repo, opts) do
+  defp wait_for_job(conf, opts, timeout) when timeout > 0 do
+    if job_exists?(conf, opts) do
       true
     else
       Process.sleep(@wait_interval)
 
-      wait_for_job(repo, opts, timeout - @wait_interval)
+      wait_for_job(conf, opts, timeout - @wait_interval)
     end
   end
 
-  defp wait_for_job(_repo, _opts, _timeout), do: false
+  defp wait_for_job(_conf, _opts, _timeout), do: false
 
-  defp available_jobs(repo, opts) do
-    {conf, opts} = extract_conf(repo, opts)
-
+  defp available_jobs(conf, opts) do
     query =
       []
       |> base_query()

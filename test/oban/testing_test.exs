@@ -1,7 +1,7 @@
 defmodule Oban.TestingTest do
   use Oban.Case, async: true
 
-  use Oban.Testing, repo: Oban.Test.Repo
+  use Oban.Testing, repo: Oban.Test.Repo, prefix: "public", log: false
 
   alias Oban.{TelemetryHandler, Testing}
 
