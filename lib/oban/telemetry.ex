@@ -81,7 +81,8 @@ defmodule Oban.Telemetry do
   | `:stop`      | `:duration`    | `:conf`, `:engine`, `:jobs`                                    |
   | `:exception` | `:duration`    | `:conf`, `:engine`, `:kind`, `:reason`, `:stacktrace` |
 
-  Events for job-level Engine operations also include the `job`
+  Events for job-level Engine operations also include the `job`, with the exception of
+  `:insert_job, :start`, because the `job` isn't available yet.
 
   * `[:oban, :engine, :cancel_job, :start | :stop | :exception]`
   * `[:oban, :engine, :complete_job, :start | :stop | :exception]`
