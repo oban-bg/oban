@@ -3,167 +3,66 @@
 _🌟 Looking for changes to Web or Pro? Check the [Oban.Pro Changelog][opc] or
 the [Oban.Web Changelog][owc]. 🌟_
 
-## 🗜️ Notification Compression
+## 🐑 Oban Instance Module
 
-Oban uses notifications across most core functionality, from job staging to cancellation. Some
-notifications, such as gossip, contain massive redundancy that compresses nicely. For example,
-this table breaks down the compression ratios for a fairly standard gossip payload
-containing data from ten queues:
+New facade modules allow you to call `Oban` functions on instances with custom names, e.g. not
+`Oban`, without passing a `t:Oban.name/0` as the first argument.
 
-| Mode      | Bytes | % of Original |
-| --------- | ----- | ------------- |
-| Original  | 4720  | 100%          |
-| Gzip      | 307   |   7%          |
-| Encode 64 | 412   |   9%          |
+For example, rather than calling `Oban.config/1` you'd call `MyOban.config/0`:
 
-Minimizing notification payloads is especially important for Postgres because it applies an 8kb
-limit to all messages. Now all pub/sub notifications are compressed automatically, with a safety
-mechanism for compatibility with external notifiers, namely Postgres triggers.
+```elixir
+MyOban.config()
+```
 
-## 🗃️ Query Improvements
+It also makes piping into Oban functions far more convenient: 
 
-There has been an ongoing issue with systems recording a job attempt twice, when it only executed
-once. While that sounds minor, it could break an entire queue when the attempt exceeded max
-attempts because it would violate a database constraint.
+```elixir
+%{some: :args}
+|> MyWorker.new()
+|> MyOban.insert()
+```
 
-Apparently, the Postgres planner may choose to generate a plan that executes a nested loop over
-the LIMITing subquery, causing more UPDATEs than LIMIT. That could cause unexpected updates,
-including attempts > max_attempts in some cases. The solution is to use a CTE as an "optimization
-fence" that forces Postgres _not_ to optimize the query.
+## 🧩 Partial Matches in Testing Assertions
 
-We also worked in a few additional query improvements:
+It's now possible to match a subset of fields on args or meta with `all_enqueued`,
+`assert_enqueued`, and `refute_enqueued`. For example, the following assertion will now pass:
 
-* Use an index only scan for job staging to safely handle tables with millions of scheduled jobs.
-* Remove unnecessary row locking from staging and pruning queries.
+```elixir
+# Given a job with these args: %{id: 123, mode: "active"}
 
-## 🪶 New Engine Callbacks for SQL Compatibility
+assert_enqueued args: %{id: 123} #=> true
+assert_enqueued args: %{mode: "active"} #=> true
+assert_enqueued args: %{id: 321, mode: "active"} #=> false
+```
 
-We're pleased to share improvements in Oban's SQLite integration. A few SQLite pioneers identified
-pruning and staging compatibility bugs, and instead of simply patching around the issues with
-conditional logic, we tackled them with new engine callbacks: `stage_jobs/3` and `prune_jobs/3`.
-The result is safer, optimized queries for each specific database.
+The change applies to `args` and `meta` queries for `all_enqueued/2`, `assert_enqueued/2` and
+`refute_enqueued/2` helpers.
 
-Introducing new engine callbacks with database-specific queries paves the way for working with
-other databases. There's even an [open issue for MySQL support][mysql]...
+## ⏲️ Unique Timestamp Option
 
-[mysql]: https://github.com/sorentwo/oban/issues/836
+Jobs are frequently scheduled for a time far in the future and it's often desirable for to
+consider `scheduled` jobs for uniqueness, but unique jobs only checked the `:inserted_at`
+timestamp.
 
-## v2.15.2 — 2023-06-22
+Now `unique` has a `timestamp` option that allows checking the `:scheduled_at` timestamp instead:
 
-### Enhancements
+```elixir
+use Oban.Worker, unique: [period: 120, timestamp: :scheduled_at]
+```
 
-- [Repo] Pass `oban: true` option to all queries.
-
-  Telemetry options are exposed in Ecto instrumentation, but they aren't obviously available in the
-  opts passed to `prepare_query`. Now all queries have an `oban: true` option so users can ignore
-  them in multi-tenancy setups.
-
-- [Engine] Generate a UUID for all `Basic` and `Lite` queue instances to aid in identifying
-  orphaned jobs or churning queue producers.
-
-- [Oban] Use `Logger.warning/2` and replace deprecated use of `:warn` level with `:warning`
-  across all modules.
+## v2.16.0 — 2023-09-22
 
 ### Bug Fixes
 
-- [Job] Validate changesets during `Job.to_map/1` conversion
+- [Reindexer] Correct relname match for reindexer plugin
 
-  The `Job.to_map/1` function converts jobs to a map "entry" suitable for use in `insert_all`.
-  Previously, that function didn't perform any validation and would allow inserting (or attempting
-  to insert) invalid jobs during `insert_all`. Aside from inconsistency with `insert` and
-  `insert!`, `insert_all` could insert invalid jobs that would never run successfully.
-  
-  Now `to_map/1` uses `apply_action!/2` to apply the changeset with validation and raises an
-  exception identical to `insert!`, but before calling the database.
+  We can safely assume all indexes start with `oban_jobs`. The previous pattern was based on an
+  outdated index format from older migrations.
 
-- [Notifier] Store PG notifier state in the registry for non-blocking lookup
+- [Testing] Support `repo`, `prefix`, and `log` query options in `use Oban.Testing`
 
-  To avoid `GenServer.call` timeouts when the system is under high load we pull the state from the
-  notifier's registry metadata.
-
-- [Migration] Add `primary_key` explicitly during SQLite3 migrations
-
-  If a user has configured Ecto's `:migration_primary_key` to something other than `bigserial` the
-  schema is incompatible with Oban's job schema.
-
-## v2.15.1 — 2023-05-11
-
-### Enhancements
-
-- [Telemetry] Add `[:oban, :stager, :switch]` telemetry event and use it for logging changes.
-
-  Aside from an instrumentable event, the new logs are structured for consistent parsing on
-  external aggregators.
-
-- [Job] Remove default priority from job schema to allow changing defaults through the database
-    
-### Bug Fixes
-
-- [Basic] Restore `attempt < max_attempts` condition when fetching jobs
-
-  In some situations, a condition to ensure the attempts don't exceed max attempts is still
-  necessary. By checking the attempts _outside_ the CTE we maintain optimal query performance for
-  the large scan that finds jobs, and only apply the check in the small outer query.
-
-- [Pruner] Add missing `:interval` to `t:Oban.Plugins.Pruner.option/0`
-
-## v2.15.0 — 2023-04-13
-
-### Enhancements
-
-- [Oban] Use DynamicSupervisor to supervise queues for optimal shutdown
-
-  Standard supervisors shut down in a fixed order, which could make shutting down queues with
-  active jobs and a lengthy grace period very slow. This switches to a `DynamicSupervisor` for
-  queue supervision so queues can shut down simultaneously while still respecting the grace
-  period.
-
-- [Executor] Retry acking infinitely after job execution
-
-  After jobs execute the producer must record their status in the database. Previously, if acking
-  failed due to a connection error after 10 retries it would orphan the job. Now, acking retries
-  infinitely (with backoff) until the function succeeds. The result is stronger execution
-  guarantees with backpressure during periods of database fragility.
-
-- [Oban] Accept a `Job` struct as well as a job id for `cancel_job/1` and `retry_job/1`
-
-  Now it's possible to write `Oban.cancel_job(job)` directly, rather than
-  `Oban.cancel_job(job.id)`.
-
-- [Worker] Allow snoozing jobs for zero seconds.
-
-  Returning `{:snooze, 0}` immediately reschedules a job without any delay.
-
-- [Notifier] Accept arbitrary channel names for notifications, e.g. "my-channel" 
-
-- [Telemetry] Add 'detach_default_logger/0' to programmatically disable an attached logger.
-
-- [Testing] Avoid unnecessary query for "happy path" assertion errors in `assert_enqueued/2`
-
-- [Testing] Inspect charlists as lists in testing assertions
-
-  Args frequently contain lists of integers like `[123]`, which was curiously displayed as `'{'`.
-
-### Bug Fixes
-
-- [Executor] Correctly raise "unknown worker" errors.
-
-  Unknown workers triggered an unknown case error rather than the appropriate "unknown worker"
-  runtime error.
-
-- [Testing] Allow `assert_enqueued` with a `scheduled_at` time for `available` jobs
-
-  The use of `Job.new` to normalize query fields would change assertions with a "scheduled_at"
-  date to _only_ check scheduled, never "available"
-
-- [Telemetry] Remove `:worker` from engine and plugin query meta.
-
-  The `worker` isn't part of any query indexes and prevents optimal index usage.
-
-- [Job] Correct priority type to cover default of 0
-
-For changes prior to v2.15 see the [v2.14][prv] docs.
+For changes prior to v2.16 see the [v2.15][prv] docs.
 
 [opc]: https://getoban.pro/docs/pro/changelog.html
 [owc]: https://getoban.pro/docs/web/changelog.html
-[prv]: https://hexdocs.pm/oban/2.14.2/changelog.html
+[prv]: https://hexdocs.pm/oban/2.15.2/changelog.html
