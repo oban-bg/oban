@@ -131,7 +131,11 @@ defmodule Oban.Testing do
           | {:prefix, binary()}
           | {:repo, module()}
 
-  @conf_keys ~w(log prefix repo)a
+  @conf_keys []
+             |> Config.new()
+             |> Map.from_struct()
+             |> Map.keys()
+
   @json_fields ~w(args meta)a
   @timestamp_fields ~w(attempted_at cancelled_at completed_at discarded_at inserted_at scheduled_at)a
   @wait_interval 10

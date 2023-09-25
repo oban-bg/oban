@@ -180,6 +180,10 @@ defmodule Oban.TestingTest do
       assert {:ok, %{"check" => "meta"}} = perform_job(EchoWorker, %{field: :meta}, meta: meta)
     end
 
+    test "splitting configuration options before building a changeset" do
+      assert {:ok, _} = perform_job(EchoWorker, %{field: :id}, engine: Oban.Engines.Basic)
+    end
+
     test "defaulting the number of attempts to mimic real execution" do
       assert {:ok, 1} = perform_job(AttemptDrivenWorker, %{})
       assert {:ok, 2} = perform_job(AttemptDrivenWorker, %{}, attempt: 2)
