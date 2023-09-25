@@ -172,6 +172,12 @@ defmodule Oban.MixProject do
   defp aliases do
     [
       bench: "run bench/bench_helper.exs",
+      release: [
+        "cmd git tag v#{@version}",
+        "cmd git push",
+        "cmd git push --tags",
+        "hex.publish --yes"
+      ],
       "test.reset": ["ecto.drop --quiet", "test.setup"],
       "test.setup": ["ecto.create --quiet", "ecto.migrate --quiet"],
       "test.ci": [
