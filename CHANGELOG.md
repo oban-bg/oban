@@ -50,6 +50,15 @@ Now `unique` has a `timestamp` option that allows checking the `:scheduled_at` t
 use Oban.Worker, unique: [period: 120, timestamp: :scheduled_at]
 ```
 
+## v2.16.1 — 2023-09-25
+
+### Bug Fixes
+
+- [Testing] Restore splitting out all config options in helpers.
+
+  Splitting all configuration keys is necessary when using `perform_job/3` with non-job options
+  such as `:engine`.
+
 ## v2.16.0 — 2023-09-22
 
 ### Bug Fixes
