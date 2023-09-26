@@ -1,4 +1,4 @@
-# Changelog for Oban v2.15
+# Changelog for Oban v2.16
 
 _🌟 Looking for changes to Web or Pro? Check the [Oban.Pro Changelog][opc] or
 the [Oban.Web Changelog][owc]. 🌟_
