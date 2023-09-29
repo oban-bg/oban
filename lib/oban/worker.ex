@@ -216,11 +216,18 @@ defmodule Oban.Worker do
   `snooze_time` seconds. Snoozing is done by incrementing the job's `max_attempts` field and
   scheduling execution for `snooze_time` seconds in the future.
 
-  Snoozing does not change the number of retries remaining on the job, but it does increment the
-  `attempt` number each time the job snoozes, which will affect the default backoff retry
+  Executing bumps a job's `attempt` count. Despite snooze incrementing the `max_attempts` to
+  preserve total retries, the change to `attempt` will affect the default backoff retry
   algorithm.
 
-  The example below demonstrates a `c:backoff/1` that compensates for snoozing:
+  > #### 🌟 Snoozes and Attempts {: .info}
+  >
+  > Oban Pro's [Smart Engine](https://getoban.pro/docs/pro/Oban.Pro.Engines.Smart.html) rolls back
+  > the `attempt` and preserves the original `max_attempts` in order to differentiate between
+  > "real" attempts and snoozes, which keeps backoff calculation accurate.
+  >
+  > Without attempt correction you may need a solution that compensates for snoozing, such as the
+  > example below:
 
       defmodule MyApp.SnoozingWorker do
         @max_attempts 20

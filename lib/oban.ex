@@ -574,7 +574,7 @@ defmodule Oban do
 
   > #### 🌟 Unique Jobs and Batching {: .warning}
   >
-  > Only the [SmartEngine](https://getoban.pro/docs/pro/smart_engine.html) in [Oban
+  > Only the [Smart Engine](https://getoban.pro/docs/pro/Oban.Pro.Engines.Smart.html) in [Oban
   > Pro](https://getoban.pro) supports bulk unique jobs and automatic batching. With the basic
   > engine, you must use `insert/3` for unique support.
 
