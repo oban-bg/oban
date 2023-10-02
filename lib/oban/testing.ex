@@ -4,11 +4,9 @@ defmodule Oban.Testing do
   `:manual` mode.
 
   Assertions may be made on any property of a job, but you'll typically want to check by `args`,
-  `queue` or `worker`. If you're using namespacing through PostgreSQL schemas, also called
-  "prefixes" in Ecto, you should use the `prefix` option when doing assertions about enqueued
-  jobs during testing. By default the `prefix` option is `public`.
+  `queue` or `worker`.
 
-  ## Using in Tests
+  ## Usage
 
   The most convenient way to use `Oban.Testing` is to `use` the module:
 
@@ -17,11 +15,42 @@ defmodule Oban.Testing do
   That will define the helper functions you'll use to make assertions on the jobs that should (or
   should not) be inserted in the database while testing.
 
-  Along with the `repo` you can also specify an alternate prefix to use in all assertions:
+  If you're using namespacing through Postgres schemas, also called "prefixes" in Ecto, you
+  should set the `prefix` option:
 
       use Oban.Testing, repo: MyApp.Repo, prefix: "business"
 
-  Some example assertions:
+  Unless overridden, the default `prefix` is `public`.
+
+  ### Adding to Case Templates
+
+  To include helpers in all of your tests you can add it to your case template:
+
+  ```elixir
+  defmodule MyApp.DataCase do
+    use ExUnit.CaseTemplate
+
+    using do
+      quote do
+        use Oban.Testing, repo: MyApp.Repo
+
+        import Ecto
+        import Ecto.Changeset
+        import Ecto.Query
+        import MyApp.DataCase
+
+        alias MyApp.Repo
+      end
+    end
+  end
+  ```
+
+  ## Examples
+
+  After the test helpers are imported, you can make assertions about enqueued (available or
+  scheduled) jobs in your tests.
+
+  Here are a few examples that demonstrate what's possible:
 
   ```elixir
   # Assert that a job was already enqueued
@@ -47,38 +76,10 @@ defmodule Oban.Testing do
   does not make an assertion by itself. This makes it possible to test using pattern matching at
   the expense of being more verbose.
 
-  ## Example
+  See the docs for `assert_enqueued/1,2`, `refute_enqueued/1,2`, and `all_enqueued/1` for more
+  examples.
 
-  Given a simple module that enqueues a job:
-
-  ```elixir
-  defmodule MyApp.Business do
-    def work(args) do
-      args
-      |> Oban.Job.new(worker: MyApp.Worker, queue: :special)
-      |> Oban.insert!()
-    end
-  end
-  ```
-
-  The behaviour can be exercised in your test code:
-
-  ```elixir
-  defmodule MyApp.BusinessTest do
-    use ExUnit.Case, async: true
-    use Oban.Testing, repo: MyApp.Repo
-
-    alias MyApp.Business
-
-    test "jobs are enqueued with provided arguments" do
-      Business.work(%{id: 1, message: "Hello!"})
-
-      assert_enqueued worker: MyApp.Worker, args: %{id: 1, message: "Hello!"}
-    end
-  end
-  ```
-
-  ## Matching Scheduled Jobs and Timestamps
+  ## Matching Timestamps
 
   In order to assert a job has been scheduled at a certain time, you will need to match against
   the `scheduled_at` attribute of the enqueued job.
@@ -91,29 +92,6 @@ defmodule Oban.Testing do
   delta by passing a tuple of value and a `delta` option (in seconds) to corresponding keyword:
 
       assert_enqueued worker: MyApp.Worker, scheduled_at: {in_an_hour, delta: 10}
-
-  ## Adding to Case Templates
-
-  To include helpers in all of your tests you can add it to your case template:
-
-  ```elixir
-  defmodule MyApp.DataCase do
-    use ExUnit.CaseTemplate
-
-    using do
-      quote do
-        use Oban.Testing, repo: MyApp.Repo
-
-        import Ecto
-        import Ecto.Changeset
-        import Ecto.Query
-        import MyApp.DataCase
-
-        alias MyApp.Repo
-      end
-    end
-  end
-  ```
   """
 
   @moduledoc since: "0.3.0"
@@ -291,10 +269,28 @@ defmodule Oban.Testing do
   end
 
   @doc """
-  Assert that a job with particular options has been enqueued.
+  Assert that a job with matching fields is enqueued.
 
-  Only values for the provided arguments will be checked. For example, an assertion made on
-  `worker: "MyWorker"` will match _any_ jobs for that worker, regardless of the queue or args.
+  Only values for the provided fields are checked. For example, an assertion made on `worker:
+  "MyWorker"` will match _any_ jobs for that worker, regardless of every other field.
+
+  ## Examples
+
+  Assert that a job is enqueued for a certain worker and args:
+
+      assert_enqueued worker: MyWorker, args: %{id: 1}
+
+  Assert that a job is enqueued for a particular queue and priority:
+
+      assert_enqueued queue: :business, priority: 3
+
+  Assert that a job's args deeply match:
+
+      assert_enqueued args: %{config: %{enabled: true}}
+
+  Use the `:_` wildcard to assert that a job's meta has a key with any value:
+
+      assert_enqueued meta: %{batch_id: :_}
   """
   @doc since: "0.3.0"
   @spec assert_enqueued(opts :: Keyword.t()) :: true
@@ -361,7 +357,25 @@ defmodule Oban.Testing do
   @doc """
   Refute that a job with particular options has been enqueued.
 
-  See `assert_enqueued/2` for additional details.
+  See `assert_enqueued/1` for additional details.
+
+  ## Examples
+
+  Refute that a job is enqueued for a certain worker:
+
+      refute_enqueued worker: MyWorker
+
+  Refute that a job is enqueued for a certain worker and args:
+
+      refute_enqueued worker: MyWorker, args: %{id: 1}
+
+  Refute that a job's nested args match:
+
+      refute_enqueued args: %{config: %{enabled: false}}
+
+  Use the `:_` wildcard to refute that a job's meta has a key with any value:
+
+      refute_enqueued meta: %{batch_id: :_}
   """
   @doc since: "0.3.0"
   @spec refute_enqueued(opts :: Keyword.t()) :: false
@@ -391,7 +405,7 @@ defmodule Oban.Testing do
 
   The minimum refute timeout is 10ms.
 
-  See `assert_enqueued/2` for additional details.
+  See `assert_enqueued/1` for additional details.
 
   ## Examples
 
@@ -620,6 +634,8 @@ defmodule Oban.Testing do
     |> Repo.all(base_query(base_opts))
     |> Enum.filter(fn job -> Enum.all?(json_opts, &contains?(&1, job)) end)
   end
+
+  defp contains?({key, "_"}, data) when is_map_key(data, key), do: true
 
   defp contains?({key, val}, data) when is_map(val) do
     case Map.get(data, key) do

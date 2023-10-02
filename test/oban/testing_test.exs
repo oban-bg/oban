@@ -346,6 +346,10 @@ defmodule Oban.TestingTest do
       assert_enqueued args: %{map: %{int: 2, list: [3, 4]}}
       assert_enqueued args: %{map: %{list: [3, 4], map: %{atom: "foo"}}}
 
+      assert_enqueued args: %{map: :_}
+      assert_enqueued args: %{map: %{int: :_}}
+      assert_enqueued args: %{map: %{map: %{atom: :_}}}
+
       refute_enqueued args: %{int: 2, atom: :foo, bool: true, string: "foo"}
       refute_enqueued args: %{int: 1, atom: :bar, bool: true, string: "foo"}
       refute_enqueued args: %{int: 1, atom: :foo, bool: false, string: "foo"}
