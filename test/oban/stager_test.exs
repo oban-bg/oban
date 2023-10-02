@@ -14,12 +14,6 @@ defmodule Oban.StagerTest do
 
       start_supervised_oban!(stage_interval: 5, testing: :disabled)
 
-      with_backoff(fn ->
-        assert %{state: "available"} = Repo.reload(job_1)
-        assert %{state: "scheduled"} = Repo.reload(job_2)
-        assert %{state: "available"} = Repo.reload(job_3)
-      end)
-
       assert_receive {:event, :start, %{system_time: _}, %{conf: _, plugin: Stager}}
       assert_receive {:event, :stop, %{duration: _}, %{plugin: Stager} = meta}
 
@@ -29,6 +23,10 @@ defmodule Oban.StagerTest do
                jobs
                |> Enum.map(& &1.state)
                |> Enum.sort()
+
+      assert %{state: "available"} = Repo.reload(job_1)
+      assert %{state: "scheduled"} = Repo.reload(job_2)
+      assert %{state: "available"} = Repo.reload(job_3)
     end
 
     test "switching to local mode without functional pubsub" do
