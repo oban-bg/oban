@@ -232,8 +232,8 @@ defmodule Oban.Testing do
       args
       |> worker.new(opts)
       |> Changeset.put_change(:id, System.unique_integer([:positive]))
-      |> Changeset.update_change(:args, &json_encode_decode/1)
-      |> Changeset.update_change(:meta, &json_encode_decode/1)
+      |> Changeset.update_change(:args, &json_recode/1)
+      |> Changeset.update_change(:meta, &json_recode/1)
       |> put_new_change(:attempt, 1)
       |> put_new_change(:attempted_at, utc_now)
       |> put_new_change(:scheduled_at, utc_now)
@@ -279,7 +279,7 @@ defmodule Oban.Testing do
   def all_enqueued(opts) when is_list(opts) do
     {conf, opts} = extract_conf(opts)
 
-    Repo.all(conf, base_query(opts))
+    filter_jobs(conf, opts)
   end
 
   @doc false
@@ -327,7 +327,7 @@ defmodule Oban.Testing do
   @doc """
   Assert that a job with particular options is or will be enqueued within a timeout period.
 
-  See `assert_enqueued/2` for additional details.
+  See `assert_enqueued/1` for additional details.
 
   ## Examples
 
@@ -509,7 +509,7 @@ defmodule Oban.Testing do
     |> Enum.map_join("\n", fn {key, val} -> "#{key}: #{val}" end)
   end
 
-  defp json_encode_decode(map) do
+  defp json_recode(map) do
     map
     |> Jason.encode!()
     |> Jason.decode!()
@@ -543,16 +543,18 @@ defmodule Oban.Testing do
     """
   end
 
+  # Enqueued Helpers
+
   defp extract_conf(opts) do
     {conf_opts, opts} = Keyword.split(opts, @conf_keys)
 
     {Config.new(conf_opts), opts}
   end
 
-  # Enqueued Helpers
-
   defp job_exists?(conf, opts) do
-    Repo.exists?(conf, base_query(opts))
+    conf
+    |> filter_jobs(opts)
+    |> Enum.any?()
   end
 
   defp wait_for_job(conf, opts, timeout) when timeout > 0 do
@@ -582,22 +584,16 @@ defmodule Oban.Testing do
       |> where([j], j.state in ["available", "scheduled"])
       |> order_by(desc: :id)
 
-    Enum.reduce(opts, query, &apply_where/2)
+    opts
+    |> Keyword.drop(~w(args meta)a)
+    |> Enum.reduce(query, &conditions/2)
   end
 
-  defp apply_where({:queue, queue}, query), do: where(query, queue: ^to_string(queue))
-  defp apply_where({:state, state}, query), do: where(query, state: ^to_string(state))
-  defp apply_where({:worker, worker}, query), do: where(query, worker: ^Worker.to_string(worker))
+  defp conditions({:queue, queue}, query), do: where(query, queue: ^to_string(queue))
+  defp conditions({:state, state}, query), do: where(query, state: ^to_string(state))
+  defp conditions({:worker, worker}, query), do: where(query, worker: ^Worker.to_string(worker))
 
-  defp apply_where({key, val}, query) when key in @json_fields do
-    if val == %{} do
-      where(query, [j], fragment("? <@ ?", field(j, ^key), ^val))
-    else
-      where(query, [j], fragment("? @> ?", field(j, ^key), ^val))
-    end
-  end
-
-  defp apply_where({key, val}, query) when key in @timestamp_fields do
+  defp conditions({key, val}, query) when key in @timestamp_fields do
     {time, delta} =
       case val do
         {time, delta: delta} ->
@@ -613,5 +609,24 @@ defmodule Oban.Testing do
     where(query, [j], fragment("? BETWEEN ? AND ?", field(j, ^key), ^begin, ^until))
   end
 
-  defp apply_where({key, value}, query), do: where(query, ^[{key, value}])
+  defp conditions({key, value}, query), do: where(query, ^[{key, value}])
+
+  defp filter_jobs(conf, opts) do
+    {json_opts, base_opts} = Keyword.split(opts, @json_fields)
+
+    json_opts = Keyword.new(json_opts, fn {key, val} -> {key, json_recode(val)} end)
+
+    conf
+    |> Repo.all(base_query(base_opts))
+    |> Enum.filter(fn job -> Enum.all?(json_opts, &contains?(&1, job)) end)
+  end
+
+  defp contains?({key, val}, data) when is_map(val) do
+    case Map.get(data, key) do
+      nil -> false
+      sub -> Enum.all?(val, &contains?(&1, sub))
+    end
+  end
+
+  defp contains?({key, val}, data), do: Map.get(data, key) == val
 end

@@ -305,19 +305,60 @@ defmodule Oban.TestingTest do
 
   describe "refute_enqueued/1" do
     test "refuting jobs with specific properties have been enqueued" do
-      insert!(%{id: 1, xd: 1}, worker: Ping, queue: :alpha)
-      insert!(%{id: 2, xd: 2}, worker: Pong, queue: :gamma)
-      insert!(%{id: 3, xd: 3}, worker: Pong, queue: :gamma, state: "completed")
-      insert!(%{id: 4, xd: 4}, worker: Pong, queue: :gamma, state: "discarded")
+      insert!(%{id: 1, xd: [1]}, worker: Ping, queue: :alpha)
+      insert!(%{id: 2, xd: [2]}, worker: Pong, queue: :gamma)
+      insert!(%{id: 3, xd: [3]}, worker: Pong, queue: :gamma, state: "completed")
+      insert!(%{id: 4, xd: [4]}, worker: Pong, queue: :gamma, state: "discarded")
       insert!(%{message: "hello"}, worker: Pong, queue: :gamma)
 
       refute_enqueued worker: Pongo
       refute_enqueued worker: Ping, args: %{id: 2}
       refute_enqueued worker: Pong, args: %{id: 3}
       refute_enqueued worker: Pong, args: %{id: 4}
+      refute_enqueued worker: Pong, args: %{xd: [2, 2]}
       refute_enqueued worker: Ping, queue: :gamma
       refute_enqueued worker: Pong, queue: :gamma, args: %{message: "helo"}
       refute_enqueued worker: Ping, prefix: "private"
+    end
+
+    test "checking for jobs with complex and nested args" do
+      insert!(%{
+        int: 1,
+        atom: :foo,
+        bool: true,
+        string: "foo",
+        date: ~D[2023-01-01],
+        time: ~T[00:00:00],
+        naive: ~N[2023-01-01 00:00:00],
+        datetime: ~U[2023-01-01 00:00:00Z],
+        list: [1, 2],
+        map: %{
+          int: 2,
+          list: [3, 4],
+          map: %{atom: :foo}
+        }
+      })
+
+      assert_enqueued args: %{int: 1, atom: :foo, bool: true, string: "foo"}
+      assert_enqueued args: %{date: ~D[2023-01-01], time: ~T[00:00:00]}
+      assert_enqueued args: %{naive: ~N[2023-01-01 00:00:00], datetime: ~U[2023-01-01 00:00:00Z]}
+      assert_enqueued args: %{list: [1, 2], map: %{int: 2}}
+      assert_enqueued args: %{map: %{int: 2, list: [3, 4]}}
+      assert_enqueued args: %{map: %{list: [3, 4], map: %{atom: "foo"}}}
+
+      refute_enqueued args: %{int: 2, atom: :foo, bool: true, string: "foo"}
+      refute_enqueued args: %{int: 1, atom: :bar, bool: true, string: "foo"}
+      refute_enqueued args: %{int: 1, atom: :foo, bool: false, string: "foo"}
+      refute_enqueued args: %{int: 1, atom: :foo, bool: true, string: "bar"}
+
+      refute_enqueued args: %{date: ~D[2023-01-02]}
+      refute_enqueued args: %{time: ~T[00:00:01]}
+      refute_enqueued args: %{naive: ~N[2023-01-01 00:00:01]}
+      refute_enqueued args: %{datetime: ~U[2023-01-01 00:00:01Z]}
+
+      refute_enqueued args: %{map: %{int: 1}}
+      refute_enqueued args: %{map: %{int: 2, list: [3]}}
+      refute_enqueued args: %{map: %{int: 2, list: [3, 4], map: %{atom: :bar}}}
     end
 
     test "refuting that jobs will eventually be enqueued" do
