@@ -50,6 +50,30 @@ Now `unique` has a `timestamp` option that allows checking the `:scheduled_at` t
 use Oban.Worker, unique: [period: 120, timestamp: :scheduled_at]
 ```
 
+## v2.16.2 — 2023-10-03
+
+### Bug Fixes
+
+- [Testing] Match args/meta patterns in Elixir rather than the database
+
+  The containment operators, `@>` and `<@`, used for pattern matching in tests are only available
+  in Postgres and have some quirks. Most notably, containment considers matching any value in a
+  list a successful match, which isn't intuitive or desirable.
+
+  The other issue with using a containment operator in tests is that SQLite doesn't have those
+  operators available and test helpers are shared between all engines.
+
+### Enhancements
+
+- [Testing] Support wildcard matcher in patterns for args/meta
+
+  Now that we match in Elixir, it's simple to support wildcard matching with a `:_` to assert that
+  a key is present in a json field without specifying an exact value.
+
+  ```elixir
+  assert_enqueued args: %{batch_id: :_, callback: true}
+  ```
+
 ## v2.16.1 — 2023-09-25
 
 ### Bug Fixes
