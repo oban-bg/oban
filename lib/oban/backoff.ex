@@ -4,7 +4,7 @@ defmodule Oban.Backoff do
   @type jitter_mode :: :inc | :dec | :both
 
   @doc """
-  Calculate an exponential backoff in millseconds for a given attempt.
+  Calculate an exponential backoff in seconds for a given attempt.
 
   By default, the exponent is clamped to a maximum of 10 to prevent unreasonably long delays.
 
