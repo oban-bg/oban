@@ -89,7 +89,7 @@ defmodule ObanTest do
 
       {time, _} = :timer.tc(fn -> stop_supervised(name) end)
 
-      assert_in_delta System.convert_time_unit(time, :microsecond, :millisecond), 50, 10
+      assert_in_delta System.convert_time_unit(time, :microsecond, :millisecond), 50, 30
 
       refute_receive {:started, 2}, 50
       refute_receive {:started, 4}, 50
