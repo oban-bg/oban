@@ -16,9 +16,21 @@ defmodule Oban.Job do
   @type errors :: [%{at: DateTime.t(), attempt: pos_integer(), error: binary()}]
   @type tags :: [binary()]
 
+  @type time_unit ::
+          :second
+          | :seconds
+          | :minute
+          | :minutes
+          | :hour
+          | :hours
+          | :day
+          | :days
+          | :week
+          | :weeks
+
   @type unique_field :: [:args | :meta | :queue | :worker]
 
-  @type unique_period :: pos_integer() | :infinity
+  @type unique_period :: pos_integer() | {pos_integer(), time_unit()} | :infinity
 
   @type unique_state :: [
           :available
@@ -58,19 +70,7 @@ defmodule Oban.Job do
           | {:scheduled, [replace_option()]}
         ]
 
-  @type schedule_in_option ::
-          pos_integer()
-          | {pos_integer(),
-             :second
-             | :seconds
-             | :minute
-             | :minutes
-             | :hour
-             | :hours
-             | :day
-             | :days
-             | :week
-             | :weeks}
+  @type schedule_in_option :: pos_integer() | {pos_integer(), time_unit()}
 
   @type option ::
           {:args, args()}
@@ -171,11 +171,31 @@ defmodule Oban.Job do
     worker
   )a
 
+  @required_params ~w(worker args)a
+  @replace_options ~w(args max_attempts meta priority queue scheduled_at tags worker)a
   @virtual_params ~w(replace replace_args schedule_in unique)a
 
-  @required_params ~w(worker args)a
+  @time_units ~w(
+    second
+    seconds
+    minute
+    minutes
+    hour
+    hours
+    day
+    days
+    week
+    weeks
+  )a
 
-  @replace_options ~w(args max_attempts meta priority queue scheduled_at tags worker)a
+  @unique_fields ~w(args queue worker)a
+  @unique_period 60
+  @unique_states ~w(scheduled available executing retryable completed)a
+  @unique_timestamp :inserted_at
+
+  defguardp is_timestampable(value)
+            when is_integer(value) or
+                   (is_integer(elem(value, 0)) and elem(value, 1) in @time_units)
 
   @doc """
   Construct a new job changeset ready for insertion into the database.
@@ -277,11 +297,6 @@ defmodule Oban.Job do
     |> check_constraint(:priority, name: :priority_range)
   end
 
-  @unique_fields ~w(args queue worker)a
-  @unique_period 60
-  @unique_states ~w(scheduled available executing retryable completed)a
-  @unique_timestamp :inserted_at
-
   @doc """
   A canonical list of all possible job states.
 
@@ -367,7 +382,7 @@ defmodule Oban.Job do
   end
 
   @doc false
-  @spec cast_period(pos_integer() | {atom(), pos_integer()}) :: pos_integer()
+  @spec cast_period(unique_period()) :: pos_integer()
   def cast_period({value, unit}) do
     unit = to_string(unit)
 
@@ -376,46 +391,30 @@ defmodule Oban.Job do
       unit in ~w(minute minutes) -> value * 60
       unit in ~w(hour hours) -> value * 60 * 60
       unit in ~w(day days) -> value * 24 * 60 * 60
+      unit in ~w(week weeks) -> value * 24 * 60 * 60 * 7
       true -> unit
     end
   end
 
   def cast_period(period), do: period
 
-  @valid_period_units ~w(second seconds minute minutes hour hours day days)a
-
   @doc false
   @spec valid_unique_opt?({:fields | :period | :states, [atom()] | integer()}) :: boolean()
   def valid_unique_opt?({:fields, [_ | _] = fields}), do: fields -- [:meta | @unique_fields] == []
   def valid_unique_opt?({:keys, []}), do: true
   def valid_unique_opt?({:keys, [_ | _] = keys}), do: Enum.all?(keys, &is_atom/1)
+
   def valid_unique_opt?({:period, :infinity}), do: true
 
   def valid_unique_opt?({:period, {period, unit}}) do
-    is_integer(period) and period > 0 and unit in @valid_period_units
+    is_integer(period) and period > 0 and unit in @time_units
   end
 
   def valid_unique_opt?({:period, period}), do: is_integer(period) and period > 0
+
   def valid_unique_opt?({:states, [_ | _] = states}), do: states -- states() == []
   def valid_unique_opt?({:timestamp, stamp}), do: stamp in ~w(inserted_at scheduled_at)a
   def valid_unique_opt?(_option), do: false
-
-  @time_units ~w(
-    second
-    seconds
-    minute
-    minutes
-    hour
-    hours
-    day
-    days
-    week
-    weeks
-  )a
-
-  defguardp is_timestampable(value)
-            when is_integer(value) or
-                   (is_integer(elem(value, 0)) and elem(value, 1) in @time_units)
 
   defp put_replace(changeset, replace, replace_args) do
     with_states = fn fields ->
@@ -470,9 +469,9 @@ defmodule Oban.Job do
           |> Map.new()
           |> Map.put_new(:fields, @unique_fields)
           |> Map.put_new(:keys, [])
-          |> Map.update(:period, @unique_period, &cast_period/1)
           |> Map.put_new(:states, @unique_states)
           |> Map.put_new(:timestamp, @unique_timestamp)
+          |> Map.update(:period, @unique_period, &cast_period/1)
 
         case validate_unique_opts(unique) do
           :ok ->
@@ -513,16 +512,11 @@ defmodule Oban.Job do
     DateTime.add(DateTime.utc_now(), seconds, :second)
   end
 
-  defp to_timestamp({seconds, :second}), do: to_timestamp(seconds)
-  defp to_timestamp({seconds, :seconds}), do: to_timestamp(seconds)
-  defp to_timestamp({minutes, :minute}), do: to_timestamp(minutes * 60)
-  defp to_timestamp({minutes, :minutes}), do: to_timestamp({minutes, :minute})
-  defp to_timestamp({hours, :hour}), do: to_timestamp(hours * 60 * 60)
-  defp to_timestamp({hours, :hours}), do: to_timestamp({hours, :hour})
-  defp to_timestamp({days, :day}), do: to_timestamp(days * 24 * 60 * 60)
-  defp to_timestamp({days, :days}), do: to_timestamp({days, :day})
-  defp to_timestamp({weeks, :week}), do: to_timestamp(weeks * 7 * 24 * 60 * 60)
-  defp to_timestamp({weeks, :weeks}), do: to_timestamp({weeks, :week})
+  defp to_timestamp({period, unit}) do
+    {period, unit}
+    |> cast_period()
+    |> to_timestamp()
+  end
 
   # Validation
 
