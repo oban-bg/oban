@@ -89,6 +89,12 @@ defmodule Oban.JobTest do
              }
     end
 
+    test ":unique will translate period" do
+      changeset = Job.new(%{}, worker: Fake, unique: [period: {1, :hour}])
+
+      assert %{period: 3600} = changeset.changes[:unique]
+    end
+
     test ":unique does not accept other types of values or options" do
       assert Job.new(%{}, worker: Fake, unique: true).errors[:unique]
       assert Job.new(%{}, worker: Fake, unique: []).errors[:unique]

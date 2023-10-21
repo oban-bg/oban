@@ -221,7 +221,7 @@ defmodule Oban.Job do
 
   Insert a job, ensuring that it is unique within the past minute:
 
-      MyApp.Worker.new(%{id: 1}, unique: [period: 60])
+      MyApp.Worker.new(%{id: 1}, unique: [period: {1, :minute}])
 
   Insert a unique job where the period is compared to the `scheduled_at` timestamp rather than
   `inserted_at`:
@@ -367,6 +367,22 @@ defmodule Oban.Job do
   end
 
   @doc false
+  @spec cast_period(pos_integer() | {atom(), pos_integer()}) :: pos_integer()
+  def cast_period({value, unit}) do
+    unit = to_string(unit)
+
+    cond do
+      unit in ~w(second seconds) -> value
+      unit in ~w(minute minutes) -> value * 60
+      unit in ~w(hour hours) -> value * 60 * 60
+      unit in ~w(day days) -> value * 24 * 60 * 60
+      true -> unit
+    end
+  end
+
+  def cast_period(period), do: period
+
+  @doc false
   @spec valid_unique_opt?({:fields | :period | :states, [atom()] | integer()}) :: boolean()
   def valid_unique_opt?({:fields, [_ | _] = fields}), do: fields -- [:meta | @unique_fields] == []
   def valid_unique_opt?({:keys, []}), do: true
@@ -447,7 +463,7 @@ defmodule Oban.Job do
           |> Map.new()
           |> Map.put_new(:fields, @unique_fields)
           |> Map.put_new(:keys, [])
-          |> Map.put_new(:period, @unique_period)
+          |> Map.update(:period, @unique_period, &cast_period/1)
           |> Map.put_new(:states, @unique_states)
           |> Map.put_new(:timestamp, @unique_timestamp)
 
