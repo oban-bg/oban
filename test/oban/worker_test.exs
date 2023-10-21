@@ -23,7 +23,7 @@ defmodule Oban.WorkerTest do
       max_attempts: @max_attempts,
       priority: 1,
       tags: ["scheduled", "special"],
-      unique: [fields: [:queue, :worker], period: 60, states: [:scheduled]]
+      unique: [fields: [:queue, :worker], period: {1, :minute}, states: [:scheduled]]
 
     @impl Worker
     def perform(%{attempt: attempt}) when attempt > 1, do: attempt

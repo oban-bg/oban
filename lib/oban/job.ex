@@ -382,12 +382,18 @@ defmodule Oban.Job do
 
   def cast_period(period), do: period
 
+  @valid_period_units ~w(second seconds minute minutes hour hours day days)a
+
   @doc false
   @spec valid_unique_opt?({:fields | :period | :states, [atom()] | integer()}) :: boolean()
   def valid_unique_opt?({:fields, [_ | _] = fields}), do: fields -- [:meta | @unique_fields] == []
   def valid_unique_opt?({:keys, []}), do: true
   def valid_unique_opt?({:keys, [_ | _] = keys}), do: Enum.all?(keys, &is_atom/1)
   def valid_unique_opt?({:period, :infinity}), do: true
+
+  def valid_unique_opt?({:period, {period, unit}}),
+    do: is_integer(period) and period > 0 and unit in @valid_period_units
+
   def valid_unique_opt?({:period, period}), do: is_integer(period) and period > 0
   def valid_unique_opt?({:states, [_ | _] = states}), do: states -- states() == []
   def valid_unique_opt?({:timestamp, stamp}), do: stamp in ~w(inserted_at scheduled_at)a
