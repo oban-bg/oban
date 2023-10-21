@@ -102,6 +102,7 @@ defmodule Oban.JobTest do
       assert Job.new(%{}, worker: Fake, unique: [fields: [:bogus]]).errors[:unique]
       assert Job.new(%{}, worker: Fake, unique: [keys: [[]]]).errors[:unique]
       assert Job.new(%{}, worker: Fake, unique: [period: :bogus]).errors[:unique]
+      assert Job.new(%{}, worker: Fake, unique: [period: {1, :bogus}]).errors[:unique]
       assert Job.new(%{}, worker: Fake, unique: [states: [:random]]).errors[:unique]
       assert Job.new(%{}, worker: Fake, unique: [timestamp: :updated_at]).errors[:unique]
     end
