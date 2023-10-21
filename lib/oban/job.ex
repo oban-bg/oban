@@ -391,8 +391,9 @@ defmodule Oban.Job do
   def valid_unique_opt?({:keys, [_ | _] = keys}), do: Enum.all?(keys, &is_atom/1)
   def valid_unique_opt?({:period, :infinity}), do: true
 
-  def valid_unique_opt?({:period, {period, unit}}),
-    do: is_integer(period) and period > 0 and unit in @valid_period_units
+  def valid_unique_opt?({:period, {period, unit}}) do
+    is_integer(period) and period > 0 and unit in @valid_period_units
+  end
 
   def valid_unique_opt?({:period, period}), do: is_integer(period) and period > 0
   def valid_unique_opt?({:states, [_ | _] = states}), do: states -- states() == []
