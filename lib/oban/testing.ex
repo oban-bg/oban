@@ -610,12 +610,11 @@ defmodule Oban.Testing do
   defp conditions({key, val}, query) when key in @timestamp_fields do
     {time, delta} =
       case val do
-        {time, delta: delta} ->
-          {time, delta}
-
-        time ->
-          {time, 1}
+        {time, delta: delta} -> {time, delta}
+        time -> {time, 1}
       end
+
+    {:ok, time} = Ecto.Type.cast(:utc_datetime, time)
 
     begin = DateTime.add(time, -delta, :second)
     until = DateTime.add(time, +delta, :second)

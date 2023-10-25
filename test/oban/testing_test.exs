@@ -264,6 +264,7 @@ defmodule Oban.TestingTest do
       insert!(%{}, worker: Pong, scheduled_at: seconds_from_now(60))
 
       assert_enqueued worker: Ping, state: "available", scheduled_at: DateTime.utc_now()
+      assert_enqueued worker: Ping, scheduled_at: DateTime.now!("America/Chicago")
       assert_enqueued worker: Pong, scheduled_at: seconds_from_now(60)
       assert_enqueued worker: Pong, scheduled_at: {seconds_from_now(69), delta: 10}
     end
