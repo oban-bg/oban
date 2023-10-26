@@ -50,6 +50,21 @@ Now `unique` has a `timestamp` option that allows checking the `:scheduled_at` t
 use Oban.Worker, unique: [period: 120, timestamp: :scheduled_at]
 ```
 
+## v2.16.3 — 2023-10-26
+
+### Bug Fixes
+
+- [Oban] Start `Peer` and `Stager` after `Queue` supervisor
+
+  The queue supervisor blocks shutdown to give jobs time to shut down gracefully. During that
+  time, the Peer could obtain or retain leadership despite all of the plugins having stopped. Now
+  the Peer and Stager (which is only active on the leader) stop before the queue supervisor.
+
+- [Testing] Cast timestamp to utc_datetime in testing queries
+
+  Timestamps with a timezone are now cast to `:utc_datetime` via a changeset before running
+  `Oban.Testing` queries.
+
 ## v2.16.2 — 2023-10-03
 
 ### Bug Fixes
