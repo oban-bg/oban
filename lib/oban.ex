@@ -400,10 +400,10 @@ defmodule Oban do
   def init(%Config{plugins: plugins} = conf) do
     children = [
       {Notifier, conf: conf, name: Registry.via(conf.name, Notifier)},
-      {Peer, conf: conf, name: Registry.via(conf.name, Peer)},
-      {Stager, conf: conf, name: Registry.via(conf.name, Stager)},
       {DynamicSupervisor, name: Registry.via(conf.name, Foreman), strategy: :one_for_one},
-      {Midwife, conf: conf, name: Registry.via(conf.name, Midwife)}
+      {Peer, conf: conf, name: Registry.via(conf.name, Peer)},
+      {Midwife, conf: conf, name: Registry.via(conf.name, Midwife)},
+      {Stager, conf: conf, name: Registry.via(conf.name, Stager)}
     ]
 
     children = children ++ Enum.map(plugins, &plugin_child_spec(&1, conf))
