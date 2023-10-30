@@ -164,7 +164,7 @@ defmodule Oban.Cron.Expression do
           rmin..rmax
         else
           raise ArgumentError,
-                "left side (#{rmin}) of the range must be lower or equal than right side (#{rmax})"
+                "left side (#{rmin}) of a range must be less than or equal to the right side (#{rmax})"
         end
     end
   end
