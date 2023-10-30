@@ -44,6 +44,21 @@ defmodule Oban.Cron.ExpressionTest do
       end
     end
 
+    test "parsing range expressions where left side is greater than the right side fails" do
+      expressions = [
+        "9-5 * * * *",
+        "* 4-3 * * *",
+        "* * 27-2 * *",
+        "* * * 11-1 *",
+        "* * * * 6-0",
+        "* * * * SAT-SUN"
+      ]
+
+      for expression <- expressions do
+        assert_raise ArgumentError, fn -> Expr.parse!(expression) end
+      end
+    end
+
     test "parsing non-standard expressions" do
       assert Expr.parse!("0 0 1 1 *") == Expr.parse!("@annually")
       assert Expr.parse!("0 0 1 1 *") == Expr.parse!("@yearly")

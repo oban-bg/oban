@@ -110,12 +110,23 @@ defmodule Oban.Cron.Expression do
 
   defp parse_part(part, range) do
     cond do
-      part == "*" -> range
-      part =~ ~r/^\d+$/ -> parse_literal(part)
-      part =~ ~r/^\*\/[1-9]\d?$/ -> parse_step(part, range)
-      part =~ ~r/^\d+(\-\d+)?\/[1-9]\d?$/ -> parse_range_step(part, range)
-      part =~ ~r/^\d+\-\d+$/ -> parse_range(part, range)
-      true -> raise ArgumentError, "unrecognized cron expression: #{part}"
+      part == "*" ->
+        range
+
+      part =~ ~r/^\d+$/ ->
+        parse_literal(part)
+
+      part =~ ~r/^\*\/[1-9]\d?$/ ->
+        parse_step(part, range)
+
+      part =~ ~r/^\d+(\-\d+)?\/[1-9]\d?$/ ->
+        parse_range_step(part, range)
+
+      part =~ ~r/^\d+\-\d+$/ ->
+        parse_range(part, range)
+
+      true ->
+        raise ArgumentError, "unrecognized cron expression: #{part}"
     end
   end
 
@@ -146,7 +157,15 @@ defmodule Oban.Cron.Expression do
         String.to_integer(rall)..Enum.max(max_range)
 
       [rmin, rmax] ->
-        String.to_integer(rmin)..String.to_integer(rmax)
+        rmin = String.to_integer(rmin)
+        rmax = String.to_integer(rmax)
+
+        if rmin <= rmax do
+          rmin..rmax
+        else
+          raise ArgumentError,
+                "left side (#{rmin}) of a range must be less than or equal to the right side (#{rmax})"
+        end
     end
   end
 end
