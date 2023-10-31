@@ -46,7 +46,7 @@ defmodule Oban.Case do
     opts =
       opts
       |> Keyword.put_new(:name, make_ref())
-      |> Keyword.put_new(:notifier, Oban.Notifiers.PG)
+      |> Keyword.put_new(:notifier, Oban.Notifiers.Isolated)
       |> Keyword.put_new(:peer, Oban.Peers.Isolated)
       |> Keyword.put_new(:stage_interval, :infinity)
       |> Keyword.put_new(:repo, Repo)

@@ -4,7 +4,7 @@ defmodule Oban.NotifierTest do
   alias Ecto.Adapters.SQL.Sandbox
   alias Oban.Notifier
 
-  for notifier <- [Oban.Notifiers.PG, Oban.Notifiers.Postgres] do
+  for notifier <- [Oban.Notifiers.Isolated, Oban.Notifiers.PG, Oban.Notifiers.Postgres] do
     @notifier notifier
 
     describe "with #{inspect(notifier)}" do

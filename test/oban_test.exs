@@ -268,8 +268,10 @@ defmodule ObanTest do
     end
 
     test "resuming queues only on the local node" do
-      name1 = start_supervised_oban!(stage_interval: 10, queues: [alpha: 1])
-      name2 = start_supervised_oban!(stage_interval: 10, queues: [alpha: 1])
+      opts = [notifier: Oban.Notifiers.PG, stage_interval: 10, queues: [alpha: 1]]
+
+      name1 = start_supervised_oban!(opts)
+      name2 = start_supervised_oban!(opts)
 
       assert :ok = Oban.pause_queue(name1, queue: :alpha)
 
