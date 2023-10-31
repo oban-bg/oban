@@ -35,8 +35,12 @@ defmodule Oban.Peers.GlobalTest do
     peer_1 = start_supervised!({Peer, name: A, conf: %{conf | name: Oban, node: "web.1"}})
     peer_2 = start_supervised!({Peer, name: B, conf: %{conf | name: Oban, node: "web.2"}})
 
-    assert leader = Enum.find([peer_1, peer_2], &Global.leader?/1)
-    assert :ok = GenServer.stop(leader)
+    assert {leader, name} =
+             Enum.find([{peer_1, A}, {peer_2, B}], fn {pid, _name} ->
+               Global.leader?(pid)
+             end)
+
+    stop_supervised!(name)
 
     assert_receive {:notification, :leader, %{"down" => _}}
 
