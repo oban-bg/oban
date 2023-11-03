@@ -838,7 +838,16 @@ Another great use of execution data is error reporting. Here is an example of
 integrating with [Sentry][sentry] to report job failures:
 
 ```elixir
-defmodule ErrorReporter do
+defmodule MyApp.ErrorReporter do
+  def attach do
+    :telemetry.attach(
+      "oban-errors",
+      [:oban, :job, :exception],
+      &__MODULE__.handle_event/4,
+      []
+    )
+  end
+
   def handle_event([:oban, :job, :exception], measure, meta, _) do
     extra =
       meta.job
@@ -849,12 +858,7 @@ defmodule ErrorReporter do
   end
 end
 
-:telemetry.attach(
-  "oban-errors",
-  [:oban, :job, :exception],
-  &ErrorReporter.handle_event/4,
-  []
-)
+MyApp.ErrorReporter.attach()
 ```
 
 You can use exception events to send error reports to Honeybadger, Rollbar,
