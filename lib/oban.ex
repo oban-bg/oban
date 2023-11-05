@@ -46,8 +46,8 @@ defmodule Oban do
           | {:log, false | Logger.level()}
           | {:name, name()}
           | {:node, String.t()}
-          | {:notifier, module()}
-          | {:peer, false | module()}
+          | {:notifier, module() | {module(), Keyword.t()}}
+          | {:peer, false | module() | {module(), Keyword.t()}}
           | {:plugins, false | [module() | {module() | Keyword.t()}]}
           | {:prefix, String.t()}
           | {:queues, false | [{queue_name(), pos_integer() | Keyword.t()}]}

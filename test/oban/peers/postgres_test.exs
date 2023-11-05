@@ -11,7 +11,7 @@ defmodule Oban.Peers.PostgresTest do
     TelemetryHandler.attach_events()
 
     name = start_supervised_oban!(peer: false)
-    conf = %{Oban.config(name) | peer: Postgres}
+    conf = %{Oban.config(name) | peer: {Postgres, []}}
 
     assert [_leader] =
              [A, B, C]

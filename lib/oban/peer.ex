@@ -75,6 +75,19 @@ defmodule Oban.Peer do
   """
   @callback leader?(Config.t() | GenServer.server()) :: boolean()
 
+  @doc false
+  @spec child_spec(Keyword.t()) :: Supervisor.child_spec()
+  def child_spec(opts) do
+    %{peer: {peer, peer_opts}} = Keyword.fetch!(opts, :conf)
+
+    opts =
+      opts
+      |> Keyword.merge(peer_opts)
+      |> Keyword.put_new(:name, peer)
+
+    %{id: opts[:name], start: {peer, :start_link, [opts]}}
+  end
+
   @doc """
   Check whether the current instance leads the cluster.
 
@@ -93,19 +106,17 @@ defmodule Oban.Peer do
   @spec leader?(Config.t() | GenServer.server()) :: boolean()
   def leader?(conf_or_name \\ Oban, timeout \\ 5_000)
 
-  def leader?(%Config{} = conf, timeout) do
-    case Registry.whereis(conf.name, Oban.Peer) do
+  def leader?(%Config{name: name, peer: {peer, _}}, timeout) do
+    case Registry.whereis(name, Oban.Peer) do
       pid when is_pid(pid) ->
-        conf.peer.leader?(pid, timeout)
+        peer.leader?(pid, timeout)
 
       nil ->
         false
     end
   catch
     :exit, {:timeout, _} = reason ->
-      Logger.warning("""
-      Oban.Peer.leader?/2 check failed due to #{inspect(reason)}.
-      """)
+      Logger.warning("Oban.Peer.leader?/2 check failed due to #{inspect(reason)}.")
 
       false
   end
@@ -114,14 +125,5 @@ defmodule Oban.Peer do
     name
     |> Oban.config()
     |> leader?(timeout)
-  end
-
-  @doc false
-  @spec child_spec(Keyword.t()) :: Supervisor.child_spec()
-  def child_spec(opts) do
-    conf = Keyword.fetch!(opts, :conf)
-    opts = Keyword.put_new(opts, :name, conf.peer)
-
-    %{id: opts[:name], start: {conf.peer, :start_link, [opts]}}
   end
 end

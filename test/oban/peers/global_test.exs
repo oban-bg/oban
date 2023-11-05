@@ -30,7 +30,7 @@ defmodule Oban.Peers.GlobalTest do
       [peer: false, node: "worker.1"]
       |> start_supervised_oban!()
       |> Oban.config()
-      |> Map.put(:peer, Global)
+      |> Map.put(:peer, {Global, []})
 
     peer_1 = start_supervised!({Peer, name: A, conf: %{conf | name: Oban, node: "web.1"}})
     peer_2 = start_supervised!({Peer, name: B, conf: %{conf | name: Oban, node: "web.2"}})

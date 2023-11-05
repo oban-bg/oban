@@ -36,8 +36,10 @@ defmodule Oban.ConfigTest do
     test ":notifier is validated as a notifier module" do
       refute_valid(notifier: nil)
       refute_valid(notifier: Repo)
+      refute_valid(notifier: {Oban.Notifiers.Postgres, true})
 
       assert_valid(notifier: Oban.Notifiers.Postgres)
+      assert_valid(notifier: {Oban.Notifiers.Postgres, [some: :opt]})
     end
 
     test ":node is validated as a binary" do
@@ -53,10 +55,12 @@ defmodule Oban.ConfigTest do
     test ":peer is validated as false or a peer module" do
       refute_valid(peer: nil)
       refute_valid(peer: Fake)
+      refute_valid(peer: {Oban.Peers.Global, false})
 
       assert_valid(peer: false)
       assert_valid(peer: Oban.Peers.Global)
       assert_valid(peer: Oban.Peers.Postgres)
+      assert_valid(peer: {Oban.Peers.Postgres, [some: :opt]})
     end
 
     test ":plugins are validated as complete plugins with possible options" do
@@ -130,7 +134,8 @@ defmodule Oban.ConfigTest do
     end
 
     test ":notifier translates to the correct postgres module" do
-      assert %Config{notifier: Oban.Notifiers.Postgres} = conf(notifier: Oban.PostgresNotifier)
+      assert %Config{notifier: {Oban.Notifiers.Postgres, []}} =
+               conf(notifier: Oban.PostgresNotifier)
     end
 
     test ":engine translates to the correct basic module" do
@@ -145,7 +150,7 @@ defmodule Oban.ConfigTest do
       assert conf = conf(queues: [alpha: 1], plugins: [Pruner], testing: :manual)
 
       assert %{queues: [], plugins: []} = conf
-      assert %{peer: Oban.Peers.Disabled, stage_interval: :infinity} = conf
+      assert %{peer: {Oban.Peers.Disabled, []}, stage_interval: :infinity} = conf
     end
 
     test "normalizing plugins as a module options tuple" do
@@ -176,17 +181,19 @@ defmodule Oban.ConfigTest do
     end
 
     test "translating peer false to the disabled module" do
-      assert %Config{peer: Oban.Peers.Disabled} = conf(peer: false)
-      assert %Config{peer: Oban.Peers.Disabled} = conf(plugins: false)
-      assert %Config{peer: Oban.Peers.Disabled} = conf(peer: Oban.Peers.Global, plugins: false)
+      assert %Config{peer: {Oban.Peers.Disabled, []}} = conf(peer: false)
+      assert %Config{peer: {Oban.Peers.Disabled, []}} = conf(plugins: false)
+
+      assert %Config{peer: {Oban.Peers.Disabled, []}} =
+               conf(peer: Oban.Peers.Global, plugins: false)
     end
 
     test "setting sane defaults for the Lite engine" do
       conf = conf(engine: Oban.Engines.Lite)
 
       refute conf.prefix
-      assert conf.notifier == Oban.Notifiers.PG
-      assert conf.peer == Oban.Peers.Isolated
+      assert {Oban.Notifiers.PG, []} = conf.notifier
+      assert {Oban.Peers.Isolated, []} = conf.peer
     end
   end
 

@@ -2,6 +2,7 @@ defmodule Oban.PeerTest do
   use Oban.Case
 
   alias Oban.{Peer, Registry}
+  alias Oban.Peers.{Global, Postgres}
 
   describe "configuration" do
     test "leadership is disabled when peer is false" do
@@ -17,10 +18,16 @@ defmodule Oban.PeerTest do
     end
   end
 
-  for peer <- [Oban.Peers.Global, Oban.Peers.Postgres] do
+  for peer <- [Global, Postgres] do
     @peer peer
 
     describe "using #{peer}" do
+      test "forwarding opts to peer instances" do
+        assert_raise RuntimeError, ~r/key :unknown not found/, fn ->
+          start_supervised_oban!(peer: {@peer, unknown: :option})
+        end
+      end
+
       test "a single node acquires leadership" do
         name = start_supervised_oban!(peer: @peer, poll_interval: 250)
 
@@ -29,7 +36,7 @@ defmodule Oban.PeerTest do
 
       test "leadership transfers to another peer when the leader exits" do
         name = start_supervised_oban!(plugins: false)
-        conf = %{Oban.config(name) | peer: @peer}
+        conf = %{Oban.config(name) | peer: {@peer, []}}
 
         peer_a = start_supervised!({Peer, conf: conf, name: Peer.A})
 

@@ -17,11 +17,11 @@ defmodule Oban.Config do
           log: false | Logger.level(),
           name: Oban.name(),
           node: String.t(),
-          notifier: module(),
-          peer: false | module(),
-          plugins: false | [module() | {module() | Keyword.t()}],
+          notifier: {module(), Keyword.t()},
+          peer: {module(), Keyword.t()},
+          plugins: [module() | {module() | Keyword.t()}],
           prefix: false | String.t(),
-          queues: false | Keyword.t(Keyword.t()),
+          queues: Keyword.t(Keyword.t()),
           repo: module(),
           shutdown_grace_period: timeout(),
           stage_interval: timeout(),
@@ -34,8 +34,8 @@ defmodule Oban.Config do
             log: false,
             name: Oban,
             node: nil,
-            notifier: Oban.Notifiers.Postgres,
-            peer: Oban.Peers.Postgres,
+            notifier: {Oban.Notifiers.Postgres, []},
+            peer: {Oban.Peers.Postgres, []},
             plugins: [],
             prefix: "public",
             queues: [],
@@ -46,8 +46,8 @@ defmodule Oban.Config do
 
   @cron_keys ~w(crontab timezone)a
   @log_levels ~w(false emergency alert critical error warning warn notice info debug)a
+  @renamed [{:engine, Oban.Queue.BasicEngine}, {:notifier, {Oban.PostgresNotifier, []}}]
   @testing_modes ~w(manual inline disabled)a
-  @renamed [{:engine, Oban.Queue.BasicEngine}, {:notifier, Oban.PostgresNotifier}]
 
   @doc """
   Generate a Config struct after normalizing and verifying Oban options.
@@ -68,8 +68,8 @@ defmodule Oban.Config do
       if opts[:engine] == Oban.Engines.Lite do
         opts
         |> Keyword.put(:prefix, false)
-        |> Keyword.put_new(:notifier, Oban.Notifiers.PG)
-        |> Keyword.put_new(:peer, Oban.Peers.Isolated)
+        |> Keyword.put_new(:notifier, {Oban.Notifiers.PG, []})
+        |> Keyword.put_new(:peer, {Oban.Peers.Isolated, []})
       else
         opts
       end
@@ -77,9 +77,9 @@ defmodule Oban.Config do
     opts =
       if opts[:testing] in [:manual, :inline] do
         opts
-        |> Keyword.put(:queues, [])
-        |> Keyword.put(:peer, Oban.Peers.Disabled)
+        |> Keyword.put(:peer, {Oban.Peers.Disabled, []})
         |> Keyword.put(:plugins, [])
+        |> Keyword.put(:queues, [])
         |> Keyword.put(:stage_interval, :infinity)
       else
         opts
@@ -190,6 +190,12 @@ defmodule Oban.Config do
     end
   end
 
+  defp validate_opt(_opts, {:notifier, {notifier, opts}}) do
+    with :ok <- validate_opt([], {:notifier, notifier}) do
+      validate_keyword(:notifier, opts)
+    end
+  end
+
   defp validate_opt(_opts, {:notifier, notifier}) do
     if Code.ensure_loaded?(notifier) and function_exported?(notifier, :listen, 2) do
       :ok
@@ -205,6 +211,12 @@ defmodule Oban.Config do
       :ok
     else
       {:error, "expected :node to be a non-empty binary, got: #{inspect(node)}"}
+    end
+  end
+
+  defp validate_opt(_opts, {:peer, {peer, opts}}) do
+    with :ok <- validate_opt([], {:peer, peer}) do
+      validate_keyword(:peer, opts)
     end
   end
 
@@ -282,6 +294,14 @@ defmodule Oban.Config do
     {:unknown, option, __MODULE__}
   end
 
+  defp validate_keyword(key, opts) do
+    if Keyword.keyword?(opts) do
+      :ok
+    else
+      {:error, "expected #{key} opts to be a keyword list, got: #{inspect(opts)}"}
+    end
+  end
+
   defp validate_plugin(plugin) when not is_tuple(plugin), do: validate_plugin({plugin, []})
 
   defp validate_plugin({plugin, opts}) do
@@ -339,7 +359,8 @@ defmodule Oban.Config do
   defp normalize(opts) do
     opts
     |> crontab_to_plugin()
-    |> peer_to_disabled()
+    |> normalize_notifier()
+    |> normalize_peer()
     |> Keyword.put_new(:node, node_name())
     |> Keyword.update(:queues, [], &normalize_queues/1)
     |> Keyword.update(:plugins, [], &normalize_plugins/1)
@@ -383,11 +404,28 @@ defmodule Oban.Config do
     end
   end
 
-  defp peer_to_disabled(opts) do
-    if opts[:peer] == false or opts[:plugins] == false do
-      Keyword.put(opts, :peer, Oban.Peers.Disabled)
-    else
-      opts
+  defp normalize_notifier(opts) do
+    case Keyword.get(opts, :notifier) do
+      module when is_atom(module) and not is_nil(module) ->
+        Keyword.put(opts, :notifier, {module, []})
+
+      _ ->
+        opts
+    end
+  end
+
+  defp normalize_peer(opts) do
+    peer = opts[:peer]
+
+    cond do
+      peer == false or opts[:plugins] == false ->
+        Keyword.put(opts, :peer, {Oban.Peers.Disabled, []})
+
+      is_atom(peer) and not is_nil(peer) ->
+        Keyword.put(opts, :peer, {peer, []})
+
+      true ->
+        opts
     end
   end
 

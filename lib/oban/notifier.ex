@@ -89,11 +89,16 @@ defmodule Oban.Notifier do
   @callback notify(server(), channel :: channel(), payload :: [map()]) :: :ok
 
   @doc false
+  @spec child_spec(Keyword.t()) :: Supervisor.child_spec()
   def child_spec(opts) do
-    conf = Keyword.fetch!(opts, :conf)
-    opts = Keyword.put_new(opts, :name, conf.notifier)
+    %{notifier: {notifier, note_opts}} = Keyword.fetch!(opts, :conf)
 
-    %{id: opts[:name], start: {conf.notifier, :start_link, [opts]}}
+    opts =
+      opts
+      |> Keyword.merge(note_opts)
+      |> Keyword.put_new(:name, notifier)
+
+    %{id: opts[:name], start: {notifier, :start_link, [opts]}}
   end
 
   @doc """
@@ -131,11 +136,11 @@ defmodule Oban.Notifier do
       raise ArgumentError, "expected channels to be a list of atoms, got: #{inspect(channels)}"
     end
 
-    conf = Oban.config(name)
+    %{notifier: {notifier, _}} = Oban.config(name)
 
     name
     |> Registry.whereis(Oban.Notifier)
-    |> conf.notifier.listen(channels)
+    |> notifier.listen(channels)
   end
 
   @doc """
@@ -153,11 +158,11 @@ defmodule Oban.Notifier do
   """
   @spec unlisten(server(), [channel]) :: :ok
   def unlisten(name \\ Oban, channels) when is_list(channels) do
-    conf = Oban.config(name)
+    %{notifier: {notifier, _}} = Oban.config(name)
 
     name
     |> Registry.whereis(Oban.Notifier)
-    |> conf.notifier.unlisten(channels)
+    |> notifier.unlisten(channels)
   end
 
   @doc """
@@ -179,10 +184,12 @@ defmodule Oban.Notifier do
   def notify(conf_or_name \\ Oban, channel, payload)
 
   def notify(%Config{} = conf, channel, payload) when is_atom(channel) do
+    %{name: name, notifier: {notifier, _}} = conf
+
     with_span(conf, channel, payload, fn ->
-      conf.name
+      name
       |> Registry.whereis(Oban.Notifier)
-      |> conf.notifier.notify(channel, normalize_payload(payload))
+      |> notifier.notify(channel, normalize_payload(payload))
     end)
   end
 
