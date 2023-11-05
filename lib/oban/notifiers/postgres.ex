@@ -52,19 +52,14 @@ if Code.ensure_loaded?(Postgrex) do
     alias Oban.{Config, Notifier, Repo}
     alias Postgrex.SimpleConnection, as: Simple
 
-    defmodule State do
-      @moduledoc false
-
-      @enforce_keys [:conf]
-      defstruct [
-        :conf,
-        :from,
-        :key,
-        channels: %{},
-        connected?: false,
-        listeners: %{}
-      ]
-    end
+    defstruct [
+      :conf,
+      :from,
+      :key,
+      channels: %{},
+      connected?: false,
+      listeners: %{}
+    ]
 
     @doc """
     Start the notifier.
@@ -106,11 +101,11 @@ if Code.ensure_loaded?(Postgrex) do
 
     @impl Simple
     def init(opts) do
-      {:ok, struct!(State, opts)}
+      {:ok, struct!(__MODULE__, opts)}
     end
 
     @impl Simple
-    def notify(full_channel, payload, %State{} = state) when is_binary(full_channel) do
+    def notify(full_channel, payload, state) when is_binary(full_channel) do
       listeners = Map.get(state.channels, full_channel, [])
 
       Notifier.relay(state.conf, listeners, reverse_channel(full_channel), payload)
@@ -118,7 +113,7 @@ if Code.ensure_loaded?(Postgrex) do
 
     # This is a Notifier callback, but it has the same name and arity as SimpleConnection
     def notify(server, channel, payload) when is_atom(channel) do
-      with %State{conf: conf} <- Simple.call(server, :get_state) do
+      with %{conf: conf} <- Simple.call(server, :get_state) do
         full_channel = to_full_channel(channel, conf)
 
         Repo.query(
@@ -132,7 +127,7 @@ if Code.ensure_loaded?(Postgrex) do
     end
 
     @impl Simple
-    def handle_connect(%State{channels: channels} = state) do
+    def handle_connect(%{channels: channels} = state) do
       state = %{state | connected?: true}
 
       if map_size(channels) > 0 do
@@ -150,18 +145,18 @@ if Code.ensure_loaded?(Postgrex) do
     end
 
     @impl Simple
-    def handle_disconnect(%State{} = state) do
+    def handle_disconnect(%{} = state) do
       {:noreply, %{state | connected?: false}}
     end
 
     @impl Simple
-    def handle_call(:get_state, from, %State{} = state) do
+    def handle_call(:get_state, from, state) do
       Simple.reply(from, state)
 
       {:noreply, state}
     end
 
-    def handle_call({:listen, pid, channels}, from, %State{} = state) do
+    def handle_call({:listen, pid, channels}, from, state) do
       channels = Enum.map(channels, &to_full_channel(&1, state.conf))
       new_channels = channels -- Map.keys(state.channels)
 
@@ -182,7 +177,7 @@ if Code.ensure_loaded?(Postgrex) do
       end
     end
 
-    def handle_call({:unlisten, pid, channels}, from, %State{} = state) do
+    def handle_call({:unlisten, pid, channels}, from, state) do
       channels = Enum.map(channels, &to_full_channel(&1, state.conf))
 
       state =
@@ -205,7 +200,7 @@ if Code.ensure_loaded?(Postgrex) do
     end
 
     @impl Simple
-    def handle_info({:DOWN, _ref, :process, pid, _reason}, %State{} = state) do
+    def handle_info({:DOWN, _ref, :process, pid, _reason}, state) do
       case Map.pop(state.listeners, pid) do
         {{_ref, channel_set}, listeners} ->
           state =
@@ -225,7 +220,7 @@ if Code.ensure_loaded?(Postgrex) do
     end
 
     @impl Simple
-    def handle_result(_results, %State{from: from} = state) do
+    def handle_result(_results, %{from: from} = state) do
       from && Simple.reply(from, :ok)
 
       {:noreply, %{state | from: nil}}

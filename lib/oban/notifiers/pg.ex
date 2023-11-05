@@ -56,11 +56,7 @@ defmodule Oban.Notifiers.PG do
 
   alias Oban.Notifier
 
-  defmodule State do
-    @moduledoc false
-
-    defstruct [:conf, :name, listeners: %{}]
-  end
+  defstruct [:conf, listeners: %{}]
 
   @impl Notifier
   def start_link(opts) do
@@ -81,7 +77,7 @@ defmodule Oban.Notifiers.PG do
 
   @impl Notifier
   def notify(server, channel, payload) do
-    with %State{conf: conf} <- get_state(server) do
+    with %{conf: conf} <- get_state(server) do
       pids = :pg.get_members(__MODULE__, conf.prefix)
 
       for pid <- pids, message <- payload_to_messages(channel, payload) do
@@ -94,7 +90,7 @@ defmodule Oban.Notifiers.PG do
 
   @impl GenServer
   def init(opts) do
-    state = struct!(State, opts)
+    state = struct!(__MODULE__, opts)
 
     put_state(state)
 
@@ -118,7 +114,7 @@ defmodule Oban.Notifiers.PG do
   end
 
   @impl GenServer
-  def handle_call({:listen, channels}, {pid, _}, %State{listeners: listeners} = state) do
+  def handle_call({:listen, channels}, {pid, _}, %{listeners: listeners} = state) do
     if Map.has_key?(listeners, pid) do
       {:reply, :ok, state}
     else
@@ -128,7 +124,7 @@ defmodule Oban.Notifiers.PG do
     end
   end
 
-  def handle_call({:unlisten, channels}, {pid, _}, %State{listeners: listeners} = state) do
+  def handle_call({:unlisten, channels}, {pid, _}, %{listeners: listeners} = state) do
     orig_channels = Map.get(listeners, pid, [])
 
     listeners =
@@ -141,7 +137,7 @@ defmodule Oban.Notifiers.PG do
   end
 
   @impl GenServer
-  def handle_info({:notification, channel, payload}, %State{} = state) do
+  def handle_info({:notification, channel, payload}, state) do
     listeners = for {pid, channels} <- state.listeners, channel in channels, do: pid
 
     Notifier.relay(state.conf, listeners, channel, payload)
