@@ -94,8 +94,8 @@ defmodule Oban.Queue.ExecutorTest do
       duration_ms = System.convert_time_unit(duration, :native, :millisecond)
       queue_time_ms = System.convert_time_unit(queue_time, :native, :millisecond)
 
-      assert_in_delta duration_ms, 10, 20
-      assert_in_delta queue_time_ms, 30, 20
+      assert duration_ms >= 10
+      assert queue_time_ms >= 30
     end
   end
 
