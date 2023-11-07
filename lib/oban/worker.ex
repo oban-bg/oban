@@ -13,6 +13,7 @@ defmodule Oban.Worker do
   * `:max_attempts` — 20
   * `:priority` — 0
   * `:queue` — `:default`
+  * `:tags` — no tags set
   * `:unique` — no uniqueness set
 
   To create a minimum worker using the defaults, including the `default` queue:
@@ -251,7 +252,7 @@ defmodule Oban.Worker do
 
   import Kernel, except: [to_string: 1]
 
-  alias Oban.{Backoff, Job}
+  alias Oban.{Backoff, Job, Validation}
 
   @type t :: module()
   @type result ::
@@ -338,7 +339,38 @@ defmodule Oban.Worker do
 
   @doc false
   defmacro __after_compile__(%{module: module}, _env) do
-    Enum.each(module.__opts__(), &validate_opt!/1)
+    validator = fn opts ->
+      Validation.validate(opts, fn
+        {:max_attempts, max} ->
+          Validation.validate_integer(:max_attempts, max)
+
+        {:priority, priority} ->
+          Validation.validate_integer(:priority, priority, min: 0)
+
+        {:queue, queue} ->
+          unless is_atom(queue) or is_binary(queue) do
+            {:error, "expected :queue to be an atom or binary, got: #{inspect(queue)}"}
+          end
+
+        {:tags, tags} ->
+          unless is_list(tags) and Enum.all?(tags, &(is_atom(&1) or is_binary(&1))) do
+            {:error, "expected :tags to be a list of strings, got: #{inspect(tags)}"}
+          end
+
+        {:unique, unique} ->
+          Job.validate_unique(unique)
+
+        {:worker, worker} ->
+          unless is_binary(worker) do
+            {:error, "expected :worker to be a binary, got: #{inspect(worker)}"}
+          end
+
+        option ->
+          {:unknown, option, Oban.Job}
+      end)
+    end
+
+    Validation.validate!(module.__opts__(), validator)
   end
 
   @doc false
@@ -429,49 +461,5 @@ defmodule Oban.Worker do
   rescue
     ArgumentError ->
       {:error, RuntimeError.exception("unknown worker: #{worker_name}")}
-  end
-
-  # Validation Helpers
-
-  defp validate_opt!({:max_attempts, max_attempts}) do
-    unless is_integer(max_attempts) and max_attempts > 0 do
-      raise ArgumentError,
-            "expected :max_attempts to be a positive integer, got: #{inspect(max_attempts)}"
-    end
-  end
-
-  defp validate_opt!({:priority, priority}) do
-    unless is_integer(priority) and priority > -1 and priority < 4 do
-      raise ArgumentError,
-            "expected :priority to be an integer from 0 to 3, got: #{inspect(priority)}"
-    end
-  end
-
-  defp validate_opt!({:queue, queue}) do
-    unless is_atom(queue) or is_binary(queue) do
-      raise ArgumentError, "expected :queue to be an atom or a binary, got: #{inspect(queue)}"
-    end
-  end
-
-  defp validate_opt!({:tags, tags}) do
-    unless is_list(tags) and Enum.all?(tags, &is_binary/1) do
-      raise ArgumentError, "expected :tags to be a list of strings, got: #{inspect(tags)}"
-    end
-  end
-
-  defp validate_opt!({:unique, unique}) do
-    unless is_list(unique) and Enum.all?(unique, &Job.valid_unique_opt?/1) do
-      raise ArgumentError, "unexpected unique options: #{inspect(unique)}"
-    end
-  end
-
-  defp validate_opt!({:worker, worker}) do
-    unless is_binary(worker) do
-      raise ArgumentError, "expected :worker to be a binary, got: #{inspect(worker)}"
-    end
-  end
-
-  defp validate_opt!(option) do
-    raise ArgumentError, "unknown option provided #{inspect(option)}"
   end
 end

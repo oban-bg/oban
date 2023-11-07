@@ -27,6 +27,7 @@ defmodule Oban.Validation do
   def validate(_parent_key, opts, validator) when is_list(opts) and is_function(validator, 1) do
     Enum.reduce_while(opts, :ok, fn opt, acc ->
       case validator.(opt) do
+        nil -> {:cont, acc}
         :ok -> {:cont, acc}
         {:error, _reason} = error -> {:halt, error}
         {:unknown, field, module} -> {:halt, unknown_error(field, module)}

@@ -12,6 +12,9 @@ defmodule Oban.Job do
 
   import Ecto.Changeset
 
+  alias Ecto.Changeset
+  alias Oban.Validation
+
   @type args :: map()
   @type errors :: [%{at: DateTime.t(), attempt: pos_integer(), error: binary()}]
   @type tags :: [binary()]
@@ -188,10 +191,8 @@ defmodule Oban.Job do
     weeks
   )a
 
-  @unique_fields ~w(args queue worker)a
-  @unique_period 60
-  @unique_states ~w(scheduled available executing retryable completed)a
-  @unique_timestamp :inserted_at
+  @unique_fields ~w(args meta queue worker)a
+  @unique_timestamps ~w(inserted_at scheduled_at)a
 
   defguardp is_timestampable(value)
             when is_integer(value) or
@@ -283,15 +284,16 @@ defmodule Oban.Job do
     |> cast(params, @permitted_params)
     |> validate_keys(params, @permitted_params ++ @virtual_params)
     |> validate_required(@required_params)
-    |> put_scheduling(params[:schedule_in])
-    |> put_uniqueness(params[:unique])
     |> put_replace(params[:replace], params[:replace_args])
+    |> put_scheduling(params[:schedule_in])
     |> put_state()
+    |> put_unique(params[:unique])
     |> validate_length(:queue, min: 1, max: 128)
     |> validate_length(:worker, min: 1, max: 128)
     |> validate_number(:max_attempts, greater_than: 0)
     |> validate_number(:priority, greater_than: -1, less_than: 4)
     |> validate_replace()
+    |> validate_unique()
     |> check_constraint(:attempt, name: :attempt_range)
     |> check_constraint(:max_attempts, name: :positive_max_attempts)
     |> check_constraint(:priority, name: :priority_range)
@@ -324,7 +326,9 @@ defmodule Oban.Job do
 
   """
   @doc since: "2.1.0"
-  def states, do: @unique_states ++ [:discarded, :cancelled]
+  def states do
+    ~w(scheduled available executing retryable completed discarded cancelled)a
+  end
 
   @doc """
   Convert a Job changeset into a map suitable for database insertion.
@@ -398,24 +402,6 @@ defmodule Oban.Job do
 
   def cast_period(period), do: period
 
-  @doc false
-  @spec valid_unique_opt?({:fields | :period | :states, [atom()] | integer()}) :: boolean()
-  def valid_unique_opt?({:fields, [_ | _] = fields}), do: fields -- [:meta | @unique_fields] == []
-  def valid_unique_opt?({:keys, []}), do: true
-  def valid_unique_opt?({:keys, [_ | _] = keys}), do: Enum.all?(keys, &is_atom/1)
-
-  def valid_unique_opt?({:period, :infinity}), do: true
-
-  def valid_unique_opt?({:period, {period, unit}}) do
-    is_integer(period) and period > 0 and unit in @time_units
-  end
-
-  def valid_unique_opt?({:period, period}), do: is_integer(period) and period > 0
-
-  def valid_unique_opt?({:states, [_ | _] = states}), do: states -- states() == []
-  def valid_unique_opt?({:timestamp, stamp}), do: stamp in ~w(inserted_at scheduled_at)a
-  def valid_unique_opt?(_option), do: false
-
   defp put_replace(changeset, replace, replace_args) do
     with_states = fn fields ->
       for state <- states(), do: {state, fields}
@@ -461,25 +447,19 @@ defmodule Oban.Job do
     end
   end
 
-  defp put_uniqueness(changeset, value) do
+  defp put_unique(changeset, value) do
     case value do
       [_ | _] = opts ->
         unique =
           opts
           |> Map.new()
-          |> Map.put_new(:fields, @unique_fields)
+          |> Map.put_new(:fields, ~w(args queue worker)a)
           |> Map.put_new(:keys, [])
-          |> Map.put_new(:states, @unique_states)
-          |> Map.put_new(:timestamp, @unique_timestamp)
-          |> Map.update(:period, @unique_period, &cast_period/1)
+          |> Map.put_new(:states, ~w(scheduled available executing retryable completed)a)
+          |> Map.put_new(:timestamp, :inserted_at)
+          |> Map.update(:period, 60, &cast_period/1)
 
-        case validate_unique_opts(unique) do
-          :ok ->
-            put_change(changeset, :unique, unique)
-
-          {:error, field, value} ->
-            add_error(changeset, :unique, "invalid unique option for #{field}, #{inspect(value)}")
-        end
+        put_change(changeset, :unique, unique)
 
       nil ->
         changeset
@@ -532,41 +512,93 @@ defmodule Oban.Job do
     end)
   end
 
-  defp validate_replace(changeset) do
-    invalid_state = fn replace ->
-      replace
-      |> Keyword.keys()
-      |> Enum.any?(&(&1 not in states()))
-    end
-
-    invalid_field = fn replace ->
-      replace
-      |> Keyword.values()
-      |> List.flatten()
-      |> Enum.any?(&(&1 not in @replace_options))
-    end
-
+  @doc false
+  def validate_replace(%Changeset{} = changeset) do
     replace = get_change(changeset, :replace)
 
-    cond do
-      is_list(replace) and invalid_state.(replace) ->
-        add_error(changeset, :replace, "has an invalid state")
+    if is_list(replace) do
+      case validate_replace(replace) do
+        :ok ->
+          changeset
 
-      is_list(replace) and invalid_field.(replace) ->
-        add_error(changeset, :replace, "has an invalid field")
-
-      true ->
-        changeset
+        {:error, error} ->
+          add_error(changeset, :replace, "invalid replace option, #{inspect(error)}")
+      end
+    else
+      changeset
     end
   end
 
-  defp validate_unique_opts(unique) do
-    Enum.reduce_while(unique, :ok, fn {key, val}, _acc ->
-      if valid_unique_opt?({key, val}) do
-        {:cont, :ok}
-      else
-        {:halt, {:error, key, val}}
+  def validate_replace(replace) do
+    keys = Keyword.keys(replace)
+    vals = replace |> Keyword.values() |> List.flatten()
+
+    cond do
+      Enum.any?(keys, &(&1 not in states())) ->
+        {:error, "has an invalid state"}
+
+      Enum.any?(vals, &(&1 not in @replace_options)) ->
+        {:error, "has an invalid field"}
+
+      true ->
+        :ok
+    end
+  end
+
+  @doc false
+  def validate_unique(%Changeset{} = changeset) do
+    unique = get_change(changeset, :unique)
+
+    if is_map(unique) do
+      case validate_unique(Map.to_list(unique)) do
+        :ok ->
+          changeset
+
+        {:error, error} ->
+          add_error(changeset, :unique, "invalid unique option, #{inspect(error)}")
       end
+    else
+      changeset
+    end
+  end
+
+  def validate_unique(unique) do
+    Validation.validate(:unique, unique, fn
+      {:fields, [_ | _] = fields} ->
+        unless Enum.all?(fields, &(&1 in @unique_fields)) do
+          {:error, "expected :fields #{inspect(fields)} to overlap #{inspect(@unique_fields)}"}
+        end
+
+      {:keys, keys} ->
+        unless is_list(keys) and Enum.all?(keys, &is_atom/1) do
+          {:error, "expected :keys to be a list of atoms"}
+        end
+
+      {:period, :infinity} ->
+        :ok
+
+      {:period, {period, unit}} ->
+        unless is_integer(period) and period > 0 and unit in @time_units do
+          {:error, "expected :period to be positive and unit to be in #{inspect(@time_units)}"}
+        end
+
+      {:period, period} ->
+        unless is_integer(period) and period > 0 do
+          {:error, "expected :period to be a positive integer"}
+        end
+
+      {:states, [_ | _] = states} ->
+        unless Enum.all?(states, &(&1 in states())) do
+          {:error, "expected :states #{inspect(states)} to overlap in #{inspect(states())}"}
+        end
+
+      {:timestamp, timestamp} ->
+        unless timestamp in @unique_timestamps do
+          {:error, "expected :timestamp to be one of #{inspect(@unique_timestamps)}"}
+        end
+
+      option ->
+        {:error, "unknown option, #{inspect(option)}"}
     end)
   end
 end

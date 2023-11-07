@@ -105,9 +105,9 @@ defmodule Oban.WorkerTest do
   end
 
   test "validating __using__ macro options" do
-    assert_raise ArgumentError, ~r/unknown option/, fn ->
+    assert_raise ArgumentError, ~r/unknown option :thing/, fn ->
       defmodule UnknownOption do
-        use Oban.Worker, state: "youcantsetthis"
+        use Oban.Worker, thing: "youcantsetthis"
 
         def perform(_), do: :ok
       end
@@ -137,7 +137,7 @@ defmodule Oban.WorkerTest do
   test "validating the priority provided to __using__" do
     assert_raise ArgumentError, ~r/expected :priority to be/, fn ->
       defmodule InvalidPriority do
-        use Oban.Worker, priority: 11
+        use Oban.Worker, priority: -1
 
         def perform(_), do: :ok
       end
@@ -155,7 +155,7 @@ defmodule Oban.WorkerTest do
 
     assert_raise ArgumentError, ~r/expected :tags to be a list/, fn ->
       defmodule InvalidTagsValue do
-        use Oban.Worker, tags: ["alpha", :beta]
+        use Oban.Worker, tags: ["alpha", 123]
 
         def perform(_), do: :ok
       end
@@ -163,7 +163,7 @@ defmodule Oban.WorkerTest do
   end
 
   test "validating the unique options provided to __using__" do
-    assert_raise ArgumentError, ~r/unexpected unique options/, fn ->
+    assert_raise ArgumentError, ~r/expected :unique to be a list/, fn ->
       defmodule InvalidUniqueType do
         use Oban.Worker, unique: 0
 
@@ -171,7 +171,7 @@ defmodule Oban.WorkerTest do
       end
     end
 
-    assert_raise ArgumentError, ~r/unexpected unique options/, fn ->
+    assert_raise ArgumentError, ~r/unknown option, {:unknown/, fn ->
       defmodule InvalidUniqueOption do
         use Oban.Worker, unique: [unknown: []]
 
@@ -179,7 +179,7 @@ defmodule Oban.WorkerTest do
       end
     end
 
-    assert_raise ArgumentError, ~r/unexpected unique options/, fn ->
+    assert_raise ArgumentError, ~r/expected :fields \[:unknown\] to overlap/, fn ->
       defmodule InvalidUniqueField do
         use Oban.Worker, unique: [fields: [:unknown]]
 
@@ -187,7 +187,7 @@ defmodule Oban.WorkerTest do
       end
     end
 
-    assert_raise ArgumentError, ~r/unexpected unique options/, fn ->
+    assert_raise ArgumentError, ~r/expected :period to be a positive/, fn ->
       defmodule InvalidUniquePeriod do
         use Oban.Worker, unique: [period: 0]
 
@@ -195,7 +195,7 @@ defmodule Oban.WorkerTest do
       end
     end
 
-    assert_raise ArgumentError, ~r/unexpected unique options/, fn ->
+    assert_raise ArgumentError, ~r/expected :states \[:unknown\] to overlap/, fn ->
       defmodule InvalidUniqueStates do
         use Oban.Worker, unique: [states: [:unknown]]
 
