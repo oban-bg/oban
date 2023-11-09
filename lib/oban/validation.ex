@@ -4,8 +4,8 @@ defmodule Oban.Validation do
   @type validator ::
           ({atom(), term()} ->
              :ok
-             | {:unknown, atom() | {atom(), term()}, module()}
              | {:error, term()})
+          | {:unknown, atom() | {atom(), term()}, module()}
 
   @doc """
   A utility to help validate options without resorting to `throw` or `raise` for control flow.
@@ -47,22 +47,24 @@ defmodule Oban.Validation do
     with {:error, reason} <- validator.(opts), do: raise(ArgumentError, reason)
   end
 
-  defp unknown_error({name, _value}, known), do: unknown_error(name, known)
+  def validate_schema(opts, schema) do
+    Enum.reduce_while(opts, :ok, fn {key, val}, acc ->
+      case Keyword.fetch(schema, key) do
+        {:ok, type} ->
+          case validate_type(type, key, val) do
+            :ok -> {:cont, acc}
+            error -> {:halt, error}
+          end
 
-  defp unknown_error(name, module) when is_atom(module) do
-    name = to_string(name)
+        :error ->
+          {:halt, unknown_error(key, Keyword.keys(schema))}
+      end
+    end)
+  end
 
-    module
-    |> struct([])
-    |> Map.from_struct()
-    |> Enum.map(fn {known, _} -> {String.jaro_distance(name, to_string(known)), known} end)
-    |> Enum.sort(:desc)
-    |> case do
-      [{score, known} | _] when score > 0.7 ->
-        {:error, "unknown option :#{name}, did you mean :#{known}?"}
-
-      _ ->
-        {:error, "unknown option :#{name}"}
+  def validate_schema!(opts, schema) do
+    with {:error, reason} <- validate_schema(opts, schema) do
+      raise ArgumentError, reason
     end
   end
 
@@ -95,6 +97,79 @@ defmodule Oban.Validation do
     else
       {:error,
        "expected #{inspect(key)} to be a positive integer or :infinity, got: #{inspect(value)}"}
+    end
+  end
+
+  # Type Validators
+
+  defp validate_type(:atom, key, val) when not is_atom(val) do
+    {:error, "expected #{inspect(key)} to be an atom, got: #{inspect(val)}"}
+  end
+
+  defp validate_type(:non_neg_integer, key, val) when not is_integer(val) or val < 0 do
+    {:error, "expected #{inspect(key)} to be a non negative integer, got: #{inspect(val)}"}
+  end
+
+  defp validate_type(:pos_integer, key, val) when not is_integer(val) or val < 1 do
+    {:error, "expected #{inspect(key)} to be a positive integer, got: #{inspect(val)}"}
+  end
+
+  defp validate_type(:string, key, val) when not is_binary(val) do
+    {:error, "expected #{inspect(key)} to be a string, got: #{inspect(val)}"}
+  end
+
+  defp validate_type({:custom, fun}, key, val) when is_function(fun, 1) do
+    with {:error, message} <- fun.(val) do
+      {:error, "invalid value for #{inspect(key)}: #{message}"}
+    end
+  end
+
+  defp validate_type({:list, type}, key, val) when is_list(val) do
+    if Enum.all?(val, &(:ok == validate_type(type, key, &1))) do
+      :ok
+    else
+      {:error, "expected #{inspect(key)} to be a list of #{inspect(type)}, got: #{inspect(val)}"}
+    end
+  end
+
+  defp validate_type({:list, _type}, key, val) do
+    {:error, "expected #{inspect(key)} to be a list, got: #{inspect(val)}"}
+  end
+
+  defp validate_type({:or, types}, key, val) do
+    if Enum.any?(types, &(:ok == validate_type(&1, key, val))) do
+      :ok
+    else
+      {:error, "expected #{inspect(key)} to be one of #{inspect(types)}, got: #{inspect(val)}"}
+    end
+  end
+
+  defp validate_type(_type, _key, _val), do: :ok
+
+  defp unknown_error({name, _value}, known), do: unknown_error(name, known)
+
+  defp unknown_error(name, module) when is_atom(module) do
+    known =
+      module
+      |> struct([])
+      |> Map.from_struct()
+      |> Map.keys()
+
+    unknown_error(name, known)
+  end
+
+  defp unknown_error(name, known) do
+    name = to_string(name)
+
+    known
+    |> Enum.map(fn field -> {String.jaro_distance(name, to_string(field)), field} end)
+    |> Enum.sort(:desc)
+    |> case do
+      [{score, field} | _] when score > 0.7 ->
+        {:error, "unknown option :#{name}, did you mean :#{field}?"}
+
+      _ ->
+        {:error, "unknown option :#{name}"}
     end
   end
 end

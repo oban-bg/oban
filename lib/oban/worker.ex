@@ -339,38 +339,14 @@ defmodule Oban.Worker do
 
   @doc false
   defmacro __after_compile__(%{module: module}, _env) do
-    validator = fn opts ->
-      Validation.validate(opts, fn
-        {:max_attempts, max} ->
-          Validation.validate_integer(:max_attempts, max)
-
-        {:priority, priority} ->
-          Validation.validate_integer(:priority, priority, min: 0)
-
-        {:queue, queue} ->
-          unless is_atom(queue) or is_binary(queue) do
-            {:error, "expected :queue to be an atom or binary, got: #{inspect(queue)}"}
-          end
-
-        {:tags, tags} ->
-          unless is_list(tags) and Enum.all?(tags, &(is_atom(&1) or is_binary(&1))) do
-            {:error, "expected :tags to be a list of strings, got: #{inspect(tags)}"}
-          end
-
-        {:unique, unique} ->
-          Job.validate_unique(unique)
-
-        {:worker, worker} ->
-          unless is_binary(worker) do
-            {:error, "expected :worker to be a binary, got: #{inspect(worker)}"}
-          end
-
-        option ->
-          {:unknown, option, Oban.Job}
-      end)
-    end
-
-    Validation.validate!(module.__opts__(), validator)
+    Validation.validate_schema!(module.__opts__(),
+      max_attempts: :pos_integer,
+      priority: :non_neg_integer,
+      queue: {:or, [:atom, :string]},
+      tags: {:list, :string},
+      unique: {:custom, &Job.validate_unique/1},
+      worker: :string
+    )
   end
 
   @doc false
