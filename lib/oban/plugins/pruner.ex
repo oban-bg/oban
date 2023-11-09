@@ -74,14 +74,13 @@ defmodule Oban.Plugins.Pruner do
 
   @impl Plugin
   def validate(opts) do
-    Validation.validate(opts, fn
-      {:conf, _} -> :ok
-      {:name, _} -> :ok
-      {:interval, interval} -> Validation.validate_integer(:interval, interval)
-      {:limit, limit} -> Validation.validate_integer(:limit, limit)
-      {:max_age, max_age} -> Validation.validate_integer(:max_age, max_age)
-      option -> {:unknown, option, State}
-    end)
+    Validation.validate_schema(opts,
+      conf: :any,
+      name: :any,
+      interval: :pos_integer,
+      limit: :pos_integer,
+      max_age: :pos_integer
+    )
   end
 
   @impl GenServer

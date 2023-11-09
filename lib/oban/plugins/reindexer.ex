@@ -74,15 +74,14 @@ defmodule Oban.Plugins.Reindexer do
 
   @impl Plugin
   def validate(opts) do
-    Validation.validate(opts, fn
-      {:conf, _} -> :ok
-      {:name, _} -> :ok
-      {:indexes, indexes} -> validate_indexes(indexes)
-      {:schedule, schedule} -> validate_schedule(schedule)
-      {:timezone, timezone} -> Validation.validate_timezone(:timezone, timezone)
-      {:timeout, timeout} -> Validation.validate_timeout(:timeout, timeout)
-      option -> {:unknown, option, State}
-    end)
+    Validation.validate_schema(opts,
+      conf: :ok,
+      name: :ok,
+      indexes: {:list, :string},
+      schedule: {:custom, &validate_schedule/1},
+      timeout: :timeout,
+      timezone: :timezone
+    )
   end
 
   @impl GenServer
@@ -132,20 +131,12 @@ defmodule Oban.Plugins.Reindexer do
 
   # Validation
 
-  defp validate_indexes(indexes) do
-    if is_list(indexes) and Enum.all?(indexes, &is_binary/1) do
-      :ok
-    else
-      {:error, "expected :indexes to be a list of strings, got: #{inspect(indexes)}"}
-    end
-  end
-
   defp validate_schedule(schedule) do
     Expression.parse!(schedule)
 
     :ok
   rescue
-    error in [ArgumentError] -> {:error, error}
+    error in [ArgumentError] -> {:error, error.message}
   end
 
   # Scheduling

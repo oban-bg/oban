@@ -82,13 +82,12 @@ defmodule Oban.Plugins.Lifeline do
 
   @impl Plugin
   def validate(opts) do
-    Validation.validate(opts, fn
-      {:conf, _} -> :ok
-      {:name, _} -> :ok
-      {:interval, interval} -> Validation.validate_integer(:interval, interval)
-      {:rescue_after, interval} -> Validation.validate_integer(:rescue_after, interval)
-      option -> {:unknown, option, State}
-    end)
+    Validation.validate_schema(opts,
+      conf: :any,
+      name: :any,
+      interval: :pos_integer,
+      rescue_after: :pos_integer
+    )
   end
 
   @impl GenServer

@@ -7,21 +7,6 @@ defmodule Oban.Validation do
              | {:error, term()})
           | {:unknown, atom() | {atom(), term()}, module()}
 
-  @doc """
-  A utility to help validate options without resorting to `throw` or `raise` for control flow.
-
-  ## Example
-
-  Ensure all keys are known and the correct type:
-
-      iex> Oban.Validation.validate(name: Oban, fn
-      ...>   {:conf, conf} when is_struct(conf) -> :ok
-      ...>   {:name, name} when is_atom(name) -> :ok
-      ...>   opt -> {:error, "unknown option: " <> inspect(opt)}
-      ...> end)
-      :ok
-  """
-  @spec validate(atom(), Keyword.t(), validator()) :: :ok | {:error, String.t()}
   def validate(parent_key \\ nil, opts, validator)
 
   def validate(_parent_key, opts, validator) when is_list(opts) and is_function(validator, 1) do
@@ -39,15 +24,12 @@ defmodule Oban.Validation do
     {:error, "expected #{inspect(parent_key)} to be a list, got: #{inspect(opts)}"}
   end
 
-  @doc """
-  Similar to `validate/2`, but it will raise an `ArgumentError` for any errors.
-  """
   @spec validate!(opts :: Keyword.t(), validator()) :: :ok
   def validate!(opts, validator) do
     with {:error, reason} <- validator.(opts), do: raise(ArgumentError, reason)
   end
 
-  def validate_schema(opts, schema) do
+  def validate_schema(opts, schema) when is_list(schema) do
     Enum.reduce_while(opts, :ok, fn {key, val}, acc ->
       case Keyword.fetch(schema, key) do
         {:ok, type} ->
@@ -102,8 +84,14 @@ defmodule Oban.Validation do
 
   # Type Validators
 
+  defp validate_type(:any, _key, _val), do: :ok
+
   defp validate_type(:atom, key, val) when not is_atom(val) do
     {:error, "expected #{inspect(key)} to be an atom, got: #{inspect(val)}"}
+  end
+
+  defp validate_type({:function, arity}, key, val) when not is_function(val, arity) do
+    {:error, "expected #{inspect(key)} to be #{arity} arity function, got: #{inspect(val)}"}
   end
 
   defp validate_type(:non_neg_integer, key, val) when not is_integer(val) or val < 0 do
@@ -116,6 +104,19 @@ defmodule Oban.Validation do
 
   defp validate_type(:string, key, val) when not is_binary(val) do
     {:error, "expected #{inspect(key)} to be a string, got: #{inspect(val)}"}
+  end
+
+  defp validate_type(:timeout, key, val) when (not is_integer(val) or val <= 0) and val != :infinity do
+    {:error,
+     "expected #{inspect(key)} to be a positive integer or :infinity, got: #{inspect(val)}"}
+  end
+
+  defp validate_type(:timezone, key, val) do
+    if is_binary(val) and match?({:ok, _}, DateTime.now(val)) do
+      :ok
+    else
+      {:error, "expected #{inspect(key)} to be a known timezone, got: #{inspect(val)}"}
+    end
   end
 
   defp validate_type({:custom, fun}, key, val) when is_function(fun, 1) do

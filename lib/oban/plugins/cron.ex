@@ -81,14 +81,13 @@ defmodule Oban.Plugins.Cron do
   end
 
   @impl Plugin
-  def validate(opts) when is_list(opts) do
-    Validation.validate(opts, fn
-      {:conf, _} -> :ok
-      {:crontab, crontab} -> Validation.validate(:crontab, crontab, &validate_crontab/1)
-      {:name, _} -> :ok
-      {:timezone, timezone} -> Validation.validate_timezone(:timezone, timezone)
-      option -> {:unknown, option, State}
-    end)
+  def validate(opts) do
+    Validation.validate_schema(opts,
+      conf: :any,
+      crontab: {:custom, &validate_crontab/1},
+      name: :any,
+      timezone: :timezone
+    )
   end
 
   @doc """
@@ -217,6 +216,10 @@ defmodule Oban.Plugins.Cron do
       end)
 
     %{state | crontab: parsed}
+  end
+
+  defp validate_crontab(crontab) when is_list(crontab) do
+    Validation.validate(:crontab, crontab, &validate_crontab/1)
   end
 
   defp validate_crontab({expression, worker, opts}) do
