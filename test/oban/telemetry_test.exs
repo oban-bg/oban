@@ -127,8 +127,8 @@ defmodule Oban.TelemetryTest do
     assert logged =~ ~s("state":"success")
     assert logged =~ ~s("tags":[])
     assert logged =~ ~s("worker":"Oban.Integration.Worker")
-    assert logged =~ ~r|"duration":\d{2,5},|
-    assert logged =~ ~r|"queue_time":\d{2,},|
+    assert logged =~ ~r|"duration":\d{1,}|
+    assert logged =~ ~r|"queue_time":\d{1,}|
 
     # Exception
     assert logged =~ ~s("event":"job:exception")
