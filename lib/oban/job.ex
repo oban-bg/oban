@@ -138,7 +138,7 @@ defmodule Oban.Job do
     field :attempt, :integer, default: 0
     field :attempted_by, {:array, :string}
     field :max_attempts, :integer, default: 20
-    field :priority, :integer
+    field :priority, :integer, default: 0
 
     field :attempted_at, :utc_datetime_usec
     field :cancelled_at, :utc_datetime_usec
@@ -205,18 +205,27 @@ defmodule Oban.Job do
 
     * `:max_attempts` — the maximum number of times a job can be retried if there are errors
       during execution
+
     * `:meta` — a map containing additional information about the job
+
     * `:priority` — a numerical indicator from 0 to 3 of how important this job is relative to
       other jobs in the same queue. The lower the number, the higher priority the job.
+
     * `:queue` — a named queue to push the job into. Jobs may be pushed into any queue, regardless
       of whether jobs are currently being processed for the queue.
+
     * `:replace` - a list of keys to replace per state on a unique conflict
+
     * `:scheduled_at` - a time in the future after which the job should be executed
+
     * `:schedule_in` - the number of seconds until the job should be executed or a tuple containing
       a number and unit
+
     * `:tags` — a list of tags to group and organize related jobs, i.e. to identify scheduled jobs
+
     * `:unique` — a keyword list of options specifying how uniqueness will be calculated. The
       options define which fields will be used, for how long, with which keys, and for which states.
+
     * `:worker` — a module to execute the job in. The module must implement the `Oban.Worker`
       behaviour.
 
@@ -530,15 +539,23 @@ defmodule Oban.Job do
   end
 
   def validate_replace(replace) do
-    keys = Keyword.keys(replace)
-    vals = replace |> Keyword.values() |> List.flatten()
+    unknown_state =
+      replace
+      |> Keyword.keys()
+      |> Enum.find(&(&1 not in states()))
+
+    unknown_field =
+      replace
+        |> Keyword.values()
+        |> List.flatten()
+        |> Enum.find(&(&1 not in @replace_options))
 
     cond do
-      Enum.any?(keys, &(&1 not in states())) ->
-        {:error, "has an invalid state"}
+      not is_nil(unknown_state) ->
+        {:error, "has an invalid state: #{inspect(unknown_state)}"}
 
-      Enum.any?(vals, &(&1 not in @replace_options)) ->
-        {:error, "has an invalid field"}
+      not is_nil(unknown_field) ->
+        {:error, "has an invalid field: #{inspect(unknown_field)}"}
 
       true ->
         :ok

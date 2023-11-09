@@ -22,6 +22,7 @@ defmodule Oban.WorkerTest do
       queue: "special",
       max_attempts: @max_attempts,
       priority: 1,
+      replace: [available: [:scheduled_at], scheduled: [:scheduled_at]],
       tags: ["scheduled", "special"],
       unique: [fields: [:queue, :worker], period: {1, :minute}, states: [:scheduled]]
 
@@ -138,6 +139,16 @@ defmodule Oban.WorkerTest do
     assert_raise ArgumentError, ~r/expected :priority to be/, fn ->
       defmodule InvalidPriority do
         use Oban.Worker, priority: -1
+
+        def perform(_), do: :ok
+      end
+    end
+  end
+
+  test "validating replace options provided to __using__" do
+    assert_raise ArgumentError, ~r/invalid value for :replace/, fn ->
+      defmodule InvalidReplace do
+        use Oban.Worker, replace: [unknown: [:thing]]
 
         def perform(_), do: :ok
       end

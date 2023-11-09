@@ -14,6 +14,7 @@ defmodule Oban.Worker do
   * `:priority` — 0
   * `:queue` — `:default`
   * `:tags` — no tags set
+  * `:replace` — no replacement set
   * `:unique` — no uniqueness set
 
   To create a minimum worker using the defaults, including the `default` queue:
@@ -38,6 +39,7 @@ defmodule Oban.Worker do
           priority: 1,
           max_attempts: 10,
           tags: ["business"],
+          replace: [scheduled: [:scheduled_at]],
           unique: [period: 30]
 
         @impl Oban.Worker
@@ -343,6 +345,7 @@ defmodule Oban.Worker do
       max_attempts: :pos_integer,
       priority: :non_neg_integer,
       queue: {:or, [:atom, :string]},
+      replace: {:custom, &Job.validate_replace/1},
       tags: {:list, :string},
       unique: {:custom, &Job.validate_unique/1},
       worker: :string
