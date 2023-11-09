@@ -131,7 +131,6 @@ defmodule Oban.Engines.Basic do
       |> select([:id, :state])
       |> where([j], j.state in ~w(scheduled retryable))
       |> where([j], not is_nil(j.queue))
-      |> where([j], j.priority in [0, 1, 2, 3])
       |> where([j], j.scheduled_at <= ^DateTime.utc_now())
       |> limit(^limit)
 
@@ -156,7 +155,6 @@ defmodule Oban.Engines.Basic do
       |> select([:id, :queue, :state])
       |> where([j], j.state in ~w(completed cancelled discarded))
       |> where([j], not is_nil(j.queue))
-      |> where([j], j.priority in [0, 1, 2, 3])
       |> where([j], j.scheduled_at < ^time)
       |> limit(^limit)
 

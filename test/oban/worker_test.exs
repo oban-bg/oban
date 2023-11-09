@@ -137,8 +137,16 @@ defmodule Oban.WorkerTest do
 
   test "validating the priority provided to __using__" do
     assert_raise ArgumentError, ~r/expected :priority to be/, fn ->
-      defmodule InvalidPriority do
+      defmodule NegativePriority do
         use Oban.Worker, priority: -1
+
+        def perform(_), do: :ok
+      end
+    end
+
+    assert_raise ArgumentError, ~r/expected :priority to be/, fn ->
+      defmodule InvalidPriority do
+        use Oban.Worker, priority: 10
 
         def perform(_), do: :ok
       end

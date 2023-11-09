@@ -102,11 +102,16 @@ defmodule Oban.Validation do
     {:error, "expected #{inspect(key)} to be a positive integer, got: #{inspect(val)}"}
   end
 
+  defp validate_type({:range, min..max}, key, val) when val < min or val > max do
+    {:error, "expected #{inspect(key)} to be between #{min}..#{max}, got: #{inspect(val)}"}
+  end
+
   defp validate_type(:string, key, val) when not is_binary(val) do
     {:error, "expected #{inspect(key)} to be a string, got: #{inspect(val)}"}
   end
 
-  defp validate_type(:timeout, key, val) when (not is_integer(val) or val <= 0) and val != :infinity do
+  defp validate_type(:timeout, key, val)
+       when (not is_integer(val) or val <= 0) and val != :infinity do
     {:error,
      "expected #{inspect(key)} to be a positive integer or :infinity, got: #{inspect(val)}"}
   end

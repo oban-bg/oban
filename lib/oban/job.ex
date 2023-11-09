@@ -138,7 +138,7 @@ defmodule Oban.Job do
     field :attempt, :integer, default: 0
     field :attempted_by, {:array, :string}
     field :max_attempts, :integer, default: 20
-    field :priority, :integer, default: 0
+    field :priority, :integer
 
     field :attempted_at, :utc_datetime_usec
     field :cancelled_at, :utc_datetime_usec
@@ -208,7 +208,7 @@ defmodule Oban.Job do
 
     * `:meta` — a map containing additional information about the job
 
-    * `:priority` — a numerical indicator from 0 to 3 of how important this job is relative to
+    * `:priority` — a numerical indicator from 0 to 9 of how important this job is relative to
       other jobs in the same queue. The lower the number, the higher priority the job.
 
     * `:queue` — a named queue to push the job into. Jobs may be pushed into any queue, regardless
@@ -300,7 +300,7 @@ defmodule Oban.Job do
     |> validate_length(:queue, min: 1, max: 128)
     |> validate_length(:worker, min: 1, max: 128)
     |> validate_number(:max_attempts, greater_than: 0)
-    |> validate_number(:priority, greater_than: -1, less_than: 4)
+    |> validate_number(:priority, greater_than: -1, less_than: 10)
     |> validate_replace()
     |> validate_unique()
     |> check_constraint(:attempt, name: :attempt_range)
@@ -322,15 +322,21 @@ defmodule Oban.Job do
 
   * `:scheduled`—Jobs inserted with `scheduled_at` in the future are `:scheduled`. After the
     `scheduled_at` time has ellapsed the `Oban.Plugins.Stager` will transition them to `:available`
+
   * `:available`—Jobs without a future `scheduled_at` timestamp are inserted as `:available` and may
     execute immediately
+
   * `:executing`—Available jobs may be ran, at which point they are `:executing`
+
   * `:retryable`—Jobs that fail and haven't exceeded their max attempts are transitiond to
     `:retryable` and rescheduled until after a backoff period. Once the backoff has ellapsed the
     `Oban.Plugins.Stager` will transition them back to `:available`
+
   * `:completed`—Jobs that finish executing succesfully are marked `:completed`
+
   * `:discarded`—Jobs that fail and exhaust their max attempts, or return a `:discard` tuple during
     execution, are marked `:discarded`
+
   * `:cancelled`—Jobs that are cancelled intentionally
 
   """
@@ -546,9 +552,9 @@ defmodule Oban.Job do
 
     unknown_field =
       replace
-        |> Keyword.values()
-        |> List.flatten()
-        |> Enum.find(&(&1 not in @replace_options))
+      |> Keyword.values()
+      |> List.flatten()
+      |> Enum.find(&(&1 not in @replace_options))
 
     cond do
       not is_nil(unknown_state) ->

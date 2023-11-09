@@ -343,7 +343,7 @@ defmodule Oban.Worker do
   defmacro __after_compile__(%{module: module}, _env) do
     Validation.validate_schema!(module.__opts__(),
       max_attempts: :pos_integer,
-      priority: :non_neg_integer,
+      priority: {:range, 0..9},
       queue: {:or, [:atom, :string]},
       replace: {:custom, &Job.validate_replace/1},
       tags: {:list, :string},

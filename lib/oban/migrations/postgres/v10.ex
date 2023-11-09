@@ -10,12 +10,6 @@ defmodule Oban.Migrations.Postgres.V10 do
       modify :priority, :integer, null: false
     end
 
-    # These could happen from an insert_all call with invalid data
-    create constraint(:oban_jobs, :priority_range,
-             check: "priority between 0 and 3",
-             prefix: prefix
-           )
-
     create constraint(:oban_jobs, :positive_max_attempts,
              check: "max_attempts > 0",
              prefix: prefix

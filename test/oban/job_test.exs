@@ -10,6 +10,19 @@ defmodule Oban.JobTest do
       refute changeset.valid?
       assert {"unknown option :workr provided", _} = changeset.errors[:base]
     end
+
+    test "validating priority values" do
+      assert Job.new(%{}, priority: -1).errors[:priority]
+      assert Job.new(%{}, priority: 10).errors[:priority]
+
+      refute Job.new(%{}, priority: 0).errors[:priority]
+      refute Job.new(%{}, priority: 9).errors[:priority]
+    end
+
+    test "validating max_attempt values" do
+      assert Job.new(%{}, max_attempts: 0).errors[:max_attempts]
+      refute Job.new(%{}, max_attempts: 1).errors[:max_attempts]
+    end
   end
 
   describe "scheduling with new/2" do

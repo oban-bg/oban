@@ -116,7 +116,8 @@ orphaned due to crashes.
 - **Periodic (CRON) Jobs** — Automatically enqueue jobs on a cron-like schedule.
   Duplicate jobs are never enqueued, no matter how many nodes you're running.
 
-- **Job Priority** — Prioritize jobs within a queue to run ahead of others.
+- **Job Priority** — Prioritize jobs within a queue to run ahead of others with ten levels of
+  granularity.
 
 - **Historic Metrics** — After a job is processed the row isn't deleted.
   Instead, the job is retained in the database to provide metrics. This allows
@@ -336,7 +337,7 @@ Unique jobs can be configured in the worker, or when the job is built:
 |> Oban.insert()
 ```
 
-Job priority can be specified using an integer from 0 to 3, with 0 being the
+Job priority can be specified using an integer from 0 to 9, with 0 being the
 default and highest priority:
 
 ```elixir
@@ -427,24 +428,21 @@ staging will switch to polling in `local` mode.
 
 ## Prioritizing Jobs
 
-Normally, all available jobs within a queue are executed in the order they were
-scheduled. You can override the normal behavior and prioritize or de-prioritize
-a job by assigning a numerical `priority`.
+Normally, all available jobs within a queue are executed in the order they were scheduled. You can
+override the normal behavior and prioritize or de-prioritize a job by assigning a numerical
+`priority`.
 
-* Priorities from 0-3 are allowed, where 0 is the highest priority and 3 is the
-  lowest.
+* Priorities from 0-9 are allowed, where 0 is the highest priority and 9 is the lowest.
 
-* The default priority is 0, unless specified all jobs have an equally high
-  priority.
+* The default priority is 0, unless specified all jobs have an equally high priority.
 
-* All jobs with a higher priority will execute before any jobs with a lower
-  priority. Within a particular priority jobs are executed in their scheduled
-  order.
+* All jobs with a higher priority will execute before any jobs with a lower priority. Within a
+  particular priority jobs are executed in their scheduled order.
 
 #### Caveats & Guidelines
 
-The default priority is defined in the jobs table. The least intrusive way to
-change it for all jobs is to change the column default:
+The default priority is defined in the jobs table. The least intrusive way to change it for all
+jobs is to change the column default:
 
 ```elixir
 alter table("oban_jobs") do
