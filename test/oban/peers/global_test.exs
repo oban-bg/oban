@@ -1,5 +1,5 @@
 defmodule Oban.Peers.GlobalTest do
-  use Oban.Case
+  use Oban.Case, async: true
 
   alias Oban.Peer
   alias Oban.Peers.Global

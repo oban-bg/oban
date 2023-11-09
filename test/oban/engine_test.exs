@@ -1,6 +1,6 @@
 for engine <- [Oban.Engines.Basic, Oban.Engines.Lite] do
   defmodule Module.concat(engine, Test) do
-    use Oban.Case
+    use Oban.Case, async: true
 
     alias Ecto.Adapters.SQL.Sandbox
     alias Ecto.Multi
