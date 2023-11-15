@@ -194,7 +194,7 @@ defmodule Oban.Migration do
     case repo().__adapter__() do
       Ecto.Adapters.Postgres -> Oban.Migrations.Postgres
       Ecto.Adapters.SQLite3 -> Oban.Migrations.SQLite
-      _ -> repo().config()[:migrator]
+      _ -> Map.fetch!(repo().config(), :migrator)
     end
   end
 end
