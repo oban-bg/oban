@@ -112,6 +112,14 @@ defmodule Oban.Repo do
   end
 
   @doc """
+  Wraps `Ecto.Adapters.SQL.Repo.query!/4` with an added `Oban.Config` argument.
+  """
+  @doc since: "2.17.0"
+  def query!(conf, statement, params \\ [], opts \\ []) do
+    __dispatch__(:query, [conf, statement, params], opts)
+  end
+
+  @doc """
   Wraps `Ecto.Adapters.SQL.Repo.to_sql/2` with an added `Oban.Config` argument.
   """
   @doc since: "2.2.0"
