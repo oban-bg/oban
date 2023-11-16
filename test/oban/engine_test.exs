@@ -428,7 +428,7 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite] do
 
         Oban.cancel_job(name, job)
 
-        refute_receive {:ok, 1}, 200
+        refute_receive {:ok, 1}
 
         assert %Job{state: "cancelled", errors: [_], cancelled_at: %_{}} = reload(name, job)
         assert %{running: []} = Oban.check_queue(name, queue: :alpha)
@@ -450,7 +450,7 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite] do
         assert :ok = Oban.cancel_job(name, job_3.id)
         assert :ok = Oban.cancel_job(name, job_4.id)
 
-        refute_receive {:ok, 4}, 150
+        refute_receive {:ok, 4}
 
         assert %Job{state: "cancelled", errors: [], cancelled_at: %_{}} = reload(name, job_1)
         assert %Job{state: "cancelled", errors: [], cancelled_at: %_{}} = reload(name, job_2)
@@ -476,7 +476,7 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite] do
 
         assert {:ok, 3} = Oban.cancel_all_jobs(name, Job)
 
-        refute_receive {:ok, 4}, 150
+        refute_receive {:ok, 4}
 
         assert %Job{state: "cancelled", errors: [], cancelled_at: %_{}} = reload(name, job_1)
         assert %Job{state: "cancelled", errors: [], cancelled_at: %_{}} = reload(name, job_2)

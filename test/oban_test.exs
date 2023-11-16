@@ -46,7 +46,7 @@ defmodule ObanTest do
       :ok = stop_supervised(name)
 
       assert_receive {:ok, 1}
-      refute_receive {:ok, 2}, 50
+      refute_receive {:ok, 2}
 
       assert Repo.get(Job, id_1).state == "completed"
       assert Repo.get(Job, id_2).state == "executing"
@@ -68,7 +68,7 @@ defmodule ObanTest do
 
       insert!(ref: 2, sleep: 50)
 
-      refute_receive {:started, 2}, 50
+      refute_receive {:started, 2}
     end
 
     test "queue shutdown grace period applies comprehensively to all queues" do
@@ -91,8 +91,8 @@ defmodule ObanTest do
 
       assert System.convert_time_unit(time, :microsecond, :millisecond) >= 50
 
-      refute_receive {:started, 2}, 50
-      refute_receive {:started, 4}, 50
+      refute_receive {:started, 2}
+      refute_receive {:started, 4}
     end
   end
 
