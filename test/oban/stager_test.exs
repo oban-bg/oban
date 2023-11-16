@@ -5,6 +5,21 @@ defmodule Oban.StagerTest do
   alias Oban.TelemetryHandler
 
   describe "integration" do
+    test "executing jobs from an insert notification" do
+      name =
+        start_supervised_oban!(
+          queues: [alpha: 1, gamma: 1],
+          stage_interval: 10_000,
+          testing: :disabled
+        )
+
+      Oban.insert(name, Worker.new(%{action: "OK", ref: 0}, queue: :alpha))
+      Oban.insert_all(name, [Worker.new(%{action: "OK", ref: 1}, queue: :gamma)])
+
+      assert_receive {:ok, 0}
+      assert_receive {:ok, 1}
+    end
+
     test "descheduling jobs to make them available for execution" do
       job_1 = insert!(%{}, state: "scheduled", scheduled_at: seconds_ago(10))
       job_2 = insert!(%{}, state: "scheduled", scheduled_at: seconds_from_now(10))

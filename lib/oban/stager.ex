@@ -52,6 +52,15 @@ defmodule Oban.Stager do
   def handle_continue(:start, %State{} = state) do
     Notifier.listen(state.conf.name, :stager)
 
+    if state.conf.insert_trigger do
+      :telemetry.attach_many(
+        "oban-stager",
+        [[:oban, :engine, :insert_job, :stop], [:oban, :engine, :insert_all_jobs, :stop]],
+        &__MODULE__.handle_insert/4,
+        []
+      )
+    end
+
     state =
       state
       |> schedule_staging()
@@ -63,6 +72,8 @@ defmodule Oban.Stager do
   @impl GenServer
   def terminate(_reason, %State{timer: timer}) do
     if is_reference(timer), do: Process.cancel_timer(timer)
+
+    :telemetry.detach("oban-stager")
 
     :ok
   end
@@ -95,6 +106,23 @@ defmodule Oban.Stager do
     end
 
     {:noreply, %{state | ping_at_tick: 60, mode: :global, swap_at_tick: 65, tick: 0}}
+  end
+
+  @doc false
+  def handle_insert(_event, _measure, meta, _) do
+    payload =
+      case meta do
+        %{job: %{queue: queue}} ->
+          [%{queue: queue}]
+
+        %{jobs: jobs} ->
+          for %{queue: queue} <- jobs, uniq: true, do: %{queue: queue}
+
+        _ ->
+          []
+      end
+
+    Notifier.notify(meta.conf, :insert, payload)
   end
 
   defp check_leadership_and_stage(state) do

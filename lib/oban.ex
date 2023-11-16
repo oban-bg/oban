@@ -321,6 +321,16 @@ defmodule Oban do
     The default is `5ms` and the minimum is `1ms`, which is likely faster than the database can
     return new jobs to run.
 
+  * `:insert_trigger` — whether to dispatch notifications to relevant queues as jobs are inserted
+    into the database. At high load, e.g. thousands or more job inserts per second, notifications
+    may become a bottleneck.
+
+    The trigger mechanism is designed to make jobs execute immediately after insert, rather than
+    up to `:stage_interval` (1 second) afterwards, and it can safely be disabled to improve insert
+    throughput.
+
+    Defaults to `true`, with triggering enabled.
+
   * `:shutdown_grace_period` — the amount of time a queue will wait for executing jobs to complete
     before hard shutdown, specified in milliseconds. The default is `15_000`, or 15 seconds.
 

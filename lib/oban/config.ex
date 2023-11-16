@@ -14,6 +14,7 @@ defmodule Oban.Config do
           dispatch_cooldown: pos_integer(),
           engine: module(),
           get_dynamic_repo: nil | (-> pid() | atom()),
+          insert_trigger: boolean(),
           log: false | Logger.level(),
           name: Oban.name(),
           node: String.t(),
@@ -31,6 +32,7 @@ defmodule Oban.Config do
   defstruct dispatch_cooldown: 5,
             engine: Oban.Engines.Basic,
             get_dynamic_repo: nil,
+            insert_trigger: true,
             log: false,
             name: Oban,
             node: nil,
@@ -187,6 +189,14 @@ defmodule Oban.Config do
     else
       {:error,
        "expected :get_dynamic_repo to be nil or a zero arity function, got: #{inspect(fun)}"}
+    end
+  end
+
+  defp validate_opt(_opts, {:insert_trigger, bool}) do
+    if is_boolean(bool) do
+      :ok
+    else
+      {:error, "expected :insert_trigger to be a boolean, got: #{inspect(bool)}"}
     end
   end
 

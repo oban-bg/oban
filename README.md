@@ -88,54 +88,47 @@ orphaned due to crashes.
 
 #### Advanced Features
 
-- **Isolated Queues** — Jobs are stored in a single table but are executed in
-  distinct queues. Each queue runs in isolation, ensuring that a job in a single
-  slow queue can't back up other faster queues.
+- **Isolated Queues** — Jobs are stored in a single table but are executed in distinct queues.
+  Each queue runs in isolation, ensuring that a job in a single slow queue can't back up other
+  faster queues.
 
-- **Queue Control** — Queues can be started, stopped, paused, resumed and scaled
-  independently at runtime locally or across _all_ running nodes (even in
-  environments like Heroku, without distributed Erlang).
+- **Queue Control** — Queues can be started, stopped, paused, resumed and scaled independently at
+  runtime locally or across _all_ running nodes (even in environments like Heroku, without
+  distributed Erlang).
 
-- **Resilient Queues** — Failing queries won't crash the entire supervision tree,
-  instead a backoff mechanism will safely retry them again in the future.
+- **Resilient Queues** — Failing queries won't crash the entire supervision tree, instead a
+  backoff mechanism will safely retry them again in the future.
 
-- **Job Canceling** — Jobs can be canceled in the middle of execution regardless
-  of which node they are running on. This stops the job at once and flags it as
-  `cancelled`.
+- **Job Canceling** — Jobs can be canceled in the middle of execution regardless of which node
+  they are running on. This stops the job at once and flags it as `cancelled`.
 
-- **Triggered Execution** — Database triggers ensure that jobs are dispatched as
-  soon as they are inserted into the database.
+- **Triggered Execution** — Insert triggers ensure that jobs are dispatched on all connected nodes
+  as soon as they are inserted into the database.
 
-- **Unique Jobs** — Duplicate work can be avoided through unique job controls.
-  Uniqueness can be enforced at the argument, queue, worker and even
-  sub-argument level for any period of time.
+- **Unique Jobs** — Duplicate work can be avoided through unique job controls. Uniqueness can be
+  enforced at the argument, queue, worker and even sub-argument level for any period of time.
 
-- **Scheduled Jobs** — Jobs can be scheduled at any time in the future, down to
-  the second.
+- **Scheduled Jobs** — Jobs can be scheduled at any time in the future, down to the second.
 
-- **Periodic (CRON) Jobs** — Automatically enqueue jobs on a cron-like schedule.
-  Duplicate jobs are never enqueued, no matter how many nodes you're running.
+- **Periodic (CRON) Jobs** — Automatically enqueue jobs on a cron-like schedule. Duplicate jobs
+  are never enqueued, no matter how many nodes you're running.
 
 - **Job Priority** — Prioritize jobs within a queue to run ahead of others with ten levels of
   granularity.
 
-- **Historic Metrics** — After a job is processed the row isn't deleted.
-  Instead, the job is retained in the database to provide metrics. This allows
-  users to inspect historic jobs and to see aggregate data at the job, queue or
-  argument level.
+- **Historic Metrics** — After a job is processed the row isn't deleted. Instead, the job is
+  retained in the database to provide metrics. This allows users to inspect historic jobs and to
+  see aggregate data at the job, queue or argument level.
 
-- **Node Metrics** — Every queue records metrics to the database during runtime.
-  These are used to monitor queue health across nodes and may be used for
-  analytics.
+- **Node Metrics** — Every queue records metrics to the database during runtime. These are used to
+  monitor queue health across nodes and may be used for analytics.
 
-- **Graceful Shutdown** — Queue shutdown is delayed so that slow jobs can finish
-  executing before shutdown. When shutdown starts queues are paused and stop
-  executing new jobs. Any jobs left running after the shutdown grace period may
-  be rescued later.
+- **Graceful Shutdown** — Queue shutdown is delayed so that slow jobs can finish executing before
+  shutdown. When shutdown starts queues are paused and stop executing new jobs. Any jobs left
+  running after the shutdown grace period may be rescued later.
 
-- **Telemetry Integration** — Job life-cycle events are emitted via
-  [Telemetry][tele] integration. This enables simple logging, error reporting
-  and health checkups without plug-ins.
+- **Telemetry Integration** — Job life-cycle events are emitted via [Telemetry][tele] integration.
+  This enables simple logging, error reporting and health checkups without plug-ins.
 
 [rdbms]: https://en.wikipedia.org/wiki/Relational_database#RDBMS
 [tele]: https://github.com/beam-telemetry/telemetry

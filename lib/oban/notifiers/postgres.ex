@@ -1,14 +1,22 @@
 if Code.ensure_loaded?(Postgrex) do
   defmodule Oban.Notifiers.Postgres do
     @moduledoc """
-    A Postgres Listen/Notify based Notifier.
+    A Postgres LISTEN/NOTIFY based Notifier.
+
+    > #### Connection Pooling {: .info}
+    >
+    > Postgres PubSub is fine for most applications, but it doesn't work with connection poolers
+    > like [PgBouncer][pgb] when configured in _transaction_ or _statement_ mode, which is
+    > standard. Notifications are required for some core Oban functionality, and you should
+    > consider using an alternative notifier such as `Oban.Notifiers.PG`.
 
     ## Usage
 
     Specify the `Postgres` notifier in your Oban configuration:
 
         config :my_app, Oban,
-          notifier: Oban.Notifiers.Postgres
+          notifier: Oban.Notifiers.Postgres,
+          ...
 
     ### Transactions and Testing
 
@@ -21,30 +29,7 @@ if Code.ensure_loaded?(Postgrex) do
     To test using notifications you must run Ecto without sandbox mode enabled, or use
     `Oban.Notifiers.PG` instead.
 
-    ### Triggers and Scaling
-
-    A database trigger is used to dispatch notifications to relevant queues as jobs are inserted
-    into the database. The trigger uses `pg_notify` to send a notification for each distinct
-    queue, and `pg_notify` relies on a de-duplication mechanism with `O(N^2)` complexity. At high
-    load, e.g. thousands or more job inserts per second, notification de-duplication may become a
-    bottleneck.
-
-    The trigger mechanism is designed to make jobs execute immediately after insert, rather than
-    up to 1 second afterwards, and it can safely be disabled to improve insert throughput. Use the
-    following migration to drop the trigger:
-
-    ```elixir
-    defmodule MyApp.Repo.Migrations.DropObanJobsNotifyTrigger do
-      use Ecto.Migration
-
-      def change do
-        execute(
-          "DROP TRIGGER IF EXISTS oban_notify ON public.oban_jobs",
-          "CREATE TRIGGER oban_notify AFTER INSERT ON public.oban_jobs FOR EACH ROW EXECUTE PROCEDURE public.oban_jobs_notify()"
-        )
-      end
-    end
-    ```
+    [pgb]: https://www.pgbouncer.org/
     """
 
     @behaviour Postgrex.SimpleConnection

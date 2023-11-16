@@ -20,6 +20,14 @@ defmodule Oban.ConfigTest do
       assert_valid(engine: Oban.Engines.Lite)
     end
 
+    test ":insert_trigger is validated as a boolean" do
+      refute_valid(insert_trigger: nil)
+      refute_valid(insert_trigger: 1)
+
+      assert_valid(insert_trigger: true)
+      assert_valid(insert_trigger: false)
+    end
+
     test ":log is validated as `false` or a valid log level" do
       refute_valid(log: 1)
       refute_valid(log: "false")

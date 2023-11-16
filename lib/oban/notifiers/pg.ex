@@ -1,13 +1,12 @@
 defmodule Oban.Notifiers.PG do
   @moduledoc """
-  A PG/PG2 based notifier implementation that runs with Distributed Erlang.
+  A [PG (Process Groups)][pg] based notifier implementation that runs with Distributed Erlang.
 
-  Out of the box, Oban uses PostgreSQL's `LISTEN/NOTIFY` for PubSub. For most applications, that
-  is fine, but Postgres-based PubSub isn't sufficient in some circumstances. In particular,
-  Postgres notifications won't work when your application connects through PGbouncer in
-  _transaction_ or _statement_ mode.
-
-  _Note: You must be using [Distributed Erlang][de] to use the PG notifier._
+  > #### Distributed Erlang {: .info}
+  >
+  > PG requires a functional [Distributed Erlang][de] cluster to broadcast between nodes. If your
+  > application isn't clustered, then you should consider an alternative notifier such as
+  > `Oban.Notifiers.Postgres`
 
   ## Usage
 
@@ -19,34 +18,7 @@ defmodule Oban.Notifiers.PG do
     ...
   ```
 
-  ## Implementation Notes
-
-  * The notifier will use `pg` if available (OTP 23+) or fall back to `pg2` for
-    older OTP releases.
-
-  * Like the Postgres implementation, notifications are namespaced by `prefix`.
-
-  * For compatibility, message payloads are always serialized to JSON before
-    broadcast and deserialized before relay to local processes.
-
-  ## Migrating from `Oban.Notifiers.Postgres`
-
-  After switching from `Oban.Notifiers.Postgres`, you may remove the unused `oban_notify` trigger.
-  Use the following migration to drop the trigger while retaining the `oban_jobs_notify` function:
-
-  ```elixir
-  defmodule MyApp.Repo.Migrations.DropObanJobsNotifyTrigger do
-    use Ecto.Migration
-
-    def change do
-      execute(
-        "DROP TRIGGER IF EXISTS oban_notify ON public.oban_jobs",
-        "CREATE TRIGGER oban_notify AFTER INSERT ON public.oban_jobs FOR EACH ROW EXECUTE PROCEDURE public.oban_jobs_notify()"
-      )
-    end
-  end
-  ```
-
+  [pg]: https://www.erlang.org/doc/man/pg.html
   [de]: https://elixir-lang.org/getting-started/mix-otp/distributed-tasks.html#our-first-distributed-code
   """
 
