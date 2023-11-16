@@ -126,6 +126,12 @@ defmodule Oban.Queue.Producer do
 
     meta =
       case payload do
+        %{"action" => "pause", "queue" => "*"} ->
+          Engine.put_meta(state.conf, state.meta, :paused, true)
+
+        %{"action" => "resume", "queue" => "*"} ->
+          Engine.put_meta(state.conf, state.meta, :paused, false)
+
         %{"action" => "pause", "queue" => ^queue} ->
           Engine.put_meta(state.conf, state.meta, :paused, true)
 

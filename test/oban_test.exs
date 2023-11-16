@@ -331,6 +331,28 @@ defmodule ObanTest do
     end
   end
 
+  describe "pause_all_queues/2 and resume_all_queues/2" do
+    test "pausing and resuming all queues" do
+      name = start_supervised_oban!(queues: [alpha: 1, gamma: 1, delta: 1])
+
+      assert :ok = Oban.pause_all_queues(name)
+
+      with_backoff(fn ->
+        assert %{paused: true} = Oban.check_queue(name, queue: :alpha)
+        assert %{paused: true} = Oban.check_queue(name, queue: :gamma)
+        assert %{paused: true} = Oban.check_queue(name, queue: :delta)
+      end)
+
+      assert :ok = Oban.resume_all_queues(name)
+
+      with_backoff(fn ->
+        assert %{paused: false} = Oban.check_queue(name, queue: :alpha)
+        assert %{paused: false} = Oban.check_queue(name, queue: :gamma)
+        assert %{paused: false} = Oban.check_queue(name, queue: :delta)
+      end)
+    end
+  end
+
   describe "scale_queue/2" do
     test "validating options" do
       name = start_supervised_oban!(testing: :manual)

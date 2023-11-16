@@ -203,8 +203,16 @@ defmodule Oban do
         Oban.pause_queue(__MODULE__, opts)
       end
 
+      def pause_all_queues(opts) do
+        Oban.pause_all_queues(__MODULE__, opts)
+      end
+
       def resume_queue(opts) do
         Oban.resume_queue(__MODULE__, opts)
+      end
+
+      def resume_all_queues(opts) do
+        Oban.resume_all_queues(__MODULE__, opts)
       end
 
       def scale_queue(opts) do
@@ -861,6 +869,31 @@ defmodule Oban do
   end
 
   @doc """
+  Pause all running queues to prevent them from executing any new jobs.
+
+  See `pause_queue/2` for options and details.
+
+  ## Example
+
+  Pause all queues:
+
+      Oban.pause_all_queues()
+
+  Pause all queues on the local node:
+
+      Oban.pause_all_queues(local_only: true)
+
+  Pause all queues on a specific node:
+
+      Oban.pause_all_queues(node: "worker.1")
+  """
+  @doc since: "2.17.0"
+  @spec pause_all_queues(name(), opts :: [local_only: boolean(), node: String.t()]) :: :ok
+  def pause_all_queues(name \\ __MODULE__, opts \\ []) do
+    pause_queue(name, Keyword.put(opts, :queue, :*))
+  end
+
+  @doc """
   Resume executing jobs in a paused queue.
 
   ## Options
@@ -902,6 +935,31 @@ defmodule Oban do
     data = %{action: :resume, queue: opts[:queue], ident: scope_signal(conf, opts)}
 
     Notifier.notify(conf, :signal, data)
+  end
+
+  @doc """
+  Resume executing jobs in all paused queues.
+
+  See `resume_queue/2` for options and details.
+
+  ## Example
+
+  Resume all queues:
+
+      Oban.resume_all_queues()
+
+  Resume all queues on the local node:
+
+      Oban.resume_all_queues(local_only: true)
+
+  Resume all queues on a specific node:
+
+      Oban.resume_all_queues(node: "worker.1")
+  """
+  @doc since: "2.17.0"
+  @spec resume_all_queues(name(), opts :: [local_only: boolean(), node: String.t()]) :: :ok
+  def resume_all_queues(name \\ __MODULE__, opts \\ []) do
+    resume_queue(name, Keyword.put(opts, :queue, :*))
   end
 
   @doc """
