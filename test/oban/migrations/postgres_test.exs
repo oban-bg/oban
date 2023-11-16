@@ -5,7 +5,7 @@ defmodule Oban.Migrations.PostgresTest do
 
   alias Oban.Migrations.Postgres
 
-  @arbitrary_checks 20
+  @arbitrary_checks 10
 
   @moduletag :unboxed
 

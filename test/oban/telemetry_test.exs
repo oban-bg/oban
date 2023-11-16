@@ -168,10 +168,8 @@ defmodule Oban.TelemetryTest do
         assert_receive {:ok, 1}
         assert_receive {:error, 2}
 
-        Process.sleep(50)
+        Logger.flush()
       end)
-
-    Logger.flush()
 
     assert logged == ""
   end
@@ -187,7 +185,7 @@ defmodule Oban.TelemetryTest do
 
         assert_receive {:ok, 1}
 
-        Process.sleep(50)
+        Logger.flush()
       end)
 
     assert logged =~ ~s(source: "oban")

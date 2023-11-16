@@ -79,7 +79,7 @@ defmodule Oban.Peers.Postgres do
 
   @impl GenServer
   def handle_continue(:start, %State{} = state) do
-    Notifier.listen(state.conf.name, [:leader])
+    Notifier.listen(state.conf.name, :leader)
 
     handle_info(:election, state)
   end

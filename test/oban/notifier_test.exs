@@ -1,16 +1,15 @@
-defmodule Oban.NotifierTest do
-  use Oban.Case
+for notifier <- [Oban.Notifiers.Isolated, Oban.Notifiers.PG, Oban.Notifiers.Postgres] do
+  defmodule Module.concat(notifier, Test) do
+    use Oban.Case, async: notifier != Oban.Notifiers.Postgres
 
-  alias Ecto.Adapters.SQL.Sandbox
-  alias Oban.Notifier
-  alias Oban.Notifiers.{Isolated, PG, Postgres}
+    alias Ecto.Adapters.SQL.Sandbox
+    alias Oban.Notifier
 
-  for notifier <- [Isolated, PG, Postgres] do
     @notifier notifier
 
     describe "with #{inspect(notifier)}" do
       test "broadcasting notifications to subscribers" do
-        Sandbox.unboxed_run(Repo, fn ->
+        unboxed_run(fn ->
           name = start_supervised_oban!(notifier: @notifier)
 
           :ok = Notifier.listen(name, :signal)
@@ -21,7 +20,7 @@ defmodule Oban.NotifierTest do
       end
 
       test "notifying with complex types" do
-        Sandbox.unboxed_run(Repo, fn ->
+        unboxed_run(fn ->
           name = start_supervised_oban!(notifier: @notifier)
 
           Notifier.listen(name, [:insert, :gossip, :signal])
@@ -40,7 +39,7 @@ defmodule Oban.NotifierTest do
       end
 
       test "broadcasting on select channels" do
-        Sandbox.unboxed_run(Repo, fn ->
+        unboxed_run(fn ->
           name = start_supervised_oban!(notifier: @notifier)
 
           :ok = Notifier.listen(name, [:signal, :gossip])
@@ -55,7 +54,7 @@ defmodule Oban.NotifierTest do
       end
 
       test "ignoring messages scoped to other instances" do
-        Sandbox.unboxed_run(Repo, fn ->
+        unboxed_run(fn ->
           name = start_supervised_oban!(notifier: @notifier)
 
           :ok = Notifier.listen(name, [:gossip, :signal])
@@ -71,6 +70,14 @@ defmodule Oban.NotifierTest do
           assert_receive {:notification, :gossip, _}
           refute_received {:notification, :signal, _}
         end)
+      end
+    end
+
+    defp unboxed_run(fun) do
+      if @notifier == Oban.Notifiers.Postgres do
+        Sandbox.unboxed_run(Repo, fun)
+      else
+        fun.()
       end
     end
   end

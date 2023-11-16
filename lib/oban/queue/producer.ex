@@ -46,8 +46,6 @@ defmodule Oban.Queue.Producer do
 
     state = struct!(State, base_opts)
 
-    :ok = Notifier.listen(state.conf.name, [:insert, :signal])
-
     {:ok, state, {:continue, {:start, meta_opts}}}
   end
 
@@ -62,6 +60,8 @@ defmodule Oban.Queue.Producer do
   @impl GenServer
   def handle_continue({:start, meta_opts}, %State{} = state) do
     {:ok, meta} = Engine.init(state.conf, meta_opts)
+
+    :ok = Notifier.listen(state.conf.name, [:insert, :signal])
 
     {:noreply, schedule_refresh(%{state | meta: meta})}
   end
