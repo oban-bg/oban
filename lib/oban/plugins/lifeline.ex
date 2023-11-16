@@ -92,8 +92,6 @@ defmodule Oban.Plugins.Lifeline do
 
   @impl GenServer
   def init(opts) do
-    Validation.validate!(opts, &validate/1)
-
     state =
       State
       |> struct!(opts)

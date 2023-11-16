@@ -86,8 +86,6 @@ defmodule Oban.Plugins.Reindexer do
 
   @impl GenServer
   def init(opts) do
-    Validation.validate!(opts, &validate/1)
-
     Process.flag(:trap_exit, true)
 
     opts =
