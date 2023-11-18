@@ -142,42 +142,42 @@ defmodule Oban.Engine do
 
   @doc false
   def init(%Config{} = conf, [_ | _] = opts) do
-    with_span(:init, conf, fn engine ->
+    with_span(:init, conf, %{opts: opts}, fn engine ->
       engine.init(conf, opts)
     end)
   end
 
   @doc false
   def refresh(%Config{} = conf, %{} = meta) do
-    with_span(:refresh, conf, fn engine ->
+    with_span(:refresh, conf, %{meta: meta}, fn engine ->
       engine.refresh(conf, meta)
     end)
   end
 
   @doc false
   def shutdown(%Config{} = conf, %{} = meta) do
-    with_span(:shutdown, conf, fn engine ->
+    with_span(:shutdown, conf, %{meta: meta}, fn engine ->
       engine.shutdown(conf, meta)
     end)
   end
 
   @doc false
   def put_meta(%Config{} = conf, %{} = meta, key, value) when is_atom(key) do
-    with_span(:put_meta, conf, fn engine ->
+    with_span(:put_meta, conf, %{meta: meta, key: key, value: value}, fn engine ->
       engine.put_meta(conf, meta, key, value)
     end)
   end
 
   @doc false
   def check_meta(%Config{} = conf, %{} = meta, %{} = running) do
-    with_span(:check_meta, conf, fn engine ->
+    with_span(:check_meta, conf, %{meta: meta, running: running}, fn engine ->
       engine.check_meta(conf, meta, running)
     end)
   end
 
   @doc false
   def insert_job(%Config{} = conf, %Changeset{} = changeset, opts) do
-    with_span(:insert_job, conf, %{opts: opts}, fn engine ->
+    with_span(:insert_job, conf, %{changeset: changeset, opts: opts}, fn engine ->
       with {:ok, job} <- engine.insert_job(conf, changeset, opts) do
         {:meta, {:ok, job}, %{job: job}}
       end
@@ -199,7 +199,7 @@ defmodule Oban.Engine do
 
   @doc false
   def insert_all_jobs(%Config{} = conf, changesets, opts) do
-    with_span(:insert_all_jobs, conf, %{opts: opts}, fn engine ->
+    with_span(:insert_all_jobs, conf, %{changesets: changesets, opts: opts}, fn engine ->
       jobs = engine.insert_all_jobs(conf, expand(changesets, %{}), opts)
 
       {:meta, jobs, %{jobs: jobs}}
@@ -215,9 +215,9 @@ defmodule Oban.Engine do
 
   @doc false
   def fetch_jobs(%Config{} = conf, %{} = meta, %{} = running) do
-    with_span(:fetch_jobs, conf, fn engine ->
+    with_span(:fetch_jobs, conf, %{meta: meta, running: running}, fn engine ->
       {:ok, {meta, jobs}} = engine.fetch_jobs(conf, meta, running)
-      {:meta, {:ok, {meta, jobs}}, %{jobs: jobs}}
+      {:meta, {:ok, {meta, jobs}}, %{jobs: jobs, meta: meta}}
     end)
   end
 
@@ -225,7 +225,7 @@ defmodule Oban.Engine do
   def stage_jobs(%Config{} = conf, queryable, opts) do
     conf = with_compatible_engine(conf, :stage_jobs)
 
-    with_span(:stage_jobs, conf, fn engine ->
+    with_span(:stage_jobs, conf, %{opts: opts, queryable: queryable}, fn engine ->
       {:ok, jobs} = engine.stage_jobs(conf, queryable, opts)
       {:meta, {:ok, jobs}, %{jobs: jobs}}
     end)
@@ -235,7 +235,7 @@ defmodule Oban.Engine do
   def prune_jobs(%Config{} = conf, queryable, opts) do
     conf = with_compatible_engine(conf, :prune_jobs)
 
-    with_span(:prune_jobs, conf, fn engine ->
+    with_span(:prune_jobs, conf, %{opts: opts, queryable: queryable}, fn engine ->
       {:ok, jobs} = engine.prune_jobs(conf, queryable, opts)
       {:meta, {:ok, jobs}, %{jobs: jobs}}
     end)
@@ -278,7 +278,7 @@ defmodule Oban.Engine do
 
   @doc false
   def cancel_all_jobs(%Config{} = conf, queryable) do
-    with_span(:cancel_all_jobs, conf, fn engine ->
+    with_span(:cancel_all_jobs, conf, %{queryable: queryable}, fn engine ->
       with {:ok, jobs} <- engine.cancel_all_jobs(conf, queryable) do
         {:meta, {:ok, jobs}, %{jobs: jobs}}
       end
@@ -294,7 +294,7 @@ defmodule Oban.Engine do
 
   @doc false
   def retry_all_jobs(%Config{} = conf, queryable) do
-    with_span(:retry_all_jobs, conf, fn engine ->
+    with_span(:retry_all_jobs, conf, %{queryable: queryable}, fn engine ->
       with {:ok, jobs} <- engine.retry_all_jobs(conf, queryable) do
         {:meta, {:ok, jobs}, %{jobs: jobs}}
       end
@@ -305,7 +305,7 @@ defmodule Oban.Engine do
   defp expand(%{changesets: changesets}, _), do: expand(changesets, %{})
   defp expand(changesets, _) when is_list(changesets), do: changesets
 
-  defp with_span(event, %Config{} = conf, base_meta \\ %{}, fun) do
+  defp with_span(event, %Config{} = conf, base_meta, fun) do
     base_meta = Map.merge(base_meta, %{conf: conf, engine: conf.engine})
 
     :telemetry.span([:oban, :engine, event], base_meta, fn ->
