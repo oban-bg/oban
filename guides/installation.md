@@ -14,7 +14,7 @@ end
 
 Then run `mix deps.get` to install Oban and its dependencies, including
 [Ecto][ecto] and [Jason][jason]. You'll optionally need to include either
-[Postgrex][postgrex] for use with Postgres, or [EctoSQLite3][sqlite] for
+[Postgrex][postgrex] for use with Postgres, or [EctoSQLite3][ecto_sqlite3] for
 SQLite3.
 
 After the packages are installed you must create a database migration to add the
