@@ -103,11 +103,7 @@ defmodule Oban.Testing do
 
   alias Oban.{Config, Job, Queue.Executor, Repo, Worker}
 
-  @type perform_opts ::
-          Job.option()
-          | {:log, Logger.level()}
-          | {:prefix, binary()}
-          | {:repo, module()}
+  @type perform_opts :: Job.option() | Oban.option()
 
   @conf_keys []
              |> Config.new()
@@ -120,7 +116,11 @@ defmodule Oban.Testing do
 
   @doc false
   defmacro __using__(repo_opts) do
-    _repo = Keyword.fetch!(repo_opts, :repo)
+    repo_opts = Keyword.put_new(repo_opts, :prefix, false)
+
+    unless Keyword.has_key?(repo_opts, :repo) do
+      raise ArgumentError, "testing requires a :repo option to be set"
+    end
 
     quote do
       alias Oban.Testing

@@ -49,7 +49,7 @@ defmodule Oban do
           | {:notifier, module() | {module(), Keyword.t()}}
           | {:peer, false | module() | {module(), Keyword.t()}}
           | {:plugins, false | [module() | {module() | Keyword.t()}]}
-          | {:prefix, String.t()}
+          | {:prefix, false | String.t()}
           | {:queues, false | [{queue_name(), pos_integer() | Keyword.t()}]}
           | {:repo, module()}
           | {:shutdown_grace_period, timeout()}
