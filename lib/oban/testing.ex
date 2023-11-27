@@ -305,7 +305,7 @@ defmodule Oban.Testing do
 
       #{inspect_opts(opts)}
 
-      to be enqueued in the #{inspect(conf.prefix)} schema. Instead found:
+      to be enqueued. Instead found:
 
       #{inspect(available_jobs(conf, opts), charlists: :as_lists, pretty: true)}
       """)
@@ -341,7 +341,7 @@ defmodule Oban.Testing do
 
     #{inspect_opts(opts)}
 
-    to be enqueued in the #{inspect(conf.prefix)} schema within #{timeout}ms
+    to be enqueued within #{timeout}ms
     """
 
     assert wait_for_job(conf, opts, timeout), error_message
@@ -387,7 +387,7 @@ defmodule Oban.Testing do
 
     #{inspect_opts(opts)}
 
-    to be enqueued in the #{inspect(conf.prefix)} schema
+    to be enqueued.
     """
 
     refute job_exists?(conf, opts), error_message
@@ -403,8 +403,6 @@ defmodule Oban.Testing do
   @doc """
   Refute that a job with particular options is or will be enqueued within a timeout period.
 
-  The minimum refute timeout is 10ms.
-
   See `assert_enqueued/1` for additional details.
 
   ## Examples
@@ -415,7 +413,7 @@ defmodule Oban.Testing do
   """
   @doc since: "1.2.0"
   @spec refute_enqueued(opts :: Keyword.t(), timeout :: timeout()) :: false
-  def refute_enqueued([_ | _] = opts, timeout) when timeout >= 10 do
+  def refute_enqueued([_ | _] = opts, timeout) when is_integer(timeout) do
     {conf, opts} = extract_conf(opts)
 
     error_message = """
@@ -423,13 +421,13 @@ defmodule Oban.Testing do
 
     #{inspect_opts(opts)}
 
-    to be enqueued in the #{inspect(conf.prefix)} schema within #{timeout}ms
+    to be enqueued within #{timeout}ms
     """
 
     refute wait_for_job(conf, opts, timeout), error_message
   end
 
-  def refute_enqueued(repo, [_ | _] = opts, timeout) when timeout >= 10 do
+  def refute_enqueued(repo, [_ | _] = opts, timeout) do
     opts
     |> Keyword.put(:repo, repo)
     |> refute_enqueued(timeout)

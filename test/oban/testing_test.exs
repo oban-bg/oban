@@ -273,7 +273,7 @@ defmodule Oban.TestingTest do
       insert!(%{id: 1}, worker: Ping, queue: :alpha)
 
       Task.async(fn ->
-        Process.sleep(50)
+        Process.sleep(10)
 
         insert!(%{id: 2}, worker: Pong, queue: :alpha)
       end)
@@ -294,7 +294,7 @@ defmodule Oban.TestingTest do
 
           %{args: %{dest: "other_node"}, worker: Ping}
 
-          to be enqueued in the "public" schema. Instead found:
+          to be enqueued. Instead found:
 
           [%{args: %{"dest" => "some_node"}, worker: "Ping"}]
           """
@@ -368,12 +368,12 @@ defmodule Oban.TestingTest do
 
     test "refuting that jobs will eventually be enqueued" do
       Task.async(fn ->
-        Process.sleep(50)
+        Process.sleep(10)
 
         insert!(%{id: 1}, worker: Ping, queue: :alpha)
       end)
 
-      refute_enqueued [worker: Ping, args: %{id: 1}], 20
+      refute_enqueued [worker: Ping, args: %{id: 1}], 5
     end
   end
 
