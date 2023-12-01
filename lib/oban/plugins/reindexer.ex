@@ -78,7 +78,7 @@ defmodule Oban.Plugins.Reindexer do
       conf: :ok,
       name: :ok,
       indexes: {:list, :string},
-      schedule: {:custom, &validate_schedule/1},
+      schedule: :schedule,
       timeout: :timeout,
       timezone: :timezone
     )
@@ -125,16 +125,6 @@ defmodule Oban.Plugins.Reindexer do
     end)
 
     {:noreply, schedule_reindex(state)}
-  end
-
-  # Validation
-
-  defp validate_schedule(schedule) do
-    Expression.parse!(schedule)
-
-    :ok
-  rescue
-    error in [ArgumentError] -> {:error, error.message}
   end
 
   # Scheduling

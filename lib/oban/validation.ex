@@ -110,6 +110,15 @@ defmodule Oban.Validation do
     {:error, "expected #{inspect(key)} to be between #{min}..#{max}, got: #{inspect(val)}"}
   end
 
+  defp validate_type(:schedule, key, val) do
+    Oban.Cron.Expression.parse!(val)
+
+    :ok
+  rescue
+    error in [ArgumentError] ->
+      {:error, "expected #{inspect(key)} to be a valid cron schedule, got: #{error.message}"}
+  end
+
   defp validate_type(:string, key, val) when not is_binary(val) do
     {:error, "expected #{inspect(key)} to be a string, got: #{inspect(val)}"}
   end
