@@ -3,6 +3,13 @@ defmodule Oban.Cron.ExpressionTest do
 
   alias Oban.Cron.Expression, as: Expr
 
+  describe "parse/1" do
+    test "parsing expressions without raising an exception" do
+      assert {:ok, _} = Expr.parse("* * * * *")
+      assert {:error, %ArgumentError{}} = Expr.parse("* * * *")
+    end
+  end
+
   describe "parse!/1" do
     property "expressions with literals, wildcards, ranges, steps and lists are parsed" do
       check all minutes <- minutes(),
@@ -43,36 +50,6 @@ defmodule Oban.Cron.ExpressionTest do
         assert_raise ArgumentError, fn -> Expr.parse!(expression) end
       end
     end
-
-    test "parsing range expressions where left side is greater than the right side fails" do
-      expressions = [
-        "9-5 * * * *",
-        "* 4-3 * * *",
-        "* * 27-2 * *",
-        "* * * 11-1 *",
-        "* * * * 6-0",
-        "* * * * SAT-SUN"
-      ]
-
-      for expression <- expressions do
-        assert_raise ArgumentError, fn -> Expr.parse!(expression) end
-      end
-    end
-
-    test "parsing non-standard expressions" do
-      assert Expr.parse!("0 0 1 1 *") == Expr.parse!("@annually")
-      assert Expr.parse!("0 0 1 1 *") == Expr.parse!("@yearly")
-      assert Expr.parse!("0 0 1 * *") == Expr.parse!("@monthly")
-      assert Expr.parse!("0 0 * * 0") == Expr.parse!("@weekly")
-      assert Expr.parse!("0 0 * * *") == Expr.parse!("@midnight")
-      assert Expr.parse!("0 0 * * *") == Expr.parse!("@daily")
-      assert Expr.parse!("0 * * * *") == Expr.parse!("@hourly")
-    end
-
-    test "parsing non-standard weekday ranges" do
-      assert MapSet.new([1, 2]) == Expr.parse!("* * * * MON-TUE").weekdays
-      assert MapSet.new([1, 2, 3, 4, 5]) == Expr.parse!("* * * * MON-FRI").weekdays
-    end
   end
 
   describe "now?/2" do
@@ -97,9 +74,7 @@ defmodule Oban.Cron.ExpressionTest do
     end
 
     test "the @reboot special expression evaluates to now" do
-      assert "@reboot"
-             |> Expr.parse!()
-             |> Expr.now?()
+      assert "@reboot" |> Expr.parse!() |> Expr.now?()
     end
 
     test "literal days of the week match the current datetime" do

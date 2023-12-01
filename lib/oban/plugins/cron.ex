@@ -126,14 +126,7 @@ defmodule Oban.Plugins.Cron do
       {:error, %ArgumentError{message: "expression field 60 is out of range 0..59"}}
   """
   @spec parse(input :: binary()) :: {:ok, expression()} | {:error, Exception.t()}
-  def parse(input) when is_binary(input) do
-    expression = Expression.parse!(input)
-
-    {:ok, expression}
-  rescue
-    error in [ArgumentError] ->
-      {:error, error}
-  end
+  defdelegate parse(input), to: Expression
 
   @doc false
   @spec interval_to_next_minute(Time.t()) :: pos_integer()

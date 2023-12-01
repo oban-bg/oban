@@ -62,29 +62,40 @@ defmodule Oban.Cron.Expression do
     |> Integer.mod(7)
   end
 
-  @spec parse!(input :: binary()) :: t()
-  def parse!("@annually"), do: parse!("0 0 1 1 *")
-  def parse!("@yearly"), do: parse!("0 0 1 1 *")
-  def parse!("@monthly"), do: parse!("0 0 1 * *")
-  def parse!("@weekly"), do: parse!("0 0 * * 0")
-  def parse!("@midnight"), do: parse!("0 0 * * *")
-  def parse!("@daily"), do: parse!("0 0 * * *")
-  def parse!("@hourly"), do: parse!("0 * * * *")
-  def parse!("@reboot"), do: %__MODULE__{reboot?: true}
+  @spec parse(input :: binary()) :: {:ok, t()} | {:error, Exception.t()}
+  def parse("@annually"), do: parse("0 0 1 1 *")
+  def parse("@yearly"), do: parse("0 0 1 1 *")
+  def parse("@monthly"), do: parse("0 0 1 * *")
+  def parse("@weekly"), do: parse("0 0 * * 0")
+  def parse("@midnight"), do: parse("0 0 * * *")
+  def parse("@daily"), do: parse("0 0 * * *")
+  def parse("@hourly"), do: parse("0 * * * *")
+  def parse("@reboot"), do: {:ok, %__MODULE__{reboot?: true}}
 
-  def parse!(input) when is_binary(input) do
+  def parse(input) when is_binary(input) do
     case String.split(input, ~r/\s+/, trim: true, parts: 5) do
       [mip, hrp, dap, mop, wdp] ->
-        %__MODULE__{
-          minutes: parse_field(mip, 0..59),
-          hours: parse_field(hrp, 0..23),
-          days: parse_field(dap, 1..31),
-          months: mop |> trans_field(@mon_map) |> parse_field(1..12),
-          weekdays: wdp |> trans_field(@dow_map) |> parse_field(0..6)
-        }
+        {:ok,
+         %__MODULE__{
+           minutes: parse_field(mip, 0..59),
+           hours: parse_field(hrp, 0..23),
+           days: parse_field(dap, 1..31),
+           months: mop |> trans_field(@mon_map) |> parse_field(1..12),
+           weekdays: wdp |> trans_field(@dow_map) |> parse_field(0..6)
+         }}
 
       _parts ->
-        raise ArgumentError, "incorrect number of fields in expression: #{input}"
+        throw({:error, "incorrect number of fields in expression: #{input}"})
+    end
+  catch
+    {:error, message} -> {:error, %ArgumentError{message: message}}
+  end
+
+  @spec parse!(input :: binary()) :: t()
+  def parse!(input) when is_binary(input) do
+    case parse(input) do
+      {:ok, cron} -> cron
+      {:error, exception} -> raise(exception)
     end
   end
 
@@ -98,7 +109,7 @@ defmodule Oban.Cron.Expression do
       |> MapSet.new()
 
     unless MapSet.subset?(parsed, range_set) do
-      raise ArgumentError, "expression field #{field} is out of range #{inspect(range)}"
+      throw({:error, "expression field #{field} is out of range: #{inspect(range)}"})
     end
 
     parsed
@@ -126,7 +137,7 @@ defmodule Oban.Cron.Expression do
         parse_range(part, range)
 
       true ->
-        raise ArgumentError, "unrecognized cron expression: #{part}"
+        throw({:error, "unrecognized cron expression: #{part}"})
     end
   end
 
@@ -163,8 +174,10 @@ defmodule Oban.Cron.Expression do
         if rmin <= rmax do
           rmin..rmax
         else
-          raise ArgumentError,
-                "left side (#{rmin}) of a range must be less than or equal to the right side (#{rmax})"
+          throw(
+            {:error,
+             "left side (#{rmin}) of a range must be less than or equal to the right side (#{rmax})"}
+          )
         end
     end
   end

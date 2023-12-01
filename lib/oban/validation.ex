@@ -1,6 +1,8 @@
 defmodule Oban.Validation do
   @moduledoc false
 
+  alias Oban.Cron.Expression
+
   @type validator ::
           ({atom(), term()} ->
              :ok
@@ -111,12 +113,13 @@ defmodule Oban.Validation do
   end
 
   defp validate_type(:schedule, key, val) do
-    Oban.Cron.Expression.parse!(val)
+    case Expression.parse(val) do
+      {:ok, _cron} ->
+        :ok
 
-    :ok
-  rescue
-    error in [ArgumentError] ->
-      {:error, "expected #{inspect(key)} to be a valid cron schedule, got: #{error.message}"}
+      {:error, error} ->
+        {:error, "expected #{inspect(key)} to be a valid cron schedule, got: #{error.message}"}
+    end
   end
 
   defp validate_type(:string, key, val) when not is_binary(val) do
