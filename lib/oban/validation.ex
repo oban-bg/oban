@@ -90,6 +90,10 @@ defmodule Oban.Validation do
     {:error, "expected #{inspect(key)} to be an atom, got: #{inspect(val)}"}
   end
 
+  defp validate_type(:boolean, key, val) when not is_boolean(val) do
+    {:error, "expected #{inspect(key)} to be a boolean, got: #{inspect(val)}"}
+  end
+
   defp validate_type({:function, arity}, key, val) when not is_function(val, arity) do
     {:error, "expected #{inspect(key)} to be #{arity} arity function, got: #{inspect(val)}"}
   end
