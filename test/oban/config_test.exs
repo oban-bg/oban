@@ -50,7 +50,7 @@ defmodule Oban.ConfigTest do
       assert_valid(notifier: {Oban.Notifiers.Postgres, [some: :opt]})
     end
 
-    test ":node is validated as a binary" do
+    test ":node is validated as a coerced binary" do
       refute_valid(node: nil)
       refute_valid(node: ~c"")
       refute_valid(node: "")
@@ -61,7 +61,6 @@ defmodule Oban.ConfigTest do
     end
 
     test ":peer is validated as false or a peer module" do
-      refute_valid(peer: nil)
       refute_valid(peer: Fake)
       refute_valid(peer: {Oban.Peers.Global, false})
 
@@ -88,8 +87,6 @@ defmodule Oban.ConfigTest do
 
     test ":prefix is validated as a binary" do
       refute_valid(prefix: :private)
-      refute_valid(prefix: " private schema ")
-      refute_valid(prefix: "")
       refute_valid(prefix: true)
 
       assert_valid(prefix: false)

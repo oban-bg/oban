@@ -32,7 +32,7 @@ if Code.ensure_loaded?(Postgrex) do
     [pgb]: https://www.pgbouncer.org/
     """
 
-    @behaviour Postgrex.SimpleConnection
+    @behaviour Oban.Notifier
 
     alias Oban.{Config, Notifier, Repo}
     alias Postgrex.SimpleConnection, as: Simple
@@ -46,10 +46,7 @@ if Code.ensure_loaded?(Postgrex) do
       listeners: %{}
     ]
 
-    @doc """
-    Start the notifier.
-    """
-    @spec start_link(Keyword.t()) :: GenServer.on_start()
+    @impl Oban.Notifier
     def start_link(opts) do
       name = Keyword.fetch!(opts, :name)
       conf = Keyword.fetch!(opts, :conf)
@@ -66,30 +63,23 @@ if Code.ensure_loaded?(Postgrex) do
       Simple.start_link(__MODULE__, call_opts, conn_opts)
     end
 
-    @doc """
-    Register current process to receive messages from some channels
-    """
-    @spec listen(GenServer.server(), channels :: [Notifier.channel()]) :: :ok
+    @impl Oban.Notifier
     def listen(server, channels) do
       Simple.call(server, {:listen, self(), channels})
     end
 
-    @doc """
-    Unregister current process from channels
-    """
-    @spec unlisten(GenServer.server(), channels :: [Notifier.channel()]) :: :ok
+    @impl Oban.Notifier
     def unlisten(server, channels) do
       Simple.call(server, {:unlisten, self(), channels})
     end
 
     ## Server Callbacks
 
-    @impl Simple
     def init(opts) do
       {:ok, struct!(__MODULE__, opts)}
     end
 
-    @impl Simple
+    @impl Oban.Notifier
     def notify(full_channel, payload, state) when is_binary(full_channel) do
       listeners = Map.get(state.channels, full_channel, [])
 
@@ -111,7 +101,6 @@ if Code.ensure_loaded?(Postgrex) do
       end
     end
 
-    @impl Simple
     def handle_connect(%{channels: channels} = state) do
       state = %{state | connected?: true}
 
@@ -129,12 +118,10 @@ if Code.ensure_loaded?(Postgrex) do
       end
     end
 
-    @impl Simple
     def handle_disconnect(%{} = state) do
       {:noreply, %{state | connected?: false}}
     end
 
-    @impl Simple
     def handle_call(:get_state, from, state) do
       Simple.reply(from, state)
 
@@ -184,7 +171,6 @@ if Code.ensure_loaded?(Postgrex) do
       end
     end
 
-    @impl Simple
     def handle_info({:DOWN, _ref, :process, pid, _reason}, state) do
       case Map.pop(state.listeners, pid) do
         {{_ref, channel_set}, listeners} ->
@@ -204,7 +190,6 @@ if Code.ensure_loaded?(Postgrex) do
       {:noreply, state}
     end
 
-    @impl Simple
     def handle_result(_results, %{from: from} = state) do
       from && Simple.reply(from, :ok)
 

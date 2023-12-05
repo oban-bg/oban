@@ -42,12 +42,11 @@ defmodule MyApp.Plugins.Breakdown do
 
   @impl Oban.Plugin
   def validate(opts) do
-    Oban.Validation.validate(opts, fn
-      {:conf, _} -> :ok
-      {:name, _} -> :ok
-      {:interval, interval} when is_integer(interval) -> :ok
-      {:interval, _} -> {:error, "expected interval to be an integer"}
-    end)
+    Oban.Validation.validate_schema(opts,
+      conf: :any,
+      name: :any,
+      interval: :pos_integer
+    )
   end
 
   @impl GenServer

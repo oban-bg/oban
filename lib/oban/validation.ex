@@ -26,11 +26,6 @@ defmodule Oban.Validation do
     {:error, "expected #{inspect(parent_key)} to be a list, got: #{inspect(opts)}"}
   end
 
-  @spec validate!(opts :: Keyword.t(), validator()) :: :ok
-  def validate!(opts, validator) do
-    with {:error, reason} <- validator.(opts), do: raise(ArgumentError, reason)
-  end
-
   def validate_schema(opts, schema) when is_list(schema) do
     Enum.reduce_while(opts, :ok, fn {key, val}, acc ->
       case Keyword.fetch(schema, key) do
@@ -52,38 +47,6 @@ defmodule Oban.Validation do
     end
   end
 
-  # Shared Validations
-
-  @doc false
-  def validate_integer(key, value, opts \\ []) do
-    min = Keyword.get(opts, :min, 1)
-
-    if is_integer(value) and value > min - 1 do
-      :ok
-    else
-      {:error, "expected #{inspect(key)} to be a positive integer, got: #{inspect(value)}"}
-    end
-  end
-
-  @doc false
-  def validate_timezone(key, value) do
-    if is_binary(value) and match?({:ok, _}, DateTime.now(value)) do
-      :ok
-    else
-      {:error, "expected #{inspect(key)} to be a known timezone, got: #{inspect(value)}"}
-    end
-  end
-
-  @doc false
-  def validate_timeout(key, value) do
-    if (is_integer(value) and value > 0) or value == :infinity do
-      :ok
-    else
-      {:error,
-       "expected #{inspect(key)} to be a positive integer or :infinity, got: #{inspect(value)}"}
-    end
-  end
-
   # Type Validators
 
   defp validate_type(:any, _key, _val), do: :ok
@@ -92,12 +55,51 @@ defmodule Oban.Validation do
     {:error, "expected #{inspect(key)} to be an atom, got: #{inspect(val)}"}
   end
 
+  defp validate_type({:behaviour, module}, key, {val, opts}) do
+    with :ok <- validate_type({:behaviour, module}, key, val) do
+      if Keyword.keyword?(opts) do
+        :ok
+      else
+        {:error, "expected #{inspect(key)} to be a keyword list, got: #{inspect(opts)}"}
+      end
+    end
+  end
+
+  defp validate_type({:behaviour, module}, key, val) do
+    cond do
+      not Code.ensure_loaded?(val) ->
+        {:error, "expected #{inspect(key)} to be a loaded module, got: #{inspect(val)}"}
+
+      module not in behaviours(val) ->
+        {:error, "expected #{inspect(key)} to implement #{inspect(module)}, got: #{inspect(val)}"}
+
+      true ->
+        :ok
+    end
+  end
+
   defp validate_type(:boolean, key, val) when not is_boolean(val) do
     {:error, "expected #{inspect(key)} to be a boolean, got: #{inspect(val)}"}
   end
 
+  defp validate_type({:enum, list}, key, val) do
+    if val in list do
+      :ok
+    else
+      {:error, "expected #{inspect(key)} to included in #{inspect(list)}, got: #{inspect(val)}"}
+    end
+  end
+
+  defp validate_type(:falsy, key, val) when not is_nil(val) and val != false do
+    {:error, "expected #{inspect(key)} to be falsy, got: #{inspect(val)}"}
+  end
+
   defp validate_type({:function, arity}, key, val) when not is_function(val, arity) do
     {:error, "expected #{inspect(key)} to be #{arity} arity function, got: #{inspect(val)}"}
+  end
+
+  defp validate_type(nil, key, val) when not is_nil(val) do
+    {:error, "expected #{inspect(key)} to be nil, got: #{inspect(val)}"}
   end
 
   defp validate_type(:non_neg_integer, key, val) when not is_integer(val) or val < 0 do
@@ -106,6 +108,19 @@ defmodule Oban.Validation do
 
   defp validate_type(:pos_integer, key, val) when not is_integer(val) or val < 1 do
     {:error, "expected #{inspect(key)} to be a positive integer, got: #{inspect(val)}"}
+  end
+
+  defp validate_type({:pattern, regex}, key, val) do
+    cond do
+      not is_binary(val) ->
+        {:error, "expected #{inspect(key)} to be a binary, got: #{inspect(val)}"}
+
+      not Regex.match?(regex, val) ->
+        {:error, "expected #{inspect(key)} to match #{inspect(regex)}, got: #{inspect(val)}"}
+
+      true ->
+        :ok
+    end
   end
 
   defp validate_type({:range, min..max}, key, val) when val < min or val > max do
@@ -142,7 +157,7 @@ defmodule Oban.Validation do
 
   defp validate_type({:custom, fun}, key, val) when is_function(fun, 1) do
     with {:error, message} <- fun.(val) do
-      {:error, "invalid value for #{inspect(key)}: #{message}"}
+      {:error, "invalid value for #{inspect(key)}, #{message}"}
     end
   end
 
@@ -167,6 +182,13 @@ defmodule Oban.Validation do
   end
 
   defp validate_type(_type, _key, _val), do: :ok
+
+  defp behaviours(module) do
+    :attributes
+    |> module.__info__()
+    |> Keyword.get_values(:behaviour)
+    |> List.flatten()
+  end
 
   defp unknown_error({name, _value}, known), do: unknown_error(name, known)
 

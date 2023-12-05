@@ -87,7 +87,9 @@ defmodule Oban.Config do
         opts
       end
 
-    Validation.validate!(opts, &validate/1)
+    with {:error, reason} <- validate(opts) do
+      raise ArgumentError, reason
+    end
 
     struct!(__MODULE__, opts)
   end
@@ -110,10 +112,10 @@ defmodule Oban.Config do
       :ok
 
       iex> Oban.Config.validate(node: {:not, :binary})
-      {:error, "expected :node to be a non-empty binary, got: {:not, :binary}"}
+      {:error, "expected :node to be a binary, got: {:not, :binary}"}
 
       iex> Oban.Config.validate(plugins: true)
-      {:error, "expected :plugins to be a list, got: true"}
+      {:error, "invalid value for :plugins, expected :plugins to be a list, got: true"}
 
   Validating plugin options:
 
@@ -121,13 +123,30 @@ defmodule Oban.Config do
       :ok
 
       iex> Oban.Config.validate(plugins: [{Oban.Plugins.Pruner, max_age: 0}])
-      {:error, "expected :max_age to be a positive integer, got: 0"}
+      {:error, "invalid value for :plugins, expected :max_age to be a positive integer, got: 0"}
   """
   @spec validate([Oban.option()]) :: :ok | {:error, String.t()}
   def validate(opts) when is_list(opts) do
     opts = normalize(opts)
 
-    Validation.validate(opts, &validate_opt(opts, &1))
+    Validation.validate_schema(opts,
+      dispatch_cooldown: :pos_integer,
+      engine: {:behaviour, Oban.Engine},
+      get_dynamic_repo: {:or, [:falsy, {:function, 0}]},
+      insert_trigger: :boolean,
+      log: {:enum, @log_levels},
+      name: :any,
+      node: {:pattern, ~r/^\S+$/},
+      notifier: {:behaviour, Oban.Notifier},
+      peer: {:or, [:falsy, {:behaviour, Oban.Peer}]},
+      plugins: {:custom, &validate_plugins/1},
+      prefix: {:or, [:falsy, :string]},
+      queues: {:custom, &validate_queues(opts, &1)},
+      repo: {:behaviour, Ecto.Repo},
+      shutdown_grace_period: :non_neg_integer,
+      stage_interval: :timeout,
+      testing: {:enum, @testing_modes}
+    )
   end
 
   @doc false
@@ -171,145 +190,8 @@ defmodule Oban.Config do
 
   # Validation
 
-  defp validate_opt(_opts, {:dispatch_cooldown, cooldown}) do
-    Validation.validate_integer(:dispatch_cooldown, cooldown)
-  end
-
-  defp validate_opt(_opts, {:engine, engine}) do
-    if Code.ensure_loaded?(engine) and function_exported?(engine, :init, 2) do
-      :ok
-    else
-      {:error, "expected :engine to be an Oban.Queue.Engine, got: #{inspect(engine)}"}
-    end
-  end
-
-  defp validate_opt(_opts, {:get_dynamic_repo, fun}) do
-    if is_nil(fun) or is_function(fun, 0) do
-      :ok
-    else
-      {:error,
-       "expected :get_dynamic_repo to be nil or a zero arity function, got: #{inspect(fun)}"}
-    end
-  end
-
-  defp validate_opt(_opts, {:insert_trigger, bool}) do
-    if is_boolean(bool) do
-      :ok
-    else
-      {:error, "expected :insert_trigger to be a boolean, got: #{inspect(bool)}"}
-    end
-  end
-
-  defp validate_opt(_opts, {:notifier, {notifier, opts}}) do
-    with :ok <- validate_opt([], {:notifier, notifier}) do
-      validate_keyword(:notifier, opts)
-    end
-  end
-
-  defp validate_opt(_opts, {:notifier, notifier}) do
-    if Code.ensure_loaded?(notifier) and function_exported?(notifier, :listen, 2) do
-      :ok
-    else
-      {:error, "expected :notifier to be an Oban.Notifier, got: #{inspect(notifier)}"}
-    end
-  end
-
-  defp validate_opt(_opts, {:name, _}), do: :ok
-
-  defp validate_opt(_opts, {:node, node}) do
-    if is_binary(node) and String.trim(node) != "" do
-      :ok
-    else
-      {:error, "expected :node to be a non-empty binary, got: #{inspect(node)}"}
-    end
-  end
-
-  defp validate_opt(_opts, {:peer, {peer, opts}}) do
-    with :ok <- validate_opt([], {:peer, peer}) do
-      validate_keyword(:peer, opts)
-    end
-  end
-
-  defp validate_opt(_opts, {:peer, peer}) do
-    if peer == false or Code.ensure_loaded?(peer) do
-      :ok
-    else
-      {:error, "expected :peer to be false or an Oban.Peer, got: #{inspect(peer)}"}
-    end
-  end
-
-  defp validate_opt(_opts, {:plugins, plugins}) do
+  defp validate_plugins(plugins) do
     Validation.validate(:plugins, plugins, &validate_plugin/1)
-  end
-
-  defp validate_opt(_opts, {:prefix, prefix}) do
-    if prefix == false or (is_binary(prefix) and Regex.match?(~r/^[a-z0-9_]+$/i, prefix)) do
-      :ok
-    else
-      {:error, "expected :prefix to be false or an alphanumeric string, got: #{inspect(prefix)}"}
-    end
-  end
-
-  defp validate_opt(opts, {:queues, queues}) do
-    if Keyword.keyword?(queues) do
-      # Queue validation requires an engine and partial configuration. Only the engine matters,
-      # but the other values are required for the struct.
-      conf_opts =
-        opts
-        |> Keyword.take([:engine, :name, :node, :repo])
-        |> Keyword.put_new(:engine, Oban.Engines.Basic)
-        |> Keyword.put_new(:repo, None)
-
-      conf = struct!(__MODULE__, conf_opts)
-
-      Validation.validate(queues, &validate_queue(conf, &1))
-    else
-      {:error, "expected :queues to be a keyword list, got: #{inspect(queues)}"}
-    end
-  end
-
-  defp validate_opt(_opts, {:repo, repo}) do
-    if Code.ensure_loaded?(repo) and function_exported?(repo, :config, 0) do
-      :ok
-    else
-      {:error, "expected :repo to be an Ecto.Repo, got: #{inspect(repo)}"}
-    end
-  end
-
-  defp validate_opt(_opts, {:shutdown_grace_period, period}) do
-    Validation.validate_integer(:shutdown_grace_period, period, min: 0)
-  end
-
-  defp validate_opt(_opts, {:stage_interval, interval}) do
-    Validation.validate_timeout(:stage_interval, interval)
-  end
-
-  defp validate_opt(_opts, {:testing, testing}) do
-    if testing in @testing_modes do
-      :ok
-    else
-      {:error, "expected :testing to be a known mode, got: #{inspect(testing)}"}
-    end
-  end
-
-  defp validate_opt(_opts, {:log, log}) do
-    if log in @log_levels do
-      :ok
-    else
-      {:error, "expected :log to be one of #{inspect(@log_levels)}, got: #{inspect(log)}"}
-    end
-  end
-
-  defp validate_opt(_opts, option) do
-    {:unknown, option, __MODULE__}
-  end
-
-  defp validate_keyword(key, opts) do
-    if Keyword.keyword?(opts) do
-      :ok
-    else
-      {:error, "expected #{key} opts to be a keyword list, got: #{inspect(opts)}"}
-    end
   end
 
   defp validate_plugin(plugin) when not is_tuple(plugin), do: validate_plugin({plugin, []})
@@ -335,6 +217,24 @@ defmodule Oban.Config do
 
       true ->
         :ok
+    end
+  end
+
+  defp validate_queues(opts, queues) do
+    if Keyword.keyword?(queues) do
+      # Queue validation requires an engine and partial configuration. Only the engine matters,
+      # but the other values are required for the struct.
+      conf_opts =
+        opts
+        |> Keyword.take([:engine, :name, :node, :repo])
+        |> Keyword.put_new(:engine, Oban.Engines.Basic)
+        |> Keyword.put_new(:repo, None)
+
+      conf = struct!(__MODULE__, conf_opts)
+
+      Validation.validate(queues, &validate_queue(conf, &1))
+    else
+      {:error, "expected :queues to be a keyword list, got: #{inspect(queues)}"}
     end
   end
 
