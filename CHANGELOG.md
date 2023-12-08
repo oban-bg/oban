@@ -1,116 +1,137 @@
-# Changelog for Oban v2.16
+# Changelog for Oban v2.17
 
-_🌟 Looking for changes to Web or Pro? Check the [Oban.Pro Changelog][opc] or
-the [Oban.Web Changelog][owc]. 🌟_
+_🌟 Looking for changes to Web or Pro? Check the [Oban.Pro Changelog][opc] or the [Oban.Web
+Changelog][owc]. 🌟_
 
-## 🐑 Oban Instance Module
+This release includes an optional database migration to disable triggers and relax priority
+checks. See the [v2.17 upgrade guide](v2-17.md) for step-by-step instructions.
 
-New facade modules allow you to call `Oban` functions on instances with custom names, e.g. not
-`Oban`, without passing a `t:Oban.name/0` as the first argument.
+## 📟 Universal Insert Notifications
 
-For example, rather than calling `Oban.config/1` you'd call `MyOban.config/0`:
+Historically, Oban used database triggers to emit a notification after a job is inserted. That
+allowed jobs to execute sooner, without waiting up to a second until the next poll event. Those
+triggers and subsequent notifications added some overhead to database operations bulk inserts into
+the same queue, despite deduplication logic in the trigger. Even worse, trigger notifications
+didn't work behind connection poolers and were restricted to the Postgres notifier.
 
-```elixir
-MyOban.config()
-```
+Now insert notifications have moved out of the database and into application code, so it's
+possible to disable triggers without running database migrations, and they work for _any_
+notifier, not just Postgres.
 
-It also makes piping into Oban functions far more convenient: 
-
-```elixir
-%{some: :args}
-|> MyWorker.new()
-|> MyOban.insert()
-```
-
-## 🧩 Partial Matches in Testing Assertions
-
-It's now possible to match a subset of fields on args or meta with `all_enqueued`,
-`assert_enqueued`, and `refute_enqueued`. For example, the following assertion will now pass:
+Disable notifications with the `insert_trigger` option if sub-second job execution isn't important
+or you'd like to reduce PubSub chatter:
 
 ```elixir
-# Given a job with these args: %{id: 123, mode: "active"}
-
-assert_enqueued args: %{id: 123} #=> true
-assert_enqueued args: %{mode: "active"} #=> true
-assert_enqueued args: %{id: 321, mode: "active"} #=> false
+config :my_app, Oban,
+  insert_trigger: false,
+  ...
 ```
 
-The change applies to `args` and `meta` queries for `all_enqueued/2`, `assert_enqueued/2` and
-`refute_enqueued/2` helpers.
+## 🧑‍🏭 Worker Conveniences
 
-## ⏲️ Unique Timestamp Option
+Workers received a few quality of life improvements to make defining `unique` behaviour more
+expressive and intuitive.
 
-Jobs are frequently scheduled for a time far in the future and it's often desirable for to
-consider `scheduled` jobs for uniqueness, but unique jobs only checked the `:inserted_at`
-timestamp.
-
-Now `unique` has a `timestamp` option that allows checking the `:scheduled_at` timestamp instead:
+First, it's now possible to define a job's unique period with time units like `{1, :minute}` or
+`{2, :hours}`, just like a job's `:schedule_in` option:
 
 ```elixir
-use Oban.Worker, unique: [period: 120, timestamp: :scheduled_at]
+use Oban.Worker, unique: [period: {5, :minutes}]
 ```
 
-## v2.16.3 — 2023-10-26
+Second, you can set the `replace` option in `use Oban.Worker` rather than in an overridden `new/2`
+or as a runtime option. For example, to enable updating a job's `scheduled_at` value on unique
+conflict:
 
-### Bug Fixes
+```elixir
+use Oban.Worker, unique: [period: 60], replace: [scheduled: [:scheduled_at]]
+```
 
-- [Oban] Start `Peer` and `Stager` after `Queue` supervisor
+## 🐦‍🔥 Oban Phoenix Notifier
 
-  The queue supervisor blocks shutdown to give jobs time to shut down gracefully. During that
-  time, the Peer could obtain or retain leadership despite all of the plugins having stopped. Now
-  the Peer and Stager (which is only active on the leader) stop before the queue supervisor.
+The new [`oban_notifiers_phoenix` package][onp] allows Oban to share a Phoenix application's
+PubSub for notifications. In addition to centralizing PubSub communications, it opens up the
+possible transports to all PubSub adapters. As Oban already provides `Postgres` and `PG`
+(Distributed Erlang) notifiers, the new package primarily enables Redis notifications.
 
-- [Testing] Cast timestamp to utc_datetime in testing queries
+```elixir
+config :my_app, Oban,
+  notifier: {Oban.Notifiers.Phoenix, pubsub: MyApp.PubSub},
+  ...
+```
 
-  Timestamps with a timezone are now cast to `:utc_datetime` via a changeset before running
-  `Oban.Testing` queries.
+[onp]: https://github.com/sorentwo/oban_notifiers_phoenix
 
-## v2.16.2 — 2023-10-03
+## 🎚️ Ten Levels of Job Priority
 
-### Bug Fixes
+Job priority may now be set to values between 0 (highest) and 9 (lowest). This increases the
+range from 4 to 10 possible priorities, giving applications much finer control over execution
+order.
 
-- [Testing] Match args/meta patterns in Elixir rather than the database
+```elixir
+args
+|> MyApp.PrioritizedWorker.new(priority: 9)
+|> Oban.insert()
+```
 
-  The containment operators, `@>` and `<@`, used for pattern matching in tests are only available
-  in Postgres and have some quirks. Most notably, containment considers matching any value in a
-  list a successful match, which isn't intuitive or desirable.
-
-  The other issue with using a containment operator in tests is that SQLite doesn't have those
-  operators available and test helpers are shared between all engines.
+## v2.17.0 — 2023-12-08
 
 ### Enhancements
 
-- [Testing] Support wildcard matcher in patterns for args/meta
+- [Oban] Add `Oban.pause_all_queues/2` and `Oban.resume_all_queues/2`.
 
-  Now that we match in Elixir, it's simple to support wildcard matching with a `:_` to assert that
-  a key is present in a json field without specifying an exact value.
+  Pause and resume all queues with a single function call and a single notification signal, rather
+  than manually looping through all queues and issuing separate calls.
 
-  ```elixir
-  assert_enqueued args: %{batch_id: :_, callback: true}
-  ```
+- [Cron] Add non-raising `Expression.parse/2` for use in `Cron.parse/2` and shared validations.
 
-## v2.16.1 — 2023-09-25
+  Multiple locations used `parse!` and converted a raised exception into an error tuple. That was
+  inefficient, repetitive, and violated the common practice of avoiding exceptions for flow
+  control.
+
+- [Validation] Use schema based validation for workers, plugins, and config. 
+
+  Validations are now simpler and more consistent, and behaviour based notifiers such as Engine,
+  Repo, and Peer are more descriptive.
+
+- [Engine] Expand telemetry meta for all engine callbacks events.
+
+  All callbacks now include every argument in telemetry event metadata. In some situations, e.g.
+  `:init`, this simplifies testing and can be used to eliminate the need to poll a supervision
+  tree to see which queues started.
+
+- [Notifier] Add `Isolated` notifier for local use and simplified testing.
+
+  Using PG for async tests has occasional flakes due to its eventually consistent nature. In tests
+  and single node systems, we don't need to broadcast messages between instances or nodes, and a
+  simplified "isolated" mechanism is ideal.
+
+- [Repo] Add `Repo.query!/4` for `Ecto.Repo` parity
+
+- [Migration] Configure a third-party engine's migrator using the repo's `config` map.
 
 ### Bug Fixes
 
-- [Testing] Restore splitting out all config options in helpers.
+- [Cron] Guard against invalid cron range expressions where the left side is greater than the
+  right, e.g. `SAT-FRI`.
 
-  Splitting all configuration keys is necessary when using `perform_job/3` with non-job options
-  such as `:engine`.
+- [Testing] Disable the `prefix` by default in generated testing helpers.
 
-## v2.16.0 — 2023-09-22
+  A prefix is only necessary when it's not the standard "public" prefix, which is rarely the case
+  in testing helpers. This makes it easier to use testing helpers with the `Lite` engine.
 
-### Bug Fixes
+- [Testing] Remove `prefix` segment from `assert_enqueued` error messages.
 
-- [Reindexer] Correct relname match for reindexer plugin
+  Not all engines support a prefix and the assert/refute message in testing helpers is confusing
+  when the prefix is `nil`.
 
-  We can safely assume all indexes start with `oban_jobs`. The previous pattern was based on an
-  outdated index format from older migrations.
+### Deprecations
 
-- [Testing] Support `repo`, `prefix`, and `log` query options in `use Oban.Testing`
+- [Gossip] The Gossip plugin is no longer needed, and shouldn't be used, by applications running
+  Oban Web v2.10 or above.
 
-For changes prior to v2.16 see the [v2.15][prv] docs.
+For changes prior to v2.17 see the [v2.16][prv] docs.
 
 [opc]: https://getoban.pro/docs/pro/changelog.html
 [owc]: https://getoban.pro/docs/web/changelog.html
-[prv]: https://hexdocs.pm/oban/2.15.2/changelog.html
+[prv]: https://hexdocs.pm/oban/2.16.3/changelog.html

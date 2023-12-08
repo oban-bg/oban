@@ -30,8 +30,7 @@ systems with multi-node setups where "web" nodes only enqueue jobs while "worker
 configured to run queues and plugins. Most plugins require leadership to function, so When a "web"
 node becomes leader the plugins go dormant.
 
-The solution is to disable leadership with `peer: false` on any node that doesn't run plugins, or
-only runs decentralized plugins like `Gossip`:
+The solution is to disable leadership with `peer: false` on any node that doesn't run plugins:
 
 ```elixir
 config :my_app, Oban, peer: false, ...
