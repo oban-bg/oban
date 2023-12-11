@@ -74,6 +74,15 @@ args
 |> Oban.insert()
 ```
 
+## v2.17.1 — 2023-12-11
+
+### Bug Fixes
+
+- [Validation] Restore validation helpers still used externally
+
+  Some of the internal validation helpers are needed by external packages that can't easily change
+  to schema validation. This restores those essential validation functions.
+
 ## v2.17.0 — 2023-12-08
 
 ### Enhancements
