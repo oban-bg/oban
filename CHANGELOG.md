@@ -4,7 +4,7 @@ _🌟 Looking for changes to Web or Pro? Check the [Oban.Pro Changelog][opc] or 
 Changelog][owc]. 🌟_
 
 This release includes an optional database migration to disable triggers and relax priority
-checks. See the [v2.17 upgrade guide](v2-17.md) for step-by-step instructions.
+checks. See the [v2.17 upgrade guide](v2-17.html) for step-by-step instructions.
 
 ## 📟 Universal Insert Notifications
 
