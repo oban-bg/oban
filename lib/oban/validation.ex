@@ -26,6 +26,11 @@ defmodule Oban.Validation do
     {:error, "expected #{inspect(parent_key)} to be a list, got: #{inspect(opts)}"}
   end
 
+  @spec validate!(opts :: Keyword.t(), validator()) :: :ok
+  def validate!(opts, validator) do
+    with {:error, reason} <- validator.(opts), do: raise(ArgumentError, reason)
+  end
+
   def validate_schema(opts, schema) when is_list(schema) do
     Enum.reduce_while(opts, :ok, fn {key, val}, acc ->
       case Keyword.fetch(schema, key) do
@@ -44,6 +49,27 @@ defmodule Oban.Validation do
   def validate_schema!(opts, schema) do
     with {:error, reason} <- validate_schema(opts, schema) do
       raise ArgumentError, reason
+    end
+  end
+
+  @doc false
+  def validate_integer(key, value, opts \\ []) do
+    min = Keyword.get(opts, :min, 1)
+
+    if is_integer(value) and value > min - 1 do
+      :ok
+    else
+      {:error, "expected #{inspect(key)} to be a positive integer, got: #{inspect(value)}"}
+    end
+  end
+
+  @doc false
+  def validate_timeout(key, value) do
+    if (is_integer(value) and value > 0) or value == :infinity do
+      :ok
+    else
+      {:error,
+       "expected #{inspect(key)} to be a positive integer or :infinity, got: #{inspect(value)}"}
     end
   end
 
