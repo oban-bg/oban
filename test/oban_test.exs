@@ -351,6 +351,34 @@ defmodule ObanTest do
         assert %{paused: false} = Oban.check_queue(name, queue: :delta)
       end)
     end
+
+    test "pausing and resuming all local queues" do
+      opts = [queues: [alpha: 1, gamma: 1]]
+
+      name1 = start_supervised_oban!(opts)
+      name2 = start_supervised_oban!(opts)
+
+      assert :ok = Oban.pause_all_queues(name1, local_only: true)
+
+      with_backoff(fn ->
+        assert %{paused: true} = Oban.check_queue(name1, queue: :alpha)
+        assert %{paused: true} = Oban.check_queue(name1, queue: :gamma)
+
+        assert %{paused: false} = Oban.check_queue(name2, queue: :alpha)
+        assert %{paused: false} = Oban.check_queue(name2, queue: :gamma)
+      end)
+
+      assert :ok = Oban.pause_all_queues(name2, local_only: true)
+      assert :ok = Oban.resume_all_queues(name1, local_only: true)
+
+      with_backoff(fn ->
+        assert %{paused: false} = Oban.check_queue(name1, queue: :alpha)
+        assert %{paused: false} = Oban.check_queue(name1, queue: :gamma)
+
+        assert %{paused: true} = Oban.check_queue(name2, queue: :alpha)
+        assert %{paused: true} = Oban.check_queue(name2, queue: :gamma)
+      end)
+    end
   end
 
   describe "scale_queue/2" do

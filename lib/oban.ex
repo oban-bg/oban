@@ -1322,11 +1322,18 @@ defmodule Oban do
   end
 
   defp validate_queue_exists!(name, opts) do
-    queue = opts[:queue]
-    local_only = opts[:local_only]
+    queue = Keyword.fetch!(opts, :queue)
+    lonly = Keyword.get(opts, :local_only, false)
 
-    if local_only && is_nil(Registry.whereis(name, {:producer, to_string(queue)})) do
-      raise ArgumentError, "queue #{inspect(queue)} does not exist locally"
+    cond do
+      queue == :* ->
+        :ok
+
+      lonly and is_nil(Registry.whereis(name, {:producer, to_string(queue)})) ->
+        raise ArgumentError, "queue #{inspect(queue)} does not exist locally"
+
+      true ->
+        :ok
     end
   end
 end
