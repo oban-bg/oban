@@ -90,14 +90,23 @@ defmodule Oban.Peers.Postgres do
 
     state =
       :telemetry.span([:oban, :peer, :election], meta, fn ->
-        {:ok, state} =
-          Repo.transaction(state.conf, fn ->
-            state
-            |> delete_expired_peers()
-            |> upsert_peer()
-          end)
+        fun = fn ->
+          state
+          |> delete_expired_peers()
+          |> upsert_peer()
+        end
 
-        {state, %{meta | leader: state.leader?}}
+        case Repo.transaction(state.conf, fun) do
+          {:ok, state} ->
+            {state, %{meta | leader: state.leader?}}
+
+          {:error, :rollback} ->
+            # The peer maintains its current `leader?` status on rollback—this may cause
+            # inconsistency if the leader encounters an error and multiple rollbacks happen in
+            # sequence. That tradeoff is acceptable because the situation is unlikely and less of
+            # an issue than crashing the peer.
+            {state, meta}
+        end
       end)
 
     {:noreply, schedule_election(state)}
