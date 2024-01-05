@@ -304,6 +304,7 @@ defmodule Oban.Engine do
   defp expand(fun, changes) when is_function(fun, 1), do: expand(fun.(changes), changes)
   defp expand(%{changesets: changesets}, _), do: expand(changesets, %{})
   defp expand(changesets, _) when is_list(changesets), do: changesets
+  defp expand(%Stream{} = stream, _), do: stream
 
   defp with_span(event, %Config{} = conf, base_meta, fun) do
     base_meta = Map.merge(base_meta, %{conf: conf, engine: conf.engine})

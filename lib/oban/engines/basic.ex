@@ -68,7 +68,8 @@ defmodule Oban.Engines.Basic do
 
   @impl Engine
   def insert_all_jobs(%Config{} = conf, changesets, opts) do
-    jobs = Enum.map(changesets, &Job.to_map/1)
+    # TODO: lazy?
+    jobs = Enum.map(changesets, &Job.to_map/1) |> dbg
     opts = Keyword.merge(opts, on_conflict: :nothing, returning: true)
 
     with {_count, jobs} <- Repo.insert_all(conf, Job, jobs, opts), do: jobs

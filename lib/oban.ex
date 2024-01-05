@@ -42,7 +42,7 @@ defmodule Oban do
   @type option ::
           {:dispatch_cooldown, pos_integer()}
           | {:engine, module()}
-          | {:get_dynamic_repo, nil | (-> pid() | atom())}
+          | {:get_dynamic_repo, nil | (() -> pid() | atom())}
           | {:log, false | Logger.level()}
           | {:name, name()}
           | {:node, String.t()}
@@ -631,6 +631,12 @@ defmodule Oban do
     name
     |> config()
     |> Engine.insert_all_jobs(changesets, opts)
+  end
+
+  def insert_all(name, %Stream{} = stream, opts) when is_list(opts) do
+    name
+    |> config()
+    |> Engine.insert_all_jobs(stream, opts)
   end
 
   def insert_all(%Multi{} = multi, multi_name, changesets) when is_list_or_wrapper(changesets) do

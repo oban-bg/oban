@@ -313,6 +313,24 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite] do
         assert_receive {:event, [:insert_all_jobs, :stop], _, %{jobs: _, opts: []}}
       end
 
+      test "lazily inserting multiple jobs", %{name: name} do
+        TelemetryHandler.attach_events()
+
+        changesets = Stream.map(0..2, &Worker.new(%{ref: &1}, queue: "special", schedule_in: 10))
+        jobs = Oban.insert_all(name, changesets) |> dbg
+
+        assert is_list(jobs)
+        assert length(jobs) == 3
+
+        [%Job{queue: "special", state: "scheduled"} = job | _] = jobs
+
+        assert job.id
+        assert job.args
+        assert job.scheduled_at
+
+        assert_receive {:event, [:insert_all_jobs, :stop], _, %{jobs: _, opts: []}}
+      end
+
       test "inserting multiple jobs from a changeset wrapper", %{name: name} do
         wrap = %{changesets: [Worker.new(%{ref: 0}), Worker.new(%{ref: 1})]}
 
