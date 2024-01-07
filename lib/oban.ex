@@ -83,8 +83,10 @@ defmodule Oban do
 
   defguardp is_list_or_wrapper(cw)
             when is_list(cw) or
-                   (is_map(cw) and is_map_key(cw, :changesets) and is_list(cw.changesets)) or
-                   is_function(cw, 1)
+                   is_struct(cw, Stream) or
+                   is_function(cw, 1) or
+                   (is_map_key(cw, :changesets) and is_list(cw.changesets)) or
+                   (is_map_key(cw, :changesets) and is_struct(cw.changesets, Stream))
 
   @doc """
   Creates a facade for `Oban` functions and automates fetching configuration from the application
@@ -602,10 +604,17 @@ defmodule Oban do
 
   ## Example
 
-  Insert 100 jobs with a single operation:
+  Insert a list of 100 jobs at once:
 
       1..100
       |> Enum.map(&MyApp.Worker.new(%{id: &1}))
+      |> Oban.insert_all()
+
+  Insert a stream of jobs at once (be sure the stream terminates!):
+
+      (fn -> MyApp.Worker.new(%{}))
+      |> Stream.repeatedly()
+      |> Stram.take(100)
       |> Oban.insert_all()
 
   Insert with a custom timeout:

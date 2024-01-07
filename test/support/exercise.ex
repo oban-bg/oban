@@ -20,12 +20,18 @@ defmodule Oban.Test.Exercise do
 
   def check_insert_all do
     changeset = changeset()
+    stream = Stream.duplicate(changeset, 1)
     wrapper = %{changesets: [changeset]}
 
     [_ | _] = Oban.insert_all([changeset])
     [_ | _] = Oban.insert_all(Oban, [changeset])
     [_ | _] = Oban.insert_all([changeset], timeout: 500)
     [_ | _] = Oban.insert_all(Oban, [changeset], timeout: 500)
+
+    [_ | _] = Oban.insert_all(stream)
+    [_ | _] = Oban.insert_all(Oban, stream)
+    [_ | _] = Oban.insert_all(stream, timeout: 500)
+    [_ | _] = Oban.insert_all(Oban, stream, timeout: 500)
 
     [_ | _] = Oban.insert_all(wrapper)
     [_ | _] = Oban.insert_all(Oban, wrapper)

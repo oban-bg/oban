@@ -313,10 +313,22 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite] do
         assert_receive {:event, [:insert_all_jobs, :stop], _, %{jobs: _, opts: []}}
       end
 
-      test "inserting multiple jobs from a changeset wrapper", %{name: name} do
-        wrap = %{changesets: [Worker.new(%{ref: 0}), Worker.new(%{ref: 1})]}
+      test "inserting multiple jobs with a stream", %{name: name} do
+        changesets = Stream.map(0..1, &Worker.new(%{ref: &1}))
 
-        [_job_1, _job_2] = Oban.insert_all(name, wrap)
+        [_job_1, _job_2] = Oban.insert_all(name, changesets)
+      end
+
+      test "inserting multiple jobs from a changeset wrapper", %{name: name} do
+        changesets = [Worker.new(%{ref: 0}), Worker.new(%{ref: 1})]
+
+        [_job_1, _job_2] = Oban.insert_all(name, %{changesets: changesets})
+      end
+
+      test "inserting multiple jobs from a changeset wrapped stream", %{name: name} do
+        changesets = Stream.map(0..1, &Worker.new(%{ref: &1}))
+
+        [_job_1, _job_2] = Oban.insert_all(name, %{changesets: changesets})
       end
 
       test "handling empty changesets list from a wrapper", %{name: name} do
