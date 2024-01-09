@@ -95,7 +95,7 @@ defmodule Oban.Backoff do
       iex> Oban.Backoff.with_retry(fn -> :ok end, 10)
       :ok
   """
-  @spec with_retry((-> term()), :infinity | pos_integer()) :: term()
+  @spec with_retry((() -> term()), :infinity | pos_integer()) :: term()
   def with_retry(fun, retries \\ :infinity) when is_function(fun, 0) do
     with_retry(fun, retries, 1)
   end

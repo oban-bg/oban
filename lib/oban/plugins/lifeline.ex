@@ -172,8 +172,6 @@ defmodule Oban.Plugins.Lifeline do
       |> where([j], j.attempt >= j.max_attempts)
       |> select([j], map(j, [:id, :queue, :state]))
 
-    Repo.update_all(state.conf, query,
-      set: [state: "discarded", discarded_at: DateTime.utc_now()]
-    )
+    Repo.update_all(state.conf, query, set: [state: "discarded", discarded_at: DateTime.utc_now()])
   end
 end

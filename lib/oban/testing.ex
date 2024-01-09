@@ -456,7 +456,7 @@ defmodule Oban.Testing do
       end)
   """
   @doc since: "2.12.0"
-  @spec with_testing_mode(:inline | :manual, (-> any())) :: any()
+  @spec with_testing_mode(:inline | :manual, (() -> any())) :: any()
   def with_testing_mode(mode, fun) when mode in [:manual, :inline] and is_function(fun, 0) do
     Process.put(:oban_testing, mode)
 
