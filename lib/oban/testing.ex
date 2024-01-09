@@ -547,7 +547,9 @@ defmodule Oban.Testing do
       - `{:ok, value}`
       - `{:cancel, reason}`
       - `{:error, reason}`
-      - `{:snooze, duration}
+      - `{:discard, reason}`
+      - `{:snooze, duration}`
+      - `:discard`
 
     Instead received:
 
