@@ -142,7 +142,7 @@ defmodule Oban.Config do
       plugins: {:custom, &validate_plugins/1},
       prefix: {:or, [:falsy, :string]},
       queues: {:custom, &validate_queues(opts, &1)},
-      repo: {:behaviour, Ecto.Repo},
+      repo: {:module, [config: 0]},
       shutdown_grace_period: :non_neg_integer,
       stage_interval: :timeout,
       testing: {:enum, @testing_modes}

@@ -107,6 +107,20 @@ defmodule Oban.ConfigTest do
       assert_valid(queues: [default: [limit: 1, dispatch_cooldown: 10]])
     end
 
+    test ":repo is validated as a repo-like module" do
+      defmodule NotRepo do
+      end
+
+      defmodule SomeRepo do
+        def config, do: []
+      end
+
+      refute_valid(repo: NotReal)
+      refute_valid(repo: NotRepo)
+
+      assert_valid(repo: SomeRepo)
+    end
+
     test ":shutdown_grace_period is validated as an integer" do
       refute_valid(shutdown_grace_period: -1)
       refute_valid(shutdown_grace_period: "5")

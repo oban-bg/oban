@@ -153,6 +153,19 @@ defmodule Oban.Validation do
     {:error, "expected #{inspect(key)} to be between #{min}..#{max}, got: #{inspect(val)}"}
   end
 
+  defp validate_type({:module, funs}, key, val) do
+    cond do
+      not Code.ensure_loaded?(val) ->
+        {:error, "expected #{inspect(key)} to be a loaded module, got: #{inspect(val)}"}
+
+      not Enum.all?(funs, fn {fun, arity} -> function_exported?(val, fun, arity) end) ->
+        {:error, "expected #{inspect(key)} to implement #{inspect(funs)}, got: #{inspect(val)}"}
+
+      true ->
+        :ok
+    end
+  end
+
   defp validate_type(:schedule, key, val) do
     case Expression.parse(val) do
       {:ok, _cron} ->
