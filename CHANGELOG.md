@@ -74,6 +74,35 @@ args
 |> Oban.insert()
 ```
 
+## v2.17.2 — 2023-01-11
+
+### Enhancements
+
+- [Oban] Support passing changeset streams to `insert_all`.
+
+  Accepting streams makes `Oban.insert_all` more flexible and may, in some circumstances, make it
+  possible to reduce memory usage for streams of large resources.
+
+### Bug Fixes
+
+- [Config] Validate `:repo` option without checking for `Ecto.Repo` behaviour.
+
+  Repo wrappers that don't implement all functions of the `Ecto.Repo` behaviour are still viable and
+  shouldn't be validated with a behaviour check. This changes repo validation back to the way it
+  was done in older versions, by checking that it's a valid module that exports `config/0`.
+
+- [Peer] Handle rollback during `Oban.Peers.Postgres` peer election
+
+  Infrequently, the postgres peer election transaction returns `{:error, :rollback}`. Now that
+  return value is handled to prevent a match error.
+
+  The peer maintains its current `leader?` status on rollback—this may cause inconsistency if the
+  leader encounters an error and multiple rollbacks happen in sequence. That tradeoff is
+  acceptable because the situation is unlikely and less of an issue than crashing the peer.
+
+- [Oban] Skip queue existence check for `pause_all_queues` and `resume_all_queues` when the
+  `local_only` option is passed.
+
 ## v2.17.1 — 2023-12-11
 
 ### Bug Fixes
