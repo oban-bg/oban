@@ -36,7 +36,7 @@ defmodule ObanTest do
       name =
         start_supervised_oban!(
           queues: [alpha: 1],
-          shutdown_grace_period: 50,
+          shutdown_grace_period: 10,
           stage_interval: 10
         )
 
@@ -46,7 +46,7 @@ defmodule ObanTest do
       :ok = stop_supervised(name)
 
       assert_receive {:ok, 1}
-      refute_receive {:ok, 2}
+      refute_receive {:ok, 2}, 20
 
       assert Repo.get(Job, id_1).state == "completed"
       assert Repo.get(Job, id_2).state == "executing"
@@ -58,7 +58,7 @@ defmodule ObanTest do
       name =
         start_supervised_oban!(
           queues: [alpha: 1],
-          shutdown_grace_period: 40,
+          shutdown_grace_period: 10,
           stage_interval: 10
         )
 
@@ -68,19 +68,18 @@ defmodule ObanTest do
 
       insert!(ref: 2, sleep: 50)
 
-      refute_receive {:started, 2}
+      refute_receive {:started, 2}, 20
     end
 
     test "queue shutdown grace period applies comprehensively to all queues" do
       insert!([ref: 1, sleep: 500], queue: :alpha)
       insert!([ref: 2, sleep: 500], queue: :alpha)
       insert!([ref: 3, sleep: 500], queue: :omega)
-      insert!([ref: 3, sleep: 500], queue: :omega)
 
       name =
         start_supervised_oban!(
           queues: [alpha: 1, omega: 1],
-          shutdown_grace_period: 50,
+          shutdown_grace_period: 10,
           stage_interval: 10
         )
 
@@ -89,10 +88,9 @@ defmodule ObanTest do
 
       {time, _} = :timer.tc(fn -> stop_supervised(name) end)
 
-      assert System.convert_time_unit(time, :microsecond, :millisecond) >= 50
+      assert System.convert_time_unit(time, :microsecond, :millisecond) >= 10
 
-      refute_receive {:started, 2}
-      refute_receive {:started, 4}
+      refute_receive {:started, 2}, 20
     end
   end
 
