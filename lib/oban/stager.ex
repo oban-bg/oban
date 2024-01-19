@@ -135,6 +135,8 @@ defmodule Oban.Stager do
 
       %{staged_count: length(staged), staged_jobs: staged}
     end)
+  rescue
+    error in [DBConnection.ConnectionError, Postgrex.Error] -> {:error, error}
   end
 
   defp stage_scheduled(state, leader?: true) do
