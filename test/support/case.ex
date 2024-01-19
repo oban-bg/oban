@@ -56,8 +56,8 @@ defmodule Oban.Case do
     repo = Keyword.fetch!(opts, :repo)
 
     attach_auto_allow(repo, name)
-
     start_supervised!({Oban, opts})
+    ensure_started(name, opts)
 
     name
   end
@@ -134,4 +134,11 @@ defmodule Oban.Case do
   end
 
   defp attach_auto_allow(_repo, _name), do: :ok
+
+  defp ensure_started(name, opts) do
+    opts
+    |> Keyword.get(:queues, [])
+    |> Keyword.keys()
+    |> Enum.each(&Oban.check_queue(name, queue: &1))
+  end
 end
