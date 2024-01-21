@@ -8,6 +8,7 @@ config :oban, Oban.Test.Repo,
   migration_lock: false,
   name: Oban.Test.Repo,
   pool: Ecto.Adapters.SQL.Sandbox,
+  pool_size: System.schedulers_online() * 2,
   priv: "test/support/postgres",
   url: System.get_env("DATABASE_URL") || "postgres://localhost:5432/oban_test"
 
