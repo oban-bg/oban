@@ -74,6 +74,26 @@ args
 |> Oban.insert()
 ```
 
+## v2.17.3 — 2023-01-23
+
+### Enhancements
+
+- [Stager] Rescue and report staging errors with telemetry
+
+  Staging errors from queue contention or other database issues would cause the top level stager
+  process to crash. Eventually that could shut down the entire Oban supervision tree. Now we
+  rescue standard database connectivity issues instead and report them as errors in telemetry.
+
+- [Telemetry] Include result in job exception telemetry
+
+  Returning an `{:error, reason}` tuple triggers an :exception telemetry event, but there's still
+  a return value. Exception events for crashes, raises, timeouts, and kills will have a `nil`
+  result value.
+
+- [Queue] Add producer `handle_call` clause for engine `put_meta` calls.
+
+  Previously, the only way to put meta was through a non-blocking notification to `handle_info`.
+
 ## v2.17.2 — 2023-01-11
 
 ### Enhancements
