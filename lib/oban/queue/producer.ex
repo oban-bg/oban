@@ -180,7 +180,13 @@ defmodule Oban.Queue.Producer do
     {:reply, meta, state}
   end
 
-  def handle_call(:shutdown, _from, state) do
+  def handle_call({:put_meta, key, value}, _from, %State{} = state) do
+    meta = Engine.put_meta(state.conf, state.meta, key, value)
+
+    {:reply, meta, %{state | meta: meta}}
+  end
+
+  def handle_call(:shutdown, _from, %State{} = state) do
     meta = Engine.shutdown(state.conf, state.meta)
 
     {:reply, :ok, %{state | meta: meta}}
