@@ -31,7 +31,7 @@ defmodule Oban.Job do
           | :week
           | :weeks
 
-  @type unique_field :: [:args | :meta | :queue | :worker]
+  @type unique_field :: :args | :meta | :queue | :worker
 
   @type unique_period :: pos_integer() | {pos_integer(), time_unit()} | :infinity
 
