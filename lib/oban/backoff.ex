@@ -110,6 +110,8 @@ defmodule Oban.Backoff do
       retry_or_raise(fun, retries, attempt, :exit, reason, __STACKTRACE__)
   end
 
+  @compile {:inline, retry_or_raise: 6}
+
   defp retry_or_raise(fun, retries, attempt, kind, reason, stacktrace) do
     if retries == :infinity or attempt < retries do
       attempt
