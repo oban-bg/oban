@@ -82,7 +82,7 @@ defmodule Oban.Backoff do
   retried _infinitely_ with a maximum of ~100 seconds between retries.
 
   This function is designed to guard against flickering database errors and retry safety only
-  applies `DBConnection.ConnectionError` and `Postgrex.Error`.
+  applies `DBConnection.ConnectionError`, `Postgrex.Error`, and `GenServer` timeouts.
 
   ## Examples
 
@@ -104,15 +104,22 @@ defmodule Oban.Backoff do
     fun.()
   rescue
     error in [DBConnection.ConnectionError, Postgrex.Error] ->
-      if retries == :infinity or attempt < retries do
-        attempt
-        |> exponential(mult: 100)
-        |> jitter()
-        |> Process.sleep()
+      retry_or_raise(fun, retries, attempt, :error, error, __STACKTRACE__)
+  catch
+    :exit, {:timeout, _} = reason ->
+      retry_or_raise(fun, retries, attempt, :exit, reason, __STACKTRACE__)
+  end
 
-        with_retry(fun, retries, attempt + 1)
-      else
-        reraise error, __STACKTRACE__
-      end
+  defp retry_or_raise(fun, retries, attempt, kind, reason, stacktrace) do
+    if retries == :infinity or attempt < retries do
+      attempt
+      |> exponential(mult: 100)
+      |> jitter()
+      |> Process.sleep()
+
+      with_retry(fun, retries, attempt + 1)
+    else
+      :erlang.raise(kind, reason, stacktrace)
+    end
   end
 end
