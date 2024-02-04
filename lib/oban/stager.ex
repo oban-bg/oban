@@ -12,7 +12,6 @@ defmodule Oban.Stager do
 
   defstruct [
     :conf,
-    :name,
     :timer,
     interval: :timer.seconds(1),
     limit: 5_000,
@@ -24,25 +23,28 @@ defmodule Oban.Stager do
 
   @spec start_link([option()]) :: GenServer.on_start()
   def start_link(opts) do
-    GenServer.start_link(__MODULE__, opts, name: opts[:name])
+    {name, opts} = Keyword.pop(opts, :name)
+
+    conf = Keyword.fetch!(opts, :conf)
+
+    if conf.stage_interval == :infinity do
+      :ignore
+    else
+      state = %State{conf: conf, interval: conf.stage_interval}
+
+      GenServer.start_link(__MODULE__, state, name: name)
+    end
   end
 
   @impl GenServer
-  def init(opts) do
-    conf = Keyword.fetch!(opts, :conf)
-    state = %State{conf: conf, interval: conf.stage_interval, name: opts[:name]}
+  def init(state) do
+    Process.flag(:trap_exit, true)
 
     # Stager is no longer a plugin, but init event is essential for auto-allow and backward
     # compatibility.
     :telemetry.execute([:oban, :plugin, :init], %{}, %{conf: state.conf, plugin: __MODULE__})
 
-    if state.interval == :infinity do
-      :ignore
-    else
-      Process.flag(:trap_exit, true)
-
-      {:ok, state, {:continue, :start}}
-    end
+    {:ok, state, {:continue, :start}}
   end
 
   @impl GenServer

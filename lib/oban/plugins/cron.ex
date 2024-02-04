@@ -65,16 +65,26 @@ defmodule Oban.Plugins.Cron do
 
   defstruct [
     :conf,
-    :name,
     :timer,
     crontab: [],
     timezone: "Etc/UTC"
   ]
 
+  @doc false
+  @spec child_spec(Keyword.t()) :: Supervisor.child_spec()
+  def child_spec(opts), do: super(opts)
+
   @impl Plugin
   @spec start_link([option()]) :: GenServer.on_start()
   def start_link(opts) do
-    GenServer.start_link(__MODULE__, opts, name: opts[:name])
+    {name, opts} = Keyword.pop(opts, :name)
+
+    state =
+      State
+      |> struct!(opts)
+      |> parse_crontab()
+
+    GenServer.start_link(__MODULE__, state, name: name)
   end
 
   @impl Plugin
@@ -137,18 +147,12 @@ defmodule Oban.Plugins.Cron do
   end
 
   @impl GenServer
-  def init(opts) do
+  def init(state) do
     Process.flag(:trap_exit, true)
-
-    state =
-      State
-      |> struct!(opts)
-      |> parse_crontab()
-      |> schedule_evaluate()
 
     :telemetry.execute([:oban, :plugin, :init], %{}, %{conf: state.conf, plugin: __MODULE__})
 
-    {:ok, state}
+    {:ok, schedule_evaluate(state)}
   end
 
   @impl GenServer

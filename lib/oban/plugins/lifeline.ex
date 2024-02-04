@@ -65,16 +65,21 @@ defmodule Oban.Plugins.Lifeline do
 
   defstruct [
     :conf,
-    :name,
     :timer,
     interval: :timer.minutes(1),
     rescue_after: :timer.minutes(60)
   ]
 
+  @doc false
+  @spec child_spec(Keyword.t()) :: Supervisor.child_spec()
+  def child_spec(opts), do: super(opts)
+
   @impl Plugin
   @spec start_link([option()]) :: GenServer.on_start()
   def start_link(opts) do
-    GenServer.start_link(__MODULE__, opts, name: opts[:name])
+    {name, opts} = Keyword.pop(opts, :name)
+
+    GenServer.start_link(__MODULE__, struct!(State, opts), name: name)
   end
 
   @impl Plugin
@@ -88,15 +93,10 @@ defmodule Oban.Plugins.Lifeline do
   end
 
   @impl GenServer
-  def init(opts) do
-    state =
-      State
-      |> struct!(opts)
-      |> schedule_rescue()
-
+  def init(state) do
     :telemetry.execute([:oban, :plugin, :init], %{}, %{conf: state.conf, plugin: __MODULE__})
 
-    {:ok, state}
+    {:ok, schedule_rescue(state)}
   end
 
   @impl GenServer

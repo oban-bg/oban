@@ -32,16 +32,20 @@ defmodule Oban.Peers.Postgres do
 
   defstruct [
     :conf,
-    :name,
     :timer,
     interval: :timer.seconds(30),
     leader?: false,
     leader_boost: 2
   ]
 
+  @doc false
+  def child_spec(opts), do: super(opts)
+
   @impl Oban.Peer
   def start_link(opts) do
-    GenServer.start_link(__MODULE__, opts, name: opts[:name])
+    {name, opts} = Keyword.pop(opts, :name)
+
+    GenServer.start_link(__MODULE__, struct!(State, opts), name: name)
   end
 
   @impl Oban.Peer
@@ -50,10 +54,10 @@ defmodule Oban.Peers.Postgres do
   end
 
   @impl GenServer
-  def init(opts) do
+  def init(state) do
     Process.flag(:trap_exit, true)
 
-    {:ok, struct!(State, opts), {:continue, :start}}
+    {:ok, state, {:continue, :start}}
   end
 
   @impl GenServer

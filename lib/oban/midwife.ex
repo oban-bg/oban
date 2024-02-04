@@ -10,9 +10,9 @@ defmodule Oban.Midwife do
 
   @spec start_link(Keyword.t()) :: GenServer.on_start()
   def start_link(opts) do
-    {name, opts} = Keyword.pop(opts, :name, __MODULE__)
+    {name, opts} = Keyword.pop(opts, :name)
 
-    GenServer.start_link(__MODULE__, opts, name: name)
+    GenServer.start_link(__MODULE__, struct!(State, opts), name: name)
   end
 
   @spec start_queue(Config.t(), Keyword.t()) :: DynamicSupervisor.on_start_child()
@@ -47,9 +47,7 @@ defmodule Oban.Midwife do
   end
 
   @impl GenServer
-  def init(opts) do
-    state = struct!(State, opts)
-
+  def init(state) do
     start_all_queues(state.conf)
 
     {:ok, state, {:continue, :start}}

@@ -18,11 +18,8 @@ defmodule Oban.Queue.Watchman do
   def child_spec(opts) do
     shutdown =
       case opts[:shutdown] do
-        0 ->
-          :brutal_kill
-
-        value ->
-          value
+        0 -> :brutal_kill
+        value -> value
       end
 
     %{id: __MODULE__, start: {__MODULE__, :start_link, [opts]}, shutdown: shutdown}
@@ -32,14 +29,14 @@ defmodule Oban.Queue.Watchman do
   def start_link(opts) do
     {name, opts} = Keyword.pop(opts, :name)
 
-    GenServer.start_link(__MODULE__, opts, name: name)
+    GenServer.start_link(__MODULE__, struct!(State, opts), name: name)
   end
 
   @impl GenServer
-  def init(opts) do
+  def init(state) do
     Process.flag(:trap_exit, true)
 
-    {:ok, struct!(State, opts)}
+    {:ok, state}
   end
 
   @impl GenServer

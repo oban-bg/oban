@@ -11,9 +11,9 @@ defmodule Oban.Notifiers.Isolated do
 
   @impl Notifier
   def start_link(opts) do
-    {name, opts} = Keyword.pop(opts, :name, __MODULE__)
+    {name, opts} = Keyword.pop(opts, :name)
 
-    GenServer.start_link(__MODULE__, opts, name: name)
+    GenServer.start_link(__MODULE__, struct!(__MODULE__, opts), name: name)
   end
 
   @impl Notifier
@@ -38,9 +38,7 @@ defmodule Oban.Notifiers.Isolated do
   end
 
   @impl GenServer
-  def init(opts) do
-    state = struct!(__MODULE__, opts)
-
+  def init(state) do
     {:ok, state}
   end
 

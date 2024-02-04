@@ -51,22 +51,37 @@ defmodule Oban.Plugins.Reindexer do
   alias Oban.{Peer, Plugin, Repo, Validation}
   alias __MODULE__, as: State
 
-  @type option :: Plugin.option() | {:schedule, binary()}
+  @type option ::
+          Plugin.option()
+          | {:indexes, [String.t()]}
+          | {:schedule, String.t()}
+          | {:timezone, Calendar.time_zone()}
+          | {:timeout, timeout()}
 
   defstruct [
     :conf,
-    :name,
     :schedule,
     :timer,
     indexes: ~w(oban_jobs_args_index oban_jobs_meta_index),
-    timezone: "Etc/UTC",
-    timeout: :timer.seconds(15)
+    timeout: :timer.seconds(15),
+    timezone: "Etc/UTC"
   ]
+
+  @doc false
+  @spec child_spec(Keyword.t()) :: Supervisor.child_spec()
+  def child_spec(opts), do: super(opts)
 
   @impl Plugin
   @spec start_link([option()]) :: GenServer.on_start()
   def start_link(opts) do
-    GenServer.start_link(__MODULE__, opts, name: opts[:name])
+    {name, opts} = Keyword.pop(opts, :name)
+
+    opts =
+      opts
+      |> Keyword.put_new(:schedule, "@midnight")
+      |> Keyword.update!(:schedule, &Expression.parse!/1)
+
+    GenServer.start_link(__MODULE__, struct!(State, opts), name: name)
   end
 
   @impl Plugin
@@ -82,22 +97,12 @@ defmodule Oban.Plugins.Reindexer do
   end
 
   @impl GenServer
-  def init(opts) do
+  def init(state) do
     Process.flag(:trap_exit, true)
-
-    opts =
-      opts
-      |> Keyword.put_new(:schedule, "@midnight")
-      |> Keyword.update!(:schedule, &Expression.parse!/1)
-
-    state =
-      State
-      |> struct!(opts)
-      |> schedule_reindex()
 
     :telemetry.execute([:oban, :plugin, :init], %{}, %{conf: state.conf, plugin: __MODULE__})
 
-    {:ok, state}
+    {:ok, schedule_reindex(state)}
   end
 
   @impl GenServer
