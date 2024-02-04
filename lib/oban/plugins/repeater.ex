@@ -1,9 +1,5 @@
 defmodule Oban.Plugins.Repeater do
-  @moduledoc """
-  Forced polling mode for local queues.
-  """
-
-  @moduledoc deprecated: "Superseded by hybrid staging"
+  @moduledoc false
 
   @behaviour Oban.Plugin
 

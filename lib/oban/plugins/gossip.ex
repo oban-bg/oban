@@ -1,9 +1,5 @@
 defmodule Oban.Plugins.Gossip do
-  @moduledoc """
-  Periodic replication of queue state information between nodes.
-  """
-
-  @moduledoc deprecated: "Superseded by external metrics and no longer required for `Oban.Web`"
+  @moduledoc false
 
   @behaviour Oban.Plugin
 
