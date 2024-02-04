@@ -6,24 +6,21 @@ defmodule Oban.Stager do
   import Ecto.Query, only: [distinct: 2, select: 3, where: 3]
 
   alias Oban.{Engine, Job, Notifier, Peer, Plugin, Repo}
+  alias __MODULE__, as: State
 
   @type option :: Plugin.option() | {:interval, pos_integer()}
 
-  defmodule State do
-    @moduledoc false
-
-    defstruct [
-      :conf,
-      :name,
-      :timer,
-      interval: :timer.seconds(1),
-      limit: 5_000,
-      mode: :global,
-      ping_at_tick: 0,
-      swap_at_tick: 5,
-      tick: 0
-    ]
-  end
+  defstruct [
+    :conf,
+    :name,
+    :timer,
+    interval: :timer.seconds(1),
+    limit: 5_000,
+    mode: :global,
+    ping_at_tick: 0,
+    swap_at_tick: 5,
+    tick: 0
+  ]
 
   @spec start_link([option()]) :: GenServer.on_start()
   def start_link(opts) do

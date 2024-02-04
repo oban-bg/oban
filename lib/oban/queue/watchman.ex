@@ -4,6 +4,7 @@ defmodule Oban.Queue.Watchman do
   use GenServer
 
   alias Oban.Queue.Producer
+  alias __MODULE__, as: State
 
   @type option ::
           {:foreman, GenServer.name()}
@@ -11,11 +12,7 @@ defmodule Oban.Queue.Watchman do
           | {:producer, GenServer.name()}
           | {:shutdown, timeout()}
 
-  defmodule State do
-    @moduledoc false
-
-    defstruct [:foreman, :producer, :shutdown, interval: 10]
-  end
+  defstruct [:foreman, :producer, :shutdown, interval: 10]
 
   @spec child_spec([option]) :: Supervisor.child_spec()
   def child_spec(opts) do

@@ -52,6 +52,7 @@ defmodule Oban.Plugins.Cron do
 
   alias Oban.Cron.Expression
   alias Oban.{Job, Peer, Plugin, Repo, Validation, Worker}
+  alias __MODULE__, as: State
 
   @opaque expression :: Expression.t()
 
@@ -62,17 +63,13 @@ defmodule Oban.Plugins.Cron do
           | {:crontab, [cron_input()]}
           | {:timezone, Calendar.time_zone()}
 
-  defmodule State do
-    @moduledoc false
-
-    defstruct [
-      :conf,
-      :name,
-      :timer,
-      crontab: [],
-      timezone: "Etc/UTC"
-    ]
-  end
+  defstruct [
+    :conf,
+    :name,
+    :timer,
+    crontab: [],
+    timezone: "Etc/UTC"
+  ]
 
   @impl Plugin
   @spec start_link([option()]) :: GenServer.on_start()

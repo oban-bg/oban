@@ -19,18 +19,15 @@ defmodule Oban.Peers.Global do
   use GenServer
 
   alias Oban.{Backoff, Notifier}
+  alias __MODULE__, as: State
 
-  defmodule State do
-    @moduledoc false
-
-    defstruct [
-      :conf,
-      :name,
-      :timer,
-      interval: :timer.seconds(30),
-      leader?: false
-    ]
-  end
+  defstruct [
+    :conf,
+    :name,
+    :timer,
+    interval: :timer.seconds(30),
+    leader?: false
+  ]
 
   @impl Oban.Peer
   def start_link(opts) do

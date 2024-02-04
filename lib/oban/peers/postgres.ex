@@ -26,21 +26,18 @@ defmodule Oban.Peers.Postgres do
   import Ecto.Query, only: [where: 2, where: 3]
 
   alias Oban.{Backoff, Notifier, Repo}
+  alias __MODULE__, as: State
 
   require Logger
 
-  defmodule State do
-    @moduledoc false
-
-    defstruct [
-      :conf,
-      :name,
-      :timer,
-      interval: :timer.seconds(30),
-      leader?: false,
-      leader_boost: 2
-    ]
-  end
+  defstruct [
+    :conf,
+    :name,
+    :timer,
+    interval: :timer.seconds(30),
+    leader?: false,
+    leader_boost: 2
+  ]
 
   @impl Oban.Peer
   def start_link(opts) do

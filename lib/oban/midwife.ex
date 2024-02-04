@@ -4,12 +4,9 @@ defmodule Oban.Midwife do
   use GenServer
 
   alias Oban.{Config, Notifier, Queue, Registry}
+  alias __MODULE__, as: State
 
-  defmodule State do
-    @moduledoc false
-
-    defstruct [:conf]
-  end
+  defstruct [:conf]
 
   @spec start_link(Keyword.t()) :: GenServer.on_start()
   def start_link(opts) do

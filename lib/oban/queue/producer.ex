@@ -5,21 +5,18 @@ defmodule Oban.Queue.Producer do
 
   alias Oban.{Backoff, Engine, Notifier, PerformError, TimeoutError}
   alias Oban.Queue.Executor
+  alias __MODULE__, as: State
 
-  defmodule State do
-    @moduledoc false
-
-    defstruct [
-      :conf,
-      :foreman,
-      :meta,
-      :name,
-      :dispatch_timer,
-      :refresh_timer,
-      dispatch_cooldown: 5,
-      running: %{}
-    ]
-  end
+  defstruct [
+    :conf,
+    :foreman,
+    :meta,
+    :name,
+    :dispatch_timer,
+    :refresh_timer,
+    dispatch_cooldown: 5,
+    running: %{}
+  ]
 
   @spec start_link([Keyword.t()]) :: GenServer.on_start()
   def start_link(opts) do

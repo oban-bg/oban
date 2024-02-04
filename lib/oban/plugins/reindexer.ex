@@ -49,22 +49,19 @@ defmodule Oban.Plugins.Reindexer do
   alias Oban.Cron.Expression
   alias Oban.Plugins.Cron
   alias Oban.{Peer, Plugin, Repo, Validation}
+  alias __MODULE__, as: State
 
   @type option :: Plugin.option() | {:schedule, binary()}
 
-  defmodule State do
-    @moduledoc false
-
-    defstruct [
-      :conf,
-      :name,
-      :schedule,
-      :timer,
-      indexes: ~w(oban_jobs_args_index oban_jobs_meta_index),
-      timezone: "Etc/UTC",
-      timeout: :timer.seconds(15)
-    ]
-  end
+  defstruct [
+    :conf,
+    :name,
+    :schedule,
+    :timer,
+    indexes: ~w(oban_jobs_args_index oban_jobs_meta_index),
+    timezone: "Etc/UTC",
+    timeout: :timer.seconds(15)
+  ]
 
   @impl Plugin
   @spec start_link([option()]) :: GenServer.on_start()

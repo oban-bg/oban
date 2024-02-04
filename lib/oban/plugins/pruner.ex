@@ -46,6 +46,7 @@ defmodule Oban.Plugins.Pruner do
   use GenServer
 
   alias Oban.{Engine, Job, Peer, Plugin, Repo, Validation}
+  alias __MODULE__, as: State
 
   @type option ::
           Plugin.option()
@@ -53,18 +54,14 @@ defmodule Oban.Plugins.Pruner do
           | {:limit, pos_integer()}
           | {:max_age, pos_integer()}
 
-  defmodule State do
-    @moduledoc false
-
-    defstruct [
-      :conf,
-      :name,
-      :timer,
-      interval: :timer.seconds(30),
-      max_age: 60,
-      limit: 10_000
-    ]
-  end
+  defstruct [
+    :conf,
+    :name,
+    :timer,
+    interval: :timer.seconds(30),
+    max_age: 60,
+    limit: 10_000
+  ]
 
   @impl Plugin
   @spec start_link([option()]) :: GenServer.on_start()
