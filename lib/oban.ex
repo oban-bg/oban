@@ -11,7 +11,7 @@ defmodule Oban do
   use Supervisor
 
   alias Ecto.{Changeset, Multi}
-  alias Oban.{Config, Engine, Job, Midwife, Notifier, Peer, Registry, Stager}
+  alias Oban.{Config, Engine, Job, Midwife, Notifier, Peer, Registry, Sonar, Stager}
   alias Oban.Queue.{Drainer, Producer}
 
   @typedoc """
@@ -422,6 +422,7 @@ defmodule Oban do
       {Notifier, conf: conf, name: Registry.via(conf.name, Notifier)},
       {DynamicSupervisor, name: Registry.via(conf.name, Foreman), strategy: :one_for_one},
       {Peer, conf: conf, name: Registry.via(conf.name, Peer)},
+      {Sonar, conf: conf, name: Registry.via(conf.name, Sonar)},
       {Midwife, conf: conf, name: Registry.via(conf.name, Midwife)},
       {Stager, conf: conf, name: Registry.via(conf.name, Stager)}
     ]
