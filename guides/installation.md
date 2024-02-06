@@ -7,7 +7,7 @@ dependencies in `mix.exs`:
 # mix.exs
 def deps do
   [
-    {:oban, "~> 2.16"}
+    {:oban, "~> 2.17"}
   ]
 end
 ```
@@ -32,7 +32,7 @@ defmodule MyApp.Repo.Migrations.AddObanJobsTable do
   use Ecto.Migration
 
   def up do
-    Oban.Migration.up(version: 11)
+    Oban.Migration.up(version: 12)
   end
 
   # We specify `version: 1` in `down`, ensuring that we'll roll all the way back down if
