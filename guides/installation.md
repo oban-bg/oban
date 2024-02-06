@@ -63,7 +63,6 @@ some base configuration within `config.exs`:
 # config/config.exs
 config :my_app, Oban,
   repo: MyApp.Repo,
-  plugins: [Oban.Plugins.Pruner],
   queues: [default: 10]
 ```
 
