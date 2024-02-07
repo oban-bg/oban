@@ -3,6 +3,8 @@ defmodule Oban.Backoff do
 
   @type jitter_mode :: :inc | :dec | :both
 
+  @retry_mult Application.compile_env(:oban, [Oban.Backoff, :retry_mult], 100)
+
   @doc """
   Calculate an exponential backoff in seconds for a given attempt.
 
@@ -115,7 +117,7 @@ defmodule Oban.Backoff do
   defp retry_or_raise(fun, retries, attempt, kind, reason, stacktrace) do
     if retries == :infinity or attempt < retries do
       attempt
-      |> exponential(mult: 100)
+      |> exponential(mult: @retry_mult)
       |> jitter()
       |> Process.sleep()
 

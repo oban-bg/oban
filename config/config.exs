@@ -4,6 +4,8 @@ config :elixir, :time_zone_database, Tz.TimeZoneDatabase
 
 config :logger, level: :warning
 
+config :oban, Oban.Backoff, retry_mult: 1
+
 config :oban, Oban.Test.Repo,
   migration_lock: false,
   name: Oban.Test.Repo,
