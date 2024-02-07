@@ -177,7 +177,11 @@ defmodule Oban.Queue.Executor do
   def record_finished(%__MODULE__{} = exec) do
     stop_mono = System.monotonic_time()
     duration = stop_mono - exec.start_mono
-    queue_time = DateTime.diff(exec.job.attempted_at, exec.job.scheduled_at, :nanosecond)
+
+    queue_time =
+      exec.job.attempted_at
+      |> DateTime.diff(exec.job.scheduled_at, :nanosecond)
+      |> max(0)
 
     %{exec | duration: duration, queue_time: queue_time, stop_mono: stop_mono}
   end

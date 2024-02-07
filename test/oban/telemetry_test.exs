@@ -95,24 +95,20 @@ defmodule Oban.TelemetryTest do
   test "the default handler logs detailed event information" do
     :ok = Telemetry.attach_default_logger(:warning)
 
-    start_supervised_oban!(
-      notifier: Oban.Notifiers.Postgres,
-      queues: [alpha: 3],
-      stage_interval: 10
-    )
+    # Use the Postgres notifier to prevent a notifier switch event and test inline to force
+    # immediate execution.
+    name = start_supervised_oban!(notifier: Oban.Notifiers.Postgres, testing: :inline)
 
     logged =
       capture_log(fn ->
-        insert!(ref: 1, action: "OK")
-        insert!(ref: 2, action: "ERROR")
+        Oban.insert_all(name, [
+          Worker.new(%{ref: 1, action: "OK"}),
+          Worker.new(%{ref: 2, action: "ERROR"})
+        ])
 
         assert_receive {:ok, 1}
         assert_receive {:error, 2}
-
-        Process.sleep(50)
       end)
-
-    Logger.flush()
 
     # Start
 
