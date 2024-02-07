@@ -12,6 +12,13 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite] do
 
     @moduletag lite: engine == Lite
 
+    defmodule MiniUniq do
+      use Oban.Worker, unique: [fields: [:args]]
+
+      @impl Worker
+      def perform(_job), do: :ok
+    end
+
     describe "insert/2" do
       setup :start_supervised_oban
 
@@ -96,13 +103,6 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite] do
 
       @tag :unique
       test "considering empty args distinct from non-empty args", %{name: name} do
-        defmodule MiniUniq do
-          use Oban.Worker, unique: [fields: [:args]]
-
-          @impl Worker
-          def perform(_job), do: :ok
-        end
-
         changeset1 = MiniUniq.new(%{id: 1})
         changeset2 = MiniUniq.new(%{})
 
@@ -112,6 +112,25 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite] do
 
         assert id_1 != id_2
         assert id_2 == id_3
+      end
+
+      @tag :unique
+      test "considering all args to establish uniqueness", %{name: name} do
+        changeset1 = MiniUniq.new(%{id: 1})
+        changeset2 = MiniUniq.new(%{id: 1, extra: :cool_beans})
+
+        assert {:ok, %Job{id: id_1}} = Oban.insert(name, changeset1)
+        assert {:ok, %Job{id: id_2}} = Oban.insert(name, changeset2)
+
+        assert id_1 != id_2
+
+        changeset3 = MiniUniq.new(%{id: 2, extra: :cool_beans})
+        changeset4 = MiniUniq.new(%{id: 2})
+
+        assert {:ok, %Job{id: id_1}} = Oban.insert(name, changeset3)
+        assert {:ok, %Job{id: id_2}} = Oban.insert(name, changeset4)
+
+        assert id_1 != id_2
       end
 
       @tag :unique

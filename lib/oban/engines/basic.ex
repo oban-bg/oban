@@ -382,10 +382,19 @@ defmodule Oban.Engines.Basic do
   defp unique_field({changeset, field, keys}, acc) when field in [:args, :meta] do
     value = unique_map_values(changeset, field, keys)
 
-    if value == %{} do
-      dynamic([j], fragment("? <@ ?", field(j, ^field), ^value) and ^acc)
-    else
-      dynamic([j], fragment("? @> ?", field(j, ^field), ^value) and ^acc)
+    cond do
+      value == %{} ->
+        dynamic([j], fragment("? <@ ?", field(j, ^field), ^value) and ^acc)
+
+      keys == [] ->
+        dynamic(
+          [j],
+          fragment("? @> ?", field(j, ^field), ^value) and
+            fragment("? <@ ?", field(j, ^field), ^value) and ^acc
+        )
+
+      true ->
+        dynamic([j], fragment("? @> ?", field(j, ^field), ^value) and ^acc)
     end
   end
 

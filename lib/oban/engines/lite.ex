@@ -296,10 +296,21 @@ defmodule Oban.Engines.Lite do
             |> Changeset.get_field(field)
             |> map_values(keys)
 
-          if value == %{} do
-            dynamic([j], field(j, ^field) == ^value and ^acc)
-          else
-            dynamic([j], json_contains(field(j, ^field), ^Jason.encode!(value)) and ^acc)
+          cond do
+            value == %{} ->
+              dynamic([j], field(j, ^field) == ^value and ^acc)
+
+            keys == [] ->
+              encoded = Jason.encode!(value)
+
+              dynamic(
+                [j],
+                json_contains(field(j, ^field), ^encoded) and
+                  json_contains(^encoded, field(j, ^field)) and ^acc
+              )
+
+            true ->
+              dynamic([j], json_contains(field(j, ^field), ^Jason.encode!(value)) and ^acc)
           end
 
         field, acc ->
