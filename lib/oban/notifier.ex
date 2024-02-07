@@ -81,7 +81,7 @@ defmodule Oban.Notifier do
 
   @type channel :: atom()
   @type name_or_conf :: Oban.name() | Config.t()
-  @type pubsub_status :: :isolated | :solitary | :clustered
+  @type pubsub_status :: :unknown | :isolated | :solitary | :clustered
 
   @doc """
   Starts a notifier instance.
@@ -214,19 +214,21 @@ defmodule Oban.Notifier do
 
   ## Statuses
 
-  * `:isolated` — the notifier isn't receiving any messages. This is the default state on start,
-    and holds when the current node receives absolutely _no_ messages.
+  * `:unknown` — This is the default state on start before the notifier has time to determine the
+    appropriate status.
+
+  * `:isolated` — The notifier isn't receiving any messages.
 
     The notifier may be connected to a database but `:isolated` and unable to receive other
     message and unable to receive outside messages. Typically, this is the case for the default
     `Postgres` notifier while testing or behind a connection pooler.
 
-  * `:solitary` — the notifier is only receiving messages from itself. This may be the case for
+  * `:solitary` — The notifier is only receiving messages from itself. This may be the case for
     the `PG` notifier when Distributed Erlang nodes aren't connected, in development, or in
     production deployments that only run a single node. If you're running multiple nodes in production
     and the status is `:solitary`, there's a connectivity issue.
 
-  * `:clustered` — the notifier is connected and able to receive messages from other nodes. The
+  * `:clustered` — The notifier is connected and able to receive messages from other nodes. The
     `Postgres` notifier is considered clustered if it can receive notifications, while the PG
     notifier requires a functional Distributed Erlang cluster.
 

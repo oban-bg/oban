@@ -184,6 +184,23 @@ defmodule Oban.Telemetry do
   * `:conf` — see the explanation in metadata above
   * `:mode` — either `local` for polling mode or `global` in the more efficient pub-sub mode
 
+  ## Notifier Events
+
+  Oban emits an event when the notifier's sonar, responsible for tracking notifier connectivity,
+  switches connectivity status:
+
+  * `[:oban, :notifier, :switch]`
+
+  | event        | measures  | metadata           |
+  | ------------ | --------- | ------------------ |
+  | `:switch`    |           | `:conf`, `:status` |
+
+  ### Metadata
+
+  * `:conf` — see the explanation in metadata above
+  * `:status` — one of `:isolated`, `:solitary`, or `:clustered`, see
+    `Oban.Notifier.status/1` for details
+
   ## Default Logger
 
   A default log handler that emits structured JSON is provided, see `attach_default_logger/0` for
@@ -273,12 +290,19 @@ defmodule Oban.Telemetry do
   * `tags` — the job's tags
   * `worker` — the job's worker module
 
-  And the following fields for stager events:
+  For stager events:
 
   * `event` — always `stager:switch`
   * `message` — information about the mode switch
   * `mode` — either `"local"` or `"global"`
   * `source` — always "oban"
+
+  For notifier events:
+
+  * `event` — always `notifier:switch`
+  * `message` — information about the status switch
+  * `source` — always "oban"
+  * `status` — either `"isolated"`, `"solitary"`, or `"clustered"`
 
   ## Options
 
@@ -312,6 +336,7 @@ defmodule Oban.Telemetry do
       [:oban, :job, :start],
       [:oban, :job, :stop],
       [:oban, :job, :exception],
+      [:oban, :notifier, :switch],
       [:oban, :stager, :switch]
     ]
 
@@ -376,13 +401,41 @@ defmodule Oban.Telemetry do
     end)
   end
 
+  def handle_event([:oban, :notifier, :switch], _measure, %{status: status}, opts) do
+    log(opts, fn ->
+      case status do
+        :isolated ->
+          %{
+            event: "notifier:switch",
+            status: status,
+            message: "notifier can't receive messages from any nodes, functionality degraded"
+          }
+
+        :solitary ->
+          %{
+            event: "notifier:switch",
+            status: status,
+            message:
+              "notifier only receiving messages from its own node, functionality may be degraded"
+          }
+
+        :clustered ->
+          %{
+            event: "notifier:switch",
+            status: status,
+            message: "notifier is receiving messages from other nodes"
+          }
+      end
+    end)
+  end
+
   def handle_event([:oban, :stager, :switch], _measure, %{mode: mode}, opts) do
     log(opts, fn ->
       case mode do
         :local ->
           %{
             event: "stager:switch",
-            mode: "local",
+            mode: mode,
             message:
               "job staging switched to local mode. local mode polls for jobs for every queue; " <>
                 "restore global mode with a functional notifier"
@@ -391,7 +444,7 @@ defmodule Oban.Telemetry do
         :global ->
           %{
             event: "stager:switch",
-            mode: "global",
+            mode: mode,
             message: "job staging switched back to global mode"
           }
       end

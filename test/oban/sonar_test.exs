@@ -1,13 +1,33 @@
 defmodule Oban.SonarTest do
   use Oban.Case, async: true
 
-  alias Oban.Notifier
+  alias Oban.{Notifier, Registry, Sonar}
 
   describe "integration" do
+    setup do
+      :telemetry_test.attach_event_handlers(self(), [[:oban, :notifier, :switch]])
+
+      :ok
+    end
+
+    test "starting with an :unknown status" do
+      name = start_supervised_oban!(notifier: Oban.Notifiers.Postgres)
+
+      assert :unknown = Notifier.status(name)
+    end
+
     test "remaining isolated without any notifications" do
       name = start_supervised_oban!(notifier: Oban.Notifiers.Postgres)
 
-      assert :isolated = Notifier.status(name)
+      name
+      |> Registry.whereis(Sonar)
+      |> send(:ping)
+
+      with_backoff(fn ->
+        assert :isolated = Notifier.status(name)
+      end)
+
+      assert_received {_event, _ref, _timing, %{status: :isolated}}
     end
 
     test "reporting a solitary status with only a single node" do
@@ -16,6 +36,8 @@ defmodule Oban.SonarTest do
       with_backoff(fn ->
         assert :solitary = Notifier.status(name)
       end)
+
+      assert_received {_event, _ref, _timing, %{status: :solitary}}
     end
 
     test "reporting a clustered status with multiple nodes" do
@@ -26,6 +48,8 @@ defmodule Oban.SonarTest do
       with_backoff(fn ->
         assert :clustered = Notifier.status(name)
       end)
+
+      assert_received {_event, _ref, _timing, %{status: :clustered}}
     end
   end
 end

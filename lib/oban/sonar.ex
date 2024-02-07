@@ -9,10 +9,10 @@ defmodule Oban.Sonar do
   defstruct [
     :conf,
     :timer,
-    interval: :timer.seconds(30),
+    interval: :timer.seconds(15),
     nodes: %{},
     stale_mult: 2,
-    status: :isolated
+    status: :unknown
   ]
 
   @spec start_link(keyword()) :: GenServer.on_start()
@@ -39,8 +39,9 @@ defmodule Oban.Sonar do
   @impl GenServer
   def handle_continue(:start, state) do
     :ok = Notifier.listen(state.conf.name, :sonar)
+    :ok = Notifier.notify(state.conf, :sonar, %{node: state.conf.node, ping: :ping})
 
-    handle_info(:ping, state)
+    {:noreply, schedule_ping(state)}
   end
 
   @impl GenServer
@@ -87,6 +88,10 @@ defmodule Oban.Sonar do
         [^node] -> :solitary
         [_ | _] -> :clustered
       end
+
+    if status != state.status do
+      :telemetry.execute([:oban, :notifier, :switch], %{}, %{conf: state.conf, status: status})
+    end
 
     %{state | status: status}
   end

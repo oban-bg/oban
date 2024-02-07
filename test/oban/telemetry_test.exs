@@ -95,7 +95,11 @@ defmodule Oban.TelemetryTest do
   test "the default handler logs detailed event information" do
     :ok = Telemetry.attach_default_logger(:warning)
 
-    start_supervised_oban!(stage_interval: 10, queues: [alpha: 3])
+    start_supervised_oban!(
+      notifier: Oban.Notifiers.Postgres,
+      queues: [alpha: 3],
+      stage_interval: 10
+    )
 
     logged =
       capture_log(fn ->
@@ -153,25 +157,28 @@ defmodule Oban.TelemetryTest do
     Telemetry.detach_default_logger()
   end
 
-  test "detaching the logger prevents logging" do
+  test "the default handler logs notifier switch events" do
     :ok = Telemetry.attach_default_logger(:warning)
-
-    start_supervised_oban!(stage_interval: 10, queues: [alpha: 3])
-
-    :ok = Telemetry.detach_default_logger()
 
     logged =
       capture_log(fn ->
-        insert!(ref: 1, action: "OK")
-        insert!(ref: 2, action: "ERROR")
-
-        assert_receive {:ok, 1}
-        assert_receive {:error, 2}
-
-        Logger.flush()
+        :telemetry.execute([:oban, :notifier, :switch], %{}, %{status: :isolated})
       end)
 
-    assert logged == ""
+    assert logged =~ ~s("source":"oban")
+    assert logged =~ ~s("event":"notifier:switch")
+    assert logged =~ ~s("message":"notifier can't receive messages)
+  after
+    Telemetry.detach_default_logger()
+  end
+
+  test "detaching the logger prevents logging" do
+    :ok = Telemetry.attach_default_logger(:warning)
+    :ok = Telemetry.detach_default_logger()
+
+    assert capture_log(fn ->
+             :telemetry.execute([:oban, :notifier, :switch], %{}, %{status: :isolated})
+           end) == ""
   end
 
   test "disabling encoding on the default logger" do
