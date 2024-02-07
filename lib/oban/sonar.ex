@@ -6,15 +6,13 @@ defmodule Oban.Sonar do
   alias Oban.Notifier
   alias __MODULE__, as: State
 
-  @type status :: :disconnected | :isolated | :clustered
-
   defstruct [
     :conf,
     :timer,
     interval: :timer.seconds(30),
     nodes: %{},
     stale_mult: 2,
-    status: :disconnected
+    status: :isolated
   ]
 
   @spec start_link(keyword()) :: GenServer.on_start()
@@ -22,13 +20,6 @@ defmodule Oban.Sonar do
     {name, opts} = Keyword.pop(opts, :name, __MODULE__)
 
     GenServer.start_link(__MODULE__, struct!(State, opts), name: name)
-  end
-
-  @spec status(Oban.name()) :: status()
-  def status(oban_name) do
-    oban_name
-    |> Oban.Registry.via(__MODULE__)
-    |> GenServer.call(:get_status)
   end
 
   @impl GenServer
@@ -92,8 +83,8 @@ defmodule Oban.Sonar do
 
     status =
       case Map.keys(state.nodes) do
-        [] -> :disconnected
-        [^node] -> :isolated
+        [] -> :isolated
+        [^node] -> :solitary
         [_ | _] -> :clustered
       end
 

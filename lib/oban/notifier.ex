@@ -3,25 +3,40 @@ defmodule Oban.Notifier do
   The `Notifier` coordinates listening for and publishing notifications for events in predefined
   channels.
 
-  Every Oban supervision tree contains a notifier process, registered as `Oban.Notifier`, which
-  must be an implementation of the `Oban.Notifier` behaviour. The default implementation uses
-  the `LISTEN/NOTIFY` operations built into Postgres.
+  Oban functions such as `pause_queue`, `scale_queue`, and `cancel_job` all **require a connected
+  notifier to operate**. Use `status/1` to check the notifier's connectivity status and diagnose
+  issues.
 
-  All incoming notifications are relayed through the notifier to other processes.
+  ## Notifiers
+
+  Every Oban supervision tree contains a notifier process, registered as `Oban.Notifier`, which is
+  an implementation of the `Oban.Notifier` behaviour. 
+
+  * `Oban.Notifiers.Postgres` — A Postgres notifier that uses `LISTEN/NOTIFY` to broadcast
+    messages. This is the default.
+
+  * `Oban.Notifiers.PG` — A process groups notifier that relies on Distributed Erlang to broadcast
+    messages.
+
+  * [`Oban.Notifiers.Phoenix`](https://github.com/sorentwo/oban_notifiers_phoenix) — A notifier
+    that uses `Phoenix.PubSub` to broadcast messages. In addition to centralizing PubSub
+    communications, it opens up the possible transports to all PubSub adapters.
 
   ## Channels
 
-  Internally, Oban uses a variety of predefined channels with distinct responsibilities:
+  All incoming notifications are relayed through the notifier to any processes listening on a
+  given channel. Internally, Oban uses a variety of predefined channels with distinct
+  responsibilities:
 
-  * `insert` — as jobs are inserted into the database an event is published on the `insert`
-    channel. Processes such as queue producers use this as a signal to dispatch new jobs.
+  * `insert` — as jobs are inserted an event is published on the `insert` channel. Processes such
+    as queue producers use this as a signal to dispatch new jobs.
 
   * `leader` — messages regarding node leadership exchanged between peers
 
   * `signal` — instructions to take action, such as scale a queue or kill a running job, are sent
     through the `signal` channel
 
-  * `gossip` — arbitrary communication for coordination between nodes
+  * `sonar` — periodic notification checks to monitor pubsub health and determine connectivity
 
   * `stager` — messages regarding job staging, e.g. notifying queues that jobs are ready for execution
 
@@ -62,16 +77,16 @@ defmodule Oban.Notifier do
       end
   """
 
-  alias Oban.{Config, Registry}
+  alias Oban.{Config, Registry, Sonar}
 
   @type channel :: atom()
-  @type name_or_conf :: Oban.name() | Oban.Config.t()
-  @type option :: {:name, module()} | {:conf, Config.t()}
+  @type name_or_conf :: Oban.name() | Config.t()
+  @type pubsub_status :: :isolated | :solitary | :clustered
 
   @doc """
   Starts a notifier instance.
   """
-  @callback start_link([option]) :: GenServer.on_start()
+  @callback start_link(opts :: [conf: Config.t(), name: GenServer.name()]) :: GenServer.on_start()
 
   @doc """
   Register the current process to receive messages from one or more channels.
@@ -187,6 +202,51 @@ defmodule Oban.Notifier do
 
       {:ok, meta}
     end)
+  end
+
+  @doc """
+  Check a notifier's connectivity level to see whether it's able to publish or receive messages
+  from other nodes.
+
+  Oban functions such as `pause_queue`, `scale_queue`, and `cancel_job` all require a connected
+  notifier to operate. Each Oban instance runs a persistent process to monitor connectivity,
+  which is exposed by this function.
+
+  ## Statuses
+
+  * `:isolated` — the notifier isn't receiving any messages. This is the default state on start,
+    and holds when the current node receives absolutely _no_ messages.
+
+    The notifier may be connected to a database but `:isolated` and unable to receive other
+    message and unable to receive outside messages. Typically, this is the case for the default
+    `Postgres` notifier while testing or behind a connection pooler.
+
+  * `:solitary` — the notifier is only receiving messages from itself. This may be the case for
+    the `PG` notifier when Distributed Erlang nodes aren't connected, in development, or in
+    production deployments that only run a single node. If you're running multiple nodes in production
+    and the status is `:solitary`, there's a connectivity issue.
+
+  * `:clustered` — the notifier is connected and able to receive messages from other nodes. The
+    `Postgres` notifier is considered clustered if it can receive notifications, while the PG
+    notifier requires a functional Distributed Erlang cluster.
+
+  ## Examples
+
+  Check the notifier's pubsub status:
+
+      Oban.Notifier.status()
+
+  Check the status for a custom instance:
+
+      Oban.Notifier.status(MyOban)
+  """
+  @spec status(name_or_conf()) :: pubsub_status()
+  def status(name_or_conf \\ Oban) do
+    name = with %Config{name: name} <- name_or_conf, do: name
+
+    name
+    |> Oban.Registry.via(Sonar)
+    |> GenServer.call(:get_status)
   end
 
   @doc false
