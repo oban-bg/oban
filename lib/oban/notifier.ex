@@ -64,9 +64,9 @@ defmodule Oban.Notifier do
 
   alias Oban.{Config, Registry}
 
-  @type server :: GenServer.server()
-  @type option :: {:name, module()} | {:conf, Config.t()}
   @type channel :: atom()
+  @type name_or_conf :: Oban.name() | Oban.Config.t()
+  @type option :: {:name, module()} | {:conf, Config.t()}
 
   @doc """
   Starts a notifier instance.
@@ -76,17 +76,17 @@ defmodule Oban.Notifier do
   @doc """
   Register the current process to receive messages from one or more channels.
   """
-  @callback listen(server(), channels :: list(channel())) :: :ok
+  @callback listen(name_or_conf(), channels :: channel() | [channel()]) :: :ok
 
   @doc """
   Unregister current process from channels.
   """
-  @callback unlisten(server(), channels :: list(channel())) :: :ok
+  @callback unlisten(name_or_conf(), channels :: channel() | [channel()]) :: :ok
 
   @doc """
   Broadcast a notification to all subscribers of a channel.
   """
-  @callback notify(server(), channel :: channel(), payload :: [map()]) :: :ok
+  @callback notify(name_or_conf(), channel :: channel(), payload :: [map()]) :: :ok
 
   @doc false
   @spec child_spec(Keyword.t()) :: Supervisor.child_spec()
@@ -124,23 +124,9 @@ defmodule Oban.Notifier do
 
       Oban.Notifier.listen(MyApp.MyOban, [:gossip, :signal])
   """
-  @spec listen(server(), channel() | [channel()]) :: :ok
-  def listen(name \\ Oban, channels)
-
-  def listen(name, channel) when is_atom(channel) do
-    listen(name, [channel])
-  end
-
-  def listen(name, channels) when is_list(channels) do
-    unless Enum.all?(channels, &is_atom/1) do
-      raise ArgumentError, "expected channels to be a list of atoms, got: #{inspect(channels)}"
-    end
-
-    %{notifier: {notifier, _}} = Oban.config(name)
-
-    name
-    |> Registry.whereis(Oban.Notifier)
-    |> notifier.listen(channels)
+  @spec listen(name_or_conf(), channel() | [channel()]) :: :ok
+  def listen(name_or_conf \\ Oban, channels) when is_atom(channels) or is_list(channels) do
+    apply_callback(name_or_conf, :listen, [normalize_channels(channels)])
   end
 
   @doc """
@@ -150,19 +136,19 @@ defmodule Oban.Notifier do
 
   Stop listening for messages on the `:gossip` channel:
 
-      Oban.Notifier.unlisten([:gossip])
+      Oban.Notifier.unlisten(:gossip)
+
+  Stop listening for messages on multiple channels:
+
+      Oban.Notifier.unlisten([:insert, :gossip])
 
   Stop listening for messages when using a custom Oban name:
 
       Oban.Notifier.unlisten(MyApp.MyOban, [:gossip])
   """
-  @spec unlisten(server(), [channel]) :: :ok
-  def unlisten(name \\ Oban, channels) when is_list(channels) do
-    %{notifier: {notifier, _}} = Oban.config(name)
-
-    name
-    |> Registry.whereis(Oban.Notifier)
-    |> notifier.unlisten(channels)
+  @spec unlisten(name_or_conf(), channel() | [channel()]) :: :ok
+  def unlisten(name_or_conf \\ Oban, channels) when is_atom(channels) or is_list(channels) do
+    apply_callback(name_or_conf, :unlisten, [normalize_channels(channels)])
   end
 
   @doc """
@@ -172,45 +158,35 @@ defmodule Oban.Notifier do
   with the `public` and `private` prefixes, a notification published in the `public` prefix won't
   be picked up by processes listening with the `private` prefix.
 
-  Using notify/3 with a config is soft deprecated. Use a server as the first argument instead
-
   ## Example
 
   Broadcast a gossip message:
 
-      Oban.Notifier.notify(:gossip, %{message: "hi!"})
+      Oban.Notifier.notify(:my_channel, %{message: "hi!"})
+
+  Broadcast multiple messages at once:
+
+      Oban.Notifier.notify(:my_channel, [%{message: "hi!"}, %{message: "there"}])
+
+  Broadcast using a custom instance name:
+
+      Oban.Notifier.notify(MyOban, :my_channel, %{message: "hi!"})
   """
-  @spec notify(Config.t() | server(), channel :: channel(), payload :: map() | [map()]) :: :ok
-  def notify(conf_or_name \\ Oban, channel, payload)
+  @spec notify(name_or_conf(), channel :: channel(), payload :: map() | [map()]) :: :ok
+  def notify(name_or_conf \\ Oban, channel, payload) when is_atom(channel) do
+    conf = if is_struct(name_or_conf, Config), do: name_or_conf, else: Oban.config(name_or_conf)
+    meta = %{conf: conf, channel: channel, payload: payload}
 
-  def notify(%Config{} = conf, channel, payload) when is_atom(channel) do
-    %{name: name, notifier: {notifier, _}} = conf
+    :telemetry.span([:oban, :notifier, :notify], meta, fn ->
+      payload =
+        payload
+        |> List.wrap()
+        |> Enum.map(&encode/1)
 
-    with_span(conf, channel, payload, fn ->
-      name
-      |> Registry.whereis(Oban.Notifier)
-      |> notifier.notify(channel, normalize_payload(payload))
+      apply_callback(conf, :notify, [channel, payload])
+
+      {:ok, meta}
     end)
-  end
-
-  def notify(name, channel, payload) when is_atom(channel) do
-    name
-    |> Oban.config()
-    |> notify(channel, payload)
-  end
-
-  defp with_span(conf, channel, payload, fun) do
-    tele_meta = %{conf: conf, channel: channel, payload: payload}
-
-    :telemetry.span([:oban, :notifier, :notify], tele_meta, fn ->
-      {fun.(), tele_meta}
-    end)
-  end
-
-  defp normalize_payload(payload) do
-    payload
-    |> List.wrap()
-    |> Enum.map(&encode/1)
   end
 
   @doc false
@@ -225,6 +201,28 @@ defmodule Oban.Notifier do
     end
 
     :ok
+  end
+
+  # Helpers
+
+  defp apply_callback(name_or_conf, callback, args) do
+    conf = if is_struct(name_or_conf, Config), do: name_or_conf, else: Oban.config(name_or_conf)
+
+    %{name: name, notifier: {notifier, _}} = conf
+
+    pid = Registry.whereis(name, __MODULE__)
+
+    apply(notifier, callback, [pid | args])
+  end
+
+  defp normalize_channels(channels) do
+    channels = List.wrap(channels)
+
+    unless Enum.all?(channels, &is_atom/1) do
+      raise ArgumentError, "expected channels to be a list of atoms, got: #{inspect(channels)}"
+    end
+
+    channels
   end
 
   defp encode(payload) do
