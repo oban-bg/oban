@@ -393,7 +393,7 @@ defmodule Oban.Engines.Basic do
             fragment("? <@ ?", field(j, ^field), ^value) and ^acc
         )
 
-      :else ->
+      true ->
         dynamic([j], fragment("? @> ?", field(j, ^field), ^value) and ^acc)
     end
   end

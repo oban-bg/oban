@@ -301,13 +301,15 @@ defmodule Oban.Engines.Lite do
               dynamic([j], field(j, ^field) == ^value and ^acc)
 
             keys == [] ->
+              encoded = Jason.encode!(value)
+
               dynamic(
                 [j],
-                json_contains(field(j, ^field), ^Jason.encode!(value)) and
-                  json_contains(^Jason.encode!(value), field(j, ^field)) and ^acc
+                json_contains(field(j, ^field), ^encoded) and
+                  json_contains(^encoded, field(j, ^field)) and ^acc
               )
 
-            :else ->
+            true ->
               dynamic([j], json_contains(field(j, ^field), ^Jason.encode!(value)) and ^acc)
           end
 

@@ -12,6 +12,13 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite] do
 
     @moduletag lite: engine == Lite
 
+    defmodule MiniUniq do
+      use Oban.Worker, unique: [fields: [:args]]
+
+      @impl Worker
+      def perform(_job), do: :ok
+    end
+
     describe "insert/2" do
       setup :start_supervised_oban
 
@@ -96,13 +103,6 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite] do
 
       @tag :unique
       test "considering empty args distinct from non-empty args", %{name: name} do
-        defmodule MiniUniq do
-          use Oban.Worker, unique: [fields: [:args]]
-
-          @impl Worker
-          def perform(_job), do: :ok
-        end
-
         changeset1 = MiniUniq.new(%{id: 1})
         changeset2 = MiniUniq.new(%{})
 
@@ -116,13 +116,6 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite] do
 
       @tag :unique
       test "considering all args to establish uniqueness", %{name: name} do
-        defmodule MiniUniq do
-          use Oban.Worker, unique: [fields: [:args]]
-
-          @impl Worker
-          def perform(_job), do: :ok
-        end
-
         changeset1 = MiniUniq.new(%{id: 1})
         changeset2 = MiniUniq.new(%{id: 1, extra: :cool_beans})
 
