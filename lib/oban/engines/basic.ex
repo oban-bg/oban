@@ -423,18 +423,17 @@ defmodule Oban.Engines.Basic do
     where(query, [j], field(j, ^timestamp) >= ^seconds_from_now(-period))
   end
 
-  defp acquire_lock(conf, base_key) do
+  defp acquire_lock(%{testing: :disabled} = conf, base_key) do
     pref_key = :erlang.phash2(conf.prefix)
     lock_key = pref_key + base_key
 
     case Repo.query(conf, "SELECT pg_try_advisory_xact_lock($1)", [lock_key]) do
-      {:ok, %{rows: [[true]]}} ->
-        :ok
-
-      _ ->
-        {:error, :locked}
+      {:ok, %{rows: [[true]]}} -> :ok
+      _ -> {:error, :locked}
     end
   end
+
+  defp acquire_lock(_conf, _key), do: :ok
 
   defp fetch_job(conf, query, opts) do
     case Repo.one(conf, query, Keyword.put(opts, :prepare, :unnamed)) do
