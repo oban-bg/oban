@@ -1,23 +1,25 @@
 defmodule Oban.StagerTest do
   use Oban.Case, async: true
 
-  alias Oban.Stager
+  alias Oban.{Notifier, Stager}
   alias Oban.TelemetryHandler
 
   describe "integration" do
     test "executing jobs from an insert notification" do
-      name =
-        start_supervised_oban!(
-          queues: [alpha: 1, gamma: 1],
-          stage_interval: 10_000,
-          testing: :disabled
-        )
+      name = start_supervised_oban!(stage_interval: 10_000, testing: :disabled)
+
+      Notifier.listen(name, :insert)
 
       Oban.insert(name, Worker.new(%{action: "OK", ref: 0}, queue: :alpha))
-      Oban.insert_all(name, [Worker.new(%{action: "OK", ref: 1}, queue: :gamma)])
 
-      assert_receive {:ok, 0}
-      assert_receive {:ok, 1}
+      Oban.insert_all(name, [
+        Worker.new(%{action: "OK", ref: 1}, queue: :gamma),
+        Worker.new(%{action: "OK", ref: 2}, queue: :delta)
+      ])
+
+      assert_receive {:notification, :insert, %{"queue" => "alpha"}}
+      assert_receive {:notification, :insert, %{"queue" => "gamma"}}
+      assert_receive {:notification, :insert, %{"queue" => "delta"}}
     end
 
     test "descheduling jobs to make them available for execution" do
