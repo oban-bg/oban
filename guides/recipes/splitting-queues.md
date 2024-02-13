@@ -86,7 +86,7 @@ only real queues are specified:
 1. It automatically trims while splitting values, so extra whitespace like won't
    break parsing (i.e. ` default,3 `)
 2. It only converts the `queue` string to _an existing atom_, hopefully
-   preventing typos that would start a random queue (i.e. `defalt`)
+   preventing typos that would start a random queue (i.e. `default`)
 
 ### Usage Examples
 
