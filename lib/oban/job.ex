@@ -138,7 +138,7 @@ defmodule Oban.Job do
     field :attempt, :integer, default: 0
     field :attempted_by, {:array, :string}
     field :max_attempts, :integer, default: 20
-    field :priority, :integer
+    field :priority, :integer, default: 0
 
     field :attempted_at, :utc_datetime_usec
     field :cancelled_at, :utc_datetime_usec
