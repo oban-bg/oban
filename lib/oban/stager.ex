@@ -15,10 +15,7 @@ defmodule Oban.Stager do
     :timer,
     interval: :timer.seconds(1),
     limit: 5_000,
-    mode: :global,
-    ping_at_tick: 0,
-    swap_at_tick: 5,
-    tick: 0
+    mode: :global
   ]
 
   @spec start_link([option()]) :: GenServer.on_start()
@@ -40,8 +37,7 @@ defmodule Oban.Stager do
   def init(state) do
     Process.flag(:trap_exit, true)
 
-    # Stager is no longer a plugin, but init event is essential for auto-allow and backward
-    # compatibility.
+    # Init event is essential for auto-allow and backward compatibility.
     :telemetry.execute([:oban, :plugin, :init], %{}, %{conf: state.conf, plugin: __MODULE__})
 
     {:ok, state, {:continue, :start}}
@@ -49,8 +45,6 @@ defmodule Oban.Stager do
 
   @impl GenServer
   def handle_continue(:start, %State{} = state) do
-    Notifier.listen(state.conf.name, :stager)
-
     if state.conf.insert_trigger do
       :telemetry.attach_many(
         "oban-stager",
@@ -63,7 +57,7 @@ defmodule Oban.Stager do
     state =
       state
       |> schedule_staging()
-      |> check_notify_mode()
+      |> check_mode()
 
     {:noreply, state}
   end
@@ -79,11 +73,10 @@ defmodule Oban.Stager do
 
   @impl GenServer
   def handle_info(:stage, %State{} = state) do
-    leader = Peer.leader?(state.conf)
-    meta = %{conf: state.conf, leader: leader, plugin: __MODULE__}
+    meta = %{conf: state.conf, leader: Peer.leader?(state.conf), plugin: __MODULE__}
 
     :telemetry.span([:oban, :plugin], meta, fn ->
-      case stage_and_notify(leader, state) do
+      case stage_and_notify(meta.leader, state) do
         {:ok, staged} ->
           {:ok, Map.merge(meta, %{staged_count: length(staged), staged_jobs: staged})}
 
@@ -95,20 +88,11 @@ defmodule Oban.Stager do
     state =
       state
       |> schedule_staging()
-      |> check_notify_mode()
+      |> check_mode()
 
     {:noreply, state}
   end
 
-  def handle_info({:notification, :stager, _payload}, %State{} = state) do
-    if state.mode == :local do
-      :telemetry.execute([:oban, :stager, :switch], %{}, %{conf: state.conf, mode: :global})
-    end
-
-    {:noreply, %{state | ping_at_tick: 60, mode: :global, swap_at_tick: 65, tick: 0}}
-  end
-
-  @doc false
   def handle_insert(_event, _measure, meta, _) do
     payload =
       case meta do
@@ -166,7 +150,7 @@ defmodule Oban.Stager do
     :ok
   end
 
-  # Scheduling
+  # Helpers
 
   defp schedule_staging(state) do
     timer = Process.send_after(self(), :stage, state.interval)
@@ -174,17 +158,19 @@ defmodule Oban.Stager do
     %{state | timer: timer}
   end
 
-  defp check_notify_mode(state) do
-    if state.tick >= state.ping_at_tick do
-      Notifier.notify(state.conf.name, :stager, %{ping: :pong})
+  defp check_mode(state) do
+    next_mode =
+      case Notifier.status(state.conf) do
+        :clustered -> :global
+        :isolated -> :local
+        :solitary -> if Peer.leader?(state.conf), do: :global, else: :local
+        :unknown -> state.mode
+      end
+
+    if state.mode != next_mode do
+      :telemetry.execute([:oban, :stager, :switch], %{}, %{conf: state.conf, mode: next_mode})
     end
 
-    if state.mode == :global and state.tick == state.swap_at_tick do
-      :telemetry.execute([:oban, :stager, :switch], %{}, %{conf: state.conf, mode: :local})
-
-      %{state | mode: :local}
-    else
-      %{state | tick: state.tick + 1}
-    end
+    %{state | mode: next_mode}
   end
 end
