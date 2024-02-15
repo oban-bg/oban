@@ -38,8 +38,6 @@ defmodule Oban.Notifier do
 
   * `sonar` — periodic notification checks to monitor pubsub health and determine connectivity
 
-  * `stager` — messages regarding job staging, e.g. notifying queues that jobs are ready for execution
-
   ## Examples
 
   Broadcasting after a job is completed:
@@ -133,7 +131,7 @@ defmodule Oban.Notifier do
 
   Listen for messages on multiple channels:
 
-      Oban.Notifier.listen([:gossip, :insert, :leader, :signal, :stager])
+      Oban.Notifier.listen([:gossip, :insert, :leader, :signal])
 
   Listen for messages when using a custom Oban name:
 
