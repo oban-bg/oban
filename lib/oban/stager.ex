@@ -79,14 +79,15 @@ defmodule Oban.Stager do
 
   @impl GenServer
   def handle_info(:stage, %State{} = state) do
-    meta = %{conf: state.conf, plugin: __MODULE__}
+    leader = Peer.leader?(state.conf)
+    meta = %{conf: state.conf, leader: leader, plugin: __MODULE__}
 
     :telemetry.span([:oban, :plugin], meta, fn ->
-      case check_leadership_and_stage(state) do
-        {:ok, extra} when is_map(extra) ->
-          {:ok, Map.merge(meta, extra)}
+      case stage_and_notify(leader, state) do
+        {:ok, staged} ->
+          {:ok, Map.merge(meta, %{staged_count: length(staged), staged_jobs: staged})}
 
-        error ->
+        {:error, error} ->
           {:error, Map.put(meta, :error, error)}
       end
     end)
@@ -124,27 +125,25 @@ defmodule Oban.Stager do
     Notifier.notify(meta.conf, :insert, payload)
   end
 
-  defp check_leadership_and_stage(state) do
-    leader? = Peer.leader?(state.conf)
-
+  defp stage_and_notify(true = _leader, state) do
     Repo.transaction(state.conf, fn ->
-      {:ok, staged} = stage_scheduled(state, leader?: leader?)
+      {:ok, staged} = Engine.stage_jobs(state.conf, Job, limit: state.limit)
 
-      notify_queues(state, leader?: leader?)
+      notify_queues(state)
 
-      %{staged_count: length(staged), staged_jobs: staged}
+      staged
     end)
   rescue
     error in [DBConnection.ConnectionError, Postgrex.Error] -> {:error, error}
   end
 
-  defp stage_scheduled(state, leader?: true) do
-    Engine.stage_jobs(state.conf, Job, limit: state.limit)
+  defp stage_and_notify(_leader, state) do
+    if state.mode == :local, do: notify_queues(state)
+
+    {:ok, []}
   end
 
-  defp stage_scheduled(_state, _leader), do: {:ok, []}
-
-  defp notify_queues(%State{conf: conf, mode: :global}, leader?: true) do
+  defp notify_queues(%{conf: conf, mode: :global}) do
     query =
       Job
       |> where([j], j.state == "available")
@@ -157,15 +156,15 @@ defmodule Oban.Stager do
     Notifier.notify(conf, :insert, payload)
   end
 
-  defp notify_queues(%State{conf: conf, mode: :local}, _leader) do
+  defp notify_queues(%{conf: conf, mode: :local}) do
     match = [{{{conf.name, {:producer, :"$1"}}, :"$2", :_}, [], [{{:"$1", :"$2"}}]}]
 
     for {queue, pid} <- Registry.select(Oban.Registry, match) do
       send(pid, {:notification, :insert, %{"queue" => queue}})
     end
-  end
 
-  defp notify_queues(_state, _leader), do: :ok
+    :ok
+  end
 
   # Scheduling
 
