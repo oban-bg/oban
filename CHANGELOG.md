@@ -74,6 +74,71 @@ args
 |> Oban.insert()
 ```
 
+## v2.17.4 — 2023-02-16
+
+### Enhancements
+
+- [Notifier] Add `Notifier.status/1` to expose cluster connectivty status for diagnostics.
+
+  Notifier gains `status/1`, backed by an internal `Sonar` process, for access to cluster
+  diagnostics. This will help identify whether the current node can communicate with other nodes
+  for vital functionality such as staging jobs.
+
+  A new `[:oban, :notifier, :switch]` telemetry event is emitted for diagnostic instrumentation
+  and switch events are displayed by the default logger.
+
+- [Stager] Use notifier status and leadership checks to switch between `global` and `local` mode.
+
+  The sonar-backed notifier status is more accurate than the ad-hoc stager checks previously used
+  to check connectivity. Now the staging mode is determined by a combination of sonar and
+  leadership—isolated follower nodes will correctly switch to `:local` (polling) mode.
+
+  The new detection mechanism prevents an infrequent and difficult to spot bug where isolated
+  follower nodes wouldn't process jobs.
+
+- [Backoff] Catch `GenServer` timeouts in `with_retry/2`.
+
+  Backoff's `with_retry/2` function previously rescued and retried known database exceptions, and
+  it didn't catch exits. Now it also catches timeout errors to accommodate synchronized `call`
+  based acks like those used in Pro's Smart engine in sync mode.
+
+- [Stager] Avoid transactions on follower nodes.
+
+  Only the leader needs to execute a transaction while staging. This change prevents pointless
+  empty transactions from each follower node every second. Now there are 60 staging transactions
+  per minute across the whole cluster, rather than 60 from each node.
+
+- [Notifier] Unify public function type signatures and accept a `name` or `conf` in all public
+  functions.
+
+- [Plugins] Always validate and build state in `start_link/1`
+
+  Error messages and stack traces are clearer when errors come from `start_link/1` rather than
+  `init/1`, and it avoids starting processes that will immediately crash.
+
+  This also hides `child_spec/1` in all public modules to keep it out of documentation.
+
+- [Basic] Skip taking advisory locks in testing modes.
+
+  Advisory locks are global and apply across transactions. That can break async tests with
+  overlapping unique jobs because the lock is held in a concurrent, sandboxed test.
+
+### Bug Fixes
+
+- [Engine] Ensure uniqueness across args when no keys are specified regardless of insertion order.
+
+- [Basic] Force materializing the CTE when fetching jobs.
+
+  The CTE used to prevent optimizations in the Basic engine's fetch query is only referenced once,
+  which may allow the Postgres optimizer to inline it. Inlining can negate the CTE "optimization
+  fence", so we force the CTE to be materialized.
+
+- [Job] Restore default `priority` in the schema.
+
+  A default was still set in the database, but it was erroneously removed from the Job schema.
+
+- [Job] Fix unique typespec by unwrapping the `field` type.
+
 ## v2.17.3 — 2023-01-23
 
 ### Enhancements
