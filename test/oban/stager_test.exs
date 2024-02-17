@@ -4,8 +4,8 @@ defmodule Oban.StagerTest do
   alias Oban.{Notifier, Stager}
   alias Oban.TelemetryHandler
 
-  test "executing jobs from an insert notification" do
-    name = start_supervised_oban!(stage_interval: 10_000, testing: :disabled)
+  test "broadcasting insert events on job insertion" do
+    name = start_supervised_oban!(stage_interval: 10_000)
 
     Notifier.listen(name, :insert)
 
