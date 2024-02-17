@@ -129,7 +129,7 @@ defmodule Oban do
 
       MyOban.config()
 
-  It also makes piping into Oban functions far more convenient: 
+  It also makes piping into Oban functions far more convenient:
 
       %{some: :args}
       |> MyWorker.new()
@@ -615,7 +615,7 @@ defmodule Oban do
 
       (fn -> MyApp.Worker.new(%{}))
       |> Stream.repeatedly()
-      |> Stram.take(100)
+      |> Stream.take(100)
       |> Oban.insert_all()
 
   Insert with a custom timeout:
