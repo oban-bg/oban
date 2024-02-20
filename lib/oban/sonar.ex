@@ -65,7 +65,7 @@ defmodule Oban.Sonar do
   def handle_info({:notification, :sonar, %{"node" => node, "ping" => _}}, state) do
     state =
       state
-      |> Map.update!(:nodes, &Map.put(&1, node, System.system_time()))
+      |> Map.update!(:nodes, &Map.put(&1, node, System.system_time(:second)))
       |> update_status()
 
     {:noreply, state}
@@ -97,7 +97,7 @@ defmodule Oban.Sonar do
   end
 
   defp prune_stale_nodes(state) do
-    stale = System.system_time() - state.interval * state.stale_mult
+    stale = System.system_time(:second) - state.interval * state.stale_mult
     nodes = Map.reject(state.nodes, fn {_, recorded} -> recorded < stale end)
 
     %{state | nodes: nodes}
