@@ -74,7 +74,7 @@ args
 |> Oban.insert()
 ```
 
-## v2.17.4 — 2023-02-16
+## v2.17.4 — 2024-02-16
 
 ### Enhancements
 
@@ -139,7 +139,7 @@ args
 
 - [Job] Fix unique typespec by unwrapping the `field` type.
 
-## v2.17.3 — 2023-01-23
+## v2.17.3 — 2024-01-23
 
 ### Enhancements
 
@@ -159,7 +159,7 @@ args
 
   Previously, the only way to put meta was through a non-blocking notification to `handle_info`.
 
-## v2.17.2 — 2023-01-11
+## v2.17.2 — 2024-01-11
 
 ### Enhancements
 
@@ -212,7 +212,7 @@ args
   inefficient, repetitive, and violated the common practice of avoiding exceptions for flow
   control.
 
-- [Validation] Use schema based validation for workers, plugins, and config. 
+- [Validation] Use schema based validation for workers, plugins, and config.
 
   Validations are now simpler and more consistent, and behaviour based notifiers such as Engine,
   Repo, and Peer are more descriptive.
