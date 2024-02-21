@@ -17,7 +17,7 @@ defmodule Oban.Sonar do
 
   @spec start_link(keyword()) :: GenServer.on_start()
   def start_link(opts) do
-    {name, opts} = Keyword.pop(opts, :name, __MODULE__)
+    {name, opts} = Keyword.pop(opts, :name)
 
     GenServer.start_link(__MODULE__, struct!(State, opts), name: name)
   end
@@ -49,9 +49,15 @@ defmodule Oban.Sonar do
     {:reply, state.status, state}
   end
 
+  def handle_call(:prune_nodes, _from, state) do
+    state = prune_stale_nodes(state)
+
+    {:reply, state.nodes, state}
+  end
+
   @impl GenServer
   def handle_info(:ping, state) do
-    :ok = Notifier.notify(state.conf, :sonar, %{node: state.conf.node, ping: :ping})
+    :ok = Notifier.notify(state.conf, :sonar, %{node: state.conf.node, ping: true})
 
     state =
       state
@@ -62,10 +68,12 @@ defmodule Oban.Sonar do
     {:noreply, state}
   end
 
-  def handle_info({:notification, :sonar, %{"node" => node, "ping" => _}}, state) do
+  def handle_info({:notification, :sonar, %{"node" => node} = payload}, state) do
+    time = Map.get(payload, "time", System.system_time(:millisecond))
+
     state =
       state
-      |> Map.update!(:nodes, &Map.put(&1, node, System.system_time(:second)))
+      |> Map.update!(:nodes, &Map.put(&1, node, time))
       |> update_status()
 
     {:noreply, state}
@@ -97,7 +105,7 @@ defmodule Oban.Sonar do
   end
 
   defp prune_stale_nodes(state) do
-    stale = System.system_time(:second) - state.interval * state.stale_mult
+    stale = System.system_time(:millisecond) - state.interval * state.stale_mult
     nodes = Map.reject(state.nodes, fn {_, recorded} -> recorded < stale end)
 
     %{state | nodes: nodes}

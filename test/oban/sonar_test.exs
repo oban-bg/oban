@@ -43,13 +43,29 @@ defmodule Oban.SonarTest do
     test "reporting a clustered status with multiple nodes" do
       name = start_supervised_oban!(notifier: Oban.Notifiers.Isolated)
 
-      Notifier.notify(name, :sonar, %{node: "web.1", ping: :ping})
+      Notifier.notify(name, :sonar, %{node: "web.1"})
 
       with_backoff(fn ->
         assert :clustered = Notifier.status(name)
       end)
 
       assert_received {_event, _ref, _timing, %{status: :clustered}}
+    end
+
+    test "pruning stale nodes based on the last notification time" do
+      name = start_supervised_oban!(notifier: Oban.Notifiers.Isolated)
+      time = System.system_time(:millisecond)
+
+      Notifier.notify(name, :sonar, %{node: "web.1", time: time - :timer.seconds(29)})
+      Notifier.notify(name, :sonar, %{node: "web.2", time: time - :timer.seconds(31)})
+
+      nodes =
+        name
+        |> Registry.whereis(Sonar)
+        |> GenServer.call(:prune_nodes)
+
+      assert Map.has_key?(nodes, "web.1")
+      refute Map.has_key?(nodes, "web.2")
     end
   end
 end
