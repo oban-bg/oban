@@ -72,7 +72,7 @@ defmodule Oban.Worker do
     future. See [Snoozing](#module-snoozing-jobs) for more details.
 
   In addition to explicit return values, any _unhandled exception_, _exit_ or _throw_ will fail
-  the job and schedule a retry if possible.
+  the job and schedule a retry under the same conditions as in the `{:error, error}` case.
 
   As an example of error tuple handling, this worker will return an error tuple when the `value`
   is less than one:
