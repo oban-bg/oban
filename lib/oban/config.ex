@@ -79,7 +79,7 @@ defmodule Oban.Config do
     opts =
       if opts[:testing] in [:manual, :inline] do
         opts
-        |> Keyword.put(:peer, {Oban.Peers.Disabled, []})
+        |> Keyword.put(:peer, {Oban.Peers.Isolated, [leader?: false]})
         |> Keyword.put(:plugins, [])
         |> Keyword.put(:queues, [])
         |> Keyword.put(:stage_interval, :infinity)
@@ -329,7 +329,7 @@ defmodule Oban.Config do
 
     cond do
       peer == false or opts[:plugins] == false ->
-        Keyword.put(opts, :peer, {Oban.Peers.Disabled, []})
+        Keyword.put(opts, :peer, {Oban.Peers.Isolated, [leader?: false]})
 
       is_atom(peer) and not is_nil(peer) ->
         Keyword.put(opts, :peer, {peer, []})

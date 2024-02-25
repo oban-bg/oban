@@ -70,7 +70,13 @@ defmodule Oban.StagerTest do
   test "switching to local mode when solitary and not the leader" do
     :telemetry_test.attach_event_handlers(self(), [[:oban, :stager, :switch]])
 
-    [stage_interval: 5, notifier: Oban.Notifiers.Isolated, peer: Oban.Peers.Disabled]
+    opts = [
+      stage_interval: 5,
+      notifier: Oban.Notifiers.Isolated,
+      peer: {Oban.Peers.Isolated, leader?: false}
+    ]
+
+    opts
     |> start_supervised_oban!()
     |> ping_sonar()
 

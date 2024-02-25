@@ -5,9 +5,11 @@ defmodule Oban.Peers.Isolated do
 
   @impl Oban.Peer
   def start_link(opts) do
-    Agent.start_link(fn -> true end, name: opts[:name])
+    leader? = Keyword.get(opts, :leader?, true)
+
+    Agent.start_link(fn -> leader? end, name: opts[:name])
   end
 
   @impl Oban.Peer
-  def leader?(_pid, _timeout \\ nil), do: true
+  def leader?(pid, timeout \\ 5000), do: Agent.get(pid, & &1, timeout)
 end

@@ -169,7 +169,7 @@ defmodule Oban.ConfigTest do
       assert conf = conf(queues: [alpha: 1], plugins: [Pruner], testing: :manual)
 
       assert %{queues: [], plugins: []} = conf
-      assert %{peer: {Oban.Peers.Disabled, []}, stage_interval: :infinity} = conf
+      assert %{peer: {Oban.Peers.Isolated, [leader?: false]}, stage_interval: :infinity} = conf
     end
 
     test "normalizing plugins as a module options tuple" do
@@ -200,10 +200,10 @@ defmodule Oban.ConfigTest do
     end
 
     test "translating peer false to the disabled module" do
-      assert %Config{peer: {Oban.Peers.Disabled, []}} = conf(peer: false)
-      assert %Config{peer: {Oban.Peers.Disabled, []}} = conf(plugins: false)
+      assert %Config{peer: {Oban.Peers.Isolated, [leader?: false]}} = conf(peer: false)
+      assert %Config{peer: {Oban.Peers.Isolated, [leader?: false]}} = conf(plugins: false)
 
-      assert %Config{peer: {Oban.Peers.Disabled, []}} =
+      assert %Config{peer: {Oban.Peers.Isolated, [leader?: false]}} =
                conf(peer: Oban.Peers.Global, plugins: false)
     end
 
