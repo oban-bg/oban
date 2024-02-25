@@ -74,6 +74,44 @@ args
 |> Oban.insert()
 ```
 
+## v2.17.5 — 2024-02-25
+
+### Enhancements
+
+- [Notifier] Use the Postgres notifier's connection to deliver notifications.
+
+  The Postgres notifier holds a single connection for listening and relaying messages. However, it
+  wasn't used to dispatch messages; that was left to queries through the Ecto pool. Those queries
+  were noisy and put unnecessary load on the pool, particularly from insert notifications.
+
+  Now notifications are delivered through the notifier's connection—they don't require a pool
+  checkout, and they won't clutter Ecto logs or telemetry.
+
+- [Engine] Emit insert trigger notification directly from `Engine` callbacks.
+
+  Notifications are now sent from the engine, within the `insert_*` telemetry block, so the timing
+  impact is visible. In addition, notifications aren't emitted for `scheduled` jobs, as there's
+  nothing ready for producers to fetch.
+
+### Bug Fixes
+
+- [Notifier] Track and compare sonar pings using the correct time unit.
+
+  The notifier's status tracker pruned stale nodes using mismatched time units, causing constant
+  status change events despite nothing changing. This ensures the recorded and compared times are
+  both milliseconds, not a mixture of seconds and native time.
+
+- [Cron] Retain `@reboot` cron entries until node becomes leader.
+
+  With rolling deploys it is frequent that a node isn't the leader the first time cron evaluates.
+  However, `@reboot` expressions were discarded after the first run, which prevented reboots from
+  being inserted when the node acquired leadership.
+
+- [Oban] Require Ecto v3.10 to support `materialized` flag added in the previous patch.
+
+  The `materialized` option wasn't supported by Ecto until v3.10. Compiling with an earlier
+  version causes a compilation error.
+
 ## v2.17.4 — 2024-02-16
 
 ### Enhancements
