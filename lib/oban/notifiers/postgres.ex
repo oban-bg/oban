@@ -88,31 +88,19 @@ if Code.ensure_loaded?(Postgrex) do
 
     # This is a Notifier callback, but it has the same name and arity as SimpleConnection
     def notify(server, channel, payload) when is_atom(channel) do
-      with %{conf: conf} <- Simple.call(server, :get_state) do
-        full_channel = to_full_channel(channel, conf)
-
-        Repo.query(
-          conf,
-          "SELECT pg_notify($1, payload) FROM json_array_elements_text($2::json) AS payload",
-          [full_channel, payload]
-        )
-
-        :ok
-      end
+      Simple.call(server, {:notify, channel, payload})
     end
 
     def handle_connect(%{channels: channels} = state) do
       state = %{state | connected?: true}
 
       if map_size(channels) > 0 do
-        parts =
+        listens =
           channels
           |> Map.keys()
           |> Enum.map_join("\n", &~s(LISTEN "#{&1}";))
 
-        query = "DO $$BEGIN #{parts} END$$"
-
-        {:query, query, state}
+        query(listens, state)
       else
         {:noreply, state}
       end
@@ -122,10 +110,11 @@ if Code.ensure_loaded?(Postgrex) do
       {:noreply, %{state | connected?: false}}
     end
 
-    def handle_call(:get_state, from, state) do
-      Simple.reply(from, state)
+    def handle_call({:notify, channel, payload}, from, state) do
+      channel = to_full_channel(channel, state.conf)
+      notifies = Enum.map_join(payload, " \n", &~s(NOTIFY "#{channel}", '#{&1}';))
 
-      {:noreply, state}
+      query(notifies, %{state | from: from})
     end
 
     def handle_call({:listen, pid, channels}, from, state) do
@@ -138,10 +127,9 @@ if Code.ensure_loaded?(Postgrex) do
         |> put_channels(pid, channels)
 
       if state.connected? and Enum.any?(new_channels) do
-        parts = Enum.map_join(new_channels, " \n", &~s(LISTEN "#{&1}";))
-        query = "DO $$BEGIN #{parts} END$$"
+        listens = Enum.map_join(new_channels, " \n", &~s(LISTEN "#{&1}";))
 
-        {:query, query, %{state | from: from}}
+        query(listens, %{state | from: from})
       else
         Simple.reply(from, :ok)
 
@@ -160,10 +148,9 @@ if Code.ensure_loaded?(Postgrex) do
       del_channels = channels -- Map.keys(state.channels)
 
       if state.connected? and Enum.any?(del_channels) do
-        parts = Enum.map_join(del_channels, " \n", &~s(UNLISTEN "#{&1}";))
-        query = "DO $$BEGIN #{parts} END$$"
+        unlistens = Enum.map_join(del_channels, " \n", &~s(UNLISTEN "#{&1}";))
 
-        {:query, query, %{state | from: from}}
+        query(unlistens, %{state | from: from})
       else
         Simple.reply(from, :ok)
 
@@ -196,7 +183,11 @@ if Code.ensure_loaded?(Postgrex) do
       {:noreply, %{state | from: nil}}
     end
 
-    ## Channel Helpers
+    ## Helpers
+
+    defp query(statement, state) do
+      {:query, ["DO $$BEGIN ", statement, " END$$"], state}
+    end
 
     defp to_full_channel(channel, %Config{prefix: prefix}) do
       "#{prefix}.oban_#{channel}"
@@ -207,8 +198,6 @@ if Code.ensure_loaded?(Postgrex) do
 
       String.to_existing_atom(shortcut)
     end
-
-    ## Listener Helpers
 
     defp put_listener(%{listeners: listeners} = state, pid, channels) do
       new_set = MapSet.new(channels)
