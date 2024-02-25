@@ -2,7 +2,7 @@ defmodule Oban.Peer do
   @moduledoc """
   The `Peer` module maintains leadership for a particular Oban instance within a cluster.
 
-  Leadership is used by plugins, primarily, to prevent duplicate work accross nodes. For example,
+  Leadership is used by plugins, primarily, to prevent duplicate work across nodes. For example,
   only the leader's `Cron` plugin will try inserting new jobs. You can use peer leadership to
   extend Oban with custom plugins, or even within your own application.
 
