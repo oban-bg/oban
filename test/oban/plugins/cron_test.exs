@@ -94,17 +94,17 @@ defmodule Oban.Plugins.CronTest do
     assert_receive {:event, :stop, %{duration: _},
                     %{conf: _, jobs: [%Job{}, %Job{}], plugin: Cron}}
 
-    assert inserted_refs() == [1, 3]
+    assert [1, 3] == inserted_refs()
   end
 
   test "cron jobs are not enqueued twice within the same minute" do
     run_with_opts(crontab: [{"* * * * *", Worker, args: worker_args(1)}])
 
-    assert inserted_refs() == [1]
+    assert [1] == inserted_refs()
 
     run_with_opts(crontab: [{"* * * * *", Worker, args: worker_args(1)}])
 
-    assert inserted_refs() == [1]
+    assert [1] == inserted_refs()
   end
 
   test "cron jobs are only enqueued once between nodes" do
@@ -120,7 +120,7 @@ defmodule Oban.Plugins.CronTest do
       |> stop_supervised()
     end
 
-    assert inserted_refs() == [1]
+    assert [1] == inserted_refs()
   end
 
   test "cron jobs are scheduled using the configured timezone" do
@@ -135,13 +135,35 @@ defmodule Oban.Plugins.CronTest do
       ]
     )
 
-    assert inserted_refs() == [1]
+    assert [1] == inserted_refs()
   end
 
   test "reboot jobs are enqueued on startup" do
     run_with_opts(crontab: [{"@reboot", Worker, args: worker_args(1)}])
 
-    assert inserted_refs() == [1]
+    assert [1] == inserted_refs()
+  end
+
+  test "evaluating reboot after acquiring leadership" do
+    name =
+      start_supervised_oban!(
+        peer: {Oban.Peers.Isolated, leader?: false},
+        plugins: [{Cron, crontab: [{"@reboot", Worker, args: worker_args(1)}]}]
+      )
+
+    send_evaluate(name)
+
+    assert [] == inserted_refs()
+
+    name
+    |> Registry.whereis(Oban.Peer)
+    |> Agent.update(fn _ -> true end)
+
+    send_evaluate(name)
+
+    assert [1] == inserted_refs()
+
+    stop_supervised!(name)
   end
 
   defp assert_valid(opts) do
@@ -171,7 +193,8 @@ defmodule Oban.Plugins.CronTest do
   defp send_evaluate(name) do
     name
     |> Registry.whereis({:plugin, Cron})
-    |> send(:evaluate)
+    |> tap(&send(&1, :evaluate))
+    |> :sys.log(true)
 
     name
   end

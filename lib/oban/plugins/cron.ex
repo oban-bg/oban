@@ -164,38 +164,16 @@ defmodule Oban.Plugins.Cron do
 
   @impl GenServer
   def handle_info(:evaluate, %State{} = state) do
-    meta = %{conf: state.conf, plugin: __MODULE__}
+    if Peer.leader?(state.conf) do
+      insert_scheduled_jobs(state)
 
-    :telemetry.span([:oban, :plugin], meta, fn ->
-      case check_leadership_and_insert_jobs(state) do
-        {:ok, inserted_jobs} when is_list(inserted_jobs) ->
-          {:ok, Map.put(meta, :jobs, inserted_jobs)}
-
-        error ->
-          {:error, Map.put(meta, :error, error)}
-      end
-    end)
-
-    state =
-      state
-      |> discard_reboots()
-      |> schedule_evaluate()
-
-    {:noreply, state}
-  end
-
-  # Scheduling Helpers
-
-  defp schedule_evaluate(state) do
-    timer = Process.send_after(self(), :evaluate, interval_to_next_minute())
-
-    %{state | timer: timer}
-  end
-
-  defp discard_reboots(state) do
-    crontab = Enum.reject(state.crontab, fn {expr, _worker, _opts} -> expr.reboot? end)
-
-    %{state | crontab: crontab}
+      {:noreply,
+       state
+       |> discard_reboots()
+       |> schedule_evaluate()}
+    else
+      {:noreply, schedule_evaluate(state)}
+    end
   end
 
   # Parsing & Validation Helpers
@@ -245,34 +223,48 @@ defmodule Oban.Plugins.Cron do
        "{expression, worker, options} tuple, got: #{inspect(invalid)}"}
   end
 
-  # Inserting Helpers
+  # Scheduling Helpers
 
-  defp check_leadership_and_insert_jobs(state) do
-    if Peer.leader?(state.conf) do
-      Repo.transaction(state.conf, fn ->
-        insert_jobs(state.conf, state.crontab, state.timezone)
-      end)
-    else
-      {:ok, []}
-    end
+  defp schedule_evaluate(state) do
+    timer = Process.send_after(self(), :evaluate, interval_to_next_minute())
+
+    %{state | timer: timer}
   end
 
-  defp insert_jobs(conf, crontab, timezone) do
-    {:ok, datetime} = DateTime.now(timezone)
+  # Inserting Helpers
 
-    for {expr, worker, opts} <- crontab, Expression.now?(expr, datetime) do
-      {:ok, job} = Oban.insert(conf.name, build_changeset(worker, opts))
+  defp discard_reboots(state) do
+    crontab = Enum.reject(state.crontab, fn {expr, _worker, _opts} -> expr.reboot? end)
 
-      job
+    %{state | crontab: crontab}
+  end
+
+  defp insert_scheduled_jobs(state) do
+    fun = fn ->
+      {:ok, datetime} = DateTime.now(state.timezone)
+
+      for {expr, worker, opts} <- state.crontab, Expression.now?(expr, datetime) do
+        Oban.insert!(state.conf.name, build_changeset(worker, opts))
+      end
     end
+
+    meta = %{conf: state.conf, plugin: __MODULE__}
+
+    :telemetry.span([:oban, :plugin], meta, fn ->
+      case Repo.transaction(state.conf, fun) do
+        {:ok, inserted_jobs} ->
+          {:ok, Map.put(meta, :jobs, inserted_jobs)}
+
+        error ->
+          {:error, Map.put(meta, :error, error)}
+      end
+    end)
   end
 
   defp build_changeset(worker, opts) do
     {args, opts} = Keyword.pop(opts, :args, %{})
 
-    opts = unique_opts(worker.__opts__(), opts)
-
-    worker.new(args, opts)
+    worker.new(args, unique_opts(worker.__opts__(), opts))
   end
 
   # Make each job unique for 59 seconds to prevent double-enqueue if the node or scheduler
