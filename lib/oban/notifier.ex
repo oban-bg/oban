@@ -79,6 +79,7 @@ defmodule Oban.Notifier do
 
   @type channel :: atom()
   @type name_or_conf :: Oban.name() | Config.t()
+  @type payload :: map() | [map()]
   @type pubsub_status :: :unknown | :isolated | :solitary | :clustered
 
   @doc """
@@ -99,7 +100,7 @@ defmodule Oban.Notifier do
   @doc """
   Broadcast a notification to all subscribers of a channel.
   """
-  @callback notify(name_or_conf(), channel :: channel(), payload :: [map()]) :: :ok
+  @callback notify(name_or_conf(), channel(), payload()) :: :ok
 
   @doc false
   @spec child_spec(Keyword.t()) :: Supervisor.child_spec()
@@ -185,7 +186,7 @@ defmodule Oban.Notifier do
 
       Oban.Notifier.notify(MyOban, :my_channel, %{message: "hi!"})
   """
-  @spec notify(name_or_conf(), channel :: channel(), payload :: map() | [map()]) :: :ok
+  @spec notify(name_or_conf(), channel(), payload()) :: :ok
   def notify(name_or_conf \\ Oban, channel, payload) when is_atom(channel) do
     conf = if is_struct(name_or_conf, Config), do: name_or_conf, else: Oban.config(name_or_conf)
     meta = %{conf: conf, channel: channel, payload: payload}

@@ -20,7 +20,7 @@ defmodule Oban.Engine do
   """
 
   alias Ecto.{Changeset, Multi}
-  alias Oban.{Config, Job}
+  alias Oban.{Config, Job, Notifier}
 
   @type conf :: Config.t()
   @type job :: Job.t()
@@ -179,6 +179,8 @@ defmodule Oban.Engine do
   def insert_job(%Config{} = conf, %Changeset{} = changeset, opts) do
     with_span(:insert_job, conf, %{changeset: changeset, opts: opts}, fn engine ->
       with {:ok, job} <- engine.insert_job(conf, changeset, opts) do
+        notify_trigger(conf, [job])
+
         {:meta, {:ok, job}, %{job: job}}
       end
     end)
@@ -201,6 +203,8 @@ defmodule Oban.Engine do
   def insert_all_jobs(%Config{} = conf, changesets, opts) do
     with_span(:insert_all_jobs, conf, %{changesets: changesets, opts: opts}, fn engine ->
       jobs = engine.insert_all_jobs(conf, expand(changesets, %{}), opts)
+
+      notify_trigger(conf, jobs)
 
       {:meta, jobs, %{jobs: jobs}}
     end)
@@ -331,4 +335,15 @@ defmodule Oban.Engine do
       %Config{conf | engine: Oban.Engines.Basic}
     end
   end
+
+  defp notify_trigger(%{insert_trigger: true} = conf, jobs) do
+    payload = for job <- jobs, job.state == "available", uniq: true, do: %{queue: job.queue}
+
+    unless payload == [], do: Notifier.notify(conf, :insert, payload)
+  catch
+    # Insert notification timeouts aren't worth failing inserts over.
+    :exit, {:timeout, _} -> :ok
+  end
+
+  defp notify_trigger(_conf, _queue), do: :skip
 end

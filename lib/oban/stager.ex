@@ -45,15 +45,6 @@ defmodule Oban.Stager do
 
   @impl GenServer
   def handle_continue(:start, %State{} = state) do
-    if state.conf.insert_trigger do
-      :telemetry.attach_many(
-        "oban-stager",
-        [[:oban, :engine, :insert_job, :stop], [:oban, :engine, :insert_all_jobs, :stop]],
-        &__MODULE__.handle_insert/4,
-        []
-      )
-    end
-
     state =
       state
       |> schedule_staging()
@@ -65,8 +56,6 @@ defmodule Oban.Stager do
   @impl GenServer
   def terminate(_reason, %State{timer: timer}) do
     if is_reference(timer), do: Process.cancel_timer(timer)
-
-    :telemetry.detach("oban-stager")
 
     :ok
   end
@@ -91,22 +80,6 @@ defmodule Oban.Stager do
       |> check_mode()
 
     {:noreply, state}
-  end
-
-  def handle_insert(_event, _measure, meta, _) do
-    payload =
-      case meta do
-        %{job: %{queue: queue}} ->
-          [%{queue: queue}]
-
-        %{jobs: jobs} ->
-          for %{queue: queue} <- jobs, uniq: true, do: %{queue: queue}
-
-        _ ->
-          []
-      end
-
-    Notifier.notify(meta.conf, :insert, payload)
   end
 
   defp stage_and_notify(true = _leader, state) do

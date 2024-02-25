@@ -5,7 +5,7 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite] do
     alias Ecto.Adapters.SQL.Sandbox
     alias Ecto.Multi
     alias Oban.Engines.Lite
-    alias Oban.TelemetryHandler
+    alias Oban.{Notifier, TelemetryHandler}
 
     @engine engine
     @repo if engine == Lite, do: LiteRepo, else: Repo
@@ -28,6 +28,16 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite] do
         assert {:ok, job} = Oban.insert(name, Worker.new(%{ref: 1}))
 
         assert_receive {:event, [:insert_job, :stop], _, %{job: ^job, opts: []}}
+      end
+
+      test "broadcasting an insert event", %{name: name} do
+        Notifier.listen(name, :insert)
+
+        Oban.insert(name, Worker.new(%{action: "OK", ref: 0}, queue: :alpha))
+        Oban.insert(name, Worker.new(%{action: "OK", ref: 0}, queue: :gamma, schedule_in: 1))
+
+        assert_received {:notification, :insert, %{"queue" => "alpha"}}
+        refute_received {:notification, :insert, %{"queue" => "gamma"}}
       end
 
       @tag :unique
@@ -360,6 +370,19 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite] do
         assert_raise Ecto.InvalidChangesetError, fn ->
           Oban.insert_all(name, changesets)
         end
+      end
+
+      test "broadcasting an insert event for all queues", %{name: name} do
+        Notifier.listen(name, :insert)
+
+        Oban.insert_all(name, [
+          Worker.new(%{action: "OK", ref: 1}, queue: :gamma),
+          Worker.new(%{action: "OK", ref: 2}, queue: :gamma),
+          Worker.new(%{action: "OK", ref: 3}, queue: :delta)
+        ])
+
+        assert_receive {:notification, :insert, %{"queue" => "gamma"}}
+        assert_receive {:notification, :insert, %{"queue" => "delta"}}
       end
     end
 
