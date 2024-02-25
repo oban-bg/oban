@@ -45,22 +45,10 @@ defmodule Oban.StagerTest do
     assert %{staged_count: _, staged_jobs: []} = meta
   end
 
-  test "dispatching directly to registered producers in local mode" do
-    name = start_supervised_oban!(stage_interval: 5, notifier: Oban.Notifiers.Postgres)
-
-    ping_sonar(name)
-
-    with {:via, _, {_, prod_name}} <- Oban.Registry.via(name, {:producer, "staging_test"}) do
-      Registry.register(Oban.Registry, prod_name, nil)
-    end
-
-    assert_receive {:notification, :insert, %{"queue" => "staging_test"}}
-  end
-
   test "switching to local mode without functional pubsub" do
     :telemetry_test.attach_event_handlers(self(), [[:oban, :stager, :switch]])
 
-    [stage_interval: 5, notifier: Oban.Notifiers.Postgres]
+    [stage_interval: 5, notifier: {Oban.Notifiers.Isolated, connected: false}]
     |> start_supervised_oban!()
     |> ping_sonar()
 
@@ -81,6 +69,23 @@ defmodule Oban.StagerTest do
     |> ping_sonar()
 
     assert_receive {[:oban, :stager, :switch], _, %{}, %{mode: :local}}
+  end
+
+  test "dispatching directly to registered producers in local mode" do
+    name =
+      start_supervised_oban!(
+        stage_interval: 5,
+        notifier: Oban.Notifiers.Isolated,
+        peer: {Oban.Peers.Isolated, leader?: false}
+      )
+
+    ping_sonar(name)
+
+    with {:via, _, {_, prod_name}} <- Oban.Registry.via(name, {:producer, "staging_test"}) do
+      Registry.register(Oban.Registry, prod_name, nil)
+    end
+
+    assert_receive {:notification, :insert, %{"queue" => "staging_test"}}
   end
 
   defp ping_sonar(name) do

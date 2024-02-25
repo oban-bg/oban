@@ -7,7 +7,7 @@ defmodule Oban.Notifiers.Isolated do
 
   alias Oban.Notifier
 
-  defstruct [:conf, listeners: %{}]
+  defstruct [:conf, connected: true, listeners: %{}]
 
   @impl Notifier
   def start_link(opts) do
@@ -28,7 +28,7 @@ defmodule Oban.Notifiers.Isolated do
 
   @impl Notifier
   def notify(server, channel, payload) do
-    with {:ok, state} <- GenServer.call(server, :get_state) do
+    with {:ok, %{connected: true} = state} <- GenServer.call(server, :get_state) do
       for {pid, channels} <- state.listeners, message <- payload, channel in channels do
         Notifier.relay(state.conf, [pid], channel, message)
       end
