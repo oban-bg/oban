@@ -15,17 +15,19 @@ defmodule Oban.Plugins.Cron do
 
   Schedule various jobs using `{expr, worker}` and `{expr, worker, opts}` syntaxes:
 
-      config :my_app, Oban,
-        plugins: [
-          {Oban.Plugins.Cron,
-           crontab: [
-             {"* * * * *", MyApp.MinuteWorker},
-             {"0 * * * *", MyApp.HourlyWorker, args: %{custom: "arg"}},
-             {"0 0 * * *", MyApp.DailyWorker, max_attempts: 1},
-             {"0 12 * * MON", MyApp.MondayWorker, queue: :scheduled, tags: ["mondays"]},
-             {"@daily", MyApp.AnotherDailyWorker}
-           ]}
-        ]
+  ```elixir
+  config :my_app, Oban,
+    plugins: [
+      {Oban.Plugins.Cron,
+       crontab: [
+         {"* * * * *", MyApp.MinuteWorker},
+         {"0 * * * *", MyApp.HourlyWorker, args: %{custom: "arg"}},
+         {"0 0 * * *", MyApp.DailyWorker, max_attempts: 1},
+         {"0 12 * * MON", MyApp.MondayWorker, queue: :scheduled, tags: ["mondays"]},
+         {"@daily", MyApp.AnotherDailyWorker}
+       ]}
+    ]
+  ```
 
   ## Options
 
@@ -38,6 +40,16 @@ defmodule Oban.Plugins.Cron do
 
   [tz]: https://hexdocs.pm/tz
   [perjob]: Oban.html#module-periodic-jobs
+
+  ## Identifying Cron Jobs
+
+  Jobs inserted by the Cron plugin are marked with a `cron` flag and the _original_ expression is
+  stored as `cron_expr` in the job's `meta` field. For example, the meta for a `@daily` cron job
+  would look like this:
+
+  ```elixir
+  %Oban.Job{meta: %{"cron" => true, "cron_expr" => "@daily"}}
+  ```
 
   ## Instrumenting with Telemetry
 
@@ -181,8 +193,8 @@ defmodule Oban.Plugins.Cron do
   defp parse_crontab(%State{crontab: crontab} = state) do
     parsed =
       Enum.map(crontab, fn
-        {expression, worker} -> {Expression.parse!(expression), worker, []}
-        {expression, worker, opts} -> {Expression.parse!(expression), worker, opts}
+        {expr, worker} -> {expr, Expression.parse!(expr), worker, []}
+        {expr, worker, opts} -> {expr, Expression.parse!(expr), worker, opts}
       end)
 
     %{state | crontab: parsed}
@@ -192,8 +204,8 @@ defmodule Oban.Plugins.Cron do
     Validation.validate(:crontab, crontab, &validate_crontab/1)
   end
 
-  defp validate_crontab({expression, worker, opts}) do
-    with {:ok, _} <- parse(expression) do
+  defp validate_crontab({expr, worker, opts}) do
+    with {:ok, _} <- parse(expr) do
       cond do
         not Code.ensure_loaded?(worker) ->
           {:error, "#{inspect(worker)} not found or can't be loaded"}
@@ -204,7 +216,7 @@ defmodule Oban.Plugins.Cron do
         not Keyword.keyword?(opts) ->
           {:error, "options must be a keyword list, got: #{inspect(opts)}"}
 
-        not build_changeset(worker, opts).valid? ->
+        not build_changeset(expr, worker, opts).valid? ->
           {:error, "expected valid job options, got: #{inspect(opts)}"}
 
         true ->
@@ -213,8 +225,8 @@ defmodule Oban.Plugins.Cron do
     end
   end
 
-  defp validate_crontab({expression, worker}) do
-    validate_crontab({expression, worker, []})
+  defp validate_crontab({expr, worker}) do
+    validate_crontab({expr, worker, []})
   end
 
   defp validate_crontab(invalid) do
@@ -234,7 +246,7 @@ defmodule Oban.Plugins.Cron do
   # Inserting Helpers
 
   defp discard_reboots(state) do
-    crontab = Enum.reject(state.crontab, fn {expr, _worker, _opts} -> expr.reboot? end)
+    crontab = Enum.reject(state.crontab, fn {_expr, parsed, _worker, _opts} -> parsed.reboot? end)
 
     %{state | crontab: crontab}
   end
@@ -243,8 +255,8 @@ defmodule Oban.Plugins.Cron do
     fun = fn ->
       {:ok, datetime} = DateTime.now(state.timezone)
 
-      for {expr, worker, opts} <- state.crontab, Expression.now?(expr, datetime) do
-        Oban.insert!(state.conf.name, build_changeset(worker, opts))
+      for {expr, parsed, worker, opts} <- state.crontab, Expression.now?(parsed, datetime) do
+        Oban.insert!(state.conf.name, build_changeset(expr, worker, opts))
       end
     end
 
@@ -261,10 +273,17 @@ defmodule Oban.Plugins.Cron do
     end)
   end
 
-  defp build_changeset(worker, opts) do
+  defp build_changeset(expr, worker, opts) do
     {args, opts} = Keyword.pop(opts, :args, %{})
 
-    worker.new(args, unique_opts(worker.__opts__(), opts))
+    meta = %{cron: true, cron_expr: expr}
+
+    opts =
+      worker.__opts__()
+      |> unique_opts(opts)
+      |> Keyword.update(:meta, meta, &Map.merge(&1, meta))
+
+    worker.new(args, opts)
   end
 
   # Make each job unique for 59 seconds to prevent double-enqueue if the node or scheduler

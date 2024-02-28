@@ -138,6 +138,21 @@ defmodule Oban.Plugins.CronTest do
     assert [1] == inserted_refs()
   end
 
+  test "cron schedules are injected into the enqueued job's meta" do
+    run_with_opts(
+      crontab: [
+        {"@reboot", Worker, args: worker_args(1)},
+        {"* * * * *", Worker, args: worker_args(2)}
+      ]
+    )
+
+    assert [{true, "* * * * *"}, {true, "@reboot"}] ==
+             Job
+             |> Repo.all()
+             |> Enum.map(fn %{meta: meta} -> {meta["cron"], meta["cron_expr"]} end)
+             |> Enum.sort()
+  end
+
   test "reboot jobs are enqueued on startup" do
     run_with_opts(crontab: [{"@reboot", Worker, args: worker_args(1)}])
 
