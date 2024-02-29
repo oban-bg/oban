@@ -688,10 +688,22 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite] do
         job = insert!(name, %{ref: 1, sleep: 20, timeout: 5}, [])
 
         assert_receive {:started, 1}
-        refute_receive {:ok, 1}
+        refute_receive {:ok, 1}, 20
 
         assert %Job{state: "retryable", errors: [%{"error" => error}]} = reload(name, job)
         assert error == "** (Oban.TimeoutError) Oban.Integration.Worker timed out after 5ms"
+      end
+
+      test "applying custom backoff after uncaught exits", %{name: name} do
+        job = insert!(name, %{ref: 1, backoff: 1, sleep: 20, timeout: 1}, attempt: 10)
+
+        assert_receive {:started, 1}
+
+        with_backoff(fn ->
+          assert %Job{state: "retryable", scheduled_at: scheduled_at} = reload(name, job)
+
+          assert_in_delta 1, DateTime.diff(scheduled_at, DateTime.utc_now()), 1
+        end)
       end
     end
 

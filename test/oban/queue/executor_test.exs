@@ -13,7 +13,7 @@ defmodule Oban.Queue.ExecutorTest do
     def perform(%{args: %{"mode" => "snooze_zero"}}), do: {:snooze, 0}
     def perform(%{args: %{"mode" => "snooze"}}), do: {:snooze, 1}
     def perform(%{args: %{"mode" => "raise"}}), do: raise(ArgumentError)
-    def perform(%{args: %{"mode" => "catch"}}), do: throw(:no_reason)
+    def perform(%{args: %{"mode" => "catch"}}), do: throw({:error, :no_reason})
     def perform(%{args: %{"mode" => "error"}}), do: {:error, "no reason"}
     def perform(%{args: %{"mode" => "sleep"}}), do: Process.sleep(10)
     def perform(%{args: %{"mode" => "discard"}}), do: {:discard, :no_reason}
