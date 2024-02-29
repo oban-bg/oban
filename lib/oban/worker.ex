@@ -281,7 +281,7 @@ defmodule Oban.Worker do
   Defaults to an exponential algorithm with a minimum delay of 15 seconds and a small amount of
   jitter.
   """
-  @callback backoff(job :: Job.t()) :: pos_integer()
+  @callback backoff(job :: Job.t()) :: non_neg_integer()
 
   @doc """
   Set a job's maximum execution time in milliseconds.
