@@ -74,6 +74,41 @@ args
 |> Oban.insert()
 ```
 
+## v2.17.6 — 2024-03-01
+
+### Enhancements
+
+- [Cron] Include cron indicator and original cron expression in meta.
+
+  When the Cron plugin inserts jobs the original, unnormalized cron expression is now stored in a
+  job's meta under the `cron_expr` key. For compatibility with Pro's `DynamicCron`, meta also has
+  `cron: true` injected.
+
+- [Worker] Change `backoff/1` spec to allow immediate rescheduling by returning `0`
+
+  The callback now specifies a `non_neg_integer` to allow retrying 0 seconds into the future. This
+  matches the abilitiy to use `{:snooze, 0}`.
+
+### Bug Fixes
+
+- [Notifier] Revert using single connection to deliver notices.
+
+  Production use of the single notifier connection in various environments showed timeouts from
+  bottlenecks in the single connection could crash the connection and start new ones, leaving
+  extra idle processes. In addition, Use interpolated NOTIFY instead of pg_notify with a JSON
+  argument added parsing load because it could no longer use prepared statements.
+
+- [Worker] Apply custom backoff on timeout and unhandled exit
+
+  A worker's custom `backoff/1` wasn't applied after a `TimeoutError` or unhandled exit. That's
+  because the producer stores the executor struct _before_ resolving the worker module. Now the
+  module is resolved again to ensure custom `backoff/1` are used.
+
+- [Job] Revert setting the default priority key in Job schema.
+
+  The Ecto default was removed to allow overriding the default in the database and it was
+  purposefully removed.
+
 ## v2.17.5 — 2024-02-25
 
 ### Enhancements
