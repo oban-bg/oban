@@ -51,7 +51,7 @@ if Code.ensure_loaded?(Postgrex) do
       name = Keyword.fetch!(opts, :name)
       conf = Keyword.fetch!(opts, :conf)
 
-      call_opts = [conf: conf]
+      state = struct!(__MODULE__, conf: conf)
 
       conn_opts =
         conf
@@ -60,7 +60,7 @@ if Code.ensure_loaded?(Postgrex) do
         |> Keyword.put_new(:auto_reconnect, true)
         |> Keyword.put_new(:sync_connect, false)
 
-      Simple.start_link(__MODULE__, call_opts, conn_opts)
+      Simple.start_link(__MODULE__, state, conn_opts)
     end
 
     @impl Oban.Notifier
@@ -75,8 +75,10 @@ if Code.ensure_loaded?(Postgrex) do
 
     ## Server Callbacks
 
-    def init(opts) do
-      {:ok, struct!(__MODULE__, opts)}
+    def init(state) do
+      put_state(state)
+
+      {:ok, state}
     end
 
     @impl Oban.Notifier
@@ -88,7 +90,17 @@ if Code.ensure_loaded?(Postgrex) do
 
     # This is a Notifier callback, but it has the same name and arity as SimpleConnection
     def notify(server, channel, payload) when is_atom(channel) do
-      Simple.call(server, {:notify, channel, payload})
+      with %{conf: conf} <- get_state(server) do
+        full_channel = to_full_channel(channel, conf)
+
+        Repo.query(
+          conf,
+          "SELECT pg_notify($1, payload) FROM json_array_elements_text($2::json) AS payload",
+          [full_channel, payload]
+        )
+
+        :ok
+      end
     end
 
     def handle_connect(%{channels: channels} = state) do
@@ -108,13 +120,6 @@ if Code.ensure_loaded?(Postgrex) do
 
     def handle_disconnect(%{} = state) do
       {:noreply, %{state | connected?: false}}
-    end
-
-    def handle_call({:notify, channel, payload}, from, state) do
-      channel = to_full_channel(channel, state.conf)
-      notifies = Enum.map_join(payload, " \n", &~s(NOTIFY "#{channel}", '#{&1}';))
-
-      query(notifies, %{state | from: from})
     end
 
     def handle_call({:listen, pid, channels}, from, state) do
@@ -184,6 +189,19 @@ if Code.ensure_loaded?(Postgrex) do
     end
 
     ## Helpers
+
+    defp put_state(state) do
+      Registry.update_value(Oban.Registry, {state.conf.name, Oban.Notifier}, fn _ -> state end)
+    end
+
+    defp get_state(server) do
+      [name] = Registry.keys(Oban.Registry, server)
+
+      case Oban.Registry.lookup(name) do
+        {_pid, state} -> state
+        nil -> :error
+      end
+    end
 
     defp query(statement, state) do
       {:query, ["DO $$BEGIN ", statement, " END$$"], state}

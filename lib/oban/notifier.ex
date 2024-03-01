@@ -100,7 +100,7 @@ defmodule Oban.Notifier do
   @doc """
   Broadcast a notification to all subscribers of a channel.
   """
-  @callback notify(name_or_conf(), channel(), payload()) :: :ok
+  @callback notify(name_or_conf(), channel(), payload()) :: :ok | {:error, any()}
 
   @doc false
   @spec child_spec(Keyword.t()) :: Supervisor.child_spec()
