@@ -906,12 +906,20 @@ defmodule Oban do
   Pause all queues on a specific node:
 
       Oban.pause_all_queues(node: "worker.1")
+
+  Pause all queues for an alternative instance name:
+
+      Oban.pause_all_queues(MyOban)
   """
   @doc since: "2.17.0"
   @spec pause_all_queues(name(), opts :: [local_only: boolean(), node: String.t()]) :: :ok
-  def pause_all_queues(name \\ __MODULE__, opts \\ []) do
+  def pause_all_queues(name, opts) do
     pause_queue(name, Keyword.put(opts, :queue, :*))
   end
+
+  @doc false
+  def pause_all_queues(opts) when is_list(opts), do: pause_all_queues(__MODULE__, opts)
+  def pause_all_queues(name), do: pause_all_queues(name, [])
 
   @doc """
   Resume executing jobs in a paused queue.
@@ -933,17 +941,14 @@ defmodule Oban do
   Resume a paused default queue:
 
       Oban.resume_queue(queue: :default)
-      :ok
 
   Resume the default queue, but only on the local node:
 
       Oban.resume_queue(queue: :default, local_only: true)
-      :ok
 
   Resume the default queue only on a particular node:
 
       Oban.resume_queue(queue: :default, node: "worker.1")
-      :ok
   """
   @doc since: "0.2.0"
   @spec resume_queue(name(), opts :: [queue_option()]) :: :ok
@@ -975,12 +980,20 @@ defmodule Oban do
   Resume all queues on a specific node:
 
       Oban.resume_all_queues(node: "worker.1")
+
+  Resume all queues for an alternative instance name:
+
+      Oban.resume_all_queues(MyOban)
   """
   @doc since: "2.17.0"
   @spec resume_all_queues(name(), opts :: [local_only: boolean(), node: String.t()]) :: :ok
-  def resume_all_queues(name \\ __MODULE__, opts \\ []) do
+  def resume_all_queues(name, opts) do
     resume_queue(name, Keyword.put(opts, :queue, :*))
   end
+
+  @doc false
+  def resume_all_queues(opts) when is_list(opts), do: resume_all_queues(__MODULE__, opts)
+  def resume_all_queues(name), do: resume_all_queues(name, [])
 
   @doc """
   Scale the concurrency for a queue.
