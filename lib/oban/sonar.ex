@@ -19,7 +19,13 @@ defmodule Oban.Sonar do
   def start_link(opts) do
     {name, opts} = Keyword.pop(opts, :name)
 
-    GenServer.start_link(__MODULE__, struct!(State, opts), name: name)
+    conf = Keyword.fetch!(opts, :conf)
+
+    if conf.testing != :disabled do
+      :ignore
+    else
+      GenServer.start_link(__MODULE__, struct!(State, opts), name: name)
+    end
   end
 
   @impl GenServer
