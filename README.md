@@ -236,9 +236,10 @@ concurrently in each queue. Some additional guidelines:
 Worker modules do the work of processing a job. At a minimum they must define a
 `perform/1` function, which is called with an `%Oban.Job{}` struct.
 
-Note that the `args` field of the job struct will _always_ have string keys,
-regardless of the key type when the job was enqueued. The `args` are stored as
-`json` and the serialization process automatically stringifies all keys.
+Note that the `args` field of the job struct will _always_ have string keys, regardless of the key
+type when the job was enqueued. The `args` are stored as JSON and the serialization process
+automatically stringifies all keys. Also, because `args` are always encoded as JSON, you must
+ensure that all values are serializable, otherwise you'll have encoding errors when inserting jobs.
 
 Define a worker to process jobs in the `events` queue:
 
