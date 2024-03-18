@@ -124,6 +124,22 @@ defmodule Oban.Telemetry do
   * `:payload` - the decoded payload that was sent
   * `:kind`, `:reason`, `:stacktrace` — see the explanation in job metadata above
 
+
+  Oban also emits an event when the notifier's sonar, responsible for tracking notifier
+  connectivity, switches connectivity status:
+
+  * `[:oban, :notifier, :switch]`
+
+  | event        | measures  | metadata           |
+  | ------------ | --------- | ------------------ |
+  | `:switch`    |           | `:conf`, `:status` |
+
+  ### Metadata
+
+  * `:conf` — see the explanation in metadata above
+  * `:status` — one of `:isolated`, `:solitary`, or `:clustered`, see
+    `Oban.Notifier.status/1` for details
+
   ## Plugin Events
 
   All the Oban plugins emit telemetry events under the `[:oban, :plugin, *]` pattern (where `*` is
@@ -183,23 +199,6 @@ defmodule Oban.Telemetry do
 
   * `:conf` — see the explanation in metadata above
   * `:mode` — either `local` for polling mode or `global` in the more efficient pub-sub mode
-
-  ## Notifier Events
-
-  Oban emits an event when the notifier's sonar, responsible for tracking notifier connectivity,
-  switches connectivity status:
-
-  * `[:oban, :notifier, :switch]`
-
-  | event        | measures  | metadata           |
-  | ------------ | --------- | ------------------ |
-  | `:switch`    |           | `:conf`, `:status` |
-
-  ### Metadata
-
-  * `:conf` — see the explanation in metadata above
-  * `:status` — one of `:isolated`, `:solitary`, or `:clustered`, see
-    `Oban.Notifier.status/1` for details
 
   ## Default Logger
 
