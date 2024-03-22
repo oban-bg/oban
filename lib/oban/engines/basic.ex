@@ -91,6 +91,7 @@ defmodule Oban.Engines.Basic do
       |> select([:id])
       |> where([j], j.state == "available")
       |> where([j], j.queue == ^meta.queue)
+      |> where([j, _], j.attempt < j.max_attempts)
       |> order_by(asc: :priority, asc: :scheduled_at, asc: :id)
       |> limit(^demand)
       |> lock("FOR UPDATE SKIP LOCKED")
@@ -107,7 +108,6 @@ defmodule Oban.Engines.Basic do
       |> with_cte("subset", as: ^subset_query, materialized: true)
       |> join(:inner, [j], x in fragment(~s("subset")), on: true)
       |> where([j, x], j.id == x.id)
-      |> where([j, _], j.attempt < j.max_attempts)
       |> select([j, _], j)
 
     updates = [
