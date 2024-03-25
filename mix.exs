@@ -2,7 +2,7 @@ defmodule Oban.MixProject do
   use Mix.Project
 
   @source_url "https://github.com/sorentwo/oban"
-  @version "2.17.6"
+  @version "2.17.7"
 
   def project do
     [

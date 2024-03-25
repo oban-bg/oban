@@ -74,6 +74,20 @@ args
 |> Oban.insert()
 ```
 
+## v2.17.7 — 2024-03-25
+
+### Bug Fixes
+
+- [Notifier] Prevent Sonar from running in `:testing` modes.
+
+  Sonar has no purpose during tests, and it can cause sandbox issues when tests run with the
+  Postgres notifier.
+
+- [Oban] Correctly handle pause and resume all with opts.
+
+  The primary clause had two default arguments and it was impossible to call `pause_all_queues/1`
+  or `resume_all_queues/1` with opts and no name.
+
 ## v2.17.6 — 2024-03-01
 
 ### Enhancements
