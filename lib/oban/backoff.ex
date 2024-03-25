@@ -102,13 +102,15 @@ defmodule Oban.Backoff do
     with_retry(fun, retries, 1)
   end
 
+  @db_errors [DBConnection.ConnectionError, Postgrex.Error]
+
   defp with_retry(fun, retries, attempt) do
     fun.()
   rescue
-    error in [DBConnection.ConnectionError, Postgrex.Error] ->
+    error in @db_errors ->
       retry_or_raise(fun, retries, attempt, :error, error, __STACKTRACE__)
   catch
-    :exit, {:timeout, _} = reason ->
+    :exit, {error, _} = reason when error in [:timeout | @db_errors] ->
       retry_or_raise(fun, retries, attempt, :exit, reason, __STACKTRACE__)
   end
 
