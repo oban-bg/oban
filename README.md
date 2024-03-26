@@ -856,7 +856,7 @@ Some of these services support reporting Oban errors out of the box:
   - AppSignal - [Oban integration documentation](https://docs.appsignal.com/elixir/integrations/oban.html)
 
 [tele]: https://hexdocs.pm/telemetry
-[honeybadger]: https://www.honeybadger.io/s
+[honeybadger]: https://www.honeybadger.io
 
 ## Instance and Database Isolation
 
