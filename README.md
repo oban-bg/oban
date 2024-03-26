@@ -827,7 +827,7 @@ metadata see docs for the `Oban.Telemetry` module.
 ### Reporting Errors
 
 Another great use of execution data is error reporting. Here is an example of
-integrating with [AppSignal][appsignal] to report job failures:
+integrating with [Honeybadger][honeybadger] to report job failures:
 
 ```elixir
 defmodule MyApp.ErrorReporter do
@@ -841,28 +841,22 @@ defmodule MyApp.ErrorReporter do
   end
 
   def handle_event([:oban, :job, :exception], measure, meta, _) do
-    Appsignal.send_error(meta.reason, meta.stacktrace)
+    Honeybadger.notify(meta.reason, stacktrace: meta.stacktrace)
   end
 end
 
 MyApp.ErrorReporter.attach()
 ```
 
-You can use exception events to send error reports to Sentry, Honeybadger, Rollbar, or any other application monitoring platform.
+You can use exception events to send error reports to Sentry, AppSignal, Honeybadger, Rollbar, or any other application monitoring platform.
 
-[Sentry] in particular supports reporting Oban errors [out of the box](https://docs.sentry.io/platforms/elixir/integrations/oban/):
+Some of these services support reporting Oban errors out of the box:
 
-```elixir
-config :sentry,
-  # ...,
-  integrations: [
-    oban: [capture_errors: true,]
-  ]
-```
+  - Sentry — [Oban integration documentation](https://docs.sentry.io/platforms/elixir/integrations/oban)
+  - AppSignal - [Oban integration documentation](https://docs.appsignal.com/elixir/integrations/oban.html)
 
 [tele]: https://hexdocs.pm/telemetry
-[sentry]: https://sentry.io
-[appsignal]: https://www.appsignal.com/
+[honeybadger]: https://www.honeybadger.io/s
 
 ## Instance and Database Isolation
 
