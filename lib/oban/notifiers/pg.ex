@@ -79,7 +79,7 @@ defmodule Oban.Notifiers.PG do
 
     case Oban.Registry.lookup(name) do
       {_pid, state} -> state
-      nil -> :error
+      nil -> {:error, RuntimeError.exception("no notifier running as #{inspect(name)}")}
     end
   end
 

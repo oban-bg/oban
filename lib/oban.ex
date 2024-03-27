@@ -20,17 +20,20 @@ defmodule Oban do
   """
   @type name :: term()
 
+  @type oban_node :: String.t()
+
   @type queue_name :: atom() | binary()
 
   @type queue_option ::
-          {:queue, queue_name()}
-          | {:limit, pos_integer()}
-          | {:local_only, boolean()}
-          | {:node, String.t()}
+          {:local_only, boolean()}
+          | {:node, oban_node()}
+          | {:queue, queue_name()}
+
+  @type queue_all_option :: {:local_only, boolean()} | {:node, oban_node()}
 
   @type queue_state :: %{
           :limit => pos_integer(),
-          :node => binary(),
+          :node => oban_node(),
           :paused => boolean(),
           :queue => queue_name(),
           :running => [pos_integer()],
@@ -45,7 +48,7 @@ defmodule Oban do
           | {:get_dynamic_repo, nil | (-> pid() | atom())}
           | {:log, false | Logger.level()}
           | {:name, name()}
-          | {:node, String.t()}
+          | {:node, oban_node()}
           | {:notifier, module() | {module(), Keyword.t()}}
           | {:peer, false | module() | {module(), Keyword.t()}}
           | {:plugins, false | [module() | {module() | Keyword.t()}]}
@@ -825,7 +828,7 @@ defmodule Oban do
       :ok
   """
   @doc since: "0.12.0"
-  @spec start_queue(name(), opts :: Keyword.t()) :: :ok
+  @spec start_queue(name(), opts :: Keyword.t()) :: :ok | {:error, Exception.t()}
   def start_queue(name \\ __MODULE__, [_ | _] = opts) do
     conf = config(name)
 
@@ -877,7 +880,7 @@ defmodule Oban do
       :ok
   """
   @doc since: "0.2.0"
-  @spec pause_queue(name(), opts :: [queue_option()]) :: :ok
+  @spec pause_queue(name(), opts :: [queue_option()]) :: :ok | {:error, Exception.t()}
   def pause_queue(name \\ __MODULE__, [_ | _] = opts) do
     validate_queue_opts!(opts, [:queue, :local_only, :node])
     validate_queue_exists!(name, opts)
@@ -912,7 +915,7 @@ defmodule Oban do
       Oban.pause_all_queues(MyOban)
   """
   @doc since: "2.17.0"
-  @spec pause_all_queues(name(), opts :: [local_only: boolean(), node: String.t()]) :: :ok
+  @spec pause_all_queues(name(), opts :: [queue_all_option()]) :: :ok | {:error, Exception.t()}
   def pause_all_queues(name, opts) do
     pause_queue(name, Keyword.put(opts, :queue, :*))
   end
@@ -951,7 +954,7 @@ defmodule Oban do
       Oban.resume_queue(queue: :default, node: "worker.1")
   """
   @doc since: "0.2.0"
-  @spec resume_queue(name(), opts :: [queue_option()]) :: :ok
+  @spec resume_queue(name(), opts :: [queue_option()]) :: :ok | {:error, Exception.t()}
   def resume_queue(name \\ __MODULE__, [_ | _] = opts) do
     validate_queue_opts!(opts, [:queue, :local_only, :node])
     validate_queue_exists!(name, opts)
@@ -986,7 +989,7 @@ defmodule Oban do
       Oban.resume_all_queues(MyOban)
   """
   @doc since: "2.17.0"
-  @spec resume_all_queues(name(), opts :: [local_only: boolean(), node: String.t()]) :: :ok
+  @spec resume_all_queues(name(), opts :: [queue_all_option()]) :: :ok | {:error, Exception.t()}
   def resume_all_queues(name, opts) do
     resume_queue(name, Keyword.put(opts, :queue, :*))
   end
@@ -1037,7 +1040,8 @@ defmodule Oban do
       :ok
   """
   @doc since: "0.2.0"
-  @spec scale_queue(name(), opts :: [queue_option()]) :: :ok
+  @spec scale_queue(name(), opts :: [queue_option() | {:limit, pos_integer()}]) ::
+          :ok | {:error, Exception.t()}
   def scale_queue(name \\ __MODULE__, [_ | _] = opts) do
     conf = config(name)
 
@@ -1094,7 +1098,7 @@ defmodule Oban do
       :ok
   """
   @doc since: "0.12.0"
-  @spec stop_queue(name(), opts :: [queue_option()]) :: :ok
+  @spec stop_queue(name(), opts :: [queue_option()]) :: :ok | {:error, Exception.t()}
   def stop_queue(name \\ __MODULE__, [_ | _] = opts) do
     validate_queue_opts!(opts, [:queue, :local_only, :node])
     validate_queue_exists!(name, opts)

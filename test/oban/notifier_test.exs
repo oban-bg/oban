@@ -3,7 +3,7 @@ for notifier <- [Oban.Notifiers.Isolated, Oban.Notifiers.PG, Oban.Notifiers.Post
     use Oban.Case, async: notifier != Oban.Notifiers.Postgres
 
     alias Ecto.Adapters.SQL.Sandbox
-    alias Oban.Notifier
+    alias Oban.{Config, Notifier}
 
     @notifier notifier
 
@@ -17,6 +17,12 @@ for notifier <- [Oban.Notifiers.Isolated, Oban.Notifiers.PG, Oban.Notifiers.Post
 
           assert_receive {:notification, :signal, %{"incoming" => "message"}}
         end)
+      end
+
+      test "returning an error without a live notifier process" do
+        conf = Config.new(repo: Repo, notifier: @notifier)
+
+        assert {:error, %RuntimeError{}} = Notifier.notify(conf, :signal, %{})
       end
 
       test "notifying with complex types" do

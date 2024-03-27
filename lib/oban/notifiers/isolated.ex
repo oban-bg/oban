@@ -32,9 +32,9 @@ defmodule Oban.Notifiers.Isolated do
       for {pid, channels} <- state.listeners, message <- payload, channel in channels do
         Notifier.relay(state.conf, [pid], channel, message)
       end
-
-      :ok
     end
+
+    :ok
   end
 
   @impl GenServer

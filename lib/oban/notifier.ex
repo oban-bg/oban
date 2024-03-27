@@ -100,7 +100,7 @@ defmodule Oban.Notifier do
   @doc """
   Broadcast a notification to all subscribers of a channel.
   """
-  @callback notify(name_or_conf(), channel(), payload()) :: :ok | {:error, any()}
+  @callback notify(name_or_conf(), channel(), payload()) :: :ok | {:error, Exception.t()}
 
   @doc false
   @spec child_spec(Keyword.t()) :: Supervisor.child_spec()
@@ -186,7 +186,7 @@ defmodule Oban.Notifier do
 
       Oban.Notifier.notify(MyOban, :my_channel, %{message: "hi!"})
   """
-  @spec notify(name_or_conf(), channel(), payload()) :: :ok
+  @spec notify(name_or_conf(), channel(), payload()) :: :ok | {:error, Exception.t()}
   def notify(name_or_conf \\ Oban, channel, payload) when is_atom(channel) do
     conf = if is_struct(name_or_conf, Config), do: name_or_conf, else: Oban.config(name_or_conf)
     meta = %{conf: conf, channel: channel, payload: payload}
@@ -197,9 +197,7 @@ defmodule Oban.Notifier do
         |> List.wrap()
         |> Enum.map(&encode/1)
 
-      apply_callback(conf, :notify, [channel, payload])
-
-      {:ok, meta}
+      {apply_callback(conf, :notify, [channel, payload]), meta}
     end)
   end
 
@@ -271,9 +269,13 @@ defmodule Oban.Notifier do
 
     %{name: name, notifier: {notifier, _}} = conf
 
-    pid = Registry.whereis(name, __MODULE__)
+    case Registry.whereis(name, __MODULE__) do
+      pid when is_pid(pid) ->
+        apply(notifier, callback, [pid | args])
 
-    apply(notifier, callback, [pid | args])
+      _ ->
+        {:error, RuntimeError.exception("no notifier running for instance #{inspect(name)}")}
+    end
   end
 
   defp normalize_channels(channels) do
