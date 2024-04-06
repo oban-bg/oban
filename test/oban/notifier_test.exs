@@ -20,7 +20,7 @@ for notifier <- [Oban.Notifiers.Isolated, Oban.Notifiers.PG, Oban.Notifiers.Post
       end
 
       test "returning an error without a live notifier process" do
-        conf = Config.new(repo: Repo, notifier: @notifier)
+        conf = Config.new(name: make_ref(), repo: Repo, notifier: @notifier)
 
         assert {:error, %RuntimeError{}} = Notifier.notify(conf, :signal, %{})
       end
