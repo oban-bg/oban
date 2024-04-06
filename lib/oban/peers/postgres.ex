@@ -112,13 +112,13 @@ defmodule Oban.Peers.Postgres do
 
     {:noreply, schedule_election(state)}
   rescue
-    error in [Postgrex.Error] ->
-      if error.postgres.code == :undefined_table do
-        Logger.warning("""
+    error in [DBConnection.ConnectionError, Postgrex.Error] ->
+      if match?(%{postgres: %{code: :undefined_table}}, error) do
+        Logger.error("""
         The `oban_peers` table is undefined and leadership is disabled.
 
         Run migrations up to v11 to restore peer leadership. In the meantime, distributed plugins
-        (e.g. Cron, Pruner, Stager) will not run on any nodes.
+        (e.g. Cron, Pruner) will not run on any nodes.
         """)
       end
 
