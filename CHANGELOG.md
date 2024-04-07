@@ -74,6 +74,36 @@ args
 |> Oban.insert()
 ```
 
+## v2.17.8 — 2024-04-07
+
+### Enhancements
+
+- [Backoff] Backoff retry on DBConnection and Postgrex errors from GenServer calls.
+
+  GenServer calls that result in a `ConnectionError` or `Postgrex.Error` should also be caught and
+  retried rather than crashing on the first attempt.
+
+### Bug Fixes
+
+- [Notifier] Check for a live notifier process and propagate notify errors.
+
+  The `Notifier.notify/1` spec showed it would always return `:ok`, but that wasn't the case when
+  the notifier was disconnected or the process was no longer running. Now an error tuple is
+  returned when a notifier process isn't running.
+
+  This situation happened most frequently during shutdown, particularly from external usage of the
+  Notifier like an application or the `oban_met` package.
+
+  In addition, the errors bubble up through top level `Oban` functions like `scale_queue/1`,
+  `pause_queue/1`, etc. to indicate that the operation can't actually succeed.
+
+- [Peers.Postgres] Rescue `DBConnection.ConnectionError` in peer leadership check.
+
+  Previously, only `Postgrex.Error` exceptions were rescued and other standard connection errors
+  were ignored, crashing the Peer. Because leadership is checked immediately after the peer
+  initializes, any connection issues would trigger a crash loop that could bring down the rest of
+  the supervision tree.
+
 ## v2.17.7 — 2024-03-25
 
 ### Bug Fixes
