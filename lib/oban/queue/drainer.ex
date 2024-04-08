@@ -9,6 +9,8 @@ defmodule Oban.Queue.Drainer do
   @infinite 100_000_000
 
   def drain(%Config{} = conf, [_ | _] = opts) do
+    Process.put(:oban_draining, true)
+
     args =
       opts
       |> Map.new()
@@ -19,6 +21,8 @@ defmodule Oban.Queue.Drainer do
       |> Map.update!(:queue, &to_string/1)
 
     drain(conf, %{cancelled: 0, discard: 0, failure: 0, snoozed: 0, success: 0}, args)
+  after
+    Process.delete(:oban_draining)
   end
 
   defp stage_scheduled(conf, queue, with_scheduled) do
