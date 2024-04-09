@@ -1,6 +1,16 @@
 defmodule Oban.Plugins.Pruner do
   @moduledoc """
-  Periodically delete completed, cancelled and discarded jobs based on age.
+  Periodically delete `completed`, `cancelled` and `discarded` jobs based on their age.
+
+  Pruning is critical for maintaining table size and continued responsive job processing. It
+  is recommended for all production applications.
+
+  > #### 🌟 DynamicPruner {: .info}
+  >
+  > This plugin limited to a fixed interval and a single `max_age` check for all jobs. To prune
+  > on a cron-style schedule, retain jobs by a limit or age, or provide overrides for specific
+  > queues, workers, and job states; see Oban Pro's
+  > [DynamicPruner](https://getoban.pro/docs/pro/Oban.Pro.Plugins.DynamicPruner.html).
 
   ## Using the Plugin
 
@@ -16,11 +26,6 @@ defmodule Oban.Plugins.Pruner do
       config :my_app, Oban,
         plugins: [{Oban.Plugins.Pruner, max_age: 300}],
         ...
-
-  > #### 🌟 DynamicPruner {: .info}
-  >
-  > To prune on a cron-style schedule, retain jobs by a limit, or provide overrides for specific
-  > queues, workers, and job states; see Oban Pro's [DynamicPruner](https://getoban.pro/docs/pro/Oban.Pro.Plugins.DynamicPruner.html).
 
   ## Options
 

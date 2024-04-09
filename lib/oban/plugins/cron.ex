@@ -5,11 +5,12 @@ defmodule Oban.Plugins.Cron do
   This plugin registers workers a cron-like schedule and enqueues jobs automatically. Periodic
   jobs are declared as a list of `{cron, worker}` or `{cron, worker, options}` tuples.
 
+
   > #### 🌟 DynamicCron {: .info}
   >
-  > This plugin only loads the crontab statically, at boot time. To configure cron schedules
-  > dynamically at runtime, across your entire cluster, see the `DynamicCron` plugin in [Oban
-  > Pro](https://getoban.pro/docs/pro/Oban.Pro.Plugins.DynamicCron.html).
+  > This plugin only loads the crontab statically, at boot time. To configure cron scheduling at
+  > runtime, globally, across an entire cluster with scheduling guarantees and timezone overrides,
+  > see the `DynamicCron` plugin in [Oban Pro](https://getoban.pro/docs/pro/Oban.Pro.Plugins.DynamicCron.html).
 
   ## Using the Plugin
 
