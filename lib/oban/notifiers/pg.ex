@@ -50,7 +50,7 @@ defmodule Oban.Notifiers.PG do
   @impl Notifier
   def notify(server, channel, payload) do
     with %{conf: conf} <- get_state(server) do
-      pids = :pg.get_members(__MODULE__, conf.prefix)
+      pids = :pg.get_members(__MODULE__, {conf.name, conf.prefix})
 
       for pid <- pids, message <- payload_to_messages(channel, payload) do
         send(pid, message)
@@ -65,7 +65,7 @@ defmodule Oban.Notifiers.PG do
     put_state(state)
 
     :pg.start_link(__MODULE__)
-    :pg.join(__MODULE__, state.conf.prefix, self())
+    :pg.join(__MODULE__, {state.conf.name, state.conf.prefix}, self())
 
     {:ok, state}
   end
