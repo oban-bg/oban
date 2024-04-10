@@ -18,6 +18,18 @@ defmodule Oban.Notifiers.PG do
     ...
   ```
 
+  By default, all Oban instances using the same `prefix` option will receive notifications from
+  each other. You can use the `namespace` option to separate instances that are in the same
+  cluster _without_ changing the prefix:
+
+  ```elixir
+  config :my_app, Oban,
+    notifier: {Oban.Notifiers.PG, namespace: :custom_namespace}
+    ...
+  ```
+
+  The namespace may be any term.
+
   [pg]: https://www.erlang.org/doc/man/pg.html
   [de]: https://elixir-lang.org/getting-started/mix-otp/distributed-tasks.html#our-first-distributed-code
   """
@@ -28,11 +40,14 @@ defmodule Oban.Notifiers.PG do
 
   alias Oban.Notifier
 
-  defstruct [:conf, listeners: %{}]
+  defstruct [:conf, :namespace, listeners: %{}]
 
   @impl Notifier
   def start_link(opts) do
     {name, opts} = Keyword.pop(opts, :name)
+
+    conf = Keyword.fetch!(opts, :conf)
+    opts = Keyword.put_new(opts, :namespace, conf.prefix)
 
     GenServer.start_link(__MODULE__, struct!(__MODULE__, opts), name: name)
   end
@@ -49,8 +64,8 @@ defmodule Oban.Notifiers.PG do
 
   @impl Notifier
   def notify(server, channel, payload) do
-    with %{conf: conf} <- get_state(server) do
-      pids = :pg.get_members(__MODULE__, conf.prefix)
+    with %{namespace: namespace} <- get_state(server) do
+      pids = :pg.get_members(__MODULE__, namespace)
 
       for pid <- pids, message <- payload_to_messages(channel, payload) do
         send(pid, message)
@@ -65,7 +80,7 @@ defmodule Oban.Notifiers.PG do
     put_state(state)
 
     :pg.start_link(__MODULE__)
-    :pg.join(__MODULE__, state.conf.prefix, self())
+    :pg.join(__MODULE__, state.namespace, self())
 
     {:ok, state}
   end
