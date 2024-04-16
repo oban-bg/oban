@@ -151,12 +151,22 @@ defmodule Oban.Config do
 
   @doc false
   @spec get_engine(t()) :: module()
+  def get_engine(%__MODULE__{engine: engine, testing: :disabled}), do: engine
+
   def get_engine(%__MODULE__{engine: engine, testing: testing}) do
-    if Process.get(:oban_testing, testing) == :inline do
+    pids = [self() | Process.get(:"$ancestors", [])]
+
+    if Enum.any?(pids, &inline_testing?(&1, testing)) do
       Oban.Engines.Inline
     else
       engine
     end
+  end
+
+  defp inline_testing?(pid, default) do
+    {:dictionary, dictionary} = Process.info(pid, :dictionary)
+
+    Keyword.get(dictionary, :oban_testing, default) == :inline
   end
 
   @doc false

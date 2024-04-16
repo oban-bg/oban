@@ -396,7 +396,23 @@ defmodule Oban.TestingTest do
 
         assert_enqueued worker: Worker
 
-        refute_received {:ok, 1}
+        refute_received {:ok, 1}, 25
+      end)
+    end
+
+    test "the temporary mode cascades down to child processes" do
+      name = start_supervised_oban!(testing: :manual)
+
+      Testing.with_testing_mode(:inline, fn ->
+        fun = fn ->
+          Oban.insert!(name, Worker.new(%{ref: 1, action: "OK"}))
+
+          assert_received {:ok, 1}
+        end
+
+        fun
+        |> Task.async()
+        |> Task.await()
       end)
     end
 
