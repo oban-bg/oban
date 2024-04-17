@@ -921,6 +921,7 @@ defmodule Oban do
   end
 
   @doc false
+  def pause_all_queues(name \\ Oban)
   def pause_all_queues(opts) when is_list(opts), do: pause_all_queues(__MODULE__, opts)
   def pause_all_queues(name), do: pause_all_queues(name, [])
 
@@ -995,6 +996,7 @@ defmodule Oban do
   end
 
   @doc false
+  def resume_all_queues(name \\ Oban)
   def resume_all_queues(opts) when is_list(opts), do: resume_all_queues(__MODULE__, opts)
   def resume_all_queues(name), do: resume_all_queues(name, [])
 

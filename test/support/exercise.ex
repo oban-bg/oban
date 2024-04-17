@@ -44,5 +44,17 @@ defmodule Oban.Test.Exercise do
     %Multi{} = Oban.insert_all(Oban, Multi.new(), :job, [changeset], timeout: 500)
   end
 
+  def check_pause_resume_all do
+    Oban.pause_all_queues()
+    Oban.pause_all_queues(Oban)
+    Oban.pause_all_queues(Oban, local_only: true)
+    Oban.pause_all_queues(local_only: true)
+
+    Oban.resume_all_queues()
+    Oban.resume_all_queues(Oban)
+    Oban.resume_all_queues(Oban, local_only: true)
+    Oban.resume_all_queues(local_only: true)
+  end
+
   defp changeset, do: Job.new(%{}, worker: "FakeWorker")
 end
