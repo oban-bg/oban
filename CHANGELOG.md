@@ -74,6 +74,34 @@ args
 |> Oban.insert()
 ```
 
+## v2.17.9 — 2024-04-20
+
+### Enhancements
+
+- [Testing] Check process ancestry tree for `with_testing_mode` override.
+
+  Cascade the `with_testing_mode` block to nested processes that make use of `:$ancestry` in the
+  process dictionary, i.e. tasks. Now enqueuing a job within spawned processes like `Task.async`
+  or `Task.async_stream` will honor the testing mode specified in `with_testing_mode/2`.
+
+- [PG] Support alternative namespacing in `PG` notifier
+
+  By default, all Oban instances using the same `prefix` option would receive notifications from
+  each other. Now you can use the `namespace` option to separate instances that are in the same
+  cluster _without_ changing the `prefix`.
+
+### Bug Fixes
+
+- [Oban] Restore zero arity version of `pause_all_queues/0`
+
+  Both pause and resume variants lost their default argument in a refactor that shifted around
+  guard clauses.
+
+- [Oban] Add `:oban_draining` to process dict while draining
+
+  The flag marks the test process while draining to give hints to the executor and engines. It
+  fixes an incompatibility between `Oban.drain_queue/2` and Pro's `Testing.drain_jobs/2`.
+
 ## v2.17.8 — 2024-04-07
 
 ### Enhancements
