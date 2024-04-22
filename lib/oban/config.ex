@@ -154,7 +154,7 @@ defmodule Oban.Config do
   def get_engine(%__MODULE__{engine: engine, testing: :disabled}), do: engine
 
   def get_engine(%__MODULE__{engine: engine, testing: testing}) do
-    pids = [self() | Process.get(:"$ancestors", [])]
+    pids = [self() | Process.get(:"$callers", [])]
 
     if Enum.any?(pids, &inline_testing?(&1, testing)) do
       Oban.Engines.Inline
@@ -163,13 +163,11 @@ defmodule Oban.Config do
     end
   end
 
-  defp inline_testing?(pid, default) when is_pid(pid) do
+  defp inline_testing?(pid, default) do
     {:dictionary, dictionary} = Process.info(pid, :dictionary)
 
     Keyword.get(dictionary, :oban_testing, default) == :inline
   end
-
-  defp inline_testing?(_pid, _default), do: false
 
   @doc false
   @spec node_name(%{optional(binary()) => binary()}) :: binary()
