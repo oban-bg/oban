@@ -163,11 +163,13 @@ defmodule Oban.Config do
     end
   end
 
-  defp inline_testing?(pid, default) do
+  defp inline_testing?(pid, default) when is_pid(pid) do
     {:dictionary, dictionary} = Process.info(pid, :dictionary)
 
     Keyword.get(dictionary, :oban_testing, default) == :inline
   end
+
+  defp inline_testing?(_pid, _default), do: false
 
   @doc false
   @spec node_name(%{optional(binary()) => binary()}) :: binary()

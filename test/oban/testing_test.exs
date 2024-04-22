@@ -405,6 +405,8 @@ defmodule Oban.TestingTest do
 
       Testing.with_testing_mode(:inline, fn ->
         fun = fn ->
+          Process.put(:"$ancestors", [Some.Endpoint | Process.get(:"$ancestors")])
+
           Oban.insert!(name, Worker.new(%{ref: 1, action: "OK"}))
 
           assert_received {:ok, 1}
