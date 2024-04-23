@@ -208,7 +208,7 @@ defmodule Oban do
         Oban.pause_queue(__MODULE__, opts)
       end
 
-      def pause_all_queues(opts) do
+      def pause_all_queues(opts \\ []) do
         Oban.pause_all_queues(__MODULE__, opts)
       end
 
@@ -216,7 +216,7 @@ defmodule Oban do
         Oban.resume_queue(__MODULE__, opts)
       end
 
-      def resume_all_queues(opts) do
+      def resume_all_queues(opts \\ []) do
         Oban.resume_all_queues(__MODULE__, opts)
       end
 
@@ -235,6 +235,26 @@ defmodule Oban do
       def retry_all_jobs(queryable) do
         Oban.retry_all_jobs(__MODULE__, queryable)
       end
+
+      defoverridable cancel_all_jobs: 1,
+                     cancel_job: 1,
+                     check_queue: 1,
+                     config: 0,
+                     drain_queue: 1,
+                     insert: 2,
+                     insert: 4,
+                     insert!: 2,
+                     insert_all: 2,
+                     insert_all: 4,
+                     start_queue: 1,
+                     pause_queue: 1,
+                     pause_all_queues: 1,
+                     resume_queue: 1,
+                     resume_all_queues: 1,
+                     scale_queue: 1,
+                     stop_queue: 1,
+                     retry_job: 1,
+                     retry_all_jobs: 1
     end
   end
 
