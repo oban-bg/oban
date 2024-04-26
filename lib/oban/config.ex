@@ -154,7 +154,9 @@ defmodule Oban.Config do
   def get_engine(%__MODULE__{engine: engine, testing: :disabled}), do: engine
 
   def get_engine(%__MODULE__{engine: engine, testing: testing}) do
-    pids = [self() | Process.get(:"$callers", [])]
+    pids = 
+      [self() | Process.get(:"$callers", [])]
+      |> Enum.filter(&is_pid/1)
 
     if Enum.any?(pids, &inline_testing?(&1, testing)) do
       Oban.Engines.Inline
