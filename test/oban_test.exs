@@ -43,7 +43,13 @@ defmodule ObanTest do
       assert_receive {:started, 1}
       assert_receive {:started, 2}
 
-      :ok = stop_supervised(name)
+      log =
+        ExUnit.CaptureLog.capture_log(fn ->
+          :ok = stop_supervised(name)
+        end)
+
+      assert log =~ "Oban's :alpha queue was unable to cleanly shutdown in allotted time"
+      assert log =~ "job ids: [#{id_2}]"
 
       assert_receive {:ok, 1}
       refute_receive {:ok, 2}, 20
@@ -64,7 +70,9 @@ defmodule ObanTest do
 
       assert_receive {:started, 1}
 
-      :ok = stop_supervised(name)
+      ExUnit.CaptureLog.capture_log(fn ->
+        :ok = stop_supervised(name)
+      end)
 
       insert!(ref: 2, sleep: 50)
 
@@ -86,7 +94,10 @@ defmodule ObanTest do
       assert_receive {:started, 1}
       assert_receive {:started, 3}
 
-      {time, _} = :timer.tc(fn -> stop_supervised(name) end)
+      {{time, _}, _log} =
+        ExUnit.CaptureLog.with_log(fn ->
+          :timer.tc(fn -> stop_supervised(name) end)
+        end)
 
       assert System.convert_time_unit(time, :microsecond, :millisecond) >= 10
 
@@ -115,6 +126,10 @@ defmodule ObanTest do
 
       assert %{limit: 2, queue: "gamma", running: [_]} = Oban.check_queue(name, queue: :gamma)
       assert %{paused: true, queue: "delta", running: []} = Oban.check_queue(name, queue: :delta)
+
+      ExUnit.CaptureLog.capture_log(fn ->
+        :ok = stop_supervised(name)
+      end)
     end
 
     test "checking an unknown or invalid queue" do
