@@ -407,12 +407,12 @@ defmodule Oban do
   2. In a Heroku environment the system environment's `DYNO` value is used
   3. Otherwise, the system hostname is used
 
-  Note: When running a mix release on a Heroku node, the node is alive even if not part of a
+  When running a mix release on a Heroku node, the node is alive even if not part of a
   distributed system. In order to use the `DYNO` value, configure the node value using runtime
   configuration via `config/runtime.exs:
 
         config :my_app, Oban,
-          node: System.get_env("DYNO") || :inet.gethostname() |> elem(1) |> List.to_string()
+          node: System.get_env("DYNO", "nonode@nohost")
 
   """
   @doc since: "0.1.0"
