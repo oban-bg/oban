@@ -114,11 +114,9 @@ defmodule Oban.Plugins.CronTest do
     name2 = start_supervised_oban!(plugins: [{Cron, opts}])
     name3 = start_supervised_oban!(plugins: [{Cron, opts}])
 
-    for name <- [name1, name2, name3] do
-      name
-      |> send_evaluate()
-      |> stop_supervised()
-    end
+    [name1, name2, name3]
+    |> Task.async_stream(&send_evaluate/1)
+    |> Stream.run()
 
     assert [1] == inserted_refs()
   end
