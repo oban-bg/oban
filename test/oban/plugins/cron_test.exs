@@ -1,6 +1,8 @@
 defmodule Oban.Plugins.CronTest do
   use Oban.Case, async: true
 
+  use ExUnitProperties
+
   alias Oban.Cron.Expression
   alias Oban.Plugins.Cron
   alias Oban.{Job, Registry, TelemetryHandler}

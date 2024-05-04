@@ -1,6 +1,8 @@
 defmodule Oban.Cron.ExpressionTest do
   use Oban.Case, async: true
 
+  use ExUnitProperties
+
   alias Oban.Cron.Expression, as: Expr
 
   describe "parse/1" do

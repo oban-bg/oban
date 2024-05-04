@@ -10,8 +10,6 @@ defmodule Oban.Case do
 
   using do
     quote do
-      use ExUnitProperties
-
       import Oban.Case
 
       alias Oban.Integration.Worker

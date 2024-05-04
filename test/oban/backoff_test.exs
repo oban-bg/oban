@@ -1,6 +1,8 @@
 defmodule Oban.BackoffTest do
   use Oban.Case, async: true
 
+  use ExUnitProperties
+
   doctest Oban.Backoff
 
   alias Oban.Backoff
