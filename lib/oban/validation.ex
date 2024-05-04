@@ -181,7 +181,7 @@ defmodule Oban.Validation do
   end
 
   defp validate_type(:timeout, key, val)
-       when (not is_integer(val) or val <= 0) and val != :infinity do
+       when (not is_integer(val) or val < 0) and val != :infinity do
     {:error,
      "expected #{inspect(key)} to be a positive integer or :infinity, got: #{inspect(val)}"}
   end

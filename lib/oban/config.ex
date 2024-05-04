@@ -24,7 +24,7 @@ defmodule Oban.Config do
           prefix: false | String.t(),
           queues: Keyword.t(Keyword.t()),
           repo: module(),
-          shutdown_grace_period: timeout(),
+          shutdown_grace_period: non_neg_integer(),
           stage_interval: timeout(),
           testing: :disabled | :inline | :manual
         }
