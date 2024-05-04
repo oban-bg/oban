@@ -12,6 +12,8 @@ for notifier <- [Oban.Notifiers.Isolated, Oban.Notifiers.PG, Oban.Notifiers.Post
         unboxed_run(fn ->
           name = start_supervised_oban!(notifier: @notifier)
 
+          await_joined()
+
           :ok = Notifier.listen(name, :signal)
           :ok = Notifier.notify(name, :signal, %{incoming: "message"})
 
@@ -48,6 +50,8 @@ for notifier <- [Oban.Notifiers.Isolated, Oban.Notifiers.PG, Oban.Notifiers.Post
         unboxed_run(fn ->
           name = start_supervised_oban!(notifier: @notifier)
 
+          await_joined()
+
           :ok = Notifier.listen(name, [:signal, :gossip])
           :ok = Notifier.unlisten(name, [:gossip])
 
@@ -63,6 +67,8 @@ for notifier <- [Oban.Notifiers.Isolated, Oban.Notifiers.PG, Oban.Notifiers.Post
         unboxed_run(fn ->
           name = start_supervised_oban!(notifier: @notifier)
 
+          await_joined()
+
           :ok = Notifier.listen(name, [:gossip, :signal])
 
           ident =
@@ -76,6 +82,17 @@ for notifier <- [Oban.Notifiers.Isolated, Oban.Notifiers.PG, Oban.Notifiers.Post
           assert_receive {:notification, :gossip, _}
           refute_received {:notification, :signal, _}
         end)
+      end
+    end
+
+    defp await_joined do
+      if @notifier == Oban.Notifiers.PG do
+        case :pg.get_local_members(Oban.Notifiers.PG, "public") do
+          [] -> await_joined()
+          _ -> :ok
+        end
+      else
+        :ok
       end
     end
 
