@@ -55,7 +55,7 @@ defmodule Oban do
           | {:prefix, false | String.t()}
           | {:queues, false | [{queue_name(), pos_integer() | Keyword.t()}]}
           | {:repo, module()}
-          | {:shutdown_grace_period, timeout()}
+          | {:shutdown_grace_period, non_neg_integer()}
           | {:stage_interval, timeout()}
           | {:testing, :disabled | :inline | :manual}
 

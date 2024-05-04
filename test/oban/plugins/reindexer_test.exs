@@ -30,9 +30,9 @@ defmodule Oban.Plugins.ReindexerTest do
       assert :ok = Reindexer.validate(timezone: "America/Chicago")
     end
 
-    test "validating that :timeout is a positive integer" do
+    test "validating that :timeout is a non negative integer" do
       assert {:error, _} = Reindexer.validate(timeout: "")
-      assert {:error, _} = Reindexer.validate(timeout: 0)
+      assert {:error, _} = Reindexer.validate(timeout: -1)
 
       assert :ok = Reindexer.validate(timeout: :timer.minutes(1))
     end
