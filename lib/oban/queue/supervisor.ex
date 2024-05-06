@@ -36,7 +36,7 @@ defmodule Oban.Queue.Supervisor do
       |> Keyword.put_new(:dispatch_cooldown, conf.dispatch_cooldown)
 
     watch_opts = [
-      foreman: fore_name,
+      conf: conf,
       name: watch_name,
       producer: prod_name,
       shutdown: conf.shutdown_grace_period

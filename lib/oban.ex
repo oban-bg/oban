@@ -409,7 +409,7 @@ defmodule Oban do
 
   When running a mix release on a Heroku node, the node is alive even if not part of a
   distributed system. In order to use the `DYNO` value, configure the node value using runtime
-  configuration via `config/runtime.exs:
+  configuration via `config/runtime.exs`:
 
         config :my_app, Oban,
           node: System.get_env("DYNO", "nonode@nohost")

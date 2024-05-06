@@ -6,26 +6,16 @@ defmodule Oban.Queue.Watchman do
   alias Oban.Queue.Producer
   alias __MODULE__, as: State
 
-  @type option ::
-          {:foreman, GenServer.name()}
-          | {:name, module()}
-          | {:producer, GenServer.name()}
-          | {:shutdown, timeout()}
+  defstruct [:conf, :producer, :shutdown, interval: 10]
 
-  defstruct [:foreman, :producer, :shutdown, interval: 10]
-
-  @spec child_spec([option]) :: Supervisor.child_spec()
+  @spec child_spec(Keyword.t()) :: Supervisor.child_spec()
   def child_spec(opts) do
-    shutdown =
-      case opts[:shutdown] do
-        0 -> :brutal_kill
-        value -> value
-      end
+    shutdown = Keyword.fetch!(opts, :shutdown) + Keyword.get(opts, :interval, 10)
 
     %{id: __MODULE__, start: {__MODULE__, :start_link, [opts]}, shutdown: shutdown}
   end
 
-  @spec start_link([option]) :: GenServer.on_start()
+  @spec start_link(Keyword.t()) :: GenServer.on_start()
   def start_link(opts) do
     {name, opts} = Keyword.pop(opts, :name)
 
@@ -41,11 +31,10 @@ defmodule Oban.Queue.Watchman do
 
   @impl GenServer
   def terminate(_reason, %State{} = state) do
-    # There is a chance that the foreman doesn't exist, and we never want to raise another error
-    # as part of the shut down process.
+    # The producer may not exist, and we don't want to raise during shutdown.
     try do
       :ok = Producer.shutdown(state.producer)
-      :ok = wait_for_executing(state)
+      :ok = wait_for_executing(0, state)
     catch
       :exit, _reason -> :ok
     end
@@ -53,15 +42,21 @@ defmodule Oban.Queue.Watchman do
     :ok
   end
 
-  defp wait_for_executing(state) do
-    case DynamicSupervisor.count_children(state.foreman) do
-      %{active: 0} ->
-        :ok
+  defp wait_for_executing(ellapsed, state) do
+    check = Producer.check(state.producer)
 
-      _ ->
-        :ok = Process.sleep(state.interval)
+    if check.running == [] or ellapsed >= state.shutdown do
+      :telemetry.execute(
+        [:oban, :queue, :shutdown],
+        %{ellapsed: ellapsed},
+        %{conf: state.conf, orphaned: check.running, queue: check.queue}
+      )
 
-        wait_for_executing(state)
+      :ok
+    else
+      :ok = Process.sleep(state.interval)
+
+      wait_for_executing(ellapsed + state.interval, state)
     end
   end
 end

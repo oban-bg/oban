@@ -92,6 +92,22 @@ defmodule Oban.TelemetryTest do
            } = error_meta
   end
 
+  test "reporting jobs still executing after the shutdown period" do
+    ref = :telemetry_test.attach_event_handlers(self(), [[:oban, :queue, :shutdown]])
+
+    name = start_supervised_oban!(queues: [alpha: 10], shutdown_grace_period: 5)
+
+    insert!(name, [ref: 1, sleep: 500], queue: :alpha)
+    insert!(name, [ref: 2, sleep: 500], queue: :alpha)
+
+    assert_receive {:started, 1}
+    assert_receive {:started, 2}
+
+    stop_supervised(name)
+
+    assert_receive {_event, ^ref, %{ellapsed: 10}, %{orphaned: [_, _], queue: "alpha"}}
+  end
+
   test "the default handler logs detailed event information" do
     :ok = Telemetry.attach_default_logger(:warning)
 
@@ -164,6 +180,39 @@ defmodule Oban.TelemetryTest do
     assert logged =~ ~s("source":"oban")
     assert logged =~ ~s("event":"notifier:switch")
     assert logged =~ ~s("message":"notifier can't receive messages)
+  after
+    Telemetry.detach_default_logger()
+  end
+
+  test "the default handler logs orphaned jobs at queue shutdown" do
+    :ok = Telemetry.attach_default_logger(:warning)
+
+    logged =
+      capture_log(fn ->
+        :telemetry.execute([:oban, :queue, :shutdown], %{ellapsed: 500}, %{
+          queue: "alpha",
+          orphaned: [100, 101, 102]
+        })
+      end)
+
+    assert logged =~ ~s|"source":"oban"|
+    assert logged =~ ~s|"event":"queue:shutdown"|
+    assert logged =~ ~s|"orphaned":[100,101,102]|
+    assert logged =~ ~s|"queue":"alpha"|
+    assert logged =~ ~s|"message":"jobs were orphaned because|
+  after
+    Telemetry.detach_default_logger()
+  end
+
+  test "the default handler doesn't log anything on shutdown without orphans" do
+    :ok = Telemetry.attach_default_logger(:warning)
+
+    logged =
+      capture_log(fn ->
+        :telemetry.execute([:oban, :queue, :shutdown], %{}, %{queue: "alpha", orphaned: []})
+      end)
+
+    refute logged =~ ~s|"event":"queue:shutdown"|
   after
     Telemetry.detach_default_logger()
   end

@@ -8,7 +8,7 @@ defmodule Oban.Queue.WatchmanTest do
       opts = [
         name: WatchmanTest,
         shutdown: 1_000,
-        foreman: Watchman.Foreman
+        producer: Watchman.Producer
       ]
 
       start_supervised!({Watchman, opts})
