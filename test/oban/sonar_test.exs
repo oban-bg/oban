@@ -64,8 +64,8 @@ defmodule Oban.SonarTest do
         |> Registry.whereis(Sonar)
         |> GenServer.call(:prune_nodes)
 
-      assert Map.has_key?(nodes, "web.1")
-      refute Map.has_key?(nodes, "web.2")
+      assert "web.1" in nodes
+      refute "web.2" in nodes
     end
   end
 end

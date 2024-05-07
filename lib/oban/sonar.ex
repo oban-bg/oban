@@ -9,9 +9,9 @@ defmodule Oban.Sonar do
   defstruct [
     :conf,
     :timer,
-    interval: :timer.seconds(15),
+    interval: :timer.seconds(5),
     nodes: %{},
-    stale_mult: 2,
+    stale_mult: 6,
     status: :unknown
   ]
 
@@ -45,12 +45,16 @@ defmodule Oban.Sonar do
   @impl GenServer
   def handle_continue(:start, state) do
     :ok = Notifier.listen(state.conf.name, :sonar)
-    :ok = Notifier.notify(state.conf, :sonar, %{node: state.conf.node, ping: :ping})
+    :ok = Notifier.notify(state.conf, :sonar, %{node: state.conf.node, ping: true})
 
     {:noreply, schedule_ping(state)}
   end
 
   @impl GenServer
+  def handle_call(:get_nodes, _from, state) do
+    {:reply, Map.keys(state.nodes), state}
+  end
+
   def handle_call(:get_status, _from, state) do
     {:reply, state.status, state}
   end
@@ -58,7 +62,7 @@ defmodule Oban.Sonar do
   def handle_call(:prune_nodes, _from, state) do
     state = prune_stale_nodes(state)
 
-    {:reply, state.nodes, state}
+    {:reply, Map.keys(state.nodes), state}
   end
 
   @impl GenServer
