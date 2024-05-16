@@ -53,18 +53,22 @@ defmodule Oban.Plugins.Pruner do
   alias Oban.{Engine, Job, Peer, Plugin, Repo, Validation}
   alias __MODULE__, as: State
 
+  @prunable_statuses ~w(completed cancelled discarded)
+
   @type option ::
           Plugin.option()
           | {:interval, pos_integer()}
           | {:limit, pos_integer()}
           | {:max_age, pos_integer()}
+          | {:only, [String.t()]}
 
   defstruct [
     :conf,
     :timer,
     interval: :timer.seconds(30),
     limit: 10_000,
-    max_age: 60
+    max_age: 60,
+    only: @prunable_statuses
   ]
 
   @doc false
@@ -81,13 +85,16 @@ defmodule Oban.Plugins.Pruner do
 
   @impl Plugin
   def validate(opts) do
-    Validation.validate_schema(opts,
-      conf: :any,
-      name: :any,
-      interval: :pos_integer,
-      limit: :pos_integer,
-      max_age: :pos_integer
-    )
+    with :ok <- validate_prunable_statuses(Keyword.get(opts, :only, [])) do
+      Validation.validate_schema(opts,
+        conf: :any,
+        name: :any,
+        interval: :pos_integer,
+        limit: :pos_integer,
+        max_age: :pos_integer,
+        only: {:list, :string}
+      )
+    end
   end
 
   @impl GenServer
@@ -127,7 +134,11 @@ defmodule Oban.Plugins.Pruner do
     if Peer.leader?(state.conf) do
       Repo.transaction(state.conf, fn ->
         {:ok, jobs} =
-          Engine.prune_jobs(state.conf, Job, limit: state.limit, max_age: state.max_age)
+          Engine.prune_jobs(state.conf, Job,
+            limit: state.limit,
+            max_age: state.max_age,
+            only: state.only
+          )
 
         %{pruned_count: length(jobs), pruned_jobs: jobs}
       end)
@@ -138,5 +149,16 @@ defmodule Oban.Plugins.Pruner do
 
   defp schedule_prune(state) do
     %{state | timer: Process.send_after(self(), :prune, state.interval)}
+  end
+
+  defp validate_prunable_statuses(status_list) do
+    invalid_statuses? = Enum.any?(status_list, &(&1 not in @prunable_statuses))
+
+    if invalid_statuses? do
+      {:error,
+       "Invalid status provided to :only option in pruner. Valid options are: #{Enum.join(@prunable_statuses, ", ")}"}
+    else
+      :ok
+    end
   end
 end

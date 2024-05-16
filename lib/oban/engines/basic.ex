@@ -150,10 +150,12 @@ defmodule Oban.Engines.Basic do
     limit = Keyword.fetch!(opts, :limit)
     time = DateTime.add(DateTime.utc_now(), -max_age)
 
+    prune_states = Keyword.get(opts, :only, ~w(completed cancelled discarded))
+
     subquery =
       queryable
       |> select([:id, :queue, :state])
-      |> where([j], j.state in ~w(completed cancelled discarded))
+      |> where([j], j.state in ^prune_states)
       |> where([j], not is_nil(j.queue))
       |> where([j], j.scheduled_at < ^time)
       |> limit(^limit)
