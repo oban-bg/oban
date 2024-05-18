@@ -431,14 +431,14 @@ defmodule Oban.Telemetry do
         :isolated ->
           %{
             event: "notifier:switch",
-            status: status,
+            connectivity_status: status,
             message: "notifier can't receive messages from any nodes, functionality degraded"
           }
 
         :solitary ->
           %{
             event: "notifier:switch",
-            status: status,
+            connectivity_status: status,
             message:
               "notifier only receiving messages from its own node, functionality may be degraded"
           }
@@ -446,7 +446,7 @@ defmodule Oban.Telemetry do
         :clustered ->
           %{
             event: "notifier:switch",
-            status: status,
+            connectivity_status: status,
             message: "notifier is receiving messages from other nodes"
           }
       end
