@@ -60,19 +60,18 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite] do
         fun = fn ->
           Sandbox.allow(Repo, parent, self())
 
-          {:ok, %Job{id: id}} = Oban.insert(name, changeset)
+          {:ok, %Job{id: id, conflict?: conflict}} = Oban.insert(name, changeset)
 
-          id
+          {id, conflict}
         end
 
-        ids =
+        results =
           1..3
           |> Enum.map(fn _ -> Task.async(fun) end)
           |> Enum.map(&Task.await/1)
-          |> Enum.reject(&is_nil/1)
-          |> Enum.uniq()
 
-        assert 1 == length(ids)
+        assert 1 == results |> Enum.uniq_by(&elem(&1, 0)) |> length()
+        assert [false, true, true] == results |> Enum.map(&elem(&1, 1)) |> Enum.sort()
       end
 
       @tag :unique
