@@ -520,8 +520,10 @@ You can use the `:conflict?` field to customize responses after insert:
 case Oban.insert(changeset) do
   {:ok, %Job{id: nil, conflict?: true}} ->
     {:error, :failed_to_acquire_lock}
+
   {:ok, %Job{conflict?: true}} ->
     {:error, :job_already_exists}
+
   result ->
     result
 end
