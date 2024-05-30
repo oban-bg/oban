@@ -77,6 +77,8 @@ defmodule Oban.Notifier do
 
   alias Oban.{Config, Registry, Sonar}
 
+  require Logger
+
   @type channel :: atom()
   @type name_or_conf :: Oban.name() | Config.t()
   @type payload :: map() | [map()]
@@ -246,6 +248,11 @@ defmodule Oban.Notifier do
     name
     |> Oban.Registry.via(Sonar)
     |> GenServer.call(:get_status)
+  catch
+    :exit, {:timeout, _} = reason ->
+      Logger.warning("Oban.Notifier.status/1 check failed due to #{inspect(reason)}.")
+
+      :unknown
   end
 
   @doc false

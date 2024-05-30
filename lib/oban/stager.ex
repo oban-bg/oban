@@ -40,17 +40,7 @@ defmodule Oban.Stager do
     # Init event is essential for auto-allow and backward compatibility.
     :telemetry.execute([:oban, :plugin, :init], %{}, %{conf: state.conf, plugin: __MODULE__})
 
-    {:ok, state, {:continue, :start}}
-  end
-
-  @impl GenServer
-  def handle_continue(:start, %State{} = state) do
-    state =
-      state
-      |> schedule_staging()
-      |> check_mode()
-
-    {:noreply, state}
+    {:ok, schedule_staging(state)}
   end
 
   @impl GenServer
@@ -62,6 +52,7 @@ defmodule Oban.Stager do
 
   @impl GenServer
   def handle_info(:stage, %State{} = state) do
+    state = check_mode(state)
     meta = %{conf: state.conf, leader: Peer.leader?(state.conf), plugin: __MODULE__}
 
     :telemetry.span([:oban, :plugin], meta, fn ->
@@ -74,12 +65,7 @@ defmodule Oban.Stager do
       end
     end)
 
-    state =
-      state
-      |> schedule_staging()
-      |> check_mode()
-
-    {:noreply, state}
+    {:noreply, schedule_staging(state)}
   end
 
   defp stage_and_notify(true = _leader, state) do
