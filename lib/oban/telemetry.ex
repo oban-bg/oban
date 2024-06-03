@@ -58,6 +58,7 @@ defmodule Oban.Telemetry do
   * `[:oban, :engine, :init, :start | :stop | :exception]`
   * `[:oban, :engine, :refresh, :start | :stop | :exception]`
   * `[:oban, :engine, :put_meta, :start | :stop | :exception]`
+  * `[:oban, :engine, :check_available, :start | :stop | :exception]`
 
   | event        | measures       | metadata                                              |
   | ------------ | -------------- | ----------------------------------------------------- |

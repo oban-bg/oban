@@ -3,8 +3,6 @@ defmodule Oban.Stager do
 
   use GenServer
 
-  import Ecto.Query, only: [distinct: 2, select: 3, where: 3]
-
   alias Oban.{Engine, Job, Notifier, Peer, Plugin, Repo}
   alias __MODULE__, as: State
 
@@ -87,14 +85,9 @@ defmodule Oban.Stager do
   end
 
   defp notify_queues(%{conf: conf, mode: :global}) do
-    query =
-      Job
-      |> where([j], j.state == "available")
-      |> where([j], not is_nil(j.queue))
-      |> select([j], %{queue: j.queue})
-      |> distinct(true)
+    {:ok, queues} = Engine.check_available(conf)
 
-    payload = Repo.all(conf, query)
+    payload = Enum.map(queues, &%{queue: &1})
 
     Notifier.notify(conf, :insert, payload)
   end

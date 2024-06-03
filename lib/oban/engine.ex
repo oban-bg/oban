@@ -94,6 +94,11 @@ defmodule Oban.Engine do
   @callback prune_jobs(conf(), queryable(), opts()) :: {:ok, [Job.t()]}
 
   @doc """
+  Check for a list of queues with available jobs.
+  """
+  @callback check_available(conf()) :: {:ok, [String.t()]}
+
+  @doc """
   Record that a job completed successfully.
   """
   @callback complete_job(conf(), Job.t()) :: :ok
@@ -138,7 +143,13 @@ defmodule Oban.Engine do
   """
   @callback retry_all_jobs(conf(), queryable()) :: {:ok, [Job.t()]}
 
-  @optional_callbacks [insert_all_jobs: 5, insert_job: 5, prune_jobs: 3, stage_jobs: 3]
+  @optional_callbacks [
+    check_available: 1,
+    insert_all_jobs: 5,
+    insert_job: 5,
+    prune_jobs: 3,
+    stage_jobs: 3
+  ]
 
   @doc false
   def init(%Config{} = conf, [_ | _] = opts) do
@@ -227,7 +238,7 @@ defmodule Oban.Engine do
 
   @doc false
   def stage_jobs(%Config{} = conf, queryable, opts) do
-    conf = with_compatible_engine(conf, :stage_jobs)
+    conf = with_compatible_engine(conf, :stage_jobs, 3)
 
     with_span(:stage_jobs, conf, %{opts: opts, queryable: queryable}, fn engine ->
       {:ok, jobs} = engine.stage_jobs(conf, queryable, opts)
@@ -237,11 +248,21 @@ defmodule Oban.Engine do
 
   @doc false
   def prune_jobs(%Config{} = conf, queryable, opts) do
-    conf = with_compatible_engine(conf, :prune_jobs)
+    conf = with_compatible_engine(conf, :prune_jobs, 3)
 
     with_span(:prune_jobs, conf, %{opts: opts, queryable: queryable}, fn engine ->
       {:ok, jobs} = engine.prune_jobs(conf, queryable, opts)
       {:meta, {:ok, jobs}, %{jobs: jobs}}
+    end)
+  end
+
+  @doc false
+  def check_available(%Config{} = conf) do
+    conf = with_compatible_engine(conf, :check_available, 1)
+
+    with_span(:check_available, conf, %{}, fn engine ->
+      {:ok, queues} = engine.check_available(conf)
+      {:meta, {:ok, queues}, %{queues: queues}}
     end)
   end
 
@@ -326,10 +347,11 @@ defmodule Oban.Engine do
     end)
   end
 
-  # External engines aren't guaranteed to implement stage_jobs/3 or prune_jobs/3, but we can
-  # assume they were built for Postgres and safely fall back to the Basic engine.
-  defp with_compatible_engine(%{engine: engine} = conf, function) do
-    if function_exported?(engine, function, 3) do
+  # External engines aren't guaranteed to implement `stage_jobs/3,` `prune_jobs/3`, or
+  # `check_available/1`, but we can assume they were built for Postgres and safely fall back to
+  # the Basic engine.
+  defp with_compatible_engine(%{engine: engine} = conf, function, arity) do
+    if function_exported?(engine, function, arity) do
       conf
     else
       %Config{conf | engine: Oban.Engines.Basic}

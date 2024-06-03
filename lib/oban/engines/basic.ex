@@ -169,6 +169,18 @@ defmodule Oban.Engines.Basic do
   end
 
   @impl Engine
+  def check_available(%Config{} = conf) do
+    query =
+      Job
+      |> where([j], j.state == "available")
+      |> where([j], not is_nil(j.queue))
+      |> select([j], j.queue)
+      |> distinct(true)
+
+    {:ok, Repo.all(conf, query)}
+  end
+
+  @impl Engine
   def complete_job(%Config{} = conf, %Job{} = job) do
     Repo.update_all(
       conf,
