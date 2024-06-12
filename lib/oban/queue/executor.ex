@@ -117,6 +117,8 @@ defmodule Oban.Queue.Executor do
 
       exec
     end
+
+    def set_label(exec), do: exec
   else
     def set_label(exec), do: exec
   end

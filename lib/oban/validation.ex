@@ -149,7 +149,7 @@ defmodule Oban.Validation do
     end
   end
 
-  defp validate_type({:range, min..max}, key, val) when val < min or val > max do
+  defp validate_type({:range, min..max//_}, key, val) when val < min or val > max do
     {:error, "expected #{inspect(key)} to be between #{min}..#{max}, got: #{inspect(val)}"}
   end
 
