@@ -89,7 +89,6 @@ defmodule Oban.Queue.ExecutorTest do
                |> Executor.perform()
                |> Executor.normalize_state()
                |> Executor.record_finished()
-               |> Executor.cancel_timeout()
 
       duration_ms = System.convert_time_unit(duration, :native, :millisecond)
       queue_time_ms = System.convert_time_unit(queue_time, :native, :millisecond)
@@ -107,6 +106,7 @@ defmodule Oban.Queue.ExecutorTest do
     @conf
     |> Executor.new(job)
     |> Executor.resolve_worker()
+    |> Executor.set_label()
     |> Executor.start_timeout()
     |> Executor.perform()
     |> Executor.normalize_state()

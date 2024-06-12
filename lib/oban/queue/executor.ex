@@ -70,6 +70,7 @@ defmodule Oban.Queue.Executor do
       exec
       |> record_started()
       |> resolve_worker()
+      |> set_label()
       |> start_timeout()
       |> perform()
       |> normalize_state()
@@ -107,6 +108,17 @@ defmodule Oban.Queue.Executor do
 
         %{exec | result: {:error, error}, state: :failure, error: error}
     end
+  end
+
+  @spec set_label(t()) :: t()
+  if function_exported?(Process, :set_label, 1) do
+    def set_label(%__MODULE__{worker: worker} = exec) when not is_nil(worker) do
+      Process.set_label(worker)
+
+      exec
+    end
+  else
+    def set_label(exec), do: exec
   end
 
   @spec start_timeout(t()) :: t()
