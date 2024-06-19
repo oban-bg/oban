@@ -54,10 +54,10 @@ defmodule Oban.SonarTest do
 
     test "pruning stale nodes based on the last notification time" do
       name = start_supervised_oban!(notifier: Oban.Notifiers.Isolated)
-      time = System.system_time(:millisecond)
+      time = System.monotonic_time(:millisecond)
 
-      Notifier.notify(name, :sonar, %{node: "web.1", time: time - :timer.seconds(29)})
-      Notifier.notify(name, :sonar, %{node: "web.2", time: time - :timer.seconds(31)})
+      Notifier.notify(name, :sonar, %{node: "web.1", time: time + :timer.seconds(29)})
+      Notifier.notify(name, :sonar, %{node: "web.2", time: time + :timer.seconds(31)})
 
       nodes =
         name
