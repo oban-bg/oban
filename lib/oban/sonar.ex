@@ -79,7 +79,7 @@ defmodule Oban.Sonar do
   end
 
   def handle_info({:notification, :sonar, %{"node" => node} = payload}, state) do
-    time = Map.get(payload, "time", System.system_time(:millisecond))
+    time = Map.get(payload, "time", System.monotonic_time(:millisecond))
 
     state =
       state
@@ -115,8 +115,8 @@ defmodule Oban.Sonar do
   end
 
   defp prune_stale_nodes(state) do
-    stale = System.system_time(:millisecond) - state.interval * state.stale_mult
-    nodes = Map.reject(state.nodes, fn {_, recorded} -> recorded < stale end)
+    stale = System.monotonic_time(:millisecond) + state.interval * state.stale_mult
+    nodes = Map.reject(state.nodes, fn {_, recorded} -> recorded > stale end)
 
     %{state | nodes: nodes}
   end
