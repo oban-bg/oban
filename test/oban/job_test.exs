@@ -74,6 +74,17 @@ defmodule Oban.JobTest do
   end
 
   describe "unique constraints with new/2" do
+    test "marking a job unique for :infinity in all states by passing true" do
+      changeset = Job.new(%{}, worker: Fake, unique: true)
+
+      assert %{period: :infinity} = changeset.changes[:unique]
+    end
+
+    test "unique with nil or false is still valid" do
+      assert Job.new(%{}, worker: Fake, unique: nil).valid?
+      assert Job.new(%{}, worker: Fake, unique: false).valid?
+    end
+
     test "marking a job as unique by setting the period provides defaults" do
       changeset = Job.new(%{}, worker: Fake, unique: [period: 60])
 
@@ -102,14 +113,13 @@ defmodule Oban.JobTest do
              }
     end
 
-    test ":unique will translate period" do
+    test "translate the unique period with time units" do
       changeset = Job.new(%{}, worker: Fake, unique: [period: {1, :hour}])
 
       assert %{period: 3600} = changeset.changes[:unique]
     end
 
-    test ":unique does not accept other types of values or options" do
-      assert Job.new(%{}, worker: Fake, unique: true).errors[:unique]
+    test "rejecting unknown values or options" do
       assert Job.new(%{}, worker: Fake, unique: []).errors[:unique]
       assert Job.new(%{}, worker: Fake, unique: [special: :value]).errors[:unique]
       assert Job.new(%{}, worker: Fake, unique: [fields: [:bogus]]).errors[:unique]

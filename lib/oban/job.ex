@@ -85,7 +85,7 @@ defmodule Oban.Job do
           | {:schedule_in, schedule_in_option()}
           | {:scheduled_at, DateTime.t()}
           | {:tags, tags()}
-          | {:unique, [unique_option()]}
+          | {:unique, true | false | nil | [unique_option()]}
           | {:worker, atom() | binary()}
 
   @type t :: %__MODULE__{
@@ -193,6 +193,14 @@ defmodule Oban.Job do
   @unique_fields ~w(args meta queue worker)a
   @unique_timestamps ~w(inserted_at scheduled_at)a
 
+  @unique_defaults %{
+    fields: ~w(args queue worker)a,
+    keys: [],
+    period: 60,
+    states: ~w(scheduled available executing retryable completed)a,
+    timestamp: :inserted_at
+  }
+
   defguardp is_timestampable(value)
             when is_integer(value) or
                    (is_integer(elem(value, 0)) and elem(value, 1) in @time_units)
@@ -282,8 +290,8 @@ defmodule Oban.Job do
   def new(args, opts \\ []) when is_map(args) and is_list(opts) do
     params =
       opts
-      |> Keyword.put(:args, args)
       |> Map.new()
+      |> Map.put(:args, args)
       |> coerce_field(:queue, &to_string/1)
       |> coerce_field(:worker, &Oban.Worker.to_string/1)
       |> normalize_tags()
@@ -465,17 +473,16 @@ defmodule Oban.Job do
     case value do
       [_ | _] = opts ->
         unique =
-          opts
-          |> Map.new()
-          |> Map.put_new(:fields, ~w(args queue worker)a)
-          |> Map.put_new(:keys, [])
-          |> Map.put_new(:states, ~w(scheduled available executing retryable completed)a)
-          |> Map.put_new(:timestamp, :inserted_at)
-          |> Map.update(:period, 60, &cast_period/1)
+          @unique_defaults
+          |> Map.merge(Map.new(opts))
+          |> Map.update!(:period, &cast_period/1)
 
         put_change(changeset, :unique, unique)
 
-      nil ->
+      true ->
+        put_change(changeset, :unique, Map.put(@unique_defaults, :period, :infinity))
+
+      value when value in [nil, false] ->
         changeset
 
       _ ->
@@ -583,6 +590,8 @@ defmodule Oban.Job do
       changeset
     end
   end
+
+  def validate_unique(unique) when is_boolean(unique), do: :ok
 
   def validate_unique(unique) do
     Validation.validate(:unique, unique, fn
