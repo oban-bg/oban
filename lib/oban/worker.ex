@@ -257,6 +257,22 @@ defmodule Oban.Worker do
   alias Oban.{Backoff, Job, Validation}
 
   @type t :: module()
+
+  @typedoc """
+  Return values control whether a job is treated as a success or a failure.
+
+  - `:ok` - the job is successful and marked as `completed`.
+  - `{:ok, ignored}` - the job is successful, marked as `completed`, and the return value is ignored.
+  - `{:cancel, reason}` - the job is marked as `cancelled` for the provided reason and no longer retried.
+  - `{:error, reason}` - the job is marked as `retryable` for the provided reason, or `discarded`
+    if it has  exhausted all attempts.
+  - `{:snooze, seconds}` - mark the job as `scheduled` to run again `seconds` in the future.
+
+  > #### Deprecated {: .warning}
+  >
+  > - `:discard` - deprecated, use `{:cancel, reason}` instead.
+  > - `{:discard, reason}` - deprecated, use `{:cancel, reason}` instead.
+  """
   @type result ::
           :ok
           | :discard
