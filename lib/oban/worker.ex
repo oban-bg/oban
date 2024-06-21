@@ -260,7 +260,7 @@ defmodule Oban.Worker do
 
   @typedoc """
   Return values control whether a job is treated as a success or a failure.
-  
+
   - `:ok` - the job is successful and marked as `completed`.
   - `{:ok, ignored}` - the job is successful, marked as `completed`, and the return value is ignored.
   - `{:cancel, reason}` - the job is marked as `cancelled` for the provided reason and no longer retried.
