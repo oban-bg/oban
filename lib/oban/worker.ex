@@ -257,6 +257,20 @@ defmodule Oban.Worker do
   alias Oban.{Backoff, Job, Validation}
 
   @type t :: module()
+
+  @typedoc """
+  - `:ok` - the job was successfully processed.
+  - `{:ok, ignored}` - the job was processed successfully, the return value is
+    ignored.
+  - `{:cancel, reason}` - the job was canceled with a reason.
+  - `{:error, reason}` - the job failed with a reason.
+  - `{:snooze, seconds}` - the job should be retried after `seconds`.
+
+  > #### Error {: .warning}
+  >
+  > - `:discard` - deprecated, use `{:cancel, reason}` or {:error, reason} instead.
+  > - `{:discard, reason}` - deprecated, use `{:cancel, reason}` or {:error, reason} instead.
+  """
   @type result ::
           :ok
           | :discard
