@@ -36,8 +36,8 @@
 - [Usage](#usage)
   - [Installation](#installation)
   - [Requirements](#requirements)
-  - [Configuring Queues](#configuring-queues)
   - [Running With SQLite3](#running-with-sqlite3)
+  - [Configuring Queues](#configuring-queues)
   - [Defining Workers](#defining-workers)
   - [Enqueueing Jobs](#enqueueing-jobs)
   - [Scheduling Jobs](#scheduling-jobs)
@@ -137,42 +137,35 @@ orphaned due to crashes.
 
 <!-- MDOC -->
 
-Oban is a robust job processing library which uses PostgreSQL or SQLite3 for
-storage and coordination.
+Oban is a robust job processing library which uses PostgreSQL or SQLite3 for persistence.
 
-### Installation
+> #### Oban Web+Pro {: .tip}
+>
+> A web dashboard for managing Oban, along with an official set of extensions, plugins, and
+> workers that expand what Oban is capable are available as licensed packages:
+> 
+> * [🧭 Oban Web](https://getoban.pro#oban-web)
+> * [🌟 Oban Pro](https://getoban.pro#oban-pro)
+> 
+> Learn more about prices and licensing Oban Web+Pro at [getoban.pro][pro].
 
-See the [installation guide](https://hexdocs.pm/oban/installation.html) for
-details on installing and configuring Oban in your application.
+## Requirements
 
-### Requirements
+Oban requires Elixir 1.13+, Erlang 23+, and PostgreSQL 12.0+ or SQLite3 3.37.0+.
 
-Oban requires Elixir 1.12+, Erlang 22+, and PostgreSQL 12.0+ or SQLite3 3.37.0+.
+## Installation
 
-### Testing
-
-Find testing setup, helpers, and strategies in the [testing guide](https://hexdocs.pm/oban/testing.html).
-
-## Oban Web+Pro
-
-A web dashboard for managing Oban, along with an official set of extensions,
-plugins, and workers are available as licensed packages:
-
-* [🧭 Web Overview](https://getoban.pro#oban-web)
-* [🌟 Pro Overview](https://getoban.pro#oban-pro)
-
-Learn more about prices and licensing Oban Web+Pro at [getoban.pro][pro].
-
-[pro]: https://getoban.pro
+See the [installation guide](https://hexdocs.pm/oban/installation.html) for details on installing
+and configuring Oban in your application.
 
 ## Running with SQLite3
 
-Oban ships with engines for PostgreSQL and SQLite3. Both engines support the
-same core functionality for a single node, while the Postgres engine is more
-advanced and designed to run in a distributed environment.
+Oban ships with engines for PostgreSQL and SQLite3. Both engines support the same core
+functionality for a single node, while the Postgres engine is more advanced and designed to run in
+a distributed environment.
 
-Running with SQLite3 requires adding `ecto_sqlite3` to your app's dependencies
-and setting the `Oban.Engines.Lite` engine:
+Running with SQLite3 requires adding `ecto_sqlite3` to your app's dependencies and setting the
+`Oban.Engines.Lite` engine:
 
 ```elixir
 config :my_app, Oban,
@@ -181,10 +174,12 @@ config :my_app, Oban,
   repo: MyApp.Repo
 ```
 
-_Please note that SQLite3 may not be suitable for high-concurrency systems or for systems that need
-to handle large amounts of data. If you expect your background jobs to generate high loads, it
-would be better to use a more robust database solution that supports horizontal scalability, like
-Postgres._
+> #### High Concurrency Systems {: .warning}
+>
+> SQLite3 may not be suitable for high-concurrency systems or for systems that need to handle
+> large amounts of data. If you expect your background jobs to generate high loads, it would be
+> better to use a more robust database solution that supports horizontal scalability, like
+> Postgres.
 
 ## Configuring Queues
 
@@ -267,8 +262,8 @@ defmodule MyApp.Business do
 end
 ```
 
-The `use` macro also accepts options to customize `max_attempts`, `priority`, `tags`, and `unique`
-options:
+The `use` macro also accepts options to customize `max_attempts`, `priority`, `tags`, `unique`,
+and `replace` options:
 
 ```elixir
 defmodule MyApp.LazyBusiness do
@@ -277,7 +272,8 @@ defmodule MyApp.LazyBusiness do
     priority: 3,
     max_attempts: 3,
     tags: ["business"],
-    unique: [period: 30]
+    unique: true,
+    replace: [scheduled: [:scheduled_at]]
 
   @impl Oban.Worker
   def perform(_job) do
@@ -327,7 +323,7 @@ Unique jobs can be configured in the worker, or when the job is built:
 
 ```elixir
 %{email: "brewster@example.com"}
-|> MyApp.Mailer.new(unique: [period: 300, fields: [:queue, :worker])
+|> MyApp.Mailer.new(unique: false)
 |> Oban.insert()
 ```
 
@@ -447,8 +443,7 @@ end
 ## Unique Jobs
 
 The unique jobs feature lets you specify constraints to prevent enqueueing duplicate jobs.
-Uniqueness is based on a combination of `args`, `queue`, `worker`, `state` and insertion time. It
-is configured at the worker or job level using the following options:
+Uniqueness is based on a combination of job attribute based on the following options:
 
 * `:period` — The number of seconds until a job is no longer considered duplicate. You should
   always specify a period, otherwise Oban will default to 60 seconds. `:infinity` can be used to
@@ -469,17 +464,17 @@ is configured at the worker or job level using the following options:
 * `:timestamp` — Which timestamp to check the period against. The available timestamps are
   `:inserted_at` or `:scheduled_at`, and it defaults to `:inserted_at` for legacy reasons.
 
-For example, configure a worker to be unique across all fields and states for 60
-seconds:
+The simplest form of uniqueness will configure uniqueness for as long as a matching job exists in
+the database, regardless of state:
+
+```elixir
+use Oban.Worker, unique: true
+```
+
+Configure the worker to be unique only for 60 seconds:
 
 ```elixir
 use Oban.Worker, unique: [period: 60]
-```
-
-Configure the worker to be unique only by `:worker` and `:queue`:
-
-```elixir
-use Oban.Worker, unique: [fields: [:queue, :worker], period: 60]
 ```
 
 Check the `:scheduled_at` timestamp instead of `:inserted_at` for uniqueness:
@@ -488,31 +483,24 @@ Check the `:scheduled_at` timestamp instead of `:inserted_at` for uniqueness:
 use Oban.Worker, unique: [period: 120, timestamp: :scheduled_at]
 ```
 
-Or, configure a worker to be unique until it has executed:
-
-```elixir
-use Oban.Worker, unique: [period: 300, states: [:available, :scheduled, :executing]]
-```
-
 Only consider the `:url` key rather than the entire `args`:
 
 ```elixir
-use Oban.Worker, unique: [fields: [:args, :worker], keys: [:url]]
+use Oban.Worker, unique: [keys: [:url]]
 ```
 
-You can use `Oban.Job.states/0` to specify uniqueness across _all_ states,
-including `:discarded`:
+Use `Oban.Job.states/0` to specify uniqueness across _all_ states, including `cancelled` and
+`discarded`:
 
 ```elixir
-use Oban.Worker, unique: [period: 300, states: Oban.Job.states()]
+use Oban.Worker, unique: [period: :infinity, states: Oban.Job.states()]
 ```
 
 #### Detecting Unique Conflicts
 
-When unique settings match an existing job, the return value of `Oban.insert/2`
-is still `{:ok, job}`. However, you can detect a unique conflict by checking the
-jobs' `:conflict?` field. If there was an existing job, the field is `true`;
-otherwise it is `false`.
+When unique settings match an existing job, the return value of `Oban.insert/2` is still `{:ok,
+job}`. However, you can detect a unique conflict by checking the jobs' `:conflict?` field. If
+there was an existing job, the field is `true`; otherwise it is `false`.
 
 You can use the `:conflict?` field to customize responses after insert:
 
@@ -529,19 +517,17 @@ case Oban.insert(changeset) do
 end
 ```
 
-Note that conflicts are only detected for jobs enqueued through `Oban.insert/2,3`.
-Jobs enqueued through `Oban.insert_all/2` _do not_ use per-job unique
-configuration.
+Note that conflicts are only detected for jobs enqueued through `Oban.insert/2,3`. Jobs enqueued
+through `Oban.insert_all/2` _do not_ use per-job unique configuration.
 
 #### Replacing Values
 
-In addition to detecting unique conflicts, passing options to `replace` can
-update any job field when there is a conflict. Any of the following fields can
-be replaced per _state_:  `args`, `max_attempts`, `meta`, `priority`, `queue`,
-`scheduled_at`, `tags`, `worker`.
+In addition to detecting unique conflicts, passing options to `replace` can update any job field
+when there is a conflict. Any of the following fields can be replaced per _state_:  `args`,
+`max_attempts`, `meta`, `priority`, `queue`, `scheduled_at`, `tags`, `worker`.
 
-For example, to change the `priority` and increase `max_attempts` when there is
-a conflict with a job in a `scheduled` state:
+For example, to change the `priority` and increase `max_attempts` when there is a conflict with a
+job in a `scheduled` state:
 
 ```elixir
 BusinessWorker.new(
@@ -552,9 +538,8 @@ BusinessWorker.new(
 )
 ```
 
-Another example is bumping the scheduled time on conflict. Either `scheduled_at`
-or `schedule_in` values will work, but the replace option is always
-`scheduled_at`.
+Another example is bumping the scheduled time on conflict. Either `scheduled_at` or `schedule_in`
+values will work, but the replace option is always `scheduled_at`.
 
 ```elixir
 UrgentWorker.new(args, schedule_in: 1, replace: [scheduled: [:scheduled_at]])
@@ -571,6 +556,12 @@ Unique jobs are guaranteed through transactional locks and database queries:
 they _do not_ rely on unique constraints in the database. This makes uniqueness
 entirely configurable by application code, without the need for database
 migrations.
+
+## Testing
+
+Find testing setup, helpers, and strategies in the [testing guide](https://hexdocs.pm/oban/testing.html).
+
+[pro]: https://getoban.pro
 
 ## Pruning Historic Jobs
 
@@ -1029,33 +1020,31 @@ end
 
 There are a few places to connect and communicate with other Oban users:
 
+- Ask questions and discuss *#oban* on the [Elixir Forum][forum]
 - [Request an invitation][invite] and join the *#oban* channel on [Slack][slack]
-- Ask questions and discuss Oban on the [Elixir Forum][forum]
 - Learn about bug reports and upcoming features in the [issue tracker][issues]
 - Follow [@sorentwo][twitter] (Twitter)
-- Follow [@sorentwo@genserver.social][social] (Mastodon)
 
-[invite]: https://elixir-slackin.herokuapp.com/
+[invite]: https://elixir-slack.community/
 [slack]: https://elixir-lang.slack.com/
 [forum]: https://elixirforum.com/
 [issues]: https://github.com/sorentwo/oban/issues
 [twitter]: https://twitter.com/sorentwo
-[social]: https://genserver.social/sorentwo
 
 ## Contributing
 
-To run the Oban test suite you must have PostgreSQL 10+ and SQLite3 3.37+
-running. Follow these steps to create the database, create the database and run
-all migrations:
+To run the Oban test suite you must have PostgreSQL 12+ and SQLite3 3.37+ running. Follow these
+steps to create the database, create the database and run all migrations:
 
 ```bash
 mix test.setup
 ```
 
-To ensure a commit passes CI you should run `mix test.ci` locally, which executes the
-following commands:
+To ensure a commit passes CI you should run `mix test.ci` locally, which executes the following
+commands:
 
 * Check formatting (`mix format --check-formatted`)
+* Check deps (`mix deps.unlock --check-unused`)
 * Lint with Credo (`mix credo --strict`)
 * Run all tests (`mix test --raise`)
 * Run Dialyzer (`mix dialyzer`)
