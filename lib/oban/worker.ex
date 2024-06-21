@@ -263,7 +263,7 @@ defmodule Oban.Worker do
   
   - `:ok` - the job is successful and marked as `completed`.
   - `{:ok, ignored}` - the job is successful, marked as `completed`, and the return value is ignored.
-  - `{:cancel, reason}` - the job is marked as `cancelled` for the provided reason and stop retrying it.
+  - `{:cancel, reason}` - the job is marked as `cancelled` for the provided reason and no longer retried.
   - `{:error, reason}` - the job is marked as `retryable` for the provided reason, or `discarded`
     if it has  exhausted all attempts.
   - `{:snooze, seconds}` - mark the job as `scheduled` to run again `seconds` in the future.
