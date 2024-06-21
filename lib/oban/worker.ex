@@ -259,17 +259,19 @@ defmodule Oban.Worker do
   @type t :: module()
 
   @typedoc """
-  - `:ok` - the job was successfully processed.
-  - `{:ok, ignored}` - the job was processed successfully, the return value is
-    ignored.
-  - `{:cancel, reason}` - the job was canceled with a reason.
-  - `{:error, reason}` - the job failed with a reason.
-  - `{:snooze, seconds}` - the job should be retried after `seconds`.
+  Return values control whether a job is treated as a success or a failure.
+  
+  - `:ok` - the job is successful and marked as `completed`.
+  - `{:ok, ignored}` - the job is successful, marked as `completed`, and the return value is ignored.
+  - `{:cancel, reason}` - the job is marked as `cancelled` for the provided reason and stop retrying it.
+  - `{:error, reason}` - the job is marked as `retryable` for the provided reason, or `discarded`
+    if it has  exhausted all attempts.
+  - `{:snooze, seconds}` - mark the job as `scheduled` to run again `seconds` in the future.
 
-  > #### Error {: .warning}
+  > #### Deprecated {: .warning}
   >
-  > - `:discard` - deprecated, use `{:cancel, reason}` or {:error, reason} instead.
-  > - `{:discard, reason}` - deprecated, use `{:cancel, reason}` or {:error, reason} instead.
+  > - `:discard` - deprecated, use `{:cancel, reason}` instead.
+  > - `{:discard, reason}` - deprecated, use `{:cancel, reason}` instead.
   """
   @type result ::
           :ok
