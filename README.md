@@ -53,8 +53,10 @@
 
 ---
 
-_Note: This README is for the unreleased main branch, please reference the
-[official documentation on hexdocs][hexdoc] for the latest stable release._
+> [!NOTE]
+>
+> This README is for the unreleased main branch, please reference the
+> [official documentation on hexdocs][hexdoc] for the latest stable release.
 
 [hexdoc]: https://hexdocs.pm/oban/Oban.html
 

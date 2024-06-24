@@ -98,7 +98,7 @@
         #
         # Controversial and experimental checks (opt-in, just replace `false` with `[]`)
         #
-        {Credo.Check.Readability.StrictModuleLayout, []},
+        {Credo.Check.Readability.StrictModuleLayout, ignore_module_attributes: ~w(doc_header doc_footer)a},
         {Credo.Check.Consistency.MultiAliasImportRequireUse, false},
         {Credo.Check.Consistency.UnusedVariableNames, false},
         {Credo.Check.Design.DuplicatedCode, false},
