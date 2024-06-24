@@ -33,7 +33,7 @@
 
 - [Features](#features)
 - [Oban Web+Pro](#oban-webpro)
-- [Usage](#usage)
+- Usage
   - [Installation](#installation)
   - [Requirements](#requirements)
   - [Running With SQLite3](#running-with-sqlite3)
@@ -133,21 +133,18 @@ orphaned due to crashes.
 [rdbms]: https://en.wikipedia.org/wiki/Relational_database#RDBMS
 [tele]: https://github.com/beam-telemetry/telemetry
 
-## Usage
+## Oban Web+Pro
 
-<!-- MDOC -->
-
-Oban is a robust job processing library which uses PostgreSQL or SQLite3 for persistence.
-
-> #### Oban Web+Pro {: .tip}
->
+> [!TIP]
 > A web dashboard for managing Oban, along with an official set of extensions, plugins, and
 > workers that expand what Oban is capable are available as licensed packages:
 > 
 > * [🧭 Oban Web](https://getoban.pro#oban-web)
 > * [🌟 Oban Pro](https://getoban.pro#oban-pro)
 > 
-> Learn more about prices and licensing Oban Web+Pro at [getoban.pro][pro].
+> Learn more at [getoban.pro][pro]!
+
+<!-- MDOC -->
 
 ## Requirements
 

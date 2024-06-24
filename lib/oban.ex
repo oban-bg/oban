@@ -1,12 +1,27 @@
 defmodule Oban do
   @external_resource readme = Path.join([__DIR__, "../README.md"])
 
-  @moduledoc readme
-             |> File.read!()
-             |> String.split("<!-- MDOC -->")
-             |> Enum.fetch!(1)
+  @doc_header """
+  Oban is a robust job processing library which uses PostgreSQL or SQLite3 for persistence.
 
-  @moduledoc since: "0.1.0"
+  > #### Oban Web+Pro {: .tip}
+  >
+  > A web dashboard for managing Oban, along with an official set of extensions, plugins, and
+  > workers that expand what Oban is capable are available as licensed packages:
+  > 
+  > * [🧭 Oban Web](https://getoban.pro#oban-web)
+  > * [🌟 Oban Pro](https://getoban.pro#oban-pro)
+  > 
+  > Learn more at [getoban.pro][pro]!
+
+  """
+
+  @doc_footer readme
+              |> File.read!()
+              |> String.split("<!-- MDOC -->")
+              |> Enum.fetch!(1)
+
+  @moduledoc @doc_header <> @doc_footer
 
   use Supervisor
 
