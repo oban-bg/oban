@@ -74,6 +74,54 @@ args
 |> Oban.insert()
 ```
 
+## v2.17.11 — 2024-06-25
+
+### Bug Fixes
+
+- [Oban] Handle deprecation warnings from Elixir 1.17
+
+- [Notifier] Prevent noisy logging about switching between modes.
+
+  There's an apparent race condition in Sonar between pruning stale nodes on `:ping` and updating
+  the status after a notification. This primarily happens in development for two reasons:
+
+  1. Development laptops are most prone to time warp because of system sleep.
+  2. Apps only run a single node in development.
+
+  Using `monotonic_time/1` instead of `system_time/1` guards against clock drift/time warp
+  effects.
+
+- [Stager] Prevent notification status timeouts from bubbling into the Stager.
+
+  A clogged Ecto pool could cause cascading errors on startup due to a sequence of calls between
+  the `Notifier`, `Sonar`, and `Stager`.
+
+  1. `Sonar` sends a notification in `handle_continue` on startup.
+  2. The notification is blocked while the `Notifier` waits for a connection from the Ecto pool.
+  3. `Stager` checks for the connection status on startup, which would eventually time out because
+     the `Sonar` hadn't finished initializing.
+  4. The `Stager` crashes from the timeout error.
+
+  This makes the following changes to prevent this sequence of events:
+
+  1. The `Stager` no longer gets the sonar status during startup.
+  2. The `Notifier` catches timeout errors from `Sonar` checks, warns about it, then returns an
+     `:unknown` status.
+
+- [Engine] Defensively check the process dictionary during inline testing.
+
+  Not all processes are guaranteed to return a value for the process dictionary. Sometimes a value
+  was missing during inline testing, which would crash the test.
+
+- [Basic] Set `conflict?` flag when encountering a unique advisory lock.
+
+  The `conflict?` flag wasn't set when inserting a unique job was blocked by an advisory lock. Now
+  the flag is set on either a fetched duplicate, or when the advisory lock is set.
+
+- [Job] Correct `replace_by_state_option` type by switching from keyword to tuples.
+
+- [Config] Correctly type `shutdown_grace_period` as an `integer` rather than a `timeout`.
+
 ## v2.17.10 — 2024-04-26
 
 ### Enhancements
