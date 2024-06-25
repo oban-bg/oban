@@ -45,12 +45,14 @@ defmodule Oban.Job do
           | :scheduled
         ]
 
+  @type unique_timestamp :: :inserted_at | :scheduled_at
+
   @type unique_option ::
           {:fields, [unique_field()]}
           | {:keys, [atom()]}
           | {:period, unique_period()}
           | {:states, [unique_state()]}
-          | {:timestamp, :inserted_at | :scheduled_at}
+          | {:timestamp, unique_timestamp()}
 
   @type replace_option :: [
           :args
@@ -111,7 +113,14 @@ defmodule Oban.Job do
           conflict?: boolean(),
           replace: [replace_option() | replace_by_state_option()] | nil,
           unique:
-            %{fields: [unique_field()], period: unique_period(), states: [unique_state()]} | nil,
+            %{
+              fields: [unique_field()],
+              keys: [atom()],
+              period: unique_period(),
+              states: [unique_state()],
+              timestamp: unique_timestamp()
+            }
+            | nil,
           unsaved_error:
             %{
               kind: Exception.kind(),
