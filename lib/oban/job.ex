@@ -337,15 +337,15 @@ defmodule Oban.Job do
   ## Job State Transitions
 
   * `:scheduled`—Jobs inserted with `scheduled_at` in the future are `:scheduled`. After the
-    `scheduled_at` time has ellapsed the `Oban.Plugins.Stager` will transition them to `:available`
+    `scheduled_at` time has elapsed the `Oban.Plugins.Stager` will transition them to `:available`
 
   * `:available`—Jobs without a future `scheduled_at` timestamp are inserted as `:available` and may
     execute immediately
 
   * `:executing`—Available jobs may be ran, at which point they are `:executing`
 
-  * `:retryable`—Jobs that fail and haven't exceeded their max attempts are transitiond to
-    `:retryable` and rescheduled until after a backoff period. Once the backoff has ellapsed the
+  * `:retryable`—Jobs that fail and haven't exceeded their max attempts are transitioned to
+    `:retryable` and rescheduled until after a backoff period. Once the backoff has elapsed the
     `Oban.Plugins.Stager` will transition them back to `:available`
 
   * `:completed`—Jobs that finish executing succesfully are marked `:completed`
