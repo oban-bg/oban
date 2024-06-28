@@ -74,6 +74,14 @@ args
 |> Oban.insert()
 ```
 
+## v2.17.12 — 2024-06-28
+
+### Bug Fixes
+
+- [Basic] Return `{:ok, job}` tuple on unique advisory lock conflict.
+
+  The advisory lock clause only returned the job, not a success tuple.
+
 ## v2.17.11 — 2024-06-25
 
 ### Bug Fixes
