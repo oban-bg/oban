@@ -343,7 +343,7 @@ defmodule Oban.Engines.Basic do
     else
       {:error, :locked} ->
         with {:ok, job} <- Changeset.apply_action(changeset, :insert) do
-          %Job{job | conflict?: true}
+          {:ok, %Job{job | conflict?: true}}
         end
 
       nil ->
