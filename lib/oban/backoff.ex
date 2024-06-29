@@ -78,7 +78,7 @@ defmodule Oban.Backoff do
   end
 
   @doc """
-  Attempt a database interraction repeatedly until it succeeds or retries are exhausted.
+  Attempt a database interaction repeatedly until it succeeds or retries are exhausted.
 
   Failed attempts are spaced out using exponential backoff with jitter. By default, functions are
   retried _infinitely_ with a maximum of ~100 seconds between retries.
