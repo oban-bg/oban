@@ -89,8 +89,9 @@ defmodule Oban.Migrations.Postgres do
     opts = Enum.into(opts, %{prefix: @default_prefix, version: version})
 
     opts
+    |> Map.put(:quoted_prefix, inspect(opts.prefix))
+    |> Map.put(:escaped_prefix, String.replace(opts.prefix, "'", "\\'"))
+    |> Map.put_new(:unlogged, true)
     |> Map.put_new(:create_schema, opts.prefix != @default_prefix)
-    |> Map.put_new(:quoted_prefix, inspect(opts.prefix))
-    |> Map.put_new(:escaped_prefix, String.replace(opts.prefix, "'", "\\'"))
   end
 end

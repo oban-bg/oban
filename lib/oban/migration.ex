@@ -153,6 +153,10 @@ defmodule Oban.Migration do
   Run migrations in an alternate prefix but don't try to create the schema:
 
       Oban.Migration.up(prefix: "payments", create_schema: false)
+
+  Disable `UNLOGGED` tables for databases that don't support it (e.g. Yugabyte)
+
+      Oban.Migration.up(unlogged: false)
   """
   def up(opts \\ []) when is_list(opts) do
     migrator().up(opts)
