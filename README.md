@@ -593,9 +593,8 @@ config :my_app, Oban,
 
 ## Periodic Jobs
 
-Oban's `Cron` plugin registers workers a cron-like schedule and enqueues jobs
-automatically. Periodic jobs are declared as a list of `{cron, worker}` or
-`{cron, worker, options}` tuples:
+Oban's `Cron` plugin registers workers a cron-like schedule and enqueues jobs automatically.
+Periodic jobs are declared as a list of `{cron, worker}` or `{cron, worker, options}` tuples:
 
 ```elixir
 config :my_app, Oban,
@@ -620,18 +619,17 @@ The crontab would insert jobs as follows:
 * `MyApp.MondayWorker` — Inserted at noon every Monday in the "scheduled" queue
 * `MyApp.AnotherDailyWorker` — Inserted at midnight every day with no retries
 
-The crontab format respects all [standard rules][cron] and has one minute
-resolution. Jobs are considered unique for most of each minute, which prevents
-duplicate jobs with multiple nodes and across node restarts.
+The crontab format respects all [standard rules][cron] and has one minute resolution. Jobs are
+considered unique for most of each minute, which prevents duplicate jobs with multiple nodes and
+across node restarts.
 
-Like other jobs, recurring jobs will use the `:queue` specified by the worker
-module (or `:default` if one is not specified).
+Like other jobs, recurring jobs will use the `:queue` specified by the worker module (or
+`:default` if one is not specified).
 
 ### Cron Expressions
 
-Standard Cron expressions are composed of rules specifying the minutes, hours,
-days, months and weekdays. Rules for each field are comprised of literal values,
-wildcards, step values or ranges:
+Standard Cron expressions are composed of rules specifying the minutes, hours, days, months and
+weekdays. Rules for each field are comprised of literal values, wildcards, step values or ranges:
 
 * `*` — Wildcard, matches any value (0, 1, 2, ...)
 * `0` — Literal, matches only itself (only 0)
@@ -639,8 +637,8 @@ wildcards, step values or ranges:
 * `0-5` — Range, matches any value within the range (0, 1, 2, 3, 4, 5)
 * `0-9/2` - Step values can be used in conjunction with ranges (0, 2, 4, 6, 8)
 
-Each part may have multiple rules, where rules are separated by a comma. The
-allowed values for each field are as follows:
+Each part may have multiple rules, where rules are separated by a comma. The allowed values for
+each field are as follows:
 
 * `minute` — 0-59
 * `hour` — 0-23
@@ -664,25 +662,18 @@ Some specific examples that demonstrate the full range of expressions:
 * `0 0 * DEC *` — Once a day at midnight during December
 * `0 7-9,4-6 13 * FRI` — Once an hour during both rush hours on Friday the 13th
 
-For more in depth information see the man documentation for `cron` and `crontab`
-in your system. Alternatively you can experiment with various expressions
-online at [Crontab Guru][guru].
+For more in depth information see the man documentation for `cron` and `crontab` in your system.
+Alternatively you can experiment with various expressions online at [Crontab Guru][guru].
 
 #### Caveats & Guidelines
 
-* All schedules are evaluated as UTC unless a different timezone is provided.
-  See `Oban.Plugins.Cron` for information about configuring a timezone.
+* All schedules are evaluated as UTC unless a different timezone is provided. See
+  `Oban.Plugins.Cron` for information about configuring a timezone.
 
-* Workers can be used for regular _and_ scheduled jobs so long as they accept
-  different arguments.
+* Workers can be used for regular _and_ scheduled jobs so long as they accept different arguments.
 
-* Duplicate jobs are prevented through transactional locks and unique
-  constraints. Workers that are used for regular and scheduled jobs _must not_
-  specify `unique` options less than `60s`.
-
-* Long running jobs may execute simultaneously if the scheduling interval is
-  shorter than it takes to execute the job. You can prevent overlap by passing
-  custom `unique` opts in the crontab config:
+* Long running jobs may execute simultaneously if the scheduling interval is shorter than it takes
+  to execute the job. You can prevent overlap by passing custom `unique` opts in the crontab config:
 
   ```elixir
   custom_args = %{scheduled: true}

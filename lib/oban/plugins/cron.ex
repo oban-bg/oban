@@ -281,18 +281,9 @@ defmodule Oban.Plugins.Cron do
 
     opts =
       worker.__opts__()
-      |> unique_opts(opts)
+      |> Worker.merge_opts(opts)
       |> Keyword.update(:meta, meta, &Map.merge(&1, meta))
 
     worker.new(args, opts)
-  end
-
-  # Make each job unique for 59 seconds to prevent double-enqueue if the node or scheduler
-  # crashes. The minimum resolution for our cron jobs is 1 minute, so there is potentially
-  # a one second window where a double enqueue can happen.
-  defp unique_opts(worker_opts, crontab_opts) do
-    [unique: [period: 59]]
-    |> Worker.merge_opts(worker_opts)
-    |> Worker.merge_opts(crontab_opts)
   end
 end
