@@ -29,18 +29,18 @@ defmodule Oban.Telemetry do
   provide the error type, the error itself, and the stacktrace. The following chart shows which
   metadata you can expect for each event:
 
-  | event        | measures                   | metadata                                                                |
-  | ------------ | -------------------------- | ----------------------------------------------------------------------- |
-  | `:start`     | `:system_time`             | `:conf`, `:job`                                                         |
-  | `:stop`      | `:duration`, `:queue_time` | `:conf`, `:job`, `:state`, `:result`                                    |
-  | `:exception` | `:duration`, `:queue_time` | `:conf`, `:job`, `:state`, `:kind`, `:reason`, `:result`, `:stacktrace` |
+  | event        | measures                                             | metadata                                                                |
+  | ------------ | ---------------------------------------------------- | ----------------------------------------------------------------------- |
+  | `:start`     | `:system_time`                                       | `:conf`, `:job`                                                         |
+  | `:stop`      | `:duration`, `:memory`, `:queue_time`, `:reductions` | `:conf`, `:job`, `:state`, `:result`                                    |
+  | `:exception` | `:duration`, `:memory`, `:queue_time`, `:reductions` | `:conf`, `:job`, `:state`, `:kind`, `:reason`, `:result`, `:stacktrace` |
 
   #### Metadata
 
   * `:conf` — the executing Oban instance's config
   * `:job` — the executing `Oban.Job`
-  * `:state` — one of `:success`, `:failure`, `:cancelled`, `:discard` or `:snoozed`
   * `:result` — the `perform/1` return value, always `nil` for an exception or crash
+  * `:state` — one of `:success`, `:failure`, `:cancelled`, `:discard` or `:snoozed`
 
   For `:exception` events the metadata also includes details about what caused the failure. The
   `:kind` value is determined by how an error occurred. Here are the possible kinds:

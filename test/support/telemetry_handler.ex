@@ -38,12 +38,8 @@ defmodule Oban.TelemetryHandler do
     send(pid, {:event, :start, start_time, meta})
   end
 
-  def handle([:oban, :job, :stop], measure, meta, pid) do
-    send(pid, {:event, :stop, measure, meta})
-  end
-
-  def handle([:oban, :job, event], %{duration: duration}, meta, pid) do
-    send(pid, {:event, event, duration, meta})
+  def handle([:oban, :job, event], measure, meta, pid) do
+    send(pid, {:event, event, measure, meta})
   end
 
   def handle([:oban, :engine | event], measure, meta, pid) do

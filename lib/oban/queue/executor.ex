@@ -36,6 +36,7 @@ defmodule Oban.Queue.Executor do
     :error,
     :job,
     :meta,
+    :pid,
     :result,
     :snooze,
     :start_mono,
@@ -58,6 +59,7 @@ defmodule Oban.Queue.Executor do
       conf: conf,
       job: %{job | conf: conf},
       meta: event_metadata(conf, job),
+      pid: self(),
       safe: Keyword.get(opts, :safe, true),
       start_mono: System.monotonic_time(),
       start_time: System.system_time()
@@ -260,8 +262,6 @@ defmodule Oban.Queue.Executor do
 
   @spec emit_event(t()) :: t()
   def emit_event(%__MODULE__{state: state} = exec) when state in [:failure, :exhausted] do
-    measurements = %{duration: exec.duration, queue_time: exec.queue_time}
-
     kind =
       case exec.kind do
         {:EXIT, _pid} -> :exit
@@ -281,15 +281,13 @@ defmodule Oban.Queue.Executor do
         state: state
       })
 
-    :telemetry.execute([:oban, :job, :exception], measurements, meta)
+    :telemetry.execute([:oban, :job, :exception], measurements(exec), meta)
 
     exec
   end
 
   def emit_event(%__MODULE__{state: state} = exec)
       when state in [:cancelled, :success, :snoozed, :discard] do
-    measurements = %{duration: exec.duration, queue_time: exec.queue_time}
-
     meta =
       Map.merge(exec.meta, %{
         job: exec.job,
@@ -297,7 +295,7 @@ defmodule Oban.Queue.Executor do
         result: exec.result
       })
 
-    :telemetry.execute([:oban, :job, :stop], measurements, meta)
+    :telemetry.execute([:oban, :job, :stop], measurements(exec), meta)
 
     exec
   end
@@ -319,6 +317,22 @@ defmodule Oban.Queue.Executor do
     job
     |> Map.take([:id, :args, :queue, :worker, :attempt, :max_attempts, :tags])
     |> Map.merge(%{conf: conf, job: job, prefix: conf.prefix})
+  end
+
+  defp measurements(exec) do
+    %{
+      duration: exec.duration,
+      memory: info_for(exec, :memory),
+      queue_time: exec.queue_time,
+      reductions: info_for(exec, :reductions)
+    }
+  end
+
+  defp info_for(%__MODULE__{pid: pid}, item) do
+    case Process.info(pid, item) do
+      {^item, value} -> value
+      nil -> 0
+    end
   end
 
   defp log_warning(%__MODULE__{safe: true, worker: worker}, returned) do

@@ -47,11 +47,17 @@ defmodule Oban.TelemetryTest do
     %Job{id: error_id} = insert!([ref: 2, action: "ERROR"], tags: ["foo"])
 
     assert_receive {:event, :start, started_time, start_meta}
-    assert_receive {:event, :stop, %{duration: stop_duration, queue_time: queue_time}, stop_meta}
-    assert_receive {:event, :exception, error_duration, %{kind: :error} = error_meta}
+    assert_receive {:event, :stop, stop_meas, stop_meta}
+    assert_receive {:event, :exception, error_meas, %{kind: :error} = error_meta}
+
+    assert %{duration: stop_duration, queue_time: queue_time} = stop_meas
+    assert %{memory: stop_memory, reductions: stop_reductions} = stop_meas
+    assert %{duration: error_duration, queue_time: _} = error_meas
 
     assert started_time > 0
     assert stop_duration > 0
+    assert stop_memory > 0
+    assert stop_reductions > 0
     assert queue_time > 0
     assert error_duration > 0
 
