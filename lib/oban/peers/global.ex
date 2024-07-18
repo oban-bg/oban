@@ -23,6 +23,7 @@ defmodule Oban.Peers.Global do
 
   defstruct [
     :conf,
+    :leader,
     :timer,
     interval: :timer.seconds(30),
     leader?: false
@@ -43,6 +44,11 @@ defmodule Oban.Peers.Global do
     GenServer.call(pid, :leader?, timeout)
   end
 
+  @impl Oban.Peer
+  def get_leader(pid, timeout \\ 5_000) do
+    GenServer.call(pid, :get_leader, timeout)
+  end
+
   @impl GenServer
   def init(state) do
     Process.flag(:trap_exit, true)
@@ -57,7 +63,7 @@ defmodule Oban.Peers.Global do
     if state.leader? do
       try do
         delete_self(state)
-        notify_down(state)
+        notify_down(state.conf)
       catch
         :exit, _reason -> :ok
       end
@@ -78,6 +84,10 @@ defmodule Oban.Peers.Global do
     {:reply, state.leader?, state}
   end
 
+  def handle_call(:get_leader, _from, %State{} = state) do
+    {:reply, state.leader, state}
+  end
+
   @impl GenServer
   def handle_info(:election, %State{} = state) do
     meta = %{conf: state.conf, leader: state.leader?, peer: __MODULE__}
@@ -89,7 +99,13 @@ defmodule Oban.Peers.Global do
         {locked?, %{meta | leader: locked?}}
       end)
 
+    if locked?, do: notify_lock(state.conf)
+
     {:noreply, schedule_election(%{state | leader?: locked?})}
+  end
+
+  def handle_info({:notification, :leader, %{"lock" => node}}, %State{} = state) do
+    {:noreply, %{state | leader: node}}
   end
 
   def handle_info({:notification, :leader, %{"down" => name}}, %State{conf: conf} = state) do
@@ -112,8 +128,12 @@ defmodule Oban.Peers.Global do
     :global.del_lock(key(state), nodes())
   end
 
-  defp notify_down(%{conf: conf}) do
+  defp notify_down(conf) do
     Notifier.notify(conf, :leader, %{down: inspect(conf.name)})
+  end
+
+  defp notify_lock(conf) do
+    Notifier.notify(conf, :leader, %{lock: conf.node})
   end
 
   defp key(state), do: {state.conf.name, state.conf.node}

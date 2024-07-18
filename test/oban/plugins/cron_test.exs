@@ -147,7 +147,7 @@ defmodule Oban.Plugins.CronTest do
 
     name
     |> Registry.whereis(Oban.Peer)
-    |> Agent.update(fn _ -> true end)
+    |> Agent.update(&%{&1 | leader?: true})
 
     send_evaluate(name)
 

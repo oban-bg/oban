@@ -23,7 +23,7 @@ defmodule Oban.Peers.Postgres do
 
   use GenServer
 
-  import Ecto.Query, only: [where: 2, where: 3]
+  import Ecto.Query, only: [select: 3, where: 2, where: 3]
 
   alias Oban.{Backoff, Notifier, Repo}
   alias __MODULE__, as: State
@@ -51,6 +51,11 @@ defmodule Oban.Peers.Postgres do
   @impl Oban.Peer
   def leader?(pid, timeout \\ 5_000) do
     GenServer.call(pid, :leader?, timeout)
+  end
+
+  @impl Oban.Peer
+  def get_leader(pid, timeout \\ 5_000) do
+    GenServer.call(pid, :get_leader, timeout)
   end
 
   @impl GenServer
@@ -146,6 +151,17 @@ defmodule Oban.Peers.Postgres do
   @impl GenServer
   def handle_call(:leader?, _from, %State{} = state) do
     {:reply, state.leader?, state}
+  end
+
+  def handle_call(:get_leader, _from, %State{conf: conf} = state) do
+    query =
+      "oban_peers"
+      |> where([p], p.name == ^inspect(conf.name))
+      |> select([p], p.node)
+
+    leader = Repo.one(conf, query)
+
+    {:reply, leader, state}
   end
 
   # Helpers

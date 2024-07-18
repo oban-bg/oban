@@ -29,9 +29,10 @@ defmodule Oban.PeerTest do
       end
 
       test "a single node acquires leadership" do
-        name = start_supervised_oban!(peer: @peer, poll_interval: 250)
+        name = start_supervised_oban!(peer: @peer, node: "web.1")
 
         assert Peer.leader?(name)
+        assert "web.1" == Peer.get_leader(name)
       end
 
       test "leadership transfers to another peer when the leader exits" do
@@ -55,7 +56,7 @@ defmodule Oban.PeerTest do
 
       @tag :capture_log
       test "leadership checks return false after a timeout" do
-        name = start_supervised_oban!(peer: @peer, poll_interval: 250)
+        name = start_supervised_oban!(peer: @peer)
 
         assert Peer.leader?(name)
 
@@ -64,6 +65,7 @@ defmodule Oban.PeerTest do
         |> :sys.suspend()
 
         refute Peer.leader?(name, 10)
+        refute Peer.get_leader(name, 10)
       end
     end
   end
