@@ -250,7 +250,11 @@ defmodule Oban.Notifier do
     |> GenServer.call(:get_status)
   catch
     :exit, {:timeout, _} = reason ->
-      Logger.warning("Oban.Notifier.status/1 check failed due to #{inspect(reason)}.")
+      Logger.warning(
+        message: "Oban.Notifier.status/1 check failed due to #{inspect(reason)}",
+        source: :oban,
+        module: __MODULE__
+      )
 
       :unknown
   end

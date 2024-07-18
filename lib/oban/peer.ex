@@ -60,10 +60,11 @@ defmodule Oban.Peer do
 
   require Logger
 
-  @type option ::
-          {:name, module()}
-          | {:conf, Config.t()}
-          | {:interval, timeout()}
+  @type option :: [name: module(), conf: Config.t(), interval: timeout()]
+
+  @type conf_or_server :: Config.t() | GenServer.server()
+
+  @type peer :: %{name: Oban.name(), node: String.t()}
 
   @doc """
   Starts a peer instance.
@@ -73,7 +74,7 @@ defmodule Oban.Peer do
   @doc """
   Check whether the current peer instance leads the cluster.
   """
-  @callback leader?(Config.t() | GenServer.server()) :: boolean()
+  @callback leader?(GenServer.server()) :: boolean()
 
   @doc false
   @spec child_spec(Keyword.t()) :: Supervisor.child_spec()
@@ -103,8 +104,8 @@ defmodule Oban.Peer do
       Oban.Peer.leader?(Oban.Private)
       # => true
   """
-  @spec leader?(Config.t() | GenServer.server()) :: boolean()
-  def leader?(conf_or_name \\ Oban, timeout \\ 5_000)
+  @spec leader?(conf_or_server(), timeout()) :: boolean()
+  def leader?(conf_or_server \\ Oban, timeout \\ 5_000)
 
   def leader?(%Config{name: name, peer: {peer, _}}, timeout) do
     case Registry.whereis(name, Oban.Peer) do
@@ -116,7 +117,11 @@ defmodule Oban.Peer do
     end
   catch
     :exit, {:timeout, _} = reason ->
-      Logger.warning("Oban.Peer.leader?/2 check failed due to #{inspect(reason)}.")
+      Logger.warning(
+        message: "Oban.Peer.leader?/2 check failed due to #{inspect(reason)}",
+        source: :oban,
+        module: __MODULE__
+      )
 
       false
   end

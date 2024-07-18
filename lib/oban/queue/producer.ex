@@ -177,7 +177,11 @@ defmodule Oban.Queue.Producer do
   end
 
   def handle_info(message, state) do
-    Logger.warning(message: inspect(message), source: :oban, module: __MODULE__)
+    Logger.warning(
+      message: "Received unexpected message: #{inspect(message)}",
+      source: :oban,
+      module: __MODULE__
+    )
 
     {:noreply, state}
   end
