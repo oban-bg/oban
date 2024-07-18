@@ -7,6 +7,8 @@ defmodule Oban.Queue.Producer do
   alias Oban.Queue.Executor
   alias __MODULE__, as: State
 
+  require Logger
+
   defstruct [
     :conf,
     :foreman,
@@ -174,7 +176,9 @@ defmodule Oban.Queue.Producer do
     {:noreply, schedule_refresh(%{state | meta: meta})}
   end
 
-  def handle_info(_message, state) do
+  def handle_info(message, state) do
+    Logger.warning(message: inspect(message), source: :oban, module: __MODULE__)
+
     {:noreply, state}
   end
 
