@@ -74,7 +74,6 @@ config :my_app, Oban,
 ### SQLite3
 
 Running with SQLite3 requires using the `Oban.Engines.Lite` engine:
-
  
 ```elixir
 # config/config.exs
