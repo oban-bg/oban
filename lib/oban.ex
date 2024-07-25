@@ -104,7 +104,8 @@ defmodule Oban do
                    is_struct(cw, Stream) or
                    is_function(cw, 1) or
                    (is_map_key(cw, :changesets) and is_list(cw.changesets)) or
-                   (is_map_key(cw, :changesets) and is_struct(cw.changesets, Stream))
+                   (is_map_key(cw, :changesets) and is_struct(cw.changesets, Stream)) or
+                   (is_map_key(cw, :changesets) and is_function(cw.changesets))
 
   @doc """
   Creates a facade for `Oban` functions and automates fetching configuration from the application

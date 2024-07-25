@@ -355,8 +355,9 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite] do
 
       test "inserting multiple jobs from a changeset wrapped stream", %{name: name} do
         changesets = Stream.map(0..1, &Worker.new(%{ref: &1}))
+        changesets = Stream.concat(changesets, changesets)
 
-        [_job_1, _job_2] = Oban.insert_all(name, %{changesets: changesets})
+        [_ | _] = Oban.insert_all(name, %{changesets: changesets})
       end
 
       test "handling empty changesets list from a wrapper", %{name: name} do
