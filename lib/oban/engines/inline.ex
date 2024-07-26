@@ -1,6 +1,6 @@
 defmodule Oban.Engines.Inline do
   @moduledoc """
-  A testing-specific engine that's used when Oban's started with `testing: :inline`.
+  A testing-specific engine that's used when Oban is started with `testing: :inline`.
 
   ## Usage
 

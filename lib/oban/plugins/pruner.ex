@@ -7,7 +7,7 @@ defmodule Oban.Plugins.Pruner do
 
   > #### 🌟 DynamicPruner {: .info}
   >
-  > This plugin limited to a fixed interval and a single `max_age` check for all jobs. To prune
+  > This plugin is limited to a fixed interval and a single `max_age` check for all jobs. To prune
   > on a cron-style schedule, retain jobs by a limit or age, or provide overrides for specific
   > queues, workers, and job states; see Oban Pro's
   > [DynamicPruner](https://getoban.pro/docs/pro/Oban.Pro.Plugins.DynamicPruner.html).
