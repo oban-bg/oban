@@ -116,7 +116,7 @@ defmodule Oban.Repo do
   """
   @doc since: "2.17.0"
   def query!(conf, statement, params \\ [], opts \\ []) do
-    __dispatch__(:query, [conf, statement, params], opts)
+    __dispatch__(:query!, [conf, statement, params], opts)
   end
 
   @doc """
