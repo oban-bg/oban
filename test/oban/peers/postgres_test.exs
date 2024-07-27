@@ -22,7 +22,7 @@ defmodule Oban.Peers.PostgresTest do
     assert_received {:event, [:election, :stop], _measure, %{leader: _, peer: Postgres}}
   end
 
-  test "gacefully handling a missing oban_peers table" do
+  test "gracefully handling a missing oban_peers table" do
     mangle_peers_table!()
 
     logged =

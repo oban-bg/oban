@@ -49,7 +49,7 @@ defmodule Oban.Peers.GlobalTest do
     end)
   end
 
-  test "emitting elemetry events for elections" do
+  test "emitting telemetry events for elections" do
     TelemetryHandler.attach_events()
 
     start_supervised_oban!(peer: Global, node: "worker.1")

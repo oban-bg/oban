@@ -112,7 +112,8 @@ defmodule Oban.Validation do
     if val in list do
       :ok
     else
-      {:error, "expected #{inspect(key)} to included in #{inspect(list)}, got: #{inspect(val)}"}
+      {:error,
+       "expected #{inspect(key)} to be included in #{inspect(list)}, got: #{inspect(val)}"}
     end
   end
 

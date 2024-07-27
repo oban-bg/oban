@@ -7,7 +7,7 @@ defmodule Oban do
   > #### Oban Web+Pro {: .tip}
   >
   > A web dashboard for managing Oban, along with an official set of extensions, plugins, and
-  > workers that expand what Oban is capable are available as licensed packages:
+  > workers that expand what Oban is capable of are available as licensed packages:
   > 
   > * [🧭 Oban Web](https://getoban.pro#oban-web)
   > * [🌟 Oban Pro](https://getoban.pro#oban-pro)
