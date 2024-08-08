@@ -7,12 +7,12 @@ defmodule Oban.Migrations.Postgres.V08 do
     alter table(:oban_jobs, prefix: prefix) do
       add_if_not_exists(:discarded_at, :utc_datetime_usec)
       add_if_not_exists(:priority, :integer)
-      add_if_not_exists(:tags, {:array, :string})
+      add_if_not_exists(:tags, {:array, :text})
     end
 
     alter table(:oban_jobs, prefix: prefix) do
       modify :priority, :integer, default: 0
-      modify :tags, {:array, :string}, default: []
+      modify :tags, {:array, :text}, default: []
     end
 
     drop_if_exists index(:oban_jobs, [:queue, :state, :scheduled_at, :id], prefix: prefix)
