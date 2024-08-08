@@ -516,8 +516,9 @@ case Oban.insert(changeset) do
 end
 ```
 
-Note that conflicts are only detected for jobs enqueued through `Oban.insert/2,3`. Jobs enqueued
-through `Oban.insert_all/2` _do not_ use per-job unique configuration.
+Note that, unless you are using Oban Pro's Smart Engine, conflicts are only detected for jobs
+enqueued through `Oban.insert/2,3`. When using the Basic Engine, jobs enqueued through
+`Oban.insert_all/2` _do not_ use per-job unique configuration.
 
 #### Replacing Values
 
