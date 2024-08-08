@@ -24,7 +24,7 @@ defmodule Oban.Repo do
 
   @moduledoc since: "2.2.0"
 
-  alias Oban.Config
+  alias Oban.{Backoff, Config}
 
   @callbacks_without_opts [
     config: 0,
@@ -59,11 +59,12 @@ defmodule Oban.Repo do
     reload!: 2,
     reload: 2,
     stream: 2,
-    transaction: 2,
     update!: 2,
     update: 2,
     update_all: 3
   ]
+
+  @retry_opts delay: 100, retry: 5, expected_delay: 5, expected_retry: 10
 
   for {fun, arity} <- @callbacks_without_opts do
     args = [Macro.var(:conf, __MODULE__) | Macro.generate_arguments(arity, __MODULE__)]
@@ -131,6 +132,51 @@ defmodule Oban.Repo do
 
     conf.repo.to_sql(kind, query)
   end
+
+  @doc """
+  Wraps `c:Ecto.Repo.transaction/2` with an additional `Oban.Config` argument and automatic
+  retries with backoff.
+
+  ## Options
+
+  Backoff helpers, in addition to the standard transaction options:
+
+  * `delay` — the time to sleep between retries, defaults to `100ms`
+  * `retry` — the number of retries for unexpected errors, defaults to `5`
+  * `expected_delay` — the time to sleep between expected errors, e.g. `serialization` or
+    `lock_not_available`, defaults to `5ms`
+  * `expected_retry` — the number of retries for expected errors, defaults to `10`
+  """
+  @doc since: "2.18.1"
+  def transaction(conf, fun_or_multi, opts \\ []) do
+    transaction(conf, fun_or_multi, opts, 1)
+  end
+
+  defp transaction(conf, fun_or_multi, opts, attempt) do
+    __dispatch__(:transaction, [conf, fun_or_multi, opts])
+  rescue
+    error in [DBConnection.ConnectionError, Postgrex.Error] ->
+      opts = Keyword.merge(@retry_opts, opts)
+
+      cond do
+        expected_error?(error) and attempt < opts[:expected_retry] ->
+          jittery_sleep(opts[:expected_delay])
+
+        attempt < opts[:retry] ->
+          jittery_sleep(opts[:delay])
+
+        true ->
+          reraise error, __STACKTRACE__
+      end
+
+      transaction(conf, fun_or_multi, opts, attempt + 1)
+  end
+
+  defp expected_error?(%_{postgres: %{code: :lock_not_available}}), do: true
+  defp expected_error?(%_{postgres: %{code: :serialization_failure}}), do: true
+  defp expected_error?(_error), do: false
+
+  defp jittery_sleep(delay), do: delay |> Backoff.jitter() |> Process.sleep()
 
   defp __dispatch__(name, [%Config{} = conf | args]) do
     with_dynamic_repo(conf, name, args)
