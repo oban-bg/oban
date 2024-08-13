@@ -772,6 +772,10 @@ Define the `timeout` based on the number of attempts:
 def timeout(%_{attempt: attempt}), do: attempt * :timer.seconds(5)
 ```
 
+If the job fails to execute before the timeout period then it will error with a dedicated
+`Oban.TimeoutError` exception. Timeouts are treated like any other failure and the job will be
+retried as usual if more attempts are available.
+
 ## Instrumentation, Error Reporting, and Logging
 
 Oban provides integration with [Telemetry][tele], a dispatching library for
