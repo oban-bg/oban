@@ -61,6 +61,33 @@ In addition, thanks to the addition of `Process.set_label` in recent Elixir vers
 name is set as the job's process label. That makes it possible to identify which job is running in
 a `pid` via observer or live dashboard.
 
+## v2.18.1 — 2024-08-15
+
+### Enhancements
+
+- [Repo] Automatically retry all transactions with backoff.
+
+  Avoid both expected an unexpected database errors by automatically retrying transactions. Some
+  operations, such as serialization and lock not available errors, are likely to occur during
+  standard use depending on how a database is configured. Other errors happen infrequently due to
+  pool contention or flickering connections, and those should also be retried for increased
+  safety.
+
+  This change is applied to `Oban.Repo.transaction/3` itself, so it will apply to _every_ location
+  that uses transactions.
+
+- [Migration] Declare `tags` as an array of `text` rather than `varchar`.
+
+  We don't provide a limit on the size of tags and they could conceivably be larger than 256
+  characters. Externally the types are interchangeable, but internally there are minor advantages
+  to using the text type.
+
+  There isn't a new migration; this change is only for new tables.
+
+### Bug Fixes
+
+- [Repo] Correctly dispatch `query!/4` to `query!` rather than `query` without a bang.
+
 ## v2.18.0 — 2024-07-26
 
 ### Enhancements
