@@ -61,6 +61,20 @@ In addition, thanks to the addition of `Process.set_label` in recent Elixir vers
 name is set as the job's process label. That makes it possible to identify which job is running in
 a `pid` via observer or live dashboard.
 
+## v2.18.2 — 2024-08-16
+
+- [Repo] Prevent debug noise by ensuring default opts for standard transactions.
+
+  Without default opts each transaction is logged. Many standard operations execute each second,
+  which makes for noisy logs. Now transaction opts are passed as a third argument to ensure
+  defaults are applied.
+
+- [Repo] Increase transaction retry delay and increase with each attempt.
+
+  Bump the base transaction retry from 100ms to 500ms, and increase linearly between each
+  successive attempt to provide deeper backoff. This alleviates pressure on smaller connection
+  pools and gives more time to recover from contentions failures.
+
 ## v2.18.1 — 2024-08-15
 
 ### Enhancements
