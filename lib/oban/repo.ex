@@ -153,7 +153,7 @@ defmodule Oban.Repo do
   end
 
   defp transaction(conf, fun_or_multi, opts, attempt) do
-    __dispatch__(:transaction, [conf, fun_or_multi, opts])
+    __dispatch__(:transaction, [conf, fun_or_multi], opts)
   rescue
     error in [DBConnection.ConnectionError, Postgrex.Error] ->
       opts = Keyword.merge(@retry_opts, opts)
