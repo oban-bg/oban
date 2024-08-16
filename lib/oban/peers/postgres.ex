@@ -70,11 +70,13 @@ defmodule Oban.Peers.Postgres do
     if is_reference(timer), do: Process.cancel_timer(timer)
 
     if state.leader? do
+      fun = fn ->
+        delete_self(state)
+        notify_down(state)
+      end
+
       try do
-        Repo.transaction(state.conf, fn ->
-          delete_self(state)
-          notify_down(state)
-        end)
+        Repo.transaction(state.conf, fun, retry: 1)
       catch
         :exit, _reason -> :ok
       end
@@ -102,7 +104,7 @@ defmodule Oban.Peers.Postgres do
           |> upsert_peer()
         end
 
-        case Repo.transaction(state.conf, fun) do
+        case Repo.transaction(state.conf, fun, retry: 1) do
           {:ok, state} ->
             {state, %{meta | leader: state.leader?}}
 

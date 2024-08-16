@@ -64,7 +64,7 @@ defmodule Oban.Repo do
     update_all: 3
   ]
 
-  @retry_opts delay: 100, retry: 5, expected_delay: 5, expected_retry: 10
+  @retry_opts delay: 500, retry: 5, expected_delay: 10, expected_retry: 20
 
   for {fun, arity} <- @callbacks_without_opts do
     args = [Macro.var(:conf, __MODULE__) | Macro.generate_arguments(arity, __MODULE__)]
@@ -141,11 +141,11 @@ defmodule Oban.Repo do
 
   Backoff helpers, in addition to the standard transaction options:
 
-  * `delay` — the time to sleep between retries, defaults to `100ms`
+  * `delay` — the time to sleep between retries, defaults to `500ms`
   * `retry` — the number of retries for unexpected errors, defaults to `5`
   * `expected_delay` — the time to sleep between expected errors, e.g. `serialization` or
-    `lock_not_available`, defaults to `5ms`
-  * `expected_retry` — the number of retries for expected errors, defaults to `10`
+    `lock_not_available`, defaults to `10ms`
+  * `expected_retry` — the number of retries for expected errors, defaults to `20`
   """
   @doc since: "2.18.1"
   def transaction(conf, fun_or_multi, opts \\ []) do
@@ -163,7 +163,7 @@ defmodule Oban.Repo do
           jittery_sleep(opts[:expected_delay])
 
         attempt < opts[:retry] ->
-          jittery_sleep(opts[:delay])
+          jittery_sleep(attempt * opts[:delay])
 
         true ->
           reraise error, __STACKTRACE__
