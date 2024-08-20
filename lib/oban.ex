@@ -26,7 +26,7 @@ defmodule Oban do
   use Supervisor
 
   alias Ecto.{Changeset, Multi}
-  alias Oban.{Config, Engine, Job, Midwife, Notifier, Peer, Registry, Sonar, Stager}
+  alias Oban.{Config, Engine, Job, Notifier, Nursery, Peer, Registry, Sonar, Stager}
   alias Oban.Queue.{Drainer, Producer}
 
   @typedoc """
@@ -465,14 +465,13 @@ defmodule Oban do
   def whereis(name), do: Registry.whereis(name)
 
   @impl Supervisor
-  def init(%Config{plugins: plugins} = conf) do
+  def init(%Config{name: name, plugins: plugins} = conf) do
     children = [
-      {Notifier, conf: conf, name: Registry.via(conf.name, Notifier)},
-      {DynamicSupervisor, name: Registry.via(conf.name, Foreman), strategy: :one_for_one},
-      {Peer, conf: conf, name: Registry.via(conf.name, Peer)},
-      {Sonar, conf: conf, name: Registry.via(conf.name, Sonar)},
-      {Midwife, conf: conf, name: Registry.via(conf.name, Midwife)},
-      {Stager, conf: conf, name: Registry.via(conf.name, Stager)}
+      {Notifier, conf: conf, name: Registry.via(name, Notifier)},
+      {Nursery, conf: conf, name: Registry.via(name, Nursery)},
+      {Peer, conf: conf, name: Registry.via(name, Peer)},
+      {Sonar, conf: conf, name: Registry.via(name, Sonar)},
+      {Stager, conf: conf, name: Registry.via(name, Stager)}
     ]
 
     children = children ++ Enum.map(plugins, &plugin_child_spec(&1, conf))
