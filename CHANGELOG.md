@@ -63,6 +63,8 @@ a `pid` via observer or live dashboard.
 
 ## v2.18.2 — 2024-08-16
 
+### Bug Fixes
+
 - [Repo] Prevent debug noise by ensuring default opts for standard transactions.
 
   Without default opts each transaction is logged. Many standard operations execute each second,
