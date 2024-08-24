@@ -90,8 +90,9 @@ sends a message back to the test process).
 You can use exception events to send error reports to Honeybadger, Rollbar, AppSignal, ErroTracker 
 or any other application monitoring platform.
 
-Some libraries automatically handle these events without requiring any extra code on your application. 
-You can take a look at ErrorTracker's [Oban integration](https://github.com/elixir-error-tracker/error-tracker/blob/main/lib/error_tracker/integrations/oban.ex) 
+Some libraries like AppSignal, ErrorTracker or Sentry automatically handle these events without 
+requiring any extra code on your application. You can take a look at ErrorTracker's 
+[Oban integration](https://github.com/elixir-error-tracker/error-tracker/blob/main/lib/error_tracker/integrations/oban.ex) 
 as an example on how to attach to and use `Oban.Telemetry` events.
 
 If you need a custom integration you can add a reporter module that fit your needs. 
