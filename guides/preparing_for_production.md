@@ -145,6 +145,6 @@ tools built on `Oban.Telemetry`:
   package instruments jobs performed by Oban workers, and collects metrics about your jobs'
   performance.
 
-* [ErrorTracker](https://hex.pm/packages/error_tracker)—An Elixir-based open source error tracking
+* [ErrorTracker](https://hex.pm/packages/error_tracker)—an Elixir-based open source error tracking
   solution that automatically integrates with Oban. It allows you to store and view exceptions on
   your app without external services. It's powered by Telemetry, Ecto and Phoenix LiveView.
