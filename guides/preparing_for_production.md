@@ -87,9 +87,14 @@ Telemetry events can be used to report issues externally to services like Sentry
 Write a handler that sends error notifications to a third party (use a mock, or something that
 sends a message back to the test process).
 
-You can use exception events to send error reports to Honeybadger, Rollbar, AppSignal or any other
-application monitoring platform.
+You can use exception events to send error reports to Honeybadger, Rollbar, AppSignal, ErroTracker 
+or any other application monitoring platform.
 
+Some libraries automatically handle these events without requiring any extra code on your application. 
+You can take a look at ErrorTracker's Oban integration [source code](https://github.com/elixir-error-tracker/error-tracker/blob/main/lib/error_tracker/integrations/oban.ex) 
+as an example on how to attach to and use `Oban.Telemetry` events.
+
+If you need a custom integration you can add a reporter module that fit your needs. 
 Here's an example reporter module for [Sentry](https://hex.pm/packages/sentry):
 
 ```elixir
