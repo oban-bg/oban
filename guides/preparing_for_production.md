@@ -138,3 +138,7 @@ tools built on `Oban.Telemetry`:
 * [AppSignal](https://docs.appsignal.com/elixir/integrations/oban.html)—The AppSignal for Elixir
   package instruments jobs performed by Oban workers, and collects metrics about your jobs'
   performance.
+
+* [ErrorTracker](https://hex.pm/packages/error_tracker)—An Elixir-based open source error tracking
+  solution that automatically integrates with Oban. It allows you to store and view exceptions on
+  your app without external services. It's powered by Telemetry, Ecto and Phoenix LiveView.
