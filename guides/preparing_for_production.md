@@ -87,7 +87,7 @@ Telemetry events can be used to report issues externally to services like Sentry
 Write a handler that sends error notifications to a third party (use a mock, or something that
 sends a message back to the test process).
 
-You can use exception events to send error reports to Honeybadger, Rollbar, AppSignal, ErroTracker 
+You can use exception events to send error reports to Honeybadger, Rollbar, AppSignal, ErrorTracker 
 or any other application monitoring platform.
 
 Some libraries like AppSignal, ErrorTracker or Sentry automatically handle these events without 
