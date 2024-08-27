@@ -445,7 +445,13 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite] do
         TelemetryHandler.attach_events(span_type: [:job, [:engine, :prune_jobs]])
 
         for state <- Job.states(), seconds <- 59..61 do
-          opts = [state: to_string(state), scheduled_at: seconds_ago(seconds)]
+          opts = [
+            state: to_string(state),
+            completed_at: seconds_ago(seconds),
+            discarded_at: seconds_ago(seconds),
+            cancelled_at: seconds_ago(seconds),
+            scheduled_at: seconds_ago(59)
+          ]
 
           # Insert one job at a time to avoid a "Cell-wise defaults" error in SQLite.
           Oban.insert!(name, Worker.new(%{}, opts))
