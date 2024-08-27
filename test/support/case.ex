@@ -106,8 +106,11 @@ defmodule Oban.Case do
 
   def insert_historical(state, timestamp_field, timestamp_age, scheduled_age) do
     opts =
-      [state: state, scheduled_at: seconds_ago(scheduled_age)]
-      |> Keyword.put(timestamp_field, seconds_ago(timestamp_age))
+      Keyword.put(
+        [state: state, scheduled_at: seconds_ago(scheduled_age)],
+        timestamp_field,
+        seconds_ago(timestamp_age)
+      )
 
     insert!(%{}, opts)
   end
