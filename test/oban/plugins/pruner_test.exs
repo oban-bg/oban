@@ -32,14 +32,14 @@ defmodule Oban.Plugins.PrunerTest do
       %Job{id: _id_} = insert_historical("discarded", :discarded_at, 61, 61)
       %Job{id: _id_} = insert_historical("discarded", :discarded_at, 61, 59)
       %Job{id: _id_} = insert_historical("completed", :completed_at, 61, 61)
-      %Job{id: _id_} = insert_historical("completed", :completed_at, 61, 59)
+      %Job{id: _id_} = insert_historical("completed", :completed_at, 59, 61)
 
       %Job{id: id_1} = insert_historical("cancelled", :cancelled_at, 59, 61)
       %Job{id: id_2} = insert_historical("cancelled", :cancelled_at, 59, 59)
       %Job{id: id_3} = insert_historical("discarded", :discarded_at, 59, 61)
       %Job{id: id_4} = insert_historical("discarded", :discarded_at, 59, 59)
-      %Job{id: id_5} = insert_historical("completed", :completed_at, 59, 61)
-      %Job{id: id_6} = insert_historical("completed", :completed_at, 59, 59)
+      %Job{id: id_5} = insert_historical("completed", :completed_at, 59, 59)
+      %Job{id: id_6} = insert_historical("completed", :completed_at, 61, 59)
 
       start_supervised_oban!(plugins: [{Pruner, interval: 10, max_age: 60}])
 
