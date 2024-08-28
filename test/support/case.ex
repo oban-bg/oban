@@ -102,6 +102,19 @@ defmodule Oban.Case do
     Oban.insert!(oban, changeset)
   end
 
+  # Pruning test helpers
+
+  def insert_historical(state, timestamp_field, timestamp_age, scheduled_age) do
+    opts =
+      Keyword.put(
+        [state: state, scheduled_at: seconds_ago(scheduled_age)],
+        timestamp_field,
+        seconds_ago(timestamp_age)
+      )
+
+    insert!(%{}, opts)
+  end
+
   # Time
 
   def seconds_from_now(seconds) do

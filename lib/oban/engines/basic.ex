@@ -153,9 +153,10 @@ defmodule Oban.Engines.Basic do
     subquery =
       queryable
       |> select([:id, :queue, :state])
-      |> where([j], j.state in ~w(completed cancelled discarded))
+      |> where([j], j.state == "completed" and j.scheduled_at < ^time)
+      |> or_where([j], j.state == "cancelled" and j.cancelled_at < ^time)
+      |> or_where([j], j.state == "discarded" and j.discarded_at < ^time)
       |> where([j], not is_nil(j.queue))
-      |> where([j], j.scheduled_at < ^time)
       |> limit(^limit)
 
     query =
