@@ -177,13 +177,14 @@ defmodule Oban.Telemetry do
   | event        | measures       | metadata                                                       |
   | ------------ | -------------- | -------------------------------------------------------------- |
   | `:start`     | `:system_time` | `:conf`, `:leader`, `:peer`,                                   |
-  | `:stop`      | `:duration`    | `:conf`, `:leader`, `:peer`,                                   |
+  | `:stop`      | `:duration`    | `:conf`, `:leader`, `:peer`, `:was_leader?`                    |
   | `:exception` | `:duration`    | `:conf`, `:leader`, `:peer`, `:kind`, `:reason`, `:stacktrace` |
 
   #### Metadata
 
   * `:conf`, `:kind`, `:reason`, `:stacktrace` — see the explanation in notifier metadata above
   * `:leader` — whether the peer is the current leader
+  * `:was_leader?` — whether the peer was the leader before the election occurred
   * `:peer` — the module used for peering
 
   ## Queue Shutdown Events
