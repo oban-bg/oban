@@ -329,7 +329,8 @@ defmodule Oban do
     Defaults to the `Postgres` peer.
 
   * `:plugins` — a list or modules or module/option tuples that are started as children of an Oban
-    supervisor. Any supervisable module is a valid plugin, i.e. a `GenServer` or an `Agent`.
+    supervisor. Any supervisable module is a valid plugin, i.e. a `GenServer` or an `Agent`. May
+    also be set to `false` to disable plugins _and_ disable leadership.
 
   * `:prefix` — the query prefix, or schema, to use for inserting and executing jobs. An
     `oban_jobs` table must exist within the prefix. See the "Prefix Support" section in the module
@@ -342,6 +343,8 @@ defmodule Oban do
 
     Queues accept additional override options to customize their behavior, e.g. by setting
     `paused` or `dispatch_cooldown` for a specific queue.
+
+    Using an empty list or `false` prevents any queues from starting on init.
 
   * `:testing` — a mode that controls how an instance is configured for testing. When set to
     `:inline` or `:manual` queues, peers, and plugins are automatically disabled. Defaults to
