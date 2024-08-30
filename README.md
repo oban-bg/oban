@@ -34,8 +34,9 @@
 - [Features](#features)
 - [Oban Web+Pro](#oban-webpro)
 - Usage
-  - [Installation](#installation)
+  - [Learning](#learning)
   - [Requirements](#requirements)
+  - [Installation](#installation)
   - [Running With SQLite3](#running-with-sqlite3)
   - [Configuring Queues](#configuring-queues)
   - [Defining Workers](#defining-workers)
@@ -147,6 +148,11 @@ orphaned due to crashes.
 > Learn more at [getoban.pro][pro]!
 
 <!-- MDOC -->
+
+## Learning
+
+Learn the fundamentals of Oban, all the way through to preparing for production with our LiveBook
+powered [Oban Training](https://github.com/sorentwo/oban_training/) curriculum. 
 
 ## Requirements
 
