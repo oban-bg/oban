@@ -125,6 +125,8 @@ defmodule Oban.Testing do
     quote do
       alias Oban.Testing
 
+      defdelegate build_job(worker, args, opts \\ []), to: Testing
+
       def perform_job(worker, args, opts \\ []) do
         opts = Keyword.merge(unquote(repo_opts), opts)
 
@@ -160,6 +162,79 @@ defmodule Oban.Testing do
   end
 
   @doc """
+  Construct a job from a worker, args, and options.
+
+  The helper makes the following assertions:
+
+  * That the worker implements the `Oban.Worker` behaviour
+  * That the options provided build a valid job
+
+  This helper is used to build jobs for execution by `perform_job/2`.
+
+  ## Examples
+
+  Build a job without args:
+
+      job = build_job(MyWorker, %{})
+
+  Build a job with stringified args:
+
+      assert %{args: %{"id" => 1}} = build_job(MyWorker, %{id: 1})
+
+  Build a job with custom options:
+
+      assert %{attempt: 5, priority: 9} = build_job(MyWorker, %{}, attempt: 5, priority: 9)
+  """
+  @doc since: "2.19.0"
+  @spec build_job(worker :: Worker.t(), args :: term(), [Job.option()]) :: Job.t()
+  def build_job(worker, args, opts) when is_atom(worker) do
+    assert_valid_worker(worker)
+
+    utc_now = DateTime.utc_now()
+
+    changeset =
+      args
+      |> worker.new(opts)
+      |> Changeset.update_change(:args, &json_recode/1)
+      |> Changeset.update_change(:meta, &json_recode/1)
+      |> put_new_change(:id, System.unique_integer([:positive]))
+      |> put_new_change(:attempt, 1)
+      |> put_new_change(:attempted_at, utc_now)
+      |> put_new_change(:scheduled_at, utc_now)
+      |> put_new_change(:inserted_at, utc_now)
+
+    assert_valid_changeset(changeset)
+
+    Changeset.apply_action!(changeset, :insert)
+  end
+
+  @doc """
+  Execute a job using the given config options.
+
+  See `perform_job/3` for more details and examples.
+
+  ## Examples
+
+  Eexecute a job without any options:
+
+      assert :ok = perform_job(job, [])
+
+  Execute a job with a custom prefix and repo:
+
+      assert :ok = perform_job(job, prefix: "private", repo: MyApp.Repo)
+  """
+  @doc since: "2.19.0"
+  @spec perform_job(Job.t(), [Oban.option()]) :: Worker.result()
+  def perform_job(%Job{} = job, conf_opts) when is_list(conf_opts) do
+    conf_opts
+    |> Config.new()
+    |> Executor.new(job, safe: false, ack: false)
+    |> Executor.call()
+    |> Map.fetch!(:result)
+    |> tap(&assert_valid_result/1)
+  end
+
+  @doc """
   Construct a job and execute it with a worker module.
 
   This reduces boilerplate when constructing jobs for unit tests and checks for common pitfalls.
@@ -172,7 +247,7 @@ defmodule Oban.Testing do
   * That the options provided build a valid job
   * That the return is valid, e.g. `:ok`, `{:ok, value}`, `{:error, value}` etc.
 
-  If all of the assertions pass then the function returns the result of `perform/1` for you to
+  If all of the assertions pass, then the function returns the result of `perform/1` for you to
   make additional assertions on.
 
   ## Examples
@@ -200,37 +275,11 @@ defmodule Oban.Testing do
   @doc since: "2.0.0"
   @spec perform_job(worker :: Worker.t(), args :: term(), [perform_opts()]) :: Worker.result()
   def perform_job(worker, args, opts) when is_atom(worker) do
-    assert_valid_worker(worker)
-
     {conf_opts, opts} = Keyword.split(opts, @conf_keys)
 
-    utc_now = DateTime.utc_now()
-
-    changeset =
-      args
-      |> worker.new(opts)
-      |> Changeset.put_change(:id, System.unique_integer([:positive]))
-      |> Changeset.update_change(:args, &json_recode/1)
-      |> Changeset.update_change(:meta, &json_recode/1)
-      |> put_new_change(:attempt, 1)
-      |> put_new_change(:attempted_at, utc_now)
-      |> put_new_change(:scheduled_at, utc_now)
-      |> put_new_change(:inserted_at, utc_now)
-
-    assert_valid_changeset(changeset)
-
-    job = Changeset.apply_action!(changeset, :insert)
-
-    result =
-      conf_opts
-      |> Config.new()
-      |> Executor.new(job, safe: false, ack: false)
-      |> Executor.call()
-      |> Map.fetch!(:result)
-
-    assert_valid_result(result)
-
-    result
+    worker
+    |> build_job(args, opts)
+    |> perform_job(conf_opts)
   end
 
   @doc """

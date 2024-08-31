@@ -90,6 +90,18 @@ defmodule Oban.TestingTest do
     end
   end
 
+  describe "build_job/3" do
+    test "creating a valid job changeset out of the args and options" do
+      job = build_job(Worker, %{id: 1}, meta: %{foo: "bar"})
+
+      assert %{args: args, id: id, meta: meta, worker: "Oban.Integration.Worker"} = job
+
+      assert is_integer(id)
+      assert %{"id" => 1} = args
+      assert %{"foo" => "bar"} = meta
+    end
+  end
+
   describe "perform_job/3" do
     test "verifying that the worker implements the Oban.Worker behaviour" do
       message = "worker to be a module that implements"
@@ -100,9 +112,7 @@ defmodule Oban.TestingTest do
       :ok = perform_job(DoubleBehaviourWorker, %{})
     end
 
-    test "creating a valid job out of the args and options" do
-      assert_perform_error(Worker, %{}, [max_attempts: -1], "args and opts to build a valid job")
-
+    test "validating options used to construct a job changeset" do
       assert_perform_error(
         Worker,
         %{},
