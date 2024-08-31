@@ -12,6 +12,7 @@ config :oban, Oban.Test.Repo,
   pool: Ecto.Adapters.SQL.Sandbox,
   pool_size: System.schedulers_online() * 2,
   priv: "test/support/postgres",
+  show_sensitive_data_on_connection_error: true,
   stacktrace: true,
   url: System.get_env("DATABASE_URL") || "postgres://localhost:5432/oban_test"
 
@@ -21,5 +22,14 @@ config :oban, Oban.Test.LiteRepo,
   stacktrace: true,
   temp_store: :memory
 
+config :oban, Oban.Test.DolphinRepo,
+  name: Oban.Test.Repo,
+  pool: Ecto.Adapters.SQL.Sandbox,
+  pool_size: System.schedulers_online() * 2,
+  priv: "test/support/myxql",
+  show_sensitive_data_on_connection_error: true,
+  stacktrace: true,
+  url: System.get_env("DATABASE_URL") || "mysql://root@localhost:3306/oban_test"
+
 config :oban,
-  ecto_repos: [Oban.Test.Repo, Oban.Test.LiteRepo]
+  ecto_repos: [Oban.Test.Repo, Oban.Test.LiteRepo, Oban.Test.DolphinRepo]

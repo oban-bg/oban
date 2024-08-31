@@ -67,13 +67,21 @@ defmodule Oban.Config do
     opts = normalize(opts)
 
     opts =
-      if opts[:engine] == Oban.Engines.Lite do
-        opts
-        |> Keyword.put(:prefix, false)
-        |> Keyword.put_new(:notifier, {Oban.Notifiers.PG, []})
-        |> Keyword.put_new(:peer, {Oban.Peers.Isolated, []})
-      else
-        opts
+      case opts[:engine] do
+        Oban.Engines.Lite ->
+          opts
+          |> Keyword.put(:prefix, false)
+          |> Keyword.put_new(:notifier, {Oban.Notifiers.PG, []})
+          |> Keyword.put_new(:peer, {Oban.Peers.Isolated, []})
+
+        Oban.Engines.Dolphin ->
+          opts
+          |> Keyword.put(:prefix, false)
+          |> Keyword.put_new(:notifier, {Oban.Notifiers.PG, []})
+          # |> Keyword.put_new(:peer, {Oban.Peers.Isolated, []})
+
+        _ ->
+          opts
       end
 
     opts =

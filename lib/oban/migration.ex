@@ -198,6 +198,7 @@ defmodule Oban.Migration do
     case repo().__adapter__() do
       Ecto.Adapters.Postgres -> Oban.Migrations.Postgres
       Ecto.Adapters.SQLite3 -> Oban.Migrations.SQLite
+      Ecto.Adapters.MyXQL -> Oban.Migrations.MyXQL
       _ -> Keyword.fetch!(repo().config(), :migrator)
     end
   end

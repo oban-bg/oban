@@ -166,6 +166,7 @@ defmodule Oban.MixProject do
       {:ecto_sql, "~> 3.10"},
       {:ecto_sqlite3, "~> 0.9", optional: true},
       {:jason, "~> 1.1"},
+      {:myxql, "~> 0.7", optional: true},
       {:postgrex, "~> 0.16", optional: true},
       {:telemetry, "~> 0.4 or ~> 1.0"},
       {:stream_data, "~> 1.0", only: [:test, :dev]},
