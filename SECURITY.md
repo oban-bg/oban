@@ -5,7 +5,7 @@
 Oban applies bug fixes only to the latest minor version. Security patches are
 available for the last 3 minor versions:
 
-| Oban Wersion | Support                        |
+| Oban Version | Support                        |
 | ------------ | ------------------------------ |
 | 2.17         | Bug fixes and security patches |
 | 2.16         | Security patches only          |

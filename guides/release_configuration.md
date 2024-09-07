@@ -48,7 +48,7 @@ end
 Our config provider ensures that the `Jason` app is loaded so that we can parse
 a `JSON` configuration file. Once the JSON is loaded we must extract the
 `queues` map and convert it to a keyword list where all of the keys are atoms.
-The use of `String.to_atom/1` is safe because all of our queues names are
+The use of `String.to_atom/1` is safe because all of our queue names are
 already defined.
 
 Then you include this in your `mix.exs` file, where your release is configured:
