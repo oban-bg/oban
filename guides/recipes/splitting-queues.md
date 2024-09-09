@@ -83,7 +83,7 @@ pairs and separated by spaces. For example, to run only the `default` and
 Note that the parsing clause has a couple of safety mechanisms to ensure that
 only real queues are specified:
 
-1. It automatically trims while splitting values, so extra whitespace like won't
+1. It automatically trims while splitting values, so extra whitespace won't
    break parsing (i.e. ` default,3 `)
 2. It only converts the `queue` string to _an existing atom_, hopefully
    preventing typos that would start a random queue (i.e. `default`)
