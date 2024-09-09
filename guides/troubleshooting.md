@@ -27,7 +27,7 @@ config :my_app, Oban,
 
 Sometimes `Cron` or `Pruner` plugins appear to stop working unexpectedly. Typically, this happens in
 systems with multi-node setups where "web" nodes only enqueue jobs while "worker" nodes are
-configured to run queues and plugins. Most plugins require leadership to function, so When a "web"
+configured to run queues and plugins. Most plugins require leadership to function, so when a "web"
 node becomes leader the plugins go dormant.
 
 The solution is to disable leadership with `peer: false` on any node that doesn't run plugins:

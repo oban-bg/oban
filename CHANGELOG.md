@@ -83,7 +83,7 @@ a `pid` via observer or live dashboard.
 
 - [Repo] Automatically retry all transactions with backoff.
 
-  Avoid both expected an unexpected database errors by automatically retrying transactions. Some
+  Avoid both expected and unexpected database errors by automatically retrying transactions. Some
   operations, such as serialization and lock not available errors, are likely to occur during
   standard use depending on how a database is configured. Other errors happen infrequently due to
   pool contention or flickering connections, and those should also be retried for increased
