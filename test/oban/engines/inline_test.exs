@@ -37,6 +37,17 @@ defmodule Oban.Engines.InlineTest do
     end
   end
 
+  test "executing multiple jobs inserted from a stream" do
+    name = start_supervised_oban!(testing: :inline)
+
+    stream = Stream.map(1..2, &Worker.new(%{ref: &1, action: "OK"}))
+
+    assert [_job_1, _job_2] = Oban.insert_all(name, stream)
+
+    assert_receive {:ok, 1}
+    assert_receive {:ok, 2}
+  end
+
   test "executing single jobs inserted within a multi" do
     name = start_supervised_oban!(testing: :inline)
 
