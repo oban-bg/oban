@@ -61,6 +61,35 @@ In addition, thanks to the addition of `Process.set_label` in recent Elixir vers
 name is set as the job's process label. That makes it possible to identify which job is running in
 a `pid` via observer or live dashboard.
 
+## v2.18.3 — 2024-09-10
+
+### Enhancements
+
+- [Basic] Use the shared concat operator when appending errors.
+
+  The standard `push` operation for updates is designed for arrays and uses `array_append`
+  internally. This replaces all use of `push` with a fragment that uses the `||` operator instead,
+  which works for both arrays and jsonb.
+
+  CockroachDB doesn't support arrays of jsonb, but they do support simple jsonb columns. Now
+  we can append to the errors column in either format for CRDB compatibility.
+
+### Bug Fixes
+
+- [Queue] Link the dynamic queue supervisor and `Midwife` for automatic restarts.
+
+  When a producer crashes it brings the queue's supervisor down with it. With enough database
+  errors, the producer may crash repeatedly enough to exhaust restarts and bring down the
+  DynamicSupervisor in charge of all queues.
+
+  Now the supervisor is linked to the midwife to ensure that the midwife restarts as well, and it
+  restarts all of the queues.
+
+- [Testing] Handle `insert_all/3` with streams for the `:inline` testing engine.
+
+  The inline engine's `insert_all_jobs` callback incorrectly expected changesets to always be a
+  list rather and couldn't handle streams.
+
 ## v2.18.2 — 2024-08-16
 
 ### Bug Fixes
