@@ -76,7 +76,7 @@ defmodule Oban.Engines.Inline do
   defp expand(value), do: expand(value, %{})
   defp expand(fun, changes) when is_function(fun, 1), do: expand(fun.(changes), changes)
   defp expand(%{changesets: changesets}, _), do: expand(changesets, %{})
-  defp expand(changesets, _) when is_list(changesets), do: changesets
+  defp expand(changesets, _), do: changesets
 
   # Execution Helpers
 
