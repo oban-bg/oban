@@ -14,7 +14,7 @@ defmodule Oban.Case do
 
       alias Oban.Integration.Worker
       alias Oban.{Config, Job}
-      alias Oban.Test.{LiteRepo, Repo, UnboxedRepo}
+      alias Oban.Test.{DolphinRepo, LiteRepo, Repo, UnboxedRepo}
     end
   end
 

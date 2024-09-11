@@ -1,16 +1,22 @@
-for engine <- [Oban.Engines.Basic, Oban.Engines.Lite] do
+for engine <- [Oban.Engines.Basic, Oban.Engines.Lite, Oban.Engines.Dolphin] do
   defmodule Module.concat(engine, Test) do
     use Oban.Case, async: true
 
     alias Ecto.Adapters.SQL.Sandbox
     alias Ecto.Multi
-    alias Oban.Engines.Lite
+    alias Oban.Engines.{Basic, Dolphin, Lite}
     alias Oban.{Notifier, TelemetryHandler}
 
     @engine engine
-    @repo if engine == Lite, do: LiteRepo, else: Repo
+
+    @repo (case engine do
+             Basic -> Repo
+             Dolphin -> DolphinRepo
+             Lite -> LiteRepo
+           end)
 
     @moduletag lite: engine == Lite
+    @moduletag dolphin: engine == Dolphin
 
     defmodule MiniUniq do
       use Oban.Worker, unique: [fields: [:args]]

@@ -24,8 +24,8 @@ defmodule Oban.Migrations.MyXQL do
       add :max_attempts, :integer, null: false, default: 20
       add :priority, :integer, null: false, default: 0
 
-      add :inserted_at, :utc_datetime_usec, null: false, default: fragment("('UTC_TIMESTAMP()')")
-      add :scheduled_at, :utc_datetime_usec, null: false, default: fragment("('UTC_TIMESTAMP()')")
+      add :inserted_at, :utc_datetime_usec, null: false, default: fragment("(UTC_TIMESTAMP(6))")
+      add :scheduled_at, :utc_datetime_usec, null: false, default: fragment("(UTC_TIMESTAMP(6))")
       add :attempted_at, :utc_datetime_usec
       add :cancelled_at, :utc_datetime_usec
       add :completed_at, :utc_datetime_usec

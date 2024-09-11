@@ -13,5 +13,28 @@ defmodule Oban.Engines.Dolphin do
       )
   """
 
+  alias Oban.Engines.Basic
+
   @behaviour Oban.Engine
+
+  @impl Engine
+  defdelegate init(conf, opts), to: Basic
+
+  @impl Engine
+  defdelegate put_meta(conf, meta, key, value), to: Basic
+
+  @impl Engine
+  defdelegate check_meta(conf, meta, running), to: Basic
+
+  @impl Engine
+  defdelegate refresh(conf, meta), to: Basic
+
+  @impl Engine
+  defdelegate shutdown(conf, meta), to: Basic
+
+  @impl Engine
+  defdelegate insert_job(conf, changeset, opts), to: Basic
+
+  @impl Engine
+  defdelegate insert_all_jobs(conf, changesets, opts), to: Basic
 end
