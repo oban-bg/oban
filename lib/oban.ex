@@ -384,7 +384,7 @@ defmodule Oban do
     minimize database load, only `5_000` jobs are staged at each interval.
 
     Only the leader node stages jobs and notifies queues when the `:notifier's` pubsub
-    notifications are functional. If pubusb messages can't get through then staging switches to a
+    notifications are functional. If pubsub messages can't get through then staging switches to a
     less efficient "local" mode in which all nodes poll for jobs to run.
 
     Setting the interval to `:infinity` disables staging entirely. The default is `1_000ms`.
