@@ -54,7 +54,10 @@ defmodule Oban.Peers.GlobalTest do
 
     start_supervised_oban!(peer: Global, node: "worker.1")
 
-    assert_receive {:event, [:election, :start], _measure, %{leader: _, peer: Oban.Peers.Global}}
-    assert_receive {:event, [:election, :stop], _measure, %{leader: _, peer: Oban.Peers.Global}}
+    assert_receive {:event, [:election, :start], _measure,
+                    %{leader: _, peer: Oban.Peers.Global, was_leader?: nil}}
+
+    assert_receive {:event, [:election, :stop], _measure,
+                    %{leader: _, peer: Oban.Peers.Global, was_leader?: false}}
   end
 end
