@@ -6,7 +6,7 @@ defmodule Oban.Case do
   alias Ecto.Adapters.SQL.Sandbox
   alias Oban.Integration.Worker
   alias Oban.Job
-  alias Oban.Test.{LiteRepo, Repo, UnboxedRepo}
+  alias Oban.Test.{DolphinRepo, LiteRepo, Repo, UnboxedRepo}
 
   using do
     quote do
@@ -30,6 +30,11 @@ defmodule Oban.Case do
         on_exit(fn ->
           LiteRepo.delete_all(Oban.Job)
         end)
+
+      context[:dolphin] ->
+        pid = Sandbox.start_owner!(DolphinRepo, shared: not context[:async])
+
+        on_exit(fn -> Sandbox.stop_owner(pid) end)
 
       true ->
         pid = Sandbox.start_owner!(Repo, shared: not context[:async])
@@ -127,7 +132,7 @@ defmodule Oban.Case do
 
   # Attaching
 
-  defp attach_auto_allow(Repo, name) do
+  defp attach_auto_allow(repo, name) when repo in [Repo, DolphinRepo] do
     telemetry_name = "oban-auto-allow-#{inspect(name)}"
 
     auto_allow = fn _event, _measure, %{conf: conf}, {name, repo, test_pid} ->
@@ -138,7 +143,7 @@ defmodule Oban.Case do
       telemetry_name,
       [[:oban, :engine, :init, :start], [:oban, :plugin, :init]],
       auto_allow,
-      {name, Repo, self()}
+      {name, repo, self()}
     )
 
     on_exit(name, fn -> :telemetry.detach(telemetry_name) end)

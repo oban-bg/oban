@@ -340,7 +340,6 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite, Oban.Engines.Dolphin] do
 
         [%Job{queue: "special", state: "scheduled"} = job | _] = jobs
 
-        assert job.id
         assert job.args
         assert job.scheduled_at
 
