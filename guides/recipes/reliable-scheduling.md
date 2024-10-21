@@ -59,7 +59,7 @@ deploys.
 _An [extensive discussion][oi27] on the Oban issue tracker prompted this example
 along with the underlying feature that made it possible._
 
-[oi27]: https://github.com/sorentwo/oban/issues/27
+[oi27]: https://github.com/oban-bg/oban/issues/27
 
 ## Considerations for Scheduling Jobs in the Very-Near-Future
 

@@ -18,7 +18,7 @@ defmodule Oban.Notifier do
   * `Oban.Notifiers.PG` — A process groups notifier that relies on Distributed Erlang to broadcast
     messages.
 
-  * [`Oban.Notifiers.Phoenix`](https://github.com/sorentwo/oban_notifiers_phoenix) — A notifier
+  * [`Oban.Notifiers.Phoenix`](https://github.com/oban-bg/oban_notifiers_phoenix) — A notifier
     that uses `Phoenix.PubSub` to broadcast messages. In addition to centralizing PubSub
     communications, it opens up the possible transports to all PubSub adapters.
 

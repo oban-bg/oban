@@ -1,8 +1,8 @@
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/sorentwo/oban/main/assets/oban-logotype-dark.png">
-    <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/sorentwo/oban/main/assets/oban-logotype-light.png">
-    <img alt="Oban logo" src="https://raw.githubusercontent.com/sorentwo/oban/main/assets/oban-logotype-light.png" width="320">
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/oban-bg/oban/main/assets/oban-logotype-dark.png">
+    <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/oban-bg/oban/main/assets/oban-logotype-light.png">
+    <img alt="Oban logo" src="https://raw.githubusercontent.com/oban-bg/oban/main/assets/oban-logotype-light.png" width="320">
   </picture>
 </p>
 
@@ -20,8 +20,8 @@
     <img alt="Hex Docs" src="http://img.shields.io/badge/hex.pm-docs-green.svg?style=flat">
   </a>
 
-  <a href="https://github.com/sorentwo/oban/actions">
-    <img alt="CI Status" src="https://github.com/sorentwo/oban/workflows/ci/badge.svg">
+  <a href="https://github.com/oban-bg/oban/actions">
+    <img alt="CI Status" src="https://github.com/oban-bg/oban/workflows/ci/badge.svg">
   </a>
 
   <a href="https://opensource.org/licenses/Apache-2.0">
@@ -152,7 +152,7 @@ orphaned due to crashes.
 ## Learning
 
 Learn the fundamentals of Oban, all the way through to preparing for production with our LiveBook
-powered [Oban Training](https://github.com/sorentwo/oban_training/) curriculum. 
+powered [Oban Training](https://github.com/oban-bg/oban_training/) curriculum. 
 
 ## Requirements
 

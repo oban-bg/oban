@@ -121,4 +121,4 @@ changes**.
 
 _This guide was [prompted by an inquiry][oi82] on the Oban issue tracker._
 
-[oi82]: https://github.com/sorentwo/oban/issues/82
+[oi82]: https://github.com/oban-bg/oban/issues/82

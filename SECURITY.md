@@ -13,8 +13,8 @@ available for the last 3 minor versions:
 
 ## Announcements
 
-[Security advisories will be published on GitHub](https://github.com/sorentwo/oban/security).
+[Security advisories will be published on GitHub](https://github.com/oban-bg/oban/security).
 
 ## Reporting Vulnerabilities
 
-[Please disclose security vulnerabilities via GitHub](https://github.com/sorentwo/oban/security).
+[Please disclose security vulnerabilities via GitHub](https://github.com/oban-bg/oban/security).
