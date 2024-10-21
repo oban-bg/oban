@@ -272,11 +272,13 @@ defmodule Oban.TestingTest do
     test "checking for jobs with matching timestamps within delta" do
       insert!(%{}, worker: Ping)
       insert!(%{}, worker: Pong, scheduled_at: seconds_from_now(60))
+      insert!(%{}, worker: Pong, scheduled_at: ~U[2000-10-20 05:10:31.057748Z])
 
       assert_enqueued worker: Ping, state: "available", scheduled_at: DateTime.utc_now()
       assert_enqueued worker: Ping, scheduled_at: DateTime.now!("America/Chicago")
       assert_enqueued worker: Pong, scheduled_at: seconds_from_now(60)
       assert_enqueued worker: Pong, scheduled_at: {seconds_from_now(69), delta: 10}
+      assert_enqueued worker: Pong, scheduled_at: ~U[2000-10-20 05:10:30.557748Z]
     end
 
     test "asserting that jobs are now or will eventually be enqueued" do
