@@ -119,10 +119,10 @@ inside of a transaction, which alleviates any limitations on how long a job can
 run.
 
 This technique is suitable for any _single_ long running job where an end user
-is waiting on the results. You can read the "Batching Jobs for Monitoring" guide
-if you need to combine _multiple_ jobs into a single output by creating **batch
-jobs**.
+is waiting on the results. Consider using [Oban Pro's Batch][batch] jobs if you
+need to combine _multiple_ jobs into a single output.
 
 [guide]: https://elixirforum.com/t/oban-reliable-and-observable-job-processing/22449/52
 [chan]: https://hexdocs.pm/phoenix/channels.html#content
 [wavy]: https://www.quora.com/When-someone-says-this-explanation-was-hand-wavy-what-does-that-mean
+[batch]: https://oban.pro/docs/pro/Oban.Pro.Batch.html
