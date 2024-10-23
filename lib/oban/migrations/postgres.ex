@@ -38,7 +38,7 @@ defmodule Oban.Migrations.Postgres do
     initial = max(migrated_version(opts), @initial_version)
 
     if initial >= opts.version do
-      change(initial..opts.version, :down, opts)
+      change(initial..opts.version//-1, :down, opts)
     end
   end
 

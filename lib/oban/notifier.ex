@@ -292,7 +292,7 @@ defmodule Oban.Notifier do
   defp normalize_channels(channels) do
     channels = List.wrap(channels)
 
-    unless Enum.all?(channels, &is_atom/1) do
+    if not Enum.all?(channels, &is_atom/1) do
       raise ArgumentError, "expected channels to be a list of atoms, got: #{inspect(channels)}"
     end
 

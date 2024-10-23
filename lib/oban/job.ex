@@ -605,12 +605,12 @@ defmodule Oban.Job do
   def validate_unique(unique) do
     Validation.validate(:unique, unique, fn
       {:fields, [_ | _] = fields} ->
-        unless Enum.all?(fields, &(&1 in @unique_fields)) do
+        if not Enum.all?(fields, &(&1 in @unique_fields)) do
           {:error, "expected :fields #{inspect(fields)} to overlap #{inspect(@unique_fields)}"}
         end
 
       {:keys, keys} ->
-        unless is_list(keys) and Enum.all?(keys, &is_atom/1) do
+        if not (is_list(keys) and Enum.all?(keys, &is_atom/1)) do
           {:error, "expected :keys to be a list of atoms"}
         end
 
@@ -618,22 +618,22 @@ defmodule Oban.Job do
         :ok
 
       {:period, {period, unit}} ->
-        unless is_integer(period) and period > 0 and unit in @time_units do
+        if not (is_integer(period) and period > 0 and unit in @time_units) do
           {:error, "expected :period to be positive and unit to be in #{inspect(@time_units)}"}
         end
 
       {:period, period} ->
-        unless is_integer(period) and period > 0 do
+        if not (is_integer(period) and period > 0) do
           {:error, "expected :period to be a positive integer"}
         end
 
       {:states, [_ | _] = states} ->
-        unless Enum.all?(states, &(&1 in states())) do
+        if not Enum.all?(states, &(&1 in states())) do
           {:error, "expected :states #{inspect(states)} to overlap in #{inspect(states())}"}
         end
 
       {:timestamp, timestamp} ->
-        unless timestamp in @unique_timestamps do
+        if timestamp not in @unique_timestamps do
           {:error, "expected :timestamp to be one of #{inspect(@unique_timestamps)}"}
         end
 

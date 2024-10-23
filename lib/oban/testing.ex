@@ -118,7 +118,7 @@ defmodule Oban.Testing do
   defmacro __using__(repo_opts) do
     repo_opts = Keyword.put_new(repo_opts, :prefix, false)
 
-    unless Keyword.has_key?(repo_opts, :repo) do
+    if not Keyword.has_key?(repo_opts, :repo) do
       raise ArgumentError, "testing requires a :repo option to be set"
     end
 

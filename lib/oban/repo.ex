@@ -195,7 +195,7 @@ defmodule Oban.Repo do
     prev_instance = conf.repo.get_dynamic_repo()
 
     try do
-      unless in_transaction?(conf, prev_instance) do
+      if not in_transaction?(conf, prev_instance) do
         conf.repo.put_dynamic_repo(fun.())
       end
 

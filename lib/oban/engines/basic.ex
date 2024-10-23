@@ -327,25 +327,25 @@ defmodule Oban.Engines.Basic do
   end
 
   defp validate_meta_opt({:limit, limit}) do
-    unless is_integer(limit) and limit > 0 do
+    if not (is_integer(limit) and limit > 0) do
       {:error, "expected :limit to be an integer greater than 0, got: #{inspect(limit)}"}
     end
   end
 
   defp validate_meta_opt({:paused, paused}) do
-    unless is_boolean(paused) do
+    if not is_boolean(paused) do
       {:error, "expected :paused to be a boolean, got: #{inspect(paused)}"}
     end
   end
 
   defp validate_meta_opt({:queue, queue}) do
-    unless is_atom(queue) or (is_binary(queue) and byte_size(queue) > 0) do
+    if not (is_atom(queue) or (is_binary(queue) and byte_size(queue) > 0)) do
       {:error, "expected :queue to be an atom or binary, got: #{inspect(queue)}"}
     end
   end
 
   defp validate_meta_opt({:refresh_interval, interval}) do
-    unless is_integer(interval) and interval > 0 do
+    if not (is_integer(interval) and interval > 0) do
       {:error, "expected :refresh_interval to be positive integer, got: #{inspect(interval)}"}
     end
   end

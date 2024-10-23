@@ -1355,7 +1355,7 @@ defmodule Oban do
   ## Validation Helpers
 
   defp validate_queue_opts!(opts, expected) when is_list(opts) do
-    unless Keyword.has_key?(opts, :queue) do
+    if not Keyword.has_key?(opts, :queue) do
       raise ArgumentError, "required option :queue is missing from #{inspect(opts)}"
     end
 
@@ -1365,20 +1365,20 @@ defmodule Oban do
   end
 
   defp validate_queue_opts!({:queue, queue}) do
-    unless (is_atom(queue) and not is_nil(queue)) or (is_binary(queue) and byte_size(queue) > 0) do
+    if not ((is_atom(queue) and not is_nil(queue)) or (is_binary(queue) and byte_size(queue) > 0)) do
       raise ArgumentError,
             "expected :queue to be a binary or atom (except `nil`), got: #{inspect(queue)}"
     end
   end
 
   defp validate_queue_opts!({:local_only, local_only}) do
-    unless is_boolean(local_only) do
+    if not is_boolean(local_only) do
       raise ArgumentError, "expected :local_only to be a boolean, got: #{inspect(local_only)}"
     end
   end
 
   defp validate_queue_opts!({:node, node}) do
-    unless (is_atom(node) and not is_nil(node)) or (is_binary(node) and byte_size(node) > 0) do
+    if not ((is_atom(node) and not is_nil(node)) or (is_binary(node) and byte_size(node) > 0)) do
       raise ArgumentError,
             "expected :node to be a binary or atom (except `nil`), got: #{inspect(node)}"
     end

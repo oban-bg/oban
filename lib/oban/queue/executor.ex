@@ -106,7 +106,7 @@ defmodule Oban.Queue.Executor do
         %{exec | worker: worker}
 
       {:error, error} ->
-        unless exec.safe, do: raise(error)
+        if not exec.safe, do: raise(error)
 
         %{exec | result: {:error, error}, state: :failure, error: error}
     end
@@ -204,7 +204,7 @@ defmodule Oban.Queue.Executor do
 
   @spec cancel_timeout(t()) :: t()
   def cancel_timeout(%__MODULE__{timer: timer} = exec) do
-    unless is_nil(timer), do: :timer.cancel(timer)
+    if not is_nil(timer), do: :timer.cancel(timer)
 
     exec
   end

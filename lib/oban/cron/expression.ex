@@ -108,7 +108,7 @@ defmodule Oban.Cron.Expression do
       |> Enum.flat_map(&parse_part(&1, range))
       |> MapSet.new()
 
-    unless MapSet.subset?(parsed, range_set) do
+    if not MapSet.subset?(parsed, range_set) do
       throw({:error, "expression field #{field} is out of range: #{inspect(range)}"})
     end
 
