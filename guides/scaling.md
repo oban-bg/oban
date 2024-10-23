@@ -184,4 +184,4 @@ config :my_app, Repo,
 
 Using a dedicated pool with a known number of constant connections can also help the ratio. It’s
 not necessary for most applications, but a dedicated database can help maintain predictable
-performance. Consider a dedicated database with extremely high load (e.g. 50m-100m jobs a day)
+performance.
