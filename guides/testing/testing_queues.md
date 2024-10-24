@@ -1,23 +1,21 @@
 # Testing Queues
 
-Where workers are the primary "unit" of an Oban system, queues are the
-"integration" point between the database and your application. That means to
-test queues and the jobs within them, your tests will have to interact with the
-database. To simplify that interaction, reduce boilerplate, and make assertions
-more expressive `Oban.Testing` provides a variety of helpers.
+Where workers are the primary "unit" of an Oban system, queues are the "integration" point between
+the database and your application. That means to test queues and the jobs within them, your tests
+will have to interact with the database. To simplify that interaction, reduce boilerplate, and
+make assertions more expressive `Oban.Testing` provides a variety of helpers.
 
 ## Asserting Enqueued Jobs
 
-During test runs you don't typically want to execute jobs. Rather, you need
-to verify that the job was enqueued properly. With the recommended test setup
-queues and plugins are disabled, and jobs won't be inserted into the database at all.
-Instead, they'll be executed immediately within the calling process.
-The `Oban.Testing.assert_enqueued/2` and `Oban.Testing.refute_enqueued/2` helpers
-simplify running queries to check for those `available` or `scheduled` jobs
-sitting in the database.
+During test runs you don't typically want to execute jobs. Rather, you need to verify that the job
+was enqueued properly. With the recommended test setup queues and plugins are disabled, and jobs
+won't be inserted into the database at all. Instead, they'll be executed immediately within the
+calling process. The `Oban.Testing.assert_enqueued/2` and `Oban.Testing.refute_enqueued/2` helpers
+simplify running queries to check for those `available` or `scheduled` jobs sitting in the
+database.
 
-Let's look at an example where we want to check that an activation job is
-enqueued after a user signs up:
+Let's look at an example where we want to check that an activation job is enqueued after a user
+signs up:
 
 ```elixir
 test "scheduling activation upon sign up" do
@@ -27,12 +25,21 @@ test "scheduling activation upon sign up" do
 end
 ```
 
-Likewise, we can also refute that a job was enqueued. The `refute_enqueued`
-helper takes the same arguments as `assert_enqueued`, though you should take
-care to be as unspecific as possible.
+It's also possible to assert that job `args` or `meta` have a particular shape, without matching
+exact values:
 
-Building on the example above, let's refute that a job is enqueued when account
-sign up fails:
+```elixir
+test "enqueued args have a particular key" do
+  :ok = MyApp.Account.notify_owners(account())
+
+  assert_enqueued queue: :default, args: %{email: _}
+end
+```
+
+You can also refute that a job was enqueued. The `refute_enqueued` helper takes the same arguments
+as `assert_enqueued`, though you should take care to be as unspecific as possible.
+
+Building on the example above, let's refute that a job is enqueued when account sign up fails:
 
 ```elixir
 test "bypassing activation when sign up fails" do
@@ -44,12 +51,12 @@ end
 
 ## Asserting Multiple Jobs
 
-Asserting and refuting about a single job isn't always enough. Sometimes you
-need to check for multiple jobs at once, or perform more complex assertions on
-the jobs themselves. In that situation, you can use `all_enqueued` instead.
+Asserting and refuting about a single job isn't always enough. Sometimes you need to check for
+multiple jobs at once, or perform more complex assertions on the jobs themselves. In that
+situation, you can use `all_enqueued` instead.
 
-The first example we'll look at asserts that multiple jobs from the same worker are
-enqueued all at once:
+The first example we'll look at asserts that multiple jobs from the same worker are enqueued all
+at once:
 
 ```elixir
 test "enqueuing one job for each child record" do
@@ -77,13 +84,11 @@ end
 
 ## Integration Testing Queues
 
-During integration tests it may be necessary to run jobs because they do work
-essential for the test to complete, i.e. sending an email, processing media,
-etc. You can execute all available jobs in a particular queue by calling
-`Oban.drain_queue/1,2` directly from your tests.
+During integration tests it may be necessary to run jobs because they do work essential for the
+test to complete, i.e. sending an email, processing media, etc. You can execute all available jobs
+in a particular queue by calling `Oban.drain_queue/1,2` directly from your tests.
 
-For example, to process all pending jobs in the "mailer" queue while testing
-some business logic:
+For example, to process all pending jobs in the "mailer" queue while testing some business logic:
 
 ```elixir
 defmodule MyApp.BusinessTest do
