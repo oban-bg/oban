@@ -117,7 +117,13 @@ defmodule ObanTest do
       assert %{paused: true, queue: "delta", running: []} = Oban.check_queue(name, queue: :delta)
     end
 
-    test "checking an unknown or invalid queue" do
+    test "checking state for a queue that isn't running locally" do
+      name = start_supervised_oban!(queues: [])
+
+      refute Oban.check_queue(name, queue: :default)
+    end
+
+    test "checking with invalid options or invalid queue name" do
       name = start_supervised_oban!(testing: :manual)
 
       assert_raise ArgumentError, fn -> Oban.check_queue(name, wrong: nil) end

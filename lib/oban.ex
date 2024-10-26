@@ -1171,6 +1171,8 @@ defmodule Oban do
 
   ## Example
 
+  Get details about the `default` queue:
+
       Oban.check_queue(queue: :default)
       %{
         limit: 10,
@@ -1181,16 +1183,22 @@ defmodule Oban do
         started_at: ~D[2020-10-07 15:31:00],
         updated_at: ~D[2020-10-07 15:31:00]
       }
+
+  Attempt to get details about a queue that isn't running locally:
+
+      Oban.check_queue(queue: :not_really_running)
+      nil
   """
   @doc since: "2.2.0"
-  @spec check_queue(name(), opts :: [{:queue, queue_name()}]) :: queue_state()
+  @spec check_queue(name(), opts :: [queue: queue_name()]) :: nil | queue_state()
   def check_queue(name \\ __MODULE__, [_ | _] = opts) do
     validate_queue_opts!(opts, [:queue])
-    validate_queue_exists!(name, opts)
 
-    name
-    |> Registry.via({:producer, to_string(opts[:queue])})
-    |> Producer.check()
+    role = {:producer, to_string(opts[:queue])}
+
+    with pid when is_pid(pid) <- Registry.whereis(name, role) do
+      Producer.check(pid)
+    end
   end
 
   @doc """
