@@ -156,7 +156,7 @@ powered [Oban Training](https://github.com/oban-bg/oban_training/) curriculum.
 
 ## Requirements
 
-Oban requires Elixir 1.13+, Erlang 23+, and PostgreSQL 12.0+ or SQLite3 3.37.0+.
+Oban requires Elixir 1.14+, Erlang 23+, and PostgreSQL 12.0+ or SQLite3 3.37.0+.
 
 ## Installation
 
