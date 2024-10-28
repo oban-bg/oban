@@ -26,7 +26,7 @@ jobs:
           - pair:
               elixir: '1.17'
               otp: '27.0'
-              postgres: '16.2-alpine'
+              postgres: '17.0-alpine'
             exclude_tags: 'gossip'
             lint: lint
 
