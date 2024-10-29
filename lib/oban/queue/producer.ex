@@ -25,12 +25,12 @@ defmodule Oban.Queue.Producer do
     GenServer.start_link(__MODULE__, opts, name: opts[:name])
   end
 
-  @spec check(GenServer.name()) :: Oban.queue_state()
+  @spec check(GenServer.server()) :: Oban.queue_state()
   def check(producer) do
     GenServer.call(producer, :check)
   end
 
-  @spec shutdown(GenServer.name()) :: :ok
+  @spec shutdown(GenServer.server()) :: :ok
   def shutdown(producer) do
     GenServer.call(producer, :shutdown)
   end

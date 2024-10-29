@@ -1196,8 +1196,9 @@ defmodule Oban do
 
     role = {:producer, to_string(opts[:queue])}
 
-    with pid when is_pid(pid) <- Registry.whereis(name, role) do
-      Producer.check(pid)
+    case Registry.whereis(name, role) do
+      pid when is_pid(pid) -> Producer.check(pid)
+      _ -> nil
     end
   end
 
