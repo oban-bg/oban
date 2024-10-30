@@ -4,13 +4,14 @@
 
 Oban uses PubSub notifications for communication between nodes, like job inserts, pausing queues,
 resuming queues, and metrics for Web. The default notifier is `Oban.Notifiers.Postgres`, which
-sends all messages through the database. Postgres' notifications adds up at scale because each one
-requires a separate query.
+sends all messages through the database. This provides transactional consistency, but Postgres'
+notifications adds up at scale because each one requires a separate query.
 
-If you're clustered, switch to an alternative notifier like `Oban.Notifiers.PG`. That keeps
-notifications out of the db, reduces total queries, and allows larger messages. As long as you
-have a functional Distributed Erlang cluster, then it’s a single line change to your Oban
-config.
+If you're clustered, consider switching to an alternative notifier like `Oban.Notifiers.PG`. That
+keeps notifications out of the db, reduces total queries, and allows larger messages, with the
+tradeoff that notifications from within a database transaction may be sent even if the transaction
+is rolled back. As long as you have a functional Distributed Erlang cluster, switching is a
+single line change to your Oban config.
 
 ```diff
  config :my_app, Oban,

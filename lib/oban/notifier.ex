@@ -13,7 +13,7 @@ defmodule Oban.Notifier do
   an implementation of the `Oban.Notifier` behaviour. 
 
   * `Oban.Notifiers.Postgres` — A Postgres notifier that uses `LISTEN/NOTIFY` to broadcast
-    messages. This is the default.
+    messages.
 
   * `Oban.Notifiers.PG` — A process groups notifier that relies on Distributed Erlang to broadcast
     messages.
