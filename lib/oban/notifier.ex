@@ -13,10 +13,7 @@ defmodule Oban.Notifier do
   an implementation of the `Oban.Notifier` behaviour. 
 
   * `Oban.Notifiers.Postgres` — A Postgres notifier that uses `LISTEN/NOTIFY` to broadcast
-    messages. This is the default, and the only one which respects database transactions.
-    For example, if you call `cancel_job` within a transaction which then gets rolled back, the
-    job will not be cancelled. However, this notifier is the least scalable because each notification
-    requires a separate query.
+    messages.
 
   * `Oban.Notifiers.PG` — A process groups notifier that relies on Distributed Erlang to broadcast
     messages.
