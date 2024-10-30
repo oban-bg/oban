@@ -1,6 +1,8 @@
 defmodule Oban.Notifiers.PG do
   @moduledoc """
   A [PG (Process Groups)][pg] based notifier implementation that runs with Distributed Erlang.
+  This notifier scales much better than `Oban.Notifiers.Postgres` but lacks its transactional
+  guarantees.
 
   > #### Distributed Erlang {: .info}
   >

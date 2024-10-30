@@ -22,6 +22,11 @@ if Code.ensure_loaded?(Postgrex) do
 
     The notifications system is built on PostgreSQL's `LISTEN/NOTIFY` functionality. Notifications
     are only delivered **after a transaction completes** and are de-duplicated before publishing.
+    This means that notifications sent during a transaction will not be sent if the transaction is
+    rolled back, providing consistency; this is the only notifer which provides that guarantee.
+    However, it is not as scalable as other notifiers because because each notification requires a
+    separate query.
+
     Typically, applications run Ecto in sandbox mode while testing, but sandbox mode wraps each test
     in a separate transaction that's rolled back after the test completes. That means the
     transaction is never committed, which prevents delivering any notifications.
