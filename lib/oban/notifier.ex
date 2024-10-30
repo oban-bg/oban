@@ -12,6 +12,8 @@ defmodule Oban.Notifier do
   Every Oban supervision tree contains a notifier process, registered as `Oban.Notifier`, which is
   an implementation of the `Oban.Notifier` behaviour. 
 
+  Choosing a notifer comes with some tradeoffs; see each module for details.
+
   * `Oban.Notifiers.Postgres` — A Postgres notifier that uses `LISTEN/NOTIFY` to broadcast
     messages.
 
