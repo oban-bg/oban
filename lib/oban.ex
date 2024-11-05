@@ -9,10 +9,10 @@ defmodule Oban do
   > A web dashboard for managing Oban, along with an official set of extensions, plugins, and
   > workers that expand what Oban is capable of are available as licensed packages:
   > 
-  > * [🧭 Oban Web](https://getoban.pro#oban-web)
-  > * [🌟 Oban Pro](https://getoban.pro#oban-pro)
+  > * [🧭 Oban Web](https://oban.pro#oban-web)
+  > * [🌟 Oban Pro](https://oban.pro#oban-pro)
   > 
-  > Learn more at [getoban.pro][pro]!
+  > Learn more at [oban.pro][pro]!
 
   """
 
@@ -645,8 +645,8 @@ defmodule Oban do
 
   > #### 🌟 Unique Jobs and Batching {: .warning}
   >
-  > Only the [Smart Engine](https://getoban.pro/docs/pro/Oban.Pro.Engines.Smart.html) in [Oban
-  > Pro](https://getoban.pro) supports bulk unique jobs and automatic batching. With the basic
+  > Only the [Smart Engine](https://oban.pro/docs/pro/Oban.Pro.Engines.Smart.html) in [Oban
+  > Pro](https://oban.pro) supports bulk unique jobs and automatic batching. With the basic
   > engine, you must use `insert/3` for unique support.
 
   ## Options

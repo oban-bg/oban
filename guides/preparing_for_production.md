@@ -133,7 +133,7 @@ job maintenance.
 For additional observability and introspection, consider integrating with one of these external
 tools built on `Oban.Telemetry`:
 
-* [Oban Web](https://getoban.pro)—an official Oban package, it's a view of jobs, queues, and
+* [Oban Web](https://oban.pro)—an official Oban package, it's a view of jobs, queues, and
   metrics that you host directly within your application. Powered by Phoenix LiveView and Oban
   Metrics, it is extremely lightweight and continuously updated.
 

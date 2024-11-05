@@ -142,10 +142,10 @@ orphaned due to crashes.
 > A web dashboard for managing Oban, along with an official set of extensions, plugins, and
 > workers that expand what Oban is capable are available as licensed packages:
 > 
-> * [🧭 Oban Web](https://getoban.pro#oban-web)
-> * [🌟 Oban Pro](https://getoban.pro#oban-pro)
+> * [🧭 Oban Web](https://oban.pro#oban-web)
+> * [🌟 Oban Pro](https://oban.pro#oban-pro)
 > 
-> Learn more at [getoban.pro][pro]!
+> Learn more at [oban.pro][pro]!
 
 <!-- MDOC -->
 
@@ -567,7 +567,7 @@ migrations.
 
 Find testing setup, helpers, and strategies in the [testing guide](https://hexdocs.pm/oban/testing.html).
 
-[pro]: https://getoban.pro
+[pro]: https://oban.pro
 
 ## Pruning Historic Jobs
 

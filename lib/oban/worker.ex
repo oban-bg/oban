@@ -225,7 +225,7 @@ defmodule Oban.Worker do
 
   > #### 🌟 Snoozes and Attempts {: .info}
   >
-  > Oban Pro's [Smart Engine](https://getoban.pro/docs/pro/Oban.Pro.Engines.Smart.html) rolls back
+  > Oban Pro's [Smart Engine](https://oban.pro/docs/pro/Oban.Pro.Engines.Smart.html) rolls back
   > the `attempt` and preserves the original `max_attempts` in order to differentiate between
   > "real" attempts and snoozes, which keeps backoff calculation accurate.
   >

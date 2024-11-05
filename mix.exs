@@ -148,10 +148,10 @@ defmodule Oban.MixProject do
       licenses: ["Apache-2.0"],
       files: ~w(lib .formatter.exs mix.exs README* CHANGELOG* LICENSE*),
       links: %{
-        Website: "https://getoban.pro",
+        Website: "https://oban.pro",
         Changelog: "#{@source_url}/blob/main/CHANGELOG.md",
         GitHub: @source_url,
-        Sponsor: "https://getoban.pro"
+        Sponsor: "https://oban.pro"
       }
     ]
   end

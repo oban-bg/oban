@@ -155,6 +155,6 @@ a `pid` via observer or live dashboard.
   In some situations it caused a performance regression (which is why it was removed from Pro's
   Smart engine a while ago).
 
-[opc]: https://getoban.pro/docs/pro/changelog.html
-[owc]: https://getoban.pro/docs/web/changelog.html
+[opc]: https://oban.pro/docs/pro/changelog.html
+[owc]: https://oban.pro/docs/web/changelog.html
 [prv]: https://hexdocs.pm/oban/2.17.12/changelog.html
