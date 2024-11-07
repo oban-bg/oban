@@ -70,6 +70,7 @@ defmodule Oban.MixProject do
       "guides/troubleshooting.md",
       "guides/release_configuration.md",
       "guides/writing_plugins.md",
+      "guides/periodic_jobs.md",
       "guides/upgrading/v2.0.md",
       "guides/upgrading/v2.6.md",
       "guides/upgrading/v2.11.md",
