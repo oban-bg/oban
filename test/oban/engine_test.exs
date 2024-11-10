@@ -594,6 +594,19 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite] do
       end
     end
 
+    describe "shutdown/2" do
+      setup :start_supervised_oban
+
+      test "recording that the queue is shutting down", %{name: name} do
+        conf = Oban.config(name)
+
+        {:ok, meta} = Oban.Engine.init(conf, limit: 10)
+
+        assert %{paused: true, shutdown_started_at: %DateTime{}} =
+                 Oban.Engine.shutdown(conf, meta)
+      end
+    end
+
     describe "integration" do
       setup :start_supervised_oban
 

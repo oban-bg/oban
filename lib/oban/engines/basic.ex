@@ -36,7 +36,7 @@ defmodule Oban.Engines.Basic do
           |> Map.put_new(:refresh_interval, :timer.seconds(30))
           |> Map.put_new(:uuid, Ecto.UUID.generate())
           |> Map.merge(%{name: conf.name, node: conf.node})
-          |> Map.merge(%{started_at: utc_now(), updated_at: utc_now()})
+          |> Map.merge(%{started_at: utc_now(), updated_at: utc_now(), shutdown_started_at: nil})
 
         {:ok, meta}
       end
@@ -64,7 +64,7 @@ defmodule Oban.Engines.Basic do
 
   @impl Engine
   def shutdown(_conf, %{} = meta) do
-    %{meta | paused: true}
+    %{meta | paused: true, shutdown_started_at: utc_now()}
   end
 
   @impl Engine
