@@ -7,7 +7,7 @@ Oban is published on [Hex](https://hex.pm/packages/oban). Add it to your list of
 # mix.exs
 def deps do
   [
-    {:oban, "~> 2.17"}
+    {:oban, "~> 2.18"}
   ]
 end
 ```
@@ -90,7 +90,7 @@ To prevent Oban from running jobs and plugins during test runs, enable `:testing
 
 ```elixir
 # config/test.exs
-config :my_app, Oban, testing: :inline
+config :my_app, Oban, testing: :manual
 ```
 
 Oban instances are isolated supervision trees and must be included in your application's
