@@ -85,23 +85,21 @@ for notifier <- [Oban.Notifiers.Isolated, Oban.Notifiers.PG, Oban.Notifiers.Post
       end
     end
 
-    defp await_joined do
-      if @notifier == Oban.Notifiers.PG do
+    if @notifier == Oban.Notifiers.PG do
+      defp await_joined do
         case :pg.get_local_members(Oban.Notifiers.PG, "public") do
           [] -> await_joined()
           _ -> :ok
         end
-      else
-        :ok
       end
+    else
+      defp await_joined, do: :ok
     end
 
-    defp unboxed_run(fun) do
-      if @notifier == Oban.Notifiers.Postgres do
-        Sandbox.unboxed_run(Repo, fun)
-      else
-        fun.()
-      end
+    if @notifier == Oban.Notifiers.Postgres do
+      defp unboxed_run(fun), do: Sandbox.unboxed_run(Repo, fun)
+    else
+      defp unboxed_run(fun), do: fun.()
     end
   end
 end
