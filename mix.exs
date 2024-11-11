@@ -136,7 +136,7 @@ defmodule Oban.MixProject do
         Oban.Notifiers.PG
       ],
       Peers: [
-        Oban.Peers.Postgres,
+        Oban.Peers.Database,
         Oban.Peers.Global
       ],
       Engines: [

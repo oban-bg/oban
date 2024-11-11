@@ -32,7 +32,7 @@ defmodule Oban.Migrations.MyXQL do
       add :discarded_at, :utc_datetime_usec
     end
 
-    create_if_not_exists table(:oban_leaders, primary_key: false) do
+    create_if_not_exists table(:oban_peers, primary_key: false) do
       add :name, :string, null: false, primary_key: true
       add :node, :string, null: false
       add :started_at, :utc_datetime_usec, null: false
@@ -58,7 +58,7 @@ defmodule Oban.Migrations.MyXQL do
 
   @impl Oban.Migration
   def down(_opts) do
-    drop_if_exists table(:oban_leaders)
+    drop_if_exists table(:oban_peers)
     drop_if_exists table(:oban_jobs)
 
     :ok

@@ -2,7 +2,6 @@ defmodule Oban.PeerTest do
   use Oban.Case
 
   alias Oban.{Peer, Registry}
-  alias Oban.Peers.{Global, Postgres}
 
   describe "configuration" do
     test "leadership is disabled when peer is false" do
@@ -18,7 +17,23 @@ defmodule Oban.PeerTest do
     end
   end
 
-  for peer <- [Global, Postgres] do
+  describe "compatibility" do
+    @tag dolphin: true
+    test "maintaining leadership using the Dolphin engine" do
+      name =
+        start_supervised_oban!(
+          engine: Oban.Engines.Dolphin,
+          node: "web.1",
+          peer: Oban.Peers.Database,
+          repo: Oban.Test.DolphinRepo
+        )
+
+      assert Peer.leader?(name)
+      assert "web.1" == Peer.get_leader(name)
+    end
+  end
+
+  for peer <- [Oban.Peers.Global, Oban.Peers.Database] do
     @peer peer
 
     describe "using #{peer}" do

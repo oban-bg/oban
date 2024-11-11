@@ -1,8 +1,8 @@
-defmodule Oban.Peers.Postgres do
+defmodule Oban.Peers.Database do
   @moduledoc """
-  A Postgres based peer that coordinates centrally through a database table.
+  A peer that coordinates centrally through a database table.
 
-  Postgres peers don't require clustering through distributed Erlang or any other
+  Database peers don't require clustering through distributed Erlang or any other
   interconnectivity between nodes. Leadership is coordinated through the `oban_peers` table in
   your database. With a standard Oban config the `oban_peers` table will only have one row, and
   that node is the leader.
@@ -12,10 +12,11 @@ defmodule Oban.Peers.Postgres do
 
   ## Usage
 
-  Specify the `Postgres` peer in your Oban configuration.
+  This is the default peer for the `Basic` and `Dolphin` engines and no configuration is
+  necessary. However, to be explicit, specify the `Database` peer in your configuration.
 
       config :my_app, Oban,
-        peer: Oban.Peers.Postgres,
+        peer: Oban.Peers.Database,
         ...
   """
 
@@ -119,7 +120,7 @@ defmodule Oban.Peers.Postgres do
 
     {:noreply, schedule_election(state)}
   rescue
-    error in [DBConnection.ConnectionError, Postgrex.Error] ->
+    error in [DBConnection.ConnectionError, Postgrex.Error, MyXQL.Error] ->
       if match?(%{postgres: %{code: :undefined_table}}, error) do
         Logger.error("""
         The `oban_peers` table is undefined and leadership is disabled.
