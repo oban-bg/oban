@@ -13,9 +13,12 @@ defmodule Oban.Engines.Dolphin do
       )
   """
 
+  @behaviour Oban.Engine
+
   import DateTime, only: [utc_now: 0]
   import Ecto.Query
 
+  alias Ecto.Changeset
   alias Oban.{Config, Engine, Job, Repo}
   alias Oban.Engines.Basic
 
@@ -25,7 +28,13 @@ defmodule Oban.Engines.Dolphin do
     end
   end
 
-  @behaviour Oban.Engine
+  defmacrop json_contains(column, object) do
+    quote do
+      fragment("json_contains(?, ?)", unquote(column), unquote(object))
+    end
+  end
+
+  @forever 60 * 60 * 24 * 365 * 99
 
   @impl Engine
   defdelegate init(conf, opts), to: Basic
@@ -43,7 +52,18 @@ defmodule Oban.Engines.Dolphin do
   defdelegate shutdown(conf, meta), to: Basic
 
   @impl Engine
-  defdelegate insert_job(conf, changeset, opts), to: Basic
+  def insert_job(%Config{} = conf, %Changeset{} = changeset, opts) do
+    with {:ok, job} <- fetch_unique(conf, changeset, opts),
+         {:ok, job} <- resolve_conflict(conf, job, changeset, opts) do
+      {:ok, %Job{job | conflict?: true}}
+    else
+      :not_found ->
+        Repo.insert(conf, changeset)
+
+      error ->
+        error
+    end
+  end
 
   @impl Engine
   def insert_all_jobs(%Config{} = conf, changesets, opts) do
@@ -56,7 +76,7 @@ defmodule Oban.Engines.Dolphin do
             {:ok, job} ->
               job
 
-            {:error, %Ecto.Changeset{} = changeset} ->
+            {:error, %Changeset{} = changeset} ->
               raise Ecto.InvalidChangesetError, action: :insert, changeset: changeset
 
             {:error, reason} ->
@@ -103,7 +123,7 @@ defmodule Oban.Engines.Dolphin do
         ]
 
         # MySQL doesn't support selecting in an update. To accomplish the required functionality
-        # we have to select, then update. 
+        # we have to select, then update.
         Repo.update_all(conf, found_query, updates)
 
         Enum.map(
@@ -172,7 +192,7 @@ defmodule Oban.Engines.Dolphin do
         set: [
           state: "discarded",
           discarded_at: ^utc_now(),
-          errors: json_push(j.errors, ^encode_unsaved(job))
+          errors: json_push(j.errors, ^Job.format_attempt(job))
         ]
       )
 
@@ -190,7 +210,7 @@ defmodule Oban.Engines.Dolphin do
         set: [
           state: "retryable",
           scheduled_at: ^seconds_from_now(seconds),
-          errors: json_push(j.errors, ^encode_unsaved(job))
+          errors: json_push(j.errors, ^Job.format_attempt(job))
         ]
       )
 
@@ -212,7 +232,7 @@ defmodule Oban.Engines.Dolphin do
           set: [
             state: "cancelled",
             cancelled_at: ^utc_now(),
-            errors: json_push(j.errors, ^encode_unsaved(job))
+            errors: json_push(j.errors, ^Job.format_attempt(job))
           ]
         )
       else
@@ -281,10 +301,83 @@ defmodule Oban.Engines.Dolphin do
     end)
   end
 
-  defp encode_unsaved(job) do
-    job
-    |> Job.format_attempt()
-    |> Jason.encode!()
+  # Insertion
+
+  defp fetch_unique(conf, %{changes: %{unique: %{} = unique}} = changeset, opts) do
+    %{fields: fields, keys: keys, period: period, states: states, timestamp: timestamp} = unique
+
+    states = Enum.map(states, &to_string/1)
+    since = seconds_from_now(min(period, @forever) * -1)
+
+    dynamic =
+      Enum.reduce(fields, true, fn
+        field, acc when field in [:args, :meta] ->
+          keys = Enum.map(keys, &to_string/1)
+          value = map_values(changeset, field, keys)
+
+          cond do
+            value == %{} ->
+              dynamic([j], json_contains(^value, field(j, ^field)) and ^acc)
+
+            keys == [] ->
+              dynamic(
+                [j],
+                json_contains(field(j, ^field), ^value) and
+                  json_contains(^value, field(j, ^field)) and ^acc
+              )
+
+            true ->
+              dynamic([j], json_contains(field(j, ^field), ^value) and ^acc)
+          end
+
+        field, acc ->
+          value = Changeset.get_field(changeset, field)
+
+          dynamic([j], field(j, ^field) == ^value and ^acc)
+      end)
+
+    query =
+      Job
+      |> where([j], j.state in ^states)
+      |> where([j], fragment("? >= ?", field(j, ^timestamp), ^since))
+      |> where(^dynamic)
+      |> limit(1)
+
+    case Repo.one(conf, query, opts) do
+      nil -> :not_found
+      job -> {:ok, job}
+    end
+  end
+
+  defp fetch_unique(_conf, _changeset, _opts), do: :not_found
+
+  defp resolve_conflict(conf, job, changeset, opts) do
+    case Changeset.fetch_change(changeset, :replace) do
+      {:ok, replace} ->
+        keys = Keyword.get(replace, String.to_existing_atom(job.state), [])
+
+        Repo.update(
+          conf,
+          Changeset.change(job, Map.take(changeset.changes, keys)),
+          opts
+        )
+
+      :error ->
+        {:ok, job}
+    end
+  end
+
+  defp map_values(changeset, field, keys) do
+    case keys do
+      [] ->
+        Changeset.get_field(changeset, field)
+
+      [_ | _] ->
+        changeset
+        |> Changeset.get_field(field)
+        |> Map.new(fn {key, val} -> {to_string(key), val} end)
+        |> Map.take(keys)
+    end
   end
 
   defp seconds_from_now(seconds), do: DateTime.add(utc_now(), seconds, :second)

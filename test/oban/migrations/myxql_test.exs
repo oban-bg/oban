@@ -34,11 +34,11 @@ defmodule Oban.Migrations.MyXQLTest do
 
     assert :ok = Ecto.Migrator.up(MigrationRepo, 1, Migration)
     assert table_exists?("oban_jobs")
-    assert table_exists?("oban_leaders")
+    assert table_exists?("oban_peers")
 
     assert :ok = Ecto.Migrator.down(MigrationRepo, 1, Migration)
     refute table_exists?("oban_jobs")
-    refute table_exists?("oban_leaders")
+    refute table_exists?("oban_peers")
   after
     MigrationRepo.__adapter__().storage_down(MigrationRepo.config())
   end
