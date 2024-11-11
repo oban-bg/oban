@@ -1,7 +1,8 @@
 # Instrumentation, Error Reporting, and Logging
 
-Oban provides integration with [Telemetry][telemetry], a dispatching library for
-metrics and instrumentation. It is easy to report Oban metrics to any backend by attaching to Telemetry events prefixed with `:oban`.
+Oban provides integration with [Telemetry][telemetry], a dispatching library for metrics and
+instrumentation. It is easy to report Oban metrics to any backend by attaching to Telemetry events
+prefixed with `:oban`.
 
 Here is an example of an unstructured log handler:
 
@@ -19,7 +20,8 @@ defmodule MyApp.ObanLogger do
 end
 ```
 
-Attach the handler to success and failure events in your application's `c:Application.start/2` callback (usually in `lib/my_app/application.ex`):
+Attach the handler to success and failure events in your application's `c:Application.start/2`
+callback (usually in `lib/my_app/application.ex`):
 
 ```elixir
 def start(_type, _args) do
@@ -35,21 +37,20 @@ def start(_type, _args) do
 end
 ```
 
-The `Oban.Telemetry` module provides a robust structured logger that handles all
-of Oban's telemetry events. As in the example above, attach it within your
-application module:
+The `Oban.Telemetry` module provides a robust structured logger that handles all of Oban's
+telemetry events. As in the example above, attach it within your application module:
 
 ```elixir
 :ok = Oban.Telemetry.attach_default_logger()
 ```
 
-For more details on the default structured logger and information on event
-metadata see docs for the `Oban.Telemetry` module.
+For more details on the default structured logger and information on event metadata see docs for
+the `Oban.Telemetry` module.
 
 ## Reporting Errors
 
-Another great use of execution data and instrumentation is error reporting. Here is an example of an event handler module that
-integrates with [Honeybadger][honeybadger] to report job failures:
+Another great use of execution data and instrumentation is error reporting. Here is an example of
+an event handler module that integrates with [Honeybadger][honeybadger] to report job failures:
 
 ```elixir
 defmodule MyApp.ErrorReporter do
@@ -71,11 +72,13 @@ end
 MyApp.ErrorReporter.attach()
 ```
 
-You can use exception events to send error reports to Sentry, AppSignal, Honeybadger, Rollbar, or any other application monitoring platform.
+You can use exception events to send error reports to Sentry, AppSignal, Honeybadger, Rollbar, or
+any other application monitoring platform.
 
 ### Built-in Reporting
 
-Some error-reporting and application-monitoring services support reporting Oban errors out of the box:
+Some error-reporting and application-monitoring services support reporting Oban errors out of the
+box:
 
   - Sentry — [Oban integration documentation][sentry-integration]
   - AppSignal — [Oban integration documentation][appsignal-integration]
