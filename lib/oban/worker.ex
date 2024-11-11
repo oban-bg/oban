@@ -205,13 +205,18 @@ defmodule Oban.Worker do
   The `c:timeout/1` function accepts an `Oban.Job` struct, so you can customize the timeout using
   any job attributes.
 
-  Define the `timeout` value through job args:
+  For example, you can define the `timeout` value through job args:
 
       def timeout(%_{args: %{"timeout" => timeout}}), do: timeout
 
-  Define the `timeout` based on the number of attempts:
+  Or you can define the `timeout` based on the number of attempts:
 
       def timeout(%_{attempt: attempt}), do: attempt * :timer.seconds(5)
+
+
+  If the job fails to execute before the timeout period then it will error with a dedicated
+  `Oban.TimeoutError` exception. Timeouts are treated like any other failure and the job will be
+  retried as usual if more attempts are available.
 
   ## Snoozing Jobs
 
