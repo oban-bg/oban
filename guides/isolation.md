@@ -7,7 +7,7 @@ tables.
 
 You can run multiple Oban instances with different prefixes on the same system and have them
 entirely isolated, provided you give each Oban supervisor a distinct name. You can do this in one
-of two ways: explicit names of **facades**.
+of two ways: explicit names or **facades**.
 
 ### Facades
 
