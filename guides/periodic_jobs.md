@@ -27,9 +27,7 @@ The crontab would insert jobs as follows:
   * `MyApp.MondayWorker` — Inserted at noon every Monday in the "scheduled" queue
   * `MyApp.AnotherDailyWorker` — Inserted at midnight every day with no retries
 
-The crontab format respects all [standard rules][cron] and has one minute resolution. Jobs are
-considered unique for most of each minute, which prevents duplicate jobs with multiple nodes and
-across node restarts.
+The crontab format respects all [standard rules][cron] and has one minute resolution. Jobs always run at the top of the minute. All jobs get scheduled by the leader.
 
 Like other jobs, recurring jobs will use the `:queue` specified by the worker module (or
 `:default` if one is not specified).
@@ -95,25 +93,7 @@ Alternatively you can experiment with various expressions online at [Crontab Gur
   * Workers can be used for regular _and_ scheduled jobs so long as they accept different arguments.
 
   * Long-running jobs may execute simultaneously if the scheduling interval is shorter than it takes
-  to execute the job. You can prevent overlap by passing custom `unique` opts in the crontab config:
+  to execute the job.
 
-  ```elixir
-  custom_args = %{scheduled: true}
-
-  unique_opts = [
-    period: 60 * 60 * 24,
-    states: [:available, :scheduled, :executing]
-  ]
-
-  config :my_app, Oban,
-    repo: MyApp.Repo,
-    plugins: [
-      {Oban.Plugins.Cron,
-       crontab: [
-         {"* * * * *", MyApp.SlowWorker, args: custom_args, unique: unique_opts}
-       ]}
-    ]
-  ```
-
-[cron]: https://en.wikipedia.org/wiki/Cron#Overview
+[cron]: https://en.wikipedia.org/wiki/Cron
 [guru]: https://crontab.guru
