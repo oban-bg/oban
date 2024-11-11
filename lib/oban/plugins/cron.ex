@@ -1,20 +1,19 @@
 defmodule Oban.Plugins.Cron do
   @moduledoc """
-  Periodically enqueue jobs through CRON based scheduling.
+  Periodically enqueue jobs through [cron](https://en.wikipedia.org/wiki/Cron)-based scheduling.
 
-  This plugin registers workers a cron-like schedule and enqueues jobs automatically. Periodic
-  jobs are declared as a list of `{cron, worker}` or `{cron, worker, options}` tuples.
-
+  This plugin registers workers a cron-like schedule and enqueues jobs automatically. To know
+  more about periodic jobs in Oban, see the [*Periodic Jobs* guide][perjob].
 
   > #### 🌟 DynamicCron {: .info}
   >
   > This plugin only loads the crontab statically, at boot time. To configure cron scheduling at
   > runtime, globally, across an entire cluster with scheduling guarantees and timezone overrides,
-  > see the `DynamicCron` plugin in [Oban Pro](https://oban.pro/docs/pro/Oban.Pro.Plugins.DynamicCron.html).
+  > see the [`DynamicCron` plugin in Oban Pro](https://oban.pro/docs/pro/Oban.Pro.Plugins.DynamicCron.html).
 
-  ## Using the Plugin
+  ## Usage
 
-  Schedule various jobs using `{expr, worker}` and `{expr, worker, opts}` syntaxes:
+  Periodic jobs are declared as a list of `{cron, worker}` or `{cron, worker, options}` tuples:
 
   ```elixir
   config :my_app, Oban,
@@ -30,21 +29,9 @@ defmodule Oban.Plugins.Cron do
     ]
   ```
 
-  ## Options
+  ### Identifying Cron Jobs
 
-  * `:crontab` — a list of cron expressions that enqueue jobs on a periodic basis. See [Periodic
-    Jobs][perjob] in the Oban module docs for syntax and details.
-
-  * `:timezone` — which timezone to use when scheduling cron jobs. To use a timezone other than
-    the default of "Etc/UTC" you *must* have a timezone database like [tz][tz] installed and
-    configured.
-
-  [tz]: https://hexdocs.pm/tz
-  [perjob]: Oban.html#module-periodic-jobs
-
-  ## Identifying Cron Jobs
-
-  Jobs inserted by the Cron plugin are marked with a `cron` flag and the _original_ expression is
+  Jobs inserted by the cron plugin are marked with a `cron` flag and the _original_ expression is
   stored as `cron_expr` in the job's `meta` field. For example, the meta for a `@daily` cron job
   would look like this:
 
@@ -52,11 +39,26 @@ defmodule Oban.Plugins.Cron do
   %Oban.Job{meta: %{"cron" => true, "cron_expr" => "@daily"}}
   ```
 
+  ## Options
+
+  You can pass the following options to this plugin:
+
+  * `:crontab` — a list of cron expressions that enqueue jobs on a periodic basis. See [*Periodic
+    Jobs* guide][perjob] for syntax and details.
+
+  * `:timezone` — which timezone to use when scheduling cron jobs. To use a timezone other than
+    the default of `Etc/UTC` you *must* have a timezone database like [tz][tz] installed and
+    configured.
+
   ## Instrumenting with Telemetry
 
-  The `Oban.Plugins.Cron` plugin adds the following metadata to the `[:oban, :plugin, :stop]` event:
+  The `Oban.Plugins.Cron` plugin adds the following metadata to the `[:oban, :plugin, :stop]`
+  event (see `Oban.Telemetry`):
 
-  * :jobs - a list of jobs that were inserted into the database
+  * `:jobs` — a list of jobs that were inserted into the database
+
+  [tz]: https://hexdocs.pm/tz
+  [perjob]: periodic_jobs.html
   """
 
   @behaviour Oban.Plugin
