@@ -27,7 +27,9 @@ The crontab would insert jobs as follows:
   * `MyApp.MondayWorker` — Inserted at noon every Monday in the "scheduled" queue
   * `MyApp.AnotherDailyWorker` — Inserted at midnight every day with no retries
 
-The crontab format respects all [standard rules][cron] and has one minute resolution. Jobs always run at the top of the minute. All jobs get scheduled by the leader.
+The crontab format respects all [standard rules][cron] and has one minute resolution. Jobs are
+always inserted at the top by the leader node, which prevents duplicate jobs regardless of
+cluster size, restarts, or crashes.
 
 Like other jobs, recurring jobs will use the `:queue` specified by the worker module (or
 `:default` if one is not specified).
