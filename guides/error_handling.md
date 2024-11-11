@@ -28,8 +28,10 @@ When a job fails and the number of execution attempts is below the configured `m
 for that job, the job will automatically be retried in the future. If the number of failures
 reaches `max_attempts`, the job gets **discarded**.
 
-The retry delay has an exponential backoff, meaning the job's second attempt will be after 16s,
-third after 31s, fourth after 1m 36s, and so on.
+The retry delay has an *exponential backoff with jitter*. This means that the delay between
+attempts grows exponentially (8s, 16s, and so on), and a randomized "jitter" is introduced for
+each attempt, so that chances of jobs overlapping when being retried go down. So, a job could be
+retried after 7.3s, then 17.1s, and so on.
 
 See the `Oban.Worker` documentation on "Customizing Backoff" for alternative backoff strategies.
 
