@@ -8,10 +8,10 @@ defmodule Oban do
   >
   > A web dashboard for managing Oban, along with an official set of extensions, plugins, and
   > workers that expand what Oban is capable of are available as licensed packages:
-  > 
+  >
   > * [🧭 Oban Web](https://oban.pro#oban-web)
   > * [🌟 Oban Pro](https://oban.pro#oban-pro)
-  > 
+  >
   > Learn more at [oban.pro][pro]!
 
   """
@@ -112,15 +112,15 @@ defmodule Oban do
   environment.
 
   Facade modules support configuration via the application environment under an OTP application
-  key. For example, the facade:
+  key that you specify with `:otp_app`. For example, to define a facade:
 
       defmodule MyApp.Oban do
-        use Oban, otp_app: MyApp
+        use Oban, otp_app: :my_app
       end
 
-  Could be configured with:
+  Then, you can configure the facade with:
 
-      config :my_app, Oban, repo: MyApp.Repo
+      config :my_app, MyApp.Oban, repo: MyApp.Repo
 
   Then you can include `MyApp.Oban` in your application's supervision tree without passing extra
   options:
@@ -139,30 +139,35 @@ defmodule Oban do
         end
       end
 
-  ### Calling Functions
+  ## Calling Functions
 
-  Facade modules allow you to call `Oban` functions on instances with custom names, e.g. not
-  `Oban`, without passing a `t:Oban.name/0` as the first argument.
+  Facade modules allow you to call `Oban` functions on instances with custom names (rather than
+  `Oban`), without passing a `t:Oban.name/0` as the first argument.
 
-  For example, rather than calling `Oban.config/1` you'd call `MyOban.config/0`:
+  For example:
 
-      MyOban.config()
+      # Instead of:
+      Oban.config(MyApp.Oban)
 
-  It also makes piping into Oban functions far more convenient:
+      # You can do:
+      MyApp.Oban.config()
+
+  Facades also make piping into Oban functions far more convenient:
 
       %{some: :args}
       |> MyWorker.new()
       |> MyOban.insert()
 
-  ### Merging Configuration
+  ## Merging Configuration
 
-  All configuration can be provided through the `use` macro or application config, and options
-  from the application supersedes those passed through `use`. Configuration is prioritized in
-  order:
+  All configuration can be provided through the `use` macro or through the application
+  configuration, and options from the application supersedes those passed through `use`.
+  Configuration is prioritized in this order:
 
   1. Options passed through `use`
-  2. Options pulled from the OTP app via `Application.get_env/3`
+  2. Options pulled from the OTP app specified by `:otp_app` via `Application.get_env/3`
   3. Options passed through a child spec in the supervisor
+
   """
   defmacro __using__(opts \\ []) do
     {otp_app, child_opts} = Keyword.pop!(opts, :otp_app)

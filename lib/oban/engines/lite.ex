@@ -2,6 +2,8 @@ defmodule Oban.Engines.Lite do
   @moduledoc """
   An engine for running Oban with SQLite3.
 
+  See the [SQLite3 guide](sqlite3.html) for more information on using SQLite3 with Oban.
+
   ## Usage
 
   Start an `Oban` instance using the `Lite` engine:
