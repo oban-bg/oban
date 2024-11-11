@@ -1,12 +1,12 @@
 # Instance and Database Isolation
 
-This guide will walk you through option for isolating Oban instances as well as Oban database
+This guide will walk you through options for isolating Oban instances as well as Oban database
 tables.
 
 ## Running Multiple Oban Instances
 
 You can run multiple Oban instances with different prefixes on the same system and have them
-entirely isolated, provided you give each Oban supervisor a distinct ID.
+entirely isolated, provided you give each Oban supervisor a distinct name.
 
 Here we configure our application to start three Oban supervisors using the `"public"` (default),
 `"special"`, and `"private"` prefixes, respectively:
@@ -103,9 +103,8 @@ defmodule MyApp.Repo.Migrations.AddPrefixedObanJobsTable do
 end
 ```
 
-The migration will create the `private` schema and all Oban-related tables, functions, and
-triggers within that schema. With the database migrated, you'll then specify the prefix in your
-configuration:
+The migration will create the `private` schema and all Oban-related tables within that schema.
+With the database migrated, you'll then specify the prefix in your configuration:
 
 ```elixir
 config :my_app, Oban,
