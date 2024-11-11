@@ -37,7 +37,7 @@
   - [Learning](#learning)
   - [Requirements](#requirements)
   - [Installation](#installation)
-  - [Running With SQLite3](#running-with-sqlite3)
+  - [Running With SQLite3](https://hexdocs.pm/oban/sqlite3s.html)
   - [Configuring Queues](#configuring-queues)
   - [Defining Workers](#defining-workers)
   - [Enqueueing Jobs](#enqueueing-jobs)
@@ -48,7 +48,7 @@
   - [Periodic Jobs](https://hexdocs.pm/oban/periodic_jobs.html)
   - [Error Handling](https://hexdocs.pm/oban/error_handling.html)
   - [Instrumentation and Logging](https://hexdocs.pm/oban/instrumentation.html)
-  - [Instance and Database Isolation](#instance-and-database-isolation)
+  - [Instance and Database Isolation](https://hexdocs.pm/oban/isolation.html)
 - [Community](#community)
 - [Contributing](#contributing)
 
@@ -162,29 +162,6 @@ Oban requires Elixir 1.14+, Erlang 23+, and PostgreSQL 12.0+ or SQLite3 3.37.0+.
 
 See the [installation guide](https://hexdocs.pm/oban/installation.html) for details on installing
 and configuring Oban in your application.
-
-## Running with SQLite3
-
-Oban ships with engines for PostgreSQL and SQLite3. Both engines support the same core
-functionality for a single node, while the Postgres engine is more advanced and designed to run in
-a distributed environment.
-
-Running with SQLite3 requires adding `ecto_sqlite3` to your app's dependencies and setting the
-`Oban.Engines.Lite` engine:
-
-```elixir
-config :my_app, Oban,
-  engine: Oban.Engines.Lite,
-  queues: [default: 10],
-  repo: MyApp.Repo
-```
-
-> #### High Concurrency Systems {: .warning}
->
-> SQLite3 may not be suitable for high-concurrency systems or for systems that need to handle
-> large amounts of data. If you expect your background jobs to generate high loads, it would be
-> better to use a more robust database solution that supports horizontal scalability, like
-> Postgres.
 
 ## Configuring Queues
 
