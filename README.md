@@ -575,6 +575,8 @@ config :my_app, Oban,
   `discarded`. It'll never delete a new job, a scheduled job or a job that
   failed and will be retried.
 
+<!-- MDOC -->
+
 ## Community
 
 There are a few places to connect and communicate with other Oban users:

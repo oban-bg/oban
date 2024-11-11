@@ -6,7 +6,54 @@ tables.
 ## Running Multiple Oban Instances
 
 You can run multiple Oban instances with different prefixes on the same system and have them
-entirely isolated, provided you give each Oban supervisor a distinct name.
+entirely isolated, provided you give each Oban supervisor a distinct name. You can do this in one
+of two ways: explicit names of **facades**.
+
+### Facades
+
+You can create an [Oban **facade**](`Oban.__using__/1`) by defining a module that calls `use
+Oban`:
+
+```elixir
+defmodule MyApp.ObanA do
+  use Oban, otp_app: :my_app
+end
+
+defmodule MyApp.ObanB do
+  use Oban, otp_app: :my_app
+end
+```
+
+Configure facades through the application environment, for example in `config/config.exs`:
+
+```elixir
+config :my_app, MyApp.ObanA, repo: MyAppo.Repo, prefix: "special"
+config :my_app, MyApp.ObanB, repo: MyAppo.Repo, prefix: "private"
+```
+
+You can then start these facades in your application's supervision tree:
+
+```elixir
+@impl true
+def start(_type, _args) do
+  children = [
+    MyApp.Repo,
+    MyApp.ObanA,
+    MyApp.ObanB
+  ]
+
+  Supervisor.start_link(children, strategy: :one_for_one, name: MyApp.Supervisor)
+end
+```
+
+Oban facades define all the functions that the `Oban` module defines, so use the facade in place
+of `Oban`:
+
+```elixir
+MyApp.ObanA.insert(MyApp.Worker.new(%{}))
+```
+
+### Isolated Instances Via Names
 
 Here we configure our application to start three Oban supervisors using the `"public"` (default),
 `"special"`, and `"private"` prefixes, respectively:
@@ -15,7 +62,6 @@ Here we configure our application to start three Oban supervisors using the `"pu
 def start(_type, _args) do
   children = [
     MyApp.Repo,
-    MyApp.Endpoint,
     {Oban, name: ObanA, repo: MyApp.Repo},
     {Oban, name: ObanB, repo: MyApp.Repo, prefix: "special"},
     {Oban, name: ObanC, repo: MyApp.Repo, prefix: "private"}
