@@ -35,9 +35,9 @@ concurrently in each queue. Some additional guidelines:
 
   * Queue limits are **local** (per-node), not global (per-cluster). For example, running a queue
   with a local limit of `2` on three separate nodes is effectively a global limit of *six
-  concurrent jobs*. If you require a global limit you must restrict the number of nodes running a
-  particular queue.
-
+  concurrent jobs*. If you require a global limit, you must restrict the number of nodes running a
+  particular queue or consider Oban Pro's [Smart Engine][smart], which can manage global
+  concurrency *automatically*!
   * Only jobs in the configured queues will execute. Jobs in any other queue will
   stay in the database untouched.
 
