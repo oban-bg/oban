@@ -20,7 +20,7 @@ defmodule Oban.Peer do
 
   There are two built-in peering modules:
 
-  * `Oban.Peers.Postgres` — uses table-based leadership through the `oban_peers` table and works
+  * `Oban.Peers.Database` — uses table-based leadership through the `oban_peers` table and works
     in any environment, with or without clustering. Only one node (per instance name) will have a
     row in the peers table, that node is the leader. This is the default.
 
@@ -30,7 +30,7 @@ defmodule Oban.Peer do
   You can specify the peering module to use in your Oban configuration:
 
       config :my_app, Oban,
-        peer: Oban.Peers.Postgres, # default value
+        peer: Oban.Peers.Database, # default value
         ...
 
   If in doubt, you can call `Oban.config()` to see which module is being used.

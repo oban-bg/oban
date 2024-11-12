@@ -66,8 +66,8 @@ defmodule Oban.ConfigTest do
 
       assert_valid(peer: false)
       assert_valid(peer: Oban.Peers.Global)
-      assert_valid(peer: Oban.Peers.Postgres)
-      assert_valid(peer: {Oban.Peers.Postgres, [some: :opt]})
+      assert_valid(peer: Oban.Peers.Database)
+      assert_valid(peer: {Oban.Peers.Database, [some: :opt]})
     end
 
     test ":plugins are validated as complete plugins with possible options" do
@@ -199,12 +199,19 @@ defmodule Oban.ConfigTest do
       assert %{stage_interval: 2_000} = conf(plugins: [{Oban.Plugins.Stager, interval: 2_000}])
     end
 
-    test "translating peer false to the disabled module" do
+    test "translating :peer false to the disabled module" do
       assert %Config{peer: {Oban.Peers.Isolated, [leader?: false]}} = conf(peer: false)
       assert %Config{peer: {Oban.Peers.Isolated, [leader?: false]}} = conf(plugins: false)
 
       assert %Config{peer: {Oban.Peers.Isolated, [leader?: false]}} =
                conf(peer: Oban.Peers.Global, plugins: false)
+    end
+
+    test "translating the :peer from Postgres to Database" do
+      assert %Config{peer: {Oban.Peers.Database, []}} = conf(peer: Oban.Peers.Postgres)
+
+      assert %Config{peer: {Oban.Peers.Database, [interval: 10]}} =
+               conf(peer: {Oban.Peers.Postgres, interval: 10})
     end
 
     test "setting sane defaults for the Lite engine" do

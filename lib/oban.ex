@@ -2,7 +2,8 @@ defmodule Oban do
   @external_resource readme = Path.join([__DIR__, "../README.md"])
 
   @doc_header """
-  Oban is a robust job processing library which uses PostgreSQL or SQLite3 for persistence.
+  Oban is a robust background job framework which uses PostgreSQL, MySQL, or SQLite3 for
+  persistence.
 
   > #### Oban Web+Pro {: .tip}
   >
@@ -325,13 +326,13 @@ defmodule Oban do
 
   * `:peer` — used to specify which peer module to use for cluster leadership.
 
-    There are two built-in peers: `Oban.Peers.Postgres`, which uses table-based leadership through
+    There are two built-in peers: `Oban.Peers.Database`, which uses table-based leadership through
     the `oban_peers` table; and `Oban.Peers.Global`, which uses global locks through distributed Erlang.
 
     Leadership can be disabled by setting `peer: false`, but note that centralized plugins like
     `Cron` won't run without leadership.
 
-    Defaults to the `Postgres` peer.
+    Defaults to the `Database` peer.
 
   * `:plugins` — a list or modules or module/option tuples that are started as children of an Oban
     supervisor. Any supervisable module is a valid plugin, i.e. a `GenServer` or an `Agent`. May

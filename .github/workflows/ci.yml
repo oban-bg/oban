@@ -21,11 +21,13 @@ jobs:
           - pair:
               elixir: '1.14'
               otp: '24.3'
+              mysql: '8.4'
               postgres: '12.13-alpine'
             exclude_tags: 'lite'
           - pair:
               elixir: '1.17'
               otp: '27.0'
+              mysql: '9.1'
               postgres: '17.0-alpine'
             exclude_tags: 'gossip'
             lint: lint
@@ -46,6 +48,17 @@ jobs:
           --health-retries 5
         ports:
           - 5432/tcp
+      mysql:
+        image: mysql:${{matrix.pair.mysql}}
+        env:
+          MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+        options: >-
+          --health-cmd "mysqladmin ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 3306/tcp
 
     steps:
       - uses: actions/checkout@v4
@@ -88,12 +101,14 @@ jobs:
 
       - name: Run mix ecto.migrate
         env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:${{job.services.postgres.ports[5432]}}/oban_test
+          MYSQL_URL: mysql://root@localhost:${{job.services.mysql.ports[3306]}}/oban_test
+          POSTGRES_URL: postgresql://postgres:postgres@localhost:${{job.services.postgres.ports[5432]}}/oban_test
         run: mix test.setup
 
       - name: Run mix test
         env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:${{job.services.postgres.ports[5432]}}/oban_test
+          MYSQL_URL: mysql://root@localhost:${{job.services.mysql.ports[3306]}}/oban_test
+          POSTGRES_URL: postgresql://postgres:postgres@localhost:${{job.services.postgres.ports[5432]}}/oban_test
         run: mix test --exclude ${{ matrix.exclude_tags }}
 
       - name: Run dialyzer

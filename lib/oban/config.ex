@@ -37,7 +37,7 @@ defmodule Oban.Config do
             name: Oban,
             node: nil,
             notifier: {Oban.Notifiers.Postgres, []},
-            peer: {Oban.Peers.Postgres, []},
+            peer: {Oban.Peers.Database, []},
             plugins: [],
             prefix: "public",
             queues: [],
@@ -67,13 +67,21 @@ defmodule Oban.Config do
     opts = normalize(opts)
 
     opts =
-      if opts[:engine] == Oban.Engines.Lite do
-        opts
-        |> Keyword.put(:prefix, false)
-        |> Keyword.put_new(:notifier, {Oban.Notifiers.PG, []})
-        |> Keyword.put_new(:peer, {Oban.Peers.Isolated, []})
-      else
-        opts
+      case opts[:engine] do
+        Oban.Engines.Lite ->
+          opts
+          |> Keyword.put(:prefix, false)
+          |> Keyword.put_new(:notifier, {Oban.Notifiers.PG, []})
+          |> Keyword.put_new(:peer, {Oban.Peers.Isolated, []})
+
+        Oban.Engines.Dolphin ->
+          opts
+          |> Keyword.put(:prefix, false)
+          |> Keyword.put_new(:notifier, {Oban.Notifiers.PG, []})
+          |> Keyword.put_new(:peer, {Oban.Peers.Database, []})
+
+        _ ->
+          opts
       end
 
     opts =
@@ -341,6 +349,12 @@ defmodule Oban.Config do
     cond do
       peer == false or opts[:plugins] == false ->
         Keyword.put(opts, :peer, {Oban.Peers.Isolated, [leader?: false]})
+
+      peer == Oban.Peers.Postgres ->
+        Keyword.put(opts, :peer, {Oban.Peers.Database, []})
+
+      match?({Oban.Peers.Postgres, _}, peer) ->
+        Keyword.put(opts, :peer, put_elem(peer, 0, Oban.Peers.Database))
 
       is_atom(peer) and not is_nil(peer) ->
         Keyword.put(opts, :peer, {peer, []})

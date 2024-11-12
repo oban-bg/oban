@@ -24,6 +24,12 @@ defmodule Oban.Test.LiteRepo do
   use Ecto.Repo, otp_app: :oban, adapter: Ecto.Adapters.SQLite3
 end
 
+defmodule Oban.Test.DolphinRepo do
+  @moduledoc false
+
+  use Ecto.Repo, otp_app: :oban, adapter: Ecto.Adapters.MyXQL
+end
+
 defmodule Oban.Test.UnboxedRepo do
   @moduledoc false
 

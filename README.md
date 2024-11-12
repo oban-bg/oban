@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  Robust job processing in Elixir, backed by modern PostgreSQL or SQLite3.
+  Robust job processing in Elixir, backed by modern PostgreSQL, MySQL, and SQLite3.
   Reliable, <br /> observable, and loaded with <a href="#features">enterprise grade features</a>.
 </p>
 
@@ -34,10 +34,10 @@
 - [Features](#features)
 - [Oban Web+Pro](#oban-webpro)
 - Usage
-  - [Learning](#learning)
+  - [Engines](#engines)
   - [Requirements](#requirements)
+  - [Learning](#learning)
   - [Installation](#installation)
-  - [Running With SQLite3](https://hexdocs.pm/oban/sqlite3s.html)
   - [Configuring Queues](#configuring-queues)
   - [Defining Workers](#defining-workers)
   - [Enqueueing Jobs](#enqueueing-jobs)
@@ -56,8 +56,8 @@
 
 > [!NOTE]
 >
-> This README is for the unreleased main branch, please reference the
-> [official documentation on hexdocs][hexdoc] for the latest stable release.
+> This README is for the unreleased main branch, please reference the [official documentation on
+> hexdocs][hexdoc] for the latest stable release.
 
 [hexdoc]: https://hexdocs.pm/oban/Oban.html
 
@@ -67,27 +67,25 @@
 
 Oban's primary goals are **reliability**, **consistency** and **observability**.
 
-Oban is a powerful and flexible library that can handle a wide range of
-background job use cases, and it is well-suited for systems of any size. It
-provides a simple and consistent API for scheduling and performing jobs, and it
-is built to be fault-tolerant and easy to monitor.
+Oban is a powerful and flexible library that can handle a wide range of background job use cases,
+and it is well-suited for systems of any size. It provides a simple and consistent API for
+scheduling and performing jobs, and it is built to be fault-tolerant and easy to monitor.
 
-Oban is fundamentally different from other background job processing tools because
-_it retains job data for historic metrics and inspection_. You can leave your
-application running indefinitely without worrying about jobs being lost or
-orphaned due to crashes.
+Oban is fundamentally different from other background job processing tools because _it retains job
+data for historic metrics and inspection_. You can leave your application running indefinitely
+without worrying about jobs being lost or orphaned due to crashes.
 
 #### Advantages Over Other Tools
 
-- **Fewer Dependencies** — If you are running a web app there is a _very good_
-  chance that you're running on top of a [RDBMS][rdbms]. Running your job queue
-  within a SQL database minimizes system dependencies and simplifies data backups.
+- **Fewer Dependencies** — If you are running a web app there is a _very good_ chance that you're
+  running on top of a SQL database. Running your job queue within a SQL database minimizes system
+  dependencies and simplifies data backups.
 
-- **Transactional Control** — Enqueue a job along with other database changes,
-  ensuring that everything is committed or rolled back atomically.
+- **Transactional Control** — Enqueue a job along with other database changes, ensuring that
+  everything is committed or rolled back atomically.
 
-- **Database Backups** — Jobs are stored inside of your primary database, which
-  means they are backed up together with the data that they relate to.
+- **Database Backups** — Jobs are stored inside of your primary database, which means they are
+  backed up together with the data that they relate to.
 
 #### Advanced Features
 
@@ -133,7 +131,6 @@ orphaned due to crashes.
 - **Telemetry Integration** — Job life-cycle events are emitted via [Telemetry][tele] integration.
   This enables simple logging, error reporting and health checkups without plug-ins.
 
-[rdbms]: https://en.wikipedia.org/wiki/Relational_database#RDBMS
 [tele]: https://github.com/beam-telemetry/telemetry
 
 ## Oban Web+Pro
@@ -149,14 +146,28 @@ orphaned due to crashes.
 
 <!-- MDOC -->
 
+## Engines
+
+Oban ships with engines for [PostgreSQL][postgres], [MySQL][mysql], and [SQLite3][sqlite3]. Each
+engine supports the same core functionality, though they have differing levels of maturity and
+suitability for production.
+
+[postgres]: https://www.postgresql.org/
+[mysql]: https://www.mysql.com/
+[sqlite3]: https://www.sqlite.org/
+
+## Requirements
+
+Oban requires: 
+
+* Elixir 1.14+
+* Erlang 24+
+* PostgreSQL 12.0+, MySQL 8.0+, or SQLite3 3.37.0+
+
 ## Learning
 
 Learn the fundamentals of Oban, all the way through to preparing for production with our LiveBook
 powered [Oban Training](https://github.com/oban-bg/oban_training/) curriculum. 
-
-## Requirements
-
-Oban requires Elixir 1.14+, Erlang 23+, and PostgreSQL 12.0+ or SQLite3 3.37.0+.
 
 ## Installation
 
@@ -594,8 +605,8 @@ There are a few places to connect and communicate with other Oban users:
 
 ## Contributing
 
-To run the Oban test suite you must have PostgreSQL 12+ and SQLite3 3.37+ running. Follow these
-steps to create the database, create the database and run all migrations:
+To run the Oban test suite you must have PostgreSQL 12+ and MySQL 8+ running. Follow these steps
+to create the database, create the database and run all migrations:
 
 ```bash
 mix test.setup

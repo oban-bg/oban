@@ -74,7 +74,8 @@ defmodule Oban.MixProject do
       "guides/release_configuration.md",
       "guides/writing_plugins.md",
       "guides/periodic_jobs.md",
-      "guides/sqlite3.md",
+
+      # Upgrading
       "guides/upgrading/v2.0.md",
       "guides/upgrading/v2.6.md",
       "guides/upgrading/v2.11.md",
@@ -136,7 +137,7 @@ defmodule Oban.MixProject do
         Oban.Notifiers.PG
       ],
       Peers: [
-        Oban.Peers.Postgres,
+        Oban.Peers.Database,
         Oban.Peers.Global
       ],
       Engines: [
@@ -166,6 +167,7 @@ defmodule Oban.MixProject do
       {:ecto_sql, "~> 3.10"},
       {:ecto_sqlite3, "~> 0.9", optional: true},
       {:jason, "~> 1.1"},
+      {:myxql, "~> 0.7", optional: true},
       {:postgrex, "~> 0.16", optional: true},
       {:telemetry, "~> 0.4 or ~> 1.0"},
       {:stream_data, "~> 1.0", only: [:test, :dev]},
