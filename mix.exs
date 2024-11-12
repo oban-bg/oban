@@ -78,6 +78,8 @@ defmodule Oban.MixProject do
       "guides/operational_maintenance.md",
       "guides/writing_plugins.md",
       "guides/periodic_jobs.md",
+      "guides/clustering.md",
+      "guides/sqlite3.md",
 
       # Upgrading
       "guides/upgrading/v2.0.md",
