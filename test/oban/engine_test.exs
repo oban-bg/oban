@@ -506,7 +506,7 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite, Oban.Engines.Dolphin] do
         job_1 = insert!(name, %{ref: 1}, schedule_in: 10)
         job_2 = insert!(name, %{ref: 2}, schedule_in: 10, state: "retryable")
         job_3 = insert!(name, %{ref: 3}, state: "completed")
-        job_4 = insert!(name, %{ref: 4, sleep: 100}, [])
+        job_4 = insert!(name, %{ref: 4, sleep: 1000}, [])
 
         assert_receive {:started, 4}
 
