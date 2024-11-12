@@ -2,7 +2,9 @@
 
 The *uniqueness* of a job is a somewhat complex topic. This guide is here to help you understand its complexities!
 
-The unique jobs feature lets you specify constraints to prevent enqueuing duplicate jobs.
+The unique jobs feature allows you to specify constraints to prevent *enqueuing* duplicate jobs.
+These constraints only apply when jobs are inserted. Uniqueness has no bearing on whether jobs
+are *executed* concurrently.
 Uniqueness is based on a combination of job attributes based on the following options:
 
   * `:period` — The number of seconds until a job is no longer considered duplicate. You should
