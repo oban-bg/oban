@@ -272,7 +272,7 @@ defmodule Oban.Worker do
 
   ## Workers in A Different Application
 
-  Occasionally you may need to insert a job for a worker that exists in another
+  Occasionally, you may need to insert a job for a worker that exists in another
   application. In that case you can use `Oban.Job.new/2` to build the changeset
   manually:
 
