@@ -14,6 +14,8 @@ Uniqueness is based on a combination of job attributes based on the following op
 
   * `:fields` — The fields to compare when evaluating uniqueness. The available fields are
     `:args`, `:queue`, `:worker`, and `:meta`. `:fields` defaults to `[:worker, :queue, :args]`.
+    It's recommended that you leave the default `:fields`, otherwise you risk unexpected conflicts
+    between unrelated jobs.
 
   * `:keys` — A specific subset of the `:args` or `:meta` to consider when comparing against
     historic jobs. This allows a job with multiple key/value pairs in its arguments to be compared
