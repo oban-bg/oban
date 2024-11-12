@@ -65,13 +65,16 @@ defmodule Oban.MixProject do
     [
       # Guides
       "guides/installation.md",
+      "guides/configuration.md",
       "guides/preparing_for_production.md",
       "guides/scaling.md",
       "guides/instrumentation.md",
       "guides/error_handling.md",
+      "guides/job_uniqueness.md",
       "guides/isolation.md",
       "guides/troubleshooting.md",
       "guides/release_configuration.md",
+      "guides/operational_maintenance.md",
       "guides/writing_plugins.md",
       "guides/periodic_jobs.md",
 

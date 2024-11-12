@@ -1,9 +1,9 @@
 defmodule Oban.Plugins.Pruner do
   @moduledoc """
-  Periodically delete `completed`, `cancelled` and `discarded` jobs based on their age.
+  Periodically delete `completed`, `cancelled`, and `discarded` jobs based on their age.
 
   Pruning is critical for maintaining table size and continued responsive job processing. It
-  is recommended for all production applications.
+  is recommended for all production applications. See also the [*Operational Maintenance* guide](operational_maintenance.html).
 
   > #### 🌟 DynamicPruner {: .info}
   >
