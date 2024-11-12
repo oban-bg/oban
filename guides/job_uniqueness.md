@@ -36,7 +36,7 @@ the database, regardless of state:
 use Oban.Worker, unique: true
 ```
 
-Here's a more complex example which uses multiple criteria:
+Here's a more complex example which uses multiple options:
 
 ```elixir
 use Oban.Worker,
