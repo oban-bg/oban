@@ -42,7 +42,7 @@ Here's a more complex example which uses multiple options:
 use Oban.Worker,
   unique: [
     # Jobs should be unique for 2 minutes...
-    period: 120,
+    period: {2, :minutes},
     # ...after being scheduled, not inserted
     timestamp: :scheduled_at,
     # Don't consider the whole :args field, but just the :url field within :args
