@@ -49,9 +49,9 @@ use Oban.Worker,
     keys: [:url],
     # Consider a job unique across all states, including :cancelled/:discarded
     states: Oban.Job.states(),
-    # Consider a job unique across workers and queues; only compare the :url key within
+    # Consider a job unique across queues; only compare the :url key within
     # the :args, as per the :keys configuration above
-    fields: [:args]
+    fields: [:worker, :args]
   ]
 ```
 
