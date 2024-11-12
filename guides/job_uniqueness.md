@@ -1,7 +1,6 @@
 # Job Uniqueness
 
-The *uniqueness* of a job is a somewhat complex topic, which is why this guide is here to help you
-understand it in detail.
+The *uniqueness* of a job is a somewhat complex topic. This guide is here to help you understand its complexities!
 
 The unique jobs feature lets you specify constraints to prevent enqueuing duplicate jobs.
 Uniqueness is based on a combination of job attributes based on the following options:
