@@ -7,8 +7,8 @@ defmodule Oban.Worker do
 
   ## Defining Workers
 
-  Worker modules are defined by using `Oban.Worker`. A bare `use Oban.Worker` invocation sets a
-  worker with these defaults:
+  Worker modules are defined by using `Oban.Worker`. `use Oban.Worker` supports several options.
+  A bare `use Oban.Worker` invocation sets a worker with these defaults:
 
   * `:max_attempts` — 20
   * `:priority` — 0
@@ -30,8 +30,9 @@ defmodule Oban.Worker do
       end
 
   The following example defines a complex worker module to process jobs in the `events` queue.
-  It then dials down the priority from 0 to 1, limits retrying on failures to 10 attempts, adds
-  a "business" tag, and ensures that duplicate jobs aren't enqueued within a 30 second period:
+  It then dials down the priority from `0` to `1`, limits retrying on failures to ten attempts,
+  adds a `business` tag, and ensures that duplicate jobs aren't enqueued within a
+  30 second period:
 
       defmodule MyApp.Workers.Business do
         use Oban.Worker,
@@ -52,8 +53,18 @@ defmodule Oban.Worker do
         end
       end
 
+  > #### Options at Compile-Time {: .warning}
+  >
+  > Like all `use` macros, options are defined at compile time. Avoid using
+  > `Application.get_env/2` to define worker options. Instead, pass dynamic options at runtime
+  > by passing them to the worker's `c:new/2` function:
+  >
+  > ```elixir
+  > MyApp.MyWorker.new(args, queue: dynamic_queue)
+  > ```
+
   The `c:perform/1` function receives an `Oban.Job` struct as an argument. This allows workers to
-  change the behavior of `c:perform/1` based on attributes of the job, e.g. the args, number of
+  change the behavior of `c:perform/1` based on attributes of the job, such as the args, number of
   execution attempts, or when it was inserted.
 
   The value returned from `c:perform/1` can control whether the job is a success or a failure:
@@ -114,9 +125,16 @@ defmodule Oban.Worker do
       |> MyApp.Workers.Business.new(unique: [period: 120, fields: [:worker]])
       |> Oban.insert()
 
-  Note that `unique` options aren't merged, they are overridden entirely.
+  `unique` options aren't merged, they are overridden entirely.
 
-  See `Oban.Job` for all available options.
+  You can also insert multiple jobs within a single transaction—see
+  `Oban.insert/5`.
+
+  Jobs that are inserted are executed as soon as possible by default. If you need
+  to **schedule** jobs in the future, see the guide for [*Scheduling Jobs*](scheduling_jobs.html).
+
+  See `Oban.Job` for all available options, and the
+  [*Job Uniqueness* guide](job_uniqueness.html) for more information about unique jobs.
 
   ## Customizing Backoff
 
@@ -254,6 +272,38 @@ defmodule Oban.Worker do
           if MyApp.something?(job), do: :ok, else: {:snooze, 60}
         end
       end
+
+  ## Workers in A Different Application
+
+  Occasionally, you may need to insert a job for a worker that exists in another
+  application. In that case you can use `Oban.Job.new/2` to build the changeset
+  manually:
+
+      %{id: 1, user_id: 2}
+      |> Oban.Job.new(queue: :default, worker: OtherApp.Worker)
+      |> Oban.insert()
+
+  ## Prioritizing Jobs
+
+  Normally, all available jobs within a queue are executed in the order they were scheduled.
+  You can override the normal behavior and prioritize or de-prioritize a job by
+  assigning a numerical `:priority`.
+
+    * Priorities from `0` to `9` are allowed, where `0` is the *highest* priority and `9`
+      is the *lowest*.
+    * The default priority is `0`; unless specified, all jobs have an equally high priority.
+    * All jobs with a higher priority will execute before any jobs with a lower priority.
+      Jobs with the *same priority* are executed in their scheduled order.
+
+  ### Caveats & Guidelines
+
+  The default priority is defined in the `jobs` table. The least intrusive way to change
+  it for all jobs is to change the column default through a migration:
+
+      alter table("oban_jobs") do
+        modify :priority, :integer, default: 1, from: {:integer, default: 0}
+      end
+
   """
   @moduledoc since: "0.1.0"
 
@@ -320,9 +370,14 @@ defmodule Oban.Worker do
   tuple, an uncaught exception or a throw then the error is recorded and the job may be retried if
   there are any attempts remaining.
 
-  Note that the `args` map provided to `perform/1` will _always_ have string keys, regardless of
-  the key type when the job was enqueued. The `args` are stored as `jsonb` in PostgreSQL and the
-  serialization process automatically stringifies all keys.
+  > #### `args` Are Stored as JSON {: .info}
+  >
+  > The `args` map provided to `perform/1` will _always_ have string keys, regardless of
+  > the key type when the job was enqueued. The `args` are stored as `jsonb` in PostgreSQL and the
+  > serialization process automatically stringifies all keys. Because `args` are always encoded
+  > as JSON, you must also ensure that all values are serializable, otherwise you'll have
+  > encoding errors when inserting jobs.
+
   """
   @callback perform(job :: Job.t()) :: result()
 
