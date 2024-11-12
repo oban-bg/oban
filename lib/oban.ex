@@ -2,7 +2,8 @@ defmodule Oban do
   @external_resource readme = Path.join([__DIR__, "../README.md"])
 
   @doc_header """
-  Oban is a robust job processing library which uses PostgreSQL or SQLite3 for persistence.
+  Oban is a robust background job framework which uses PostgreSQL, MySQL, or SQLite3 for
+  persistence.
 
   > #### Oban Web+Pro {: .tip}
   >

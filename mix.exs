@@ -74,7 +74,8 @@ defmodule Oban.MixProject do
       "guides/release_configuration.md",
       "guides/writing_plugins.md",
       "guides/periodic_jobs.md",
-      "guides/sqlite3.md",
+
+      # Upgrading
       "guides/upgrading/v2.0.md",
       "guides/upgrading/v2.6.md",
       "guides/upgrading/v2.11.md",

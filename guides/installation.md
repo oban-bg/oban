@@ -12,9 +12,9 @@ def deps do
 end
 ```
 
-Then run `mix deps.get` to install Oban and its dependencies, including [Ecto][ecto] and
-[Jason][jason]. You'll optionally need to include either [Postgrex][postgrex] for use with
-Postgres, or [EctoSQLite3][ecto_sqlite3] for SQLite3.
+You'll optionally need to include [Postgrex][postgrex] for Postgres, [EctoSQLite3][ecto_sqlite3]
+for SQLite3, or [MyXQL][myxql] for use with MySQL. Then run `mix deps.get` to install Oban and its
+dependencies.
 
 After the packages are installed you must create a database migration to add the `oban_jobs` table
 to your database:
@@ -43,11 +43,8 @@ end
 ```
 
 This will run all of Oban's versioned migrations for your database. Migrations between versions
-are idempotent and rarely† change after a release. As new versions are released you may need to
-run additional migrations.
-
-_† The only exception is the removal of `oban_beats`. That table is no longer created or modified
-in any migrations_
+are idempotent and rarely change after a release. As new versions are released you may need to run
+additional migrations.
 
 Now, run the migration to create the table:
 
@@ -79,6 +76,18 @@ Running with SQLite3 requires using the `Oban.Engines.Lite` engine:
 # config/config.exs
 config :my_app, Oban,
   engine: Oban.Engines.Lite,
+  queues: [default: 10],
+  repo: MyApp.Repo
+```
+
+### MySQL
+
+Running with MySQL requires using the `Oban.Engines.Dolphin` engine:
+
+```elixir
+# config/config.exs
+config :my_app, Oban,
+  engine: Oban.Engines.Dolphin,
   queues: [default: 10],
   repo: MyApp.Repo
 ```
@@ -121,7 +130,6 @@ You're all set! Get started creating jobs and configuring queues in [Usage][use]
 
 [use]: Oban.html#Usage
 [test]: testing.md
-[ecto]: https://hex.pm/packages/ecto
-[jason]: https://hex.pm/packages/jason
 [postgrex]: https://hex.pm/packages/postgrex
 [ecto_sqlite3]: https://hex.pm/packages/ecto_sqlite3
+[myxql]: https://hex.pm/packages/myxql
