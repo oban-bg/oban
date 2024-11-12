@@ -20,7 +20,9 @@ Uniqueness is based on a combination of job attributes based on the following op
     using only a subset of them.
 
   * `:states` — The job states that are checked for duplicates. The available states are
-    described in `t:Oban.Job.unique_state/0`. By default, Oban checks all states except for `:discarded` and `:cancelled`, which prevents duplicates even if the previous job has been completed.
+    described in `t:Oban.Job.unique_state/0`. By default, Oban checks all states except for
+    `:discarded` and `:cancelled`, which prevents duplicates even if the previous job has been
+    completed.
 
   * `:timestamp` — Which job timestamp to check the period against. The available timestamps are
     `:inserted_at` or `:scheduled_at`. Defaults to `:inserted_at` for legacy reasons.
