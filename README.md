@@ -127,7 +127,7 @@ without worrying about jobs being lost or orphaned due to crashes.
 > [!TIP] Oban Web+Pro
 >
 > A web dashboard for managing Oban, along with an official set of extensions, plugins, and
-> workers that expand what Oban is capable are available as licensed packages:
+> workers that expand what Oban is capable of are available as licensed packages:
 > 
 > * [🧭 Oban Web](https://oban.pro#oban-web)
 > * [🌟 Oban Pro](https://oban.pro#oban-pro)
@@ -176,7 +176,7 @@ and configuring Oban in your application.
        queues: [mailers: 20]
      ```
 
-  1. Define a worker to process jobs in the `mailers` queue (see `Oban.Worker`):
+  2. Define a worker to process jobs in the `mailers` queue (see `Oban.Worker`):
 
      ```elixir
      defmodule MyApp.MailerWorker do
@@ -190,7 +190,7 @@ and configuring Oban in your application.
      end
      ```
 
-  1. Enqueue a job (see [the documentation](https://hexdocs.pm/oban/Oban.Job.html#enqueueing-jobs)):
+  3. Enqueue a job (see [the documentation](https://hexdocs.pm/oban/Oban.Job.html#enqueueing-jobs)):
 
      ```elixir
      %{email: %{to: "foo@example.com", body: "Hello from Oban!"}}
@@ -198,7 +198,7 @@ and configuring Oban in your application.
      |> Oban.insert()
      ```
 
-  1. The magic happens! Oban executes the job when there is available bandwidth in the
+  4. The magic happens! Oban executes the job when there is available bandwidth in the
      `mailer` queue.
 
 <!-- MDOC -->

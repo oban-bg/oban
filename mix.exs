@@ -70,6 +70,7 @@ defmodule Oban.MixProject do
       "guides/scaling.md",
       "guides/instrumentation.md",
       "guides/error_handling.md",
+      "guides/scheduling_jobs.md",
       "guides/job_uniqueness.md",
       "guides/isolation.md",
       "guides/troubleshooting.md",

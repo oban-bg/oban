@@ -130,6 +130,9 @@ defmodule Oban.Worker do
   You can also insert multiple jobs within a single transaction—see
   `Oban.insert/5`.
 
+  Jobs that are inserted are executed as soon as possible by default. If you need
+  to **schedule** jobs in the future, see the guide for [*Scheduling Jobs*](scheduling_jobs.html).
+
   See `Oban.Job` for all available options, and the
   [*Job Uniqueness* guide](job_uniqueness.html) for more information about unique jobs.
 
@@ -280,45 +283,6 @@ defmodule Oban.Worker do
       |> Oban.Job.new(queue: :default, worker: OtherApp.Worker)
       |> Oban.insert()
 
-  ## Scheduling Jobs
-
-  You can schedule jobs down to the second any time in the future:
-
-      %{id: 1}
-      |> MyApp.Business.new(schedule_in: _seconds = 5)
-      |> Oban.insert()
-
-  Jobs may also be scheduled at a specific timestamp in the future:
-
-      %{id: 1}
-      |> MyApp.Business.new(scheduled_at: ~U[2020-12-25 19:00:56.0Z])
-      |> Oban.insert()
-
-  Scheduling is _always_ in UTC. You'll have to shift timestamps in other zones to
-  UTC before scheduling:
-
-      %{id: 1}
-      |> MyApp.Business.new(scheduled_at: DateTime.shift_zone!(datetime, "Etc/UTC"))
-      |> Oban.insert()
-
-  ### Caveats & Guidelines
-
-  Usually, scheduled job management operates in `global` mode and notifies queues
-  of available jobs via PubSub to minimize database load. However, when PubSub
-  isn't available, staging switches to a `local` mode where each queue polls
-  independently.
-
-  Local mode is less efficient and will only happen if you're running in an
-  environment where neither `Postgres` nor `PG` notifications work. That situation
-  should be rare and limited to the following conditions:
-
-    1. Running with a connection pooler, like [`pg_bouncer`][pg_bouncer],
-       in transaction mode.
-    2. Running without clustering, that is, without *distributed Erlang*.
-
-  If **both** of those criteria apply and PubSub notifications won't work, then
-  staging will switch to polling in `local` mode.
-
   ## Prioritizing Jobs
 
   Normally, all available jobs within a queue are executed in the order they were scheduled.
@@ -340,7 +304,6 @@ defmodule Oban.Worker do
         modify :priority, :integer, default: 1, from: {:integer, default: 0}
       end
 
-  [pg_bouncer]: http://www.pgbouncer.org
   """
   @moduledoc since: "0.1.0"
 
