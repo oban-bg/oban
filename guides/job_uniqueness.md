@@ -122,10 +122,10 @@ UrgentWorker.new(args, schedule_in: 1, replace: [scheduled: [:scheduled_at]])
 >
 > then Oban will update `:args`, but the job will continue executing with the original value.
 
-## Strong Guarantees
+## Unique Guarantees
 
-Oban **guarantees** uniqueness of jobs through transactional locks and database queries.
-Uniqueness *does not* rely on unique constraints in the database. This makes uniqueness entirely
-configurable by application code, without the need for database migrations.
+Oban **strives** for uniqueness of jobs through transactional locks and database queries.
+Uniqueness *does not* rely on unique constraints in the database, which leaves it prone to race
+conditions in some circumstances.
 
 [pro-smart-engine]: https://oban.pro/docs/pro/Oban.Pro.Engines.Smart.html
