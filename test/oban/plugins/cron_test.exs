@@ -1,8 +1,6 @@
 defmodule Oban.Plugins.CronTest do
   use Oban.Case, async: true
 
-  use ExUnitProperties
-
   alias Oban.Cron.Expression
   alias Oban.Plugins.Cron
   alias Oban.{Job, Registry, TelemetryHandler}
@@ -63,19 +61,6 @@ defmodule Oban.Plugins.CronTest do
 
     test "wrapping invalid expressions in an error tuple" do
       assert {:error, %ArgumentError{}} = Cron.parse("60 24 13 * *")
-    end
-  end
-
-  describe "interval_to_next_minute/1" do
-    property "calculated time is always within a short future range" do
-      check all hour <- integer(0..23),
-                minute <- integer(0..59),
-                second <- integer(0..59),
-                max_runs: 1_000 do
-        {:ok, time} = Time.new(hour, minute, second)
-
-        assert Cron.interval_to_next_minute(time) in 1_000..60_000
-      end
     end
   end
 

@@ -66,7 +66,7 @@ defmodule Oban.Plugins.Cron do
   use GenServer
 
   alias Oban.Cron.Expression
-  alias Oban.{Job, Peer, Plugin, Repo, Validation, Worker}
+  alias Oban.{Cron, Job, Peer, Plugin, Repo, Validation, Worker}
   alias __MODULE__, as: State
 
   @opaque expression :: Expression.t()
@@ -151,15 +151,7 @@ defmodule Oban.Plugins.Cron do
   defdelegate parse(input), to: Expression
 
   @doc false
-  @spec interval_to_next_minute(Time.t()) :: pos_integer()
-  def interval_to_next_minute(time \\ Time.utc_now()) do
-    time
-    |> Time.add(60)
-    |> Map.put(:second, 0)
-    |> Time.diff(time)
-    |> Integer.mod(86_400)
-    |> :timer.seconds()
-  end
+  defdelegate interval_to_next_minute(), to: Cron
 
   @impl GenServer
   def init(state) do

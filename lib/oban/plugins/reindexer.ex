@@ -46,9 +46,7 @@ defmodule Oban.Plugins.Reindexer do
 
   use GenServer
 
-  alias Oban.Cron.Expression
-  alias Oban.Plugins.Cron
-  alias Oban.{Peer, Plugin, Repo, Validation}
+  alias Oban.{Cron, Peer, Plugin, Repo, Validation}
   alias __MODULE__, as: State
 
   @type option ::
@@ -60,9 +58,8 @@ defmodule Oban.Plugins.Reindexer do
 
   defstruct [
     :conf,
-    :schedule,
-    :timer,
     indexes: ~w(oban_jobs_args_index oban_jobs_meta_index),
+    schedule: "@midnight",
     timeout: :timer.seconds(15),
     timezone: "Etc/UTC"
   ]
@@ -75,11 +72,6 @@ defmodule Oban.Plugins.Reindexer do
   @spec start_link([option()]) :: GenServer.on_start()
   def start_link(opts) do
     {name, opts} = Keyword.pop(opts, :name)
-
-    opts =
-      opts
-      |> Keyword.put_new(:schedule, "@midnight")
-      |> Keyword.update!(:schedule, &Expression.parse!/1)
 
     GenServer.start_link(__MODULE__, struct!(State, opts), name: name)
   end
@@ -102,14 +94,9 @@ defmodule Oban.Plugins.Reindexer do
 
     :telemetry.execute([:oban, :plugin, :init], %{}, %{conf: state.conf, plugin: __MODULE__})
 
-    {:ok, schedule_reindex(state)}
-  end
+    Cron.schedule_interval(self(), :reindex, state.schedule, state.timezone)
 
-  @impl GenServer
-  def terminate(_reason, %State{timer: timer}) do
-    if is_reference(timer), do: Process.cancel_timer(timer)
-
-    :ok
+    {:ok, state}
   end
 
   @impl GenServer
@@ -126,23 +113,13 @@ defmodule Oban.Plugins.Reindexer do
       end
     end)
 
-    {:noreply, schedule_reindex(state)}
-  end
-
-  # Scheduling
-
-  defp schedule_reindex(state) do
-    timer = Process.send_after(self(), :reindex, Cron.interval_to_next_minute())
-
-    %{state | timer: timer}
+    {:noreply, state}
   end
 
   # Reindexing
 
   defp check_leadership_and_reindex(state) do
-    {:ok, datetime} = DateTime.now(state.timezone)
-
-    if Peer.leader?(state.conf) and Expression.now?(state.schedule, datetime) do
+    if Peer.leader?(state.conf) do
       queries = [deindex_query(state) | Enum.map(state.indexes, &reindex_query(state, &1))]
 
       Enum.reduce_while(queries, :ok, fn query, _ ->
