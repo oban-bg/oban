@@ -63,22 +63,26 @@ defmodule Oban.MixProject do
 
   defp extras do
     [
-      # Guides
-      "guides/installation.md",
-      "guides/configuration.md",
-      "guides/preparing_for_production.md",
-      "guides/scaling.md",
-      "guides/instrumentation.md",
-      "guides/error_handling.md",
-      "guides/scheduling_jobs.md",
-      "guides/job_uniqueness.md",
-      "guides/isolation.md",
-      "guides/troubleshooting.md",
-      "guides/release_configuration.md",
-      "guides/operational_maintenance.md",
-      "guides/writing_plugins.md",
-      "guides/periodic_jobs.md",
-      "guides/clustering.md",
+      # Introduction
+      "guides/introduction/installation.md",
+      "guides/introduction/ready_for_production.md",
+
+      # Learning
+      "guides/learning/defining_queues.md",
+      "guides/learning/scheduling_jobs.md",
+      "guides/learning/periodic_jobs.md",
+      "guides/learning/unique_jobs.md",
+      "guides/learning/operational_maintenance.md",
+      "guides/learning/instrumentation.md",
+      "guides/learning/error_handling.md",
+      "guides/learning/clustering.md",
+      "guides/learning/isolation.md",
+
+      # Advanced
+      "guides/advanced/writing_plugins.md",
+      "guides/advanced/release_configuration.md",
+      "guides/advanced/scaling.md",
+      "guides/advanced/troubleshooting.md",
 
       # Upgrading
       "guides/upgrading/v2.0.md",
@@ -107,7 +111,9 @@ defmodule Oban.MixProject do
 
   defp groups_for_extras do
     [
-      Guides: ~r{guides/[^\/]+\.md},
+      Introduction: ~r{guides/introduction/[^\/]+\.md},
+      Learning: ~r{guides/learning/[^\/]+\.md},
+      Advanced: ~r{guides/advanced/[^\/]+\.md},
       Recipes: ~r{guides/recipes/.?},
       Testing: ~r{guides/testing/.?},
       "Upgrade Guides": ~r{guides/upgrading/.*}

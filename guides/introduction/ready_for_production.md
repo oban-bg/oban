@@ -1,4 +1,4 @@
-# Preparing for Production
+# Ready for Production
 
 There are a few additional bits of configuration to consider before you're ready to run Oban in
 production. In development and test environments, job data is short lived and there's no scale to

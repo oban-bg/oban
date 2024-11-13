@@ -1,11 +1,10 @@
 # Error Handling
 
-This page guides you through handling errors in Oban.
+This page guides you through handling and reporting errors in Oban.
 
-The basics: jobs can fail in expected or unexpected ways. To mark a job as failed, you can return
-`{:error, reason}` from a worker's [`perform/1` callback](`c:Oban.Worker.perform/1`), as
-documented in the `t:Oban.Worker.result/0` type. A job can also fail because of unexpected raised
-errors or exits.
+Jobs can fail in expected or unexpected ways. To mark a job as failed, you can return `{:error,
+reason}` from a worker's [`perform/1` callback](`c:Oban.Worker.perform/1`), as documented in the
+`t:Oban.Worker.result/0` type. A job can also fail because of unexpected raised errors or exits.
 
 In any case, when a job fails the details of the failure are recorded in the `errors` array on the
 `Oban.Job` struct.
@@ -44,3 +43,43 @@ instruct a worker to discard jobs after three failures:
 ```elixir
 use Oban.Worker, queue: :limited, max_attempts: 3
 ```
+
+## Reporting Errors
+
+Another great use of execution data and instrumentation is error reporting. Here is an example of
+an event handler module that integrates with [Honeybadger][honeybadger] to report job failures:
+
+```elixir
+defmodule MyApp.ErrorReporter do
+  def attach do
+    :telemetry.attach(
+      "oban-errors",
+      [:oban, :job, :exception],
+      &__MODULE__.handle_event/4,
+      []
+    )
+  end
+
+  def handle_event([:oban, :job, :exception], measure, meta, _) do
+    Honeybadger.notify(meta.reason, stacktrace: meta.stacktrace)
+  end
+end
+
+# Attach it with:
+MyApp.ErrorReporter.attach()
+```
+
+You can use exception events to send error reports to Sentry, AppSignal, Honeybadger, Rollbar, or
+any other application monitoring platform.
+
+### Built-in Reporting
+
+Some error-reporting and application-monitoring services support reporting Oban errors out of the
+box:
+
+  - Sentry — [Oban integration documentation][sentry-integration]
+  - AppSignal — [Oban integration documentation][appsignal-integration]
+
+[honeybadger]: https://www.honeybadger.io
+[sentry-integration]: https://docs.sentry.io/platforms/elixir/integrations/oban
+[appsignal-integration]: https://docs.appsignal.com/elixir/integrations/oban.html

@@ -33,11 +33,11 @@
 
 - [Features](#features)
 - [Oban Web+Pro](#oban-webpro)
-- [Learning](#learning)
-- [Requirements](#requirements)
 - [Engines](#engines)
+- [Requirements](#requirements)
 - [Installation](#installation)
 - [Quick Getting Started](#quick-getting-started)
+- [Learning](#learning)
 - [Community](#community)
 - [Contributing](#contributing)
 
@@ -124,7 +124,7 @@ without worrying about jobs being lost or orphaned due to crashes.
 
 ## Oban Web+Pro
 
-> [!TIP] Oban Web+Pro
+> [!TIP]
 >
 > A web dashboard for managing Oban, along with an official set of extensions, plugins, and
 > workers that expand what Oban is capable of are available as licensed packages:
@@ -153,11 +153,6 @@ Oban requires:
 * Elixir 1.14+
 * Erlang 24+
 * PostgreSQL 12.0+, MySQL 8.0+, or SQLite3 3.37.0+
-
-## Learning
-
-Learn the fundamentals of Oban, all the way through to preparing for production with our LiveBook
-powered [Oban Training](https://github.com/oban-bg/oban_training/) curriculum.
 
 ## Installation
 
@@ -200,6 +195,11 @@ and configuring Oban in your application.
 
   4. The magic happens! Oban executes the job when there is available bandwidth in the
      `mailer` queue.
+
+## Learning
+
+Learn the fundamentals of Oban, all the way through to preparing for production with our LiveBook
+powered [Oban Training](https://github.com/oban-bg/oban_training/) curriculum.
 
 <!-- MDOC -->
 

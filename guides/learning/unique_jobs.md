@@ -1,4 +1,4 @@
-# Job Uniqueness
+# Unique Jobs
 
 The *uniqueness* of a job is a somewhat complex topic. This guide is here to help you understand its complexities!
 

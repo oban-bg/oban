@@ -13,7 +13,7 @@ defmodule Oban do
   > * [🧭 Oban Web](https://oban.pro#oban-web)
   > * [🌟 Oban Pro](https://oban.pro#oban-pro)
   >
-  > Learn more at [oban.pro][pro]!
+  > Learn more at [oban.pro](https://oban.pro)!
 
   """
 

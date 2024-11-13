@@ -1,11 +1,7 @@
-# Configuration
+# Defining Queues
 
-This page details generic configuration options.
-
-## Configuring Queues
-
-You can define queues as a keyword list where the key is the name of the queue and the value is
-the maximum number of concurrent jobs. The following configuration would start four queues with
+Queues are defined as a keyword list where the key is the name of the queue and the value is the
+maximum number of concurrent jobs. The following configuration would start four queues with
 concurrency ranging from 5 to 50:
 
 ```elixir
