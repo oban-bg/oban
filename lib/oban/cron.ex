@@ -5,19 +5,26 @@ defmodule Oban.Cron do
 
   @spec schedule_interval(pid(), term(), binary(), Calendar.time_zone()) :: :ok
   def schedule_interval(pid, message, schedule, timezone \\ "Etc/UTC") do
-    expression = Expression.parse!(schedule)
-
-    :timer.apply_after(interval_to_next_minute(), fn ->
-      now = DateTime.now!(timezone)
-
-      if Expression.now?(expression, now) do
-        send(pid, message)
-      end
-
-      schedule_interval(pid, message, schedule, timezone)
-    end)
+    :timer.apply_after(
+      interval_to_next_minute(),
+      __MODULE__,
+      :__schedule_interval__,
+      [pid, message, schedule, timezone]
+    )
 
     :ok
+  end
+
+  @doc false
+  def __schedule_interval__(pid, message, schedule, timezone) do
+    exp = Expression.parse!(schedule)
+    now = DateTime.now!(timezone)
+
+    if Expression.now?(exp, now) do
+      send(pid, message)
+    end
+
+    schedule_interval(pid, message, schedule, timezone)
   end
 
   @spec interval_to_next_minute(Time.t()) :: pos_integer()
