@@ -5,6 +5,32 @@ defmodule ObanTest do
 
   @opts [repo: Repo, testing: :manual]
 
+  describe "__using__/1" do
+    test "allows overwriting function heads" do
+      defmodule ObanDoubleTestModule do
+        use Oban, otp_app: :oban
+
+        def insert(_changeset, _opts) do
+          :success
+        end
+      end
+
+      assert :success == ObanDoubleTestModule.insert(nil, nil)
+    end
+
+    test "allows overwriting function heads with optional params" do
+      defmodule ObanSingleTestModule do
+        use Oban, otp_app: :oban
+
+        def insert(_changeset, _opts \\ []) do
+          :success
+        end
+      end
+
+      assert :success == ObanSingleTestModule.insert(nil)
+    end
+  end
+
   describe "child_spec/1" do
     test "name is used as a default child id" do
       assert Supervisor.child_spec(Oban, []).id == Oban
