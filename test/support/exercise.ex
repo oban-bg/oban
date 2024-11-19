@@ -4,6 +4,22 @@ defmodule Oban.Test.Exercise do
   alias Ecto.Multi
   alias Oban.Job
 
+  defmodule Used do
+    @moduledoc false
+
+    use Oban, otp_app: :oban
+  end
+
+  def check_used do
+    changeset = changeset()
+
+    {:ok, _} = Used.insert(changeset)
+    {:ok, _} = Used.insert(changeset, timeout: 500)
+
+    %Multi{} = Used.insert(Multi.new(), :job, changeset)
+    %Multi{} = Used.insert(Multi.new(), :job, changeset, timeout: 500)
+  end
+
   def check_insert do
     changeset = changeset()
 
