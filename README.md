@@ -27,6 +27,10 @@
   <a href="https://opensource.org/licenses/Apache-2.0">
     <img alt="Apache 2 License" src="https://img.shields.io/hexpm/l/oban">
   </a>
+
+  <a href="https://gurubase.io/g/oban">
+    <img alt="Gurubase" src="https://img.shields.io/badge/Gurubase-Ask%20Oban%20Guru-006BFF">
+  </a>
 </p>
 
 ## Table of Contents
