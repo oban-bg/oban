@@ -152,6 +152,12 @@ defmodule Oban.Peers.Database do
   end
 
   @impl GenServer
+  def handle_call(:election, _from, %State{} = state) do
+    {:noreply, state} = handle_info(:election, state)
+
+    {:reply, state, state}
+  end
+
   def handle_call(:leader?, _from, %State{} = state) do
     {:reply, state.leader?, state}
   end
@@ -208,16 +214,24 @@ defmodule Oban.Peers.Database do
       expires_at: expires_at
     }
 
+    # MySQL only supports auto-inference and not conflict_target.
+    base_opts =
+      if state.conf.engine == Oban.Engines.Dolphin do
+        []
+      else
+        [conflict_target: :name]
+      end
+
     repo_opts =
       if state.leader? do
-        [conflict_target: :name, on_conflict: [set: [expires_at: expires_at]]]
+        Keyword.put(base_opts, :on_conflict, set: [expires_at: expires_at])
       else
         [on_conflict: :nothing]
       end
 
     case Repo.insert_all(conf, "oban_peers", [peer_data], repo_opts) do
-      {1, _} -> %{state | leader?: true}
-      {0, _} -> %{state | leader?: false}
+      {0, nil} -> %{state | leader?: false}
+      {_, nil} -> %{state | leader?: true}
     end
   end
 end

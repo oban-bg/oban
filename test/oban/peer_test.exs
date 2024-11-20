@@ -30,6 +30,12 @@ defmodule Oban.PeerTest do
 
       assert Peer.leader?(name)
       assert "web.1" == Peer.get_leader(name)
+
+      # Force a second election after the peer is leader
+      assert %{leader?: true} =
+               name
+               |> Oban.Registry.whereis(Oban.Peer)
+               |> GenServer.call(:election)
     end
   end
 
