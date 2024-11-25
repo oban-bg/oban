@@ -6,7 +6,7 @@ Changelog][owc]. 🌟_
 ## 🔭 Queue Shutdown Telemetry
 
 A new queue shutdown event, `[:oban, :queue, :shutdown]`, is emitted by each queue when it
-terminates. The event originates from the `watchman` process, which tracks the total ellapsed time
+terminates. The event originates from the `watchman` process, which tracks the total elapsed time
 from when termination starts to when all jobs complete or the allotted period is exhausted.
 
 Any jobs that take longer than the `:shutdown_grace_period` (by default 15 seconds) are brutally
@@ -23,7 +23,7 @@ affected:
   queue: "alpha",
   source: "oban",
   event: "queue:shutdown",
-  ellapsed: 500,
+  elapsed: 500,
   orphaned: [101, 102, 103]
 ]
 ```

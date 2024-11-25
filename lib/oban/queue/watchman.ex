@@ -42,13 +42,13 @@ defmodule Oban.Queue.Watchman do
     :ok
   end
 
-  defp wait_for_executing(ellapsed, state) do
+  defp wait_for_executing(elapsed, state) do
     check = Producer.check(state.producer)
 
-    if check.running == [] or ellapsed >= state.shutdown do
+    if check.running == [] or elapsed >= state.shutdown do
       :telemetry.execute(
         [:oban, :queue, :shutdown],
-        %{ellapsed: ellapsed},
+        %{elapsed: elapsed, ellapsed: elapsed},
         %{conf: state.conf, orphaned: check.running, queue: check.queue}
       )
 
@@ -56,7 +56,7 @@ defmodule Oban.Queue.Watchman do
     else
       :ok = Process.sleep(state.interval)
 
-      wait_for_executing(ellapsed + state.interval, state)
+      wait_for_executing(elapsed + state.interval, state)
     end
   end
 end

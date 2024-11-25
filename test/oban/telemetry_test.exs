@@ -111,7 +111,7 @@ defmodule Oban.TelemetryTest do
 
     stop_supervised(name)
 
-    assert_receive {_event, ^ref, %{ellapsed: 10}, %{orphaned: [_, _], queue: "alpha"}}
+    assert_receive {_event, ^ref, %{elapsed: 10}, %{orphaned: [_, _], queue: "alpha"}}
   end
 
   test "the default handler logs detailed event information" do
@@ -195,7 +195,7 @@ defmodule Oban.TelemetryTest do
 
     logged =
       capture_log(fn ->
-        :telemetry.execute([:oban, :queue, :shutdown], %{ellapsed: 500}, %{
+        :telemetry.execute([:oban, :queue, :shutdown], %{elapsed: 500}, %{
           queue: "alpha",
           orphaned: [100, 101, 102]
         })
