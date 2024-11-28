@@ -194,9 +194,9 @@ defmodule Oban.Telemetry do
 
   * `[:oban, :queue, :shutdown]`
 
-  | event       | measures                | metadata                       |
-  | ----------- | ----------------------- | ------------------------------ |
-  | `:shutdown` | `:elapsed`, `:ellapsed` | `:conf`, `:orphaned`, `:queue` |
+  | event       | measures   | metadata                       |
+  | ----------- | -----------| ------------------------------ |
+  | `:shutdown` | `:elapsed` | `:conf`, `:orphaned`, `:queue` |
 
   #### Metadata
 
@@ -313,7 +313,6 @@ defmodule Oban.Telemetry do
   #### Queue Shutdown Events
 
   * `elapsed` — the amount of time the queue waited for shutdown, in milliseconds
-  * `ellapsed` — alias for elapsed
   * `event` — always `queue:shutdown`
   * `orphaned` — a list of any job id's left in an `executing` state
   * `queue` — the queue name
@@ -460,7 +459,6 @@ defmodule Oban.Telemetry do
     log(opts, fn ->
       %{
         elapsed: measure.elapsed,
-        ellapsed: measure.elapsed,
         event: "queue:shutdown",
         orphaned: meta.orphaned,
         queue: meta.queue,
