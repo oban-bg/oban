@@ -1,3 +1,5 @@
+Application.ensure_all_started(:postgrex)
+
 Oban.Test.Repo.start_link()
 Oban.Test.DolphinRepo.start_link()
 Oban.Test.LiteRepo.start_link()
