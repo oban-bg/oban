@@ -100,20 +100,22 @@ defmodule Oban.Engines.Dolphin do
   def fetch_jobs(%Config{} = conf, meta, running) do
     demand = meta.limit - map_size(running)
 
+    query = """
+    SELECT *
+    FROM oban_jobs
+    WHERE state = 'available' AND queue = '#{meta.queue}' AND attempt < max_attempts
+    ORDER BY priority, scheduled_at, id
+    LIMIT #{demand}
+    FOR UPDATE SKIP LOCKED
+    """
+
     {:ok, jobs} =
       Repo.transaction(conf, fn ->
-        fetch_query =
-          Job
-          |> where([j], j.state == "available")
-          |> where([j], j.queue == ^meta.queue)
-          |> where([j], j.attempt < j.max_attempts)
-          |> order_by(asc: :priority, asc: :scheduled_at, asc: :id)
-          |> limit(^demand)
-          |> lock("FOR UPDATE SKIP LOCKED")
+        # Using literal SQL allows us to use `query_type: text`, which is required in environments
+        # such as Planetscale where the binary protocol is incompatible with prepared statements.
+        %{columns: columns, rows: rows} = Repo.query!(conf, query, [], query_type: :text)
 
-        jobs = Repo.all(conf, fetch_query)
-        found_query = where(Job, [j], j.id in ^Enum.map(jobs, & &1.id))
-
+        jobs = Enum.map(rows, &conf.repo.load(Job, {columns, &1}))
         at = utc_now()
         by = [meta.node, meta.uuid]
 
@@ -124,7 +126,7 @@ defmodule Oban.Engines.Dolphin do
 
         # MySQL doesn't support selecting in an update. To accomplish the required functionality
         # we have to select, then update.
-        Repo.update_all(conf, found_query, updates)
+        Repo.update_all(conf, where(Job, [j], j.id in ^Enum.map(jobs, & &1.id)), updates)
 
         Enum.map(
           jobs,
