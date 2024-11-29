@@ -20,6 +20,6 @@ defmodule Oban.Peers.Isolated do
 
   @impl Oban.Peer
   def get_leader(pid, timeout \\ 5_000) do
-    Agent.get(pid, & &1.conf.node, timeout)
+    Agent.get(pid, fn state -> if state.leader?, do: state.conf.node, else: nil end, timeout)
   end
 end
