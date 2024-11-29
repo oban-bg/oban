@@ -50,9 +50,8 @@ defmodule Oban.Migrations.Postgres do
     escaped_prefix = Map.fetch!(opts, :escaped_prefix)
 
     query = """
-    SELECT description
+    SELECT pg_catalog.obj_description(pg_class.oid, 'pg_class')
     FROM pg_class
-    LEFT JOIN pg_description ON pg_description.objoid = pg_class.oid
     LEFT JOIN pg_namespace ON pg_namespace.oid = pg_class.relnamespace
     WHERE pg_class.relname = 'oban_jobs'
     AND pg_namespace.nspname = '#{escaped_prefix}'
