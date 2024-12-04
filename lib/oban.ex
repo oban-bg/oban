@@ -888,7 +888,7 @@ defmodule Oban do
   def start_queue(name \\ __MODULE__, [_ | _] = opts) do
     conf = config(name)
 
-    validate_queue_opts!(opts, [:queue, :local_only])
+    validate_queue_opts!(opts, ~w(local_only queue)a)
     validate_engine_meta!(conf, opts)
 
     data =
@@ -938,7 +938,7 @@ defmodule Oban do
   @doc since: "0.2.0"
   @spec pause_queue(name(), opts :: [queue_option()]) :: :ok | {:error, Exception.t()}
   def pause_queue(name \\ __MODULE__, [_ | _] = opts) do
-    validate_queue_opts!(opts, [:queue, :local_only, :node])
+    validate_queue_opts!(opts, ~w(local_only node queue)a)
     validate_queue_exists!(name, opts)
 
     conf = config(name)
@@ -1013,7 +1013,7 @@ defmodule Oban do
   @doc since: "0.2.0"
   @spec resume_queue(name(), opts :: [queue_option()]) :: :ok | {:error, Exception.t()}
   def resume_queue(name \\ __MODULE__, [_ | _] = opts) do
-    validate_queue_opts!(opts, [:queue, :local_only, :node])
+    validate_queue_opts!(opts, ~w(local_only node queue)a)
     validate_queue_exists!(name, opts)
 
     conf = config(name)
@@ -1103,7 +1103,7 @@ defmodule Oban do
   def scale_queue(name \\ __MODULE__, [_ | _] = opts) do
     conf = config(name)
 
-    validate_queue_opts!(opts, [:queue, :local_only, :node])
+    validate_queue_opts!(opts, ~w(local_only node queue)a)
     validate_engine_meta!(conf, opts)
     validate_queue_exists!(name, opts)
 
@@ -1158,7 +1158,7 @@ defmodule Oban do
   @doc since: "0.12.0"
   @spec stop_queue(name(), opts :: [queue_option()]) :: :ok | {:error, Exception.t()}
   def stop_queue(name \\ __MODULE__, [_ | _] = opts) do
-    validate_queue_opts!(opts, [:queue, :local_only, :node])
+    validate_queue_opts!(opts, ~w(local_only node queue)a)
     validate_queue_exists!(name, opts)
 
     conf = config(name)
@@ -1409,7 +1409,7 @@ defmodule Oban do
   defp validate_engine_meta!(conf, opts) do
     opts =
       opts
-      |> Keyword.drop([:local_only])
+      |> Keyword.drop([:local_only, :node])
       |> Keyword.put(:validate, true)
 
     with {:error, error} <- conf.engine.init(conf, opts), do: raise(error)

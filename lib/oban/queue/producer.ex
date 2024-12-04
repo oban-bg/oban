@@ -147,7 +147,7 @@ defmodule Oban.Queue.Producer do
 
         %{"action" => "scale", "queue" => ^queue} ->
           payload
-          |> Map.drop(["action", "ident", "queue"])
+          |> Map.drop(~w(action ident node queue))
           |> Enum.reduce(state.meta, fn {key, val}, meta ->
             Engine.put_meta(state.conf, meta, String.to_existing_atom(key), val)
           end)

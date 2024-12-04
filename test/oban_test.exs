@@ -256,7 +256,7 @@ defmodule ObanTest do
     end
 
     test "pausing queues on a specific node" do
-      name = start_supervised_oban!(node: "web.1", stage_interval: 10, queues: [alpha: 1])
+      name = start_supervised_oban!(node: "web.1", queues: [alpha: 1])
 
       assert :ok = Oban.pause_queue(name, queue: :alpha, node: "web.2")
 
@@ -293,7 +293,7 @@ defmodule ObanTest do
     end
 
     test "resuming queues on a specific node" do
-      name = start_supervised_oban!(node: "web.1", stage_interval: 10, queues: [alpha: 1])
+      name = start_supervised_oban!(node: "web.1", queues: [alpha: 1])
 
       Oban.pause_queue(name, queue: :alpha)
 
@@ -429,6 +429,22 @@ defmodule ObanTest do
       end)
     end
 
+    test "scaling queues for a specific node" do
+      name = start_supervised_oban!(node: "web.1", queues: [alpha: 2])
+
+      assert :ok = Oban.scale_queue(name, queue: :alpha, limit: 1, node: "web.2")
+
+      with_backoff(fn ->
+        assert %{limit: 2} = Oban.check_queue(name, queue: :alpha)
+      end)
+
+      assert :ok = Oban.scale_queue(name, queue: :alpha, limit: 1, node: "web.1")
+
+      with_backoff(fn ->
+        assert %{limit: 1} = Oban.check_queue(name, queue: :alpha)
+      end)
+    end
+
     test "trying to scale queues that don't exist" do
       name = start_supervised_oban!(queues: [])
 
@@ -487,7 +503,7 @@ defmodule ObanTest do
     end
 
     test "stopping individual queues" do
-      name = start_supervised_oban!(stage_interval: 10, queues: [alpha: 5, delta: 5, gamma: 5])
+      name = start_supervised_oban!(queues: [alpha: 5, delta: 5, gamma: 5])
 
       assert supervised_queue?(name, "delta")
       assert supervised_queue?(name, "gamma")
@@ -503,8 +519,8 @@ defmodule ObanTest do
     end
 
     test "stopping individual queues only on the local node" do
-      name1 = start_supervised_oban!(stage_interval: 10, queues: [alpha: 1])
-      name2 = start_supervised_oban!(stage_interval: 10, queues: [alpha: 1])
+      name1 = start_supervised_oban!(queues: [alpha: 1])
+      name2 = start_supervised_oban!(queues: [alpha: 1])
 
       assert :ok = Oban.stop_queue(name2, queue: :alpha, local_only: true)
 
