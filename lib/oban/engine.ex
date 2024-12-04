@@ -91,7 +91,12 @@ defmodule Oban.Engine do
   @doc """
   Delete completed, cancelled and discarded jobs.
   """
-  @callback prune_jobs(conf(), queryable(), opts()) :: {:ok, [Job.t()]}
+  @callback prune_jobs(conf(), queryable(), opts()) :: {:ok, [map()]}
+
+  @doc """
+  Transition stuck jobs to `available` or `discarded` state based on attempts.
+  """
+  @callback rescue_jobs(conf(), queryable(), opts()) :: {:ok, [map()]}
 
   @doc """
   Check for a list of queues with available jobs.
@@ -148,6 +153,7 @@ defmodule Oban.Engine do
     insert_all_jobs: 5,
     insert_job: 5,
     prune_jobs: 3,
+    rescue_jobs: 3,
     stage_jobs: 3
   ]
 
@@ -257,6 +263,16 @@ defmodule Oban.Engine do
   end
 
   @doc false
+  def rescue_jobs(%Config{} = conf, queryable, opts) do
+    conf = with_compatible_engine(conf, :rescue_jobs, 3)
+
+    with_span(:rescue_jobs, conf, %{opts: opts, queryable: queryable}, fn engine ->
+      {:ok, jobs} = engine.rescue_jobs(conf, queryable, opts)
+      {:meta, {:ok, jobs}, %{jobs: jobs}}
+    end)
+  end
+
+  @doc false
   def check_available(%Config{} = conf) do
     conf = with_compatible_engine(conf, :check_available, 1)
 
@@ -346,9 +362,9 @@ defmodule Oban.Engine do
     end)
   end
 
-  # External engines aren't guaranteed to implement `stage_jobs/3,` `prune_jobs/3`, or
-  # `check_available/1`, but we can assume they were built for Postgres and safely fall back to
-  # the Basic engine.
+  # External engines aren't guaranteed to implement `stage_jobs/3,` `prune_jobs/3`,
+  # `check_available/1`, or `rescue_jobs/3, but we can assume they were built for Postgres and
+  # safely fall back to the Basic engine.
   defp with_compatible_engine(%{engine: engine} = conf, function, arity) do
     if function_exported?(engine, function, arity) do
       conf

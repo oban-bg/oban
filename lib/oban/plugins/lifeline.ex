@@ -53,9 +53,7 @@ defmodule Oban.Plugins.Lifeline do
 
   use GenServer
 
-  import Ecto.Query, only: [select: 3, where: 3]
-
-  alias Oban.{Job, Peer, Plugin, Repo, Validation}
+  alias Oban.{Engine, Job, Peer, Plugin, Repo, Validation}
   alias __MODULE__, as: State
 
   @type option ::
@@ -136,41 +134,14 @@ defmodule Oban.Plugins.Lifeline do
   defp check_leadership_and_rescue_jobs(state) do
     if Peer.leader?(state.conf) do
       Repo.transaction(state.conf, fn ->
-        time = DateTime.add(DateTime.utc_now(), -state.rescue_after, :millisecond)
-        base = where(Job, [j], j.state == "executing" and j.attempted_at < ^time)
+        {:ok, rescued} = Engine.rescue_jobs(state.conf, Job, rescue_after: state.rescue_after)
 
-        {rescued_count, rescued} = transition_available(base, state)
-        {discard_count, discard} = transition_discarded(base, state)
+        {rescued, discarded} = Enum.split_with(rescued, &(&1.state == "available"))
 
-        %{
-          discarded_count: discard_count,
-          discarded_jobs: discard,
-          rescued_count: rescued_count,
-          rescued_jobs: rescued
-        }
+        %{discarded_jobs: discarded, rescued_jobs: rescued}
       end)
     else
-      {:ok, %{}}
+      {:ok, %{discarded_jobs: [], rescued_jobs: []}}
     end
-  end
-
-  defp transition_available(base, state) do
-    query =
-      base
-      |> where([j], j.attempt < j.max_attempts)
-      |> select([j], map(j, [:id, :queue, :state]))
-
-    Repo.update_all(state.conf, query, set: [state: "available"])
-  end
-
-  defp transition_discarded(base, state) do
-    query =
-      base
-      |> where([j], j.attempt >= j.max_attempts)
-      |> select([j], map(j, [:id, :queue, :state]))
-
-    Repo.update_all(state.conf, query,
-      set: [state: "discarded", discarded_at: DateTime.utc_now()]
-    )
   end
 end
