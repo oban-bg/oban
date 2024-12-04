@@ -19,6 +19,7 @@ defmodule Oban.MixProject do
         "test.reset": :test,
         "test.setup": :test
       ],
+      xref: [exclude: [Postgrex.Error, MyXQL.Error]],
 
       # Hex
       package: package(),
