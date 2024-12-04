@@ -155,7 +155,7 @@ defmodule Oban.Repo do
   defp transaction(conf, fun_or_multi, opts, attempt) do
     __dispatch__(:transaction, [conf, fun_or_multi], opts)
   rescue
-    error in [DBConnection.ConnectionError, Postgrex.Error] ->
+    error in [DBConnection.ConnectionError, Postgrex.Error, MyXQL.Error] ->
       opts = Keyword.merge(@retry_opts, opts)
 
       cond do
