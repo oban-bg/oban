@@ -3,6 +3,7 @@ defmodule Oban.Plugins.LifelineTest do
 
   alias Oban.Plugins.Lifeline
   alias Oban.TelemetryHandler
+  alias Oban.Test.DolphinRepo
 
   describe "validate/1" do
     test "validating interval options" do
@@ -36,8 +37,8 @@ defmodule Oban.Plugins.LifelineTest do
       assert_receive {:event, :start, _measure, %{plugin: Lifeline}}
       assert_receive {:event, :stop, _measure, %{plugin: Lifeline} = meta}
 
-      assert %{rescued_count: 1, rescued_jobs: [_ | _]} = meta
-      assert %{discarded_count: 1, discarded_jobs: [_ | _]} = meta
+      assert %{rescued_jobs: [_]} = meta
+      assert %{discarded_jobs: [_]} = meta
 
       assert %{state: "executing"} = Repo.reload(job_1)
       assert %{state: "available"} = Repo.reload(job_2)
@@ -54,10 +55,41 @@ defmodule Oban.Plugins.LifelineTest do
 
       send_rescue(name)
 
-      assert_receive {:event, :stop, _meta, %{plugin: Lifeline, rescued_count: 1}}
+      assert_receive {:event, :stop, _meta, %{plugin: Lifeline, rescued_jobs: [_]}}
 
       assert %{state: "executing"} = Repo.reload(job_1)
       assert %{state: "available"} = Repo.reload(job_2)
+
+      stop_supervised(name)
+    end
+  end
+
+  describe "compatibility" do
+    setup do
+      TelemetryHandler.attach_events()
+    end
+
+    @tag :dolphin
+    test "rescuing stuck jobs using the Dolphin engine" do
+      name =
+        start_supervised_oban!(
+          engine: Oban.Engines.Dolphin,
+          plugins: [{Lifeline, rescue_after: 5_000}],
+          repo: DolphinRepo
+        )
+
+      [job_1, job_2] =
+        Oban.insert_all(name, [
+          Worker.new(%{}, state: "executing", attempted_at: seconds_ago(3)),
+          Worker.new(%{}, state: "executing", attempted_at: seconds_ago(8))
+        ])
+
+      send_rescue(name)
+
+      assert_receive {:event, :stop, _meta, %{plugin: Lifeline, rescued_jobs: [_]}}
+
+      assert %{state: "executing"} = DolphinRepo.reload(job_1)
+      assert %{state: "available"} = DolphinRepo.reload(job_2)
 
       stop_supervised(name)
     end

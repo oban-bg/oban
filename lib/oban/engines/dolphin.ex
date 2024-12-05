@@ -175,11 +175,40 @@ defmodule Oban.Engines.Dolphin do
 
     pruned = Repo.all(conf, select_query)
 
-    if Enum.any?(pruned) do
-      Repo.delete_all(conf, where(Job, [j], j.id in ^Enum.map(pruned, & &1.id)))
-    end
+    Repo.delete_all(conf, where(queryable, [j], j.id in ^Enum.map(pruned, & &1.id)))
 
     {:ok, pruned}
+  end
+
+  @impl Engine
+  def rescue_jobs(%Config{} = conf, queryable, opts) do
+    rescue_after = Keyword.fetch!(opts, :rescue_after)
+
+    now = DateTime.utc_now()
+    cut = DateTime.add(now, -rescue_after, :millisecond)
+
+    select_query =
+      queryable
+      |> where([j], j.state == "executing" and j.attempted_at < ^cut)
+      |> select([j], map(j, [:attempt, :id, :max_attempts, :queue]))
+
+    {available, discarded} =
+      conf
+      |> Repo.all(select_query)
+      |> Enum.reduce({[], []}, fn job, {res_acc, dis_acc} ->
+        if job.attempt < job.max_attempts do
+          {[Map.put(job, :state, "available") | res_acc], dis_acc}
+        else
+          {res_acc, [Map.put(job, :state, "discarded") | dis_acc]}
+        end
+      end)
+
+    to_where = fn jobs -> where(queryable, [j], j.id in ^Enum.map(jobs, & &1.id)) end
+
+    Repo.update_all(conf, to_where.(available), set: [state: "available"])
+    Repo.update_all(conf, to_where.(discarded), set: [state: "discarded", discarded_at: now])
+
+    {:ok, available ++ discarded}
   end
 
   @impl Engine

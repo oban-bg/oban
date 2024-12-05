@@ -178,6 +178,29 @@ defmodule Oban.Engines.Basic do
   end
 
   @impl Engine
+  def rescue_jobs(%Config{} = conf, queryable, opts) do
+    rescue_after = Keyword.fetch!(opts, :rescue_after)
+
+    now = DateTime.utc_now()
+    cut = DateTime.add(now, -rescue_after, :millisecond)
+
+    base =
+      queryable
+      |> where([j], j.state == "executing" and j.attempted_at < ^cut)
+      |> select([j], map(j, [:id, :queue, :state]))
+
+    rescue_query = where(base, [j], j.attempt < j.max_attempts)
+    discard_query = where(base, [j], j.attempt >= j.max_attempts)
+
+    {_, available} = Repo.update_all(conf, rescue_query, set: [state: "available"])
+
+    {_, discarded} =
+      Repo.update_all(conf, discard_query, set: [state: "discarded", discarded_at: now])
+
+    {:ok, available ++ discarded}
+  end
+
+  @impl Engine
   def check_available(%Config{} = conf) do
     query =
       Job

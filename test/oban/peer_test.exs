@@ -18,7 +18,7 @@ defmodule Oban.PeerTest do
   end
 
   describe "compatibility" do
-    @tag dolphin: true
+    @tag :dolphin
     test "maintaining leadership using the Dolphin engine" do
       name =
         start_supervised_oban!(
