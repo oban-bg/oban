@@ -192,7 +192,7 @@ defmodule Oban.Engines.Dolphin do
       |> where([j], j.state == "executing" and j.attempted_at < ^cut)
       |> select([j], map(j, [:attempt, :id, :max_attempts, :queue]))
 
-    {rescues, discard} =
+    {available, discarded} =
       conf
       |> Repo.all(select_query)
       |> Enum.reduce({[], []}, fn job, {res_acc, dis_acc} ->
@@ -205,10 +205,10 @@ defmodule Oban.Engines.Dolphin do
 
     to_where = fn jobs -> where(queryable, [j], j.id in ^Enum.map(jobs, & &1.id)) end
 
-    Repo.update_all(conf, to_where.(rescues), set: [state: "available"])
-    Repo.update_all(conf, to_where.(discard), set: [state: "discarded", discarded_at: now])
+    Repo.update_all(conf, to_where.(available), set: [state: "available"])
+    Repo.update_all(conf, to_where.(discarded), set: [state: "discarded", discarded_at: now])
 
-    {:ok, rescues ++ discard}
+    {:ok, available ++ discarded}
   end
 
   @impl Engine

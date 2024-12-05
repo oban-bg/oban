@@ -25,28 +25,6 @@ defmodule Oban.Engines.Basic do
     end
   end
 
-  defmacrop rescue_state(attempt, max_attempts, prefix) do
-    quote do
-      fragment(
-        "(CASE WHEN ? < ? THEN 'available' ELSE 'discarded' END)::?.oban_job_state",
-        unquote(attempt),
-        unquote(max_attempts),
-        literal(unquote(prefix))
-      )
-    end
-  end
-
-  defmacrop discarded_at(attempt, max_attempts, at) do
-    quote do
-      fragment(
-        "CASE WHEN ? < ? THEN NULL ELSE ?::timestamp END",
-        unquote(attempt),
-        unquote(max_attempts),
-        unquote(at)
-      )
-    end
-  end
-
   @impl Engine
   def init(%Config{} = conf, opts) do
     if Keyword.has_key?(opts, :limit) do
@@ -206,20 +184,20 @@ defmodule Oban.Engines.Basic do
     now = DateTime.utc_now()
     cut = DateTime.add(now, -rescue_after, :millisecond)
 
-    query =
+    base =
       queryable
       |> where([j], j.state == "executing" and j.attempted_at < ^cut)
       |> select([j], map(j, [:id, :queue, :state]))
-      |> update([j],
-        set: [
-          state: rescue_state(j.attempt, j.max_attempts, ^conf.prefix),
-          discarded_at: discarded_at(j.attempt, j.max_attempts, ^now)
-        ]
-      )
 
-    {_, rescued} = Repo.update_all(conf, query, [])
+    rescue_query = where(base, [j], j.attempt < j.max_attempts)
+    discard_query = where(base, [j], j.attempt >= j.max_attempts)
 
-    {:ok, rescued}
+    {_, available} = Repo.update_all(conf, rescue_query, set: [state: "available"])
+
+    {_, discarded} =
+      Repo.update_all(conf, discard_query, set: [state: "discarded", discarded_at: now])
+
+    {:ok, available ++ discarded}
   end
 
   @impl Engine
