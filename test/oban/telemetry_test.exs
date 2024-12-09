@@ -114,141 +114,134 @@ defmodule Oban.TelemetryTest do
     assert_receive {_event, ^ref, %{elapsed: 10}, %{orphaned: [_, _], queue: "alpha"}}
   end
 
-  test "the default handler logs detailed event information" do
-    :ok = Telemetry.attach_default_logger(:warning)
+  describe "attach_default_logger/1" do
+    setup context do
+      on_exit(fn -> Telemetry.detach_default_logger() end)
 
-    # Use the Postgres notifier to prevent a notifier switch event and test inline to force
-    # immediate execution.
-    name = start_supervised_oban!(notifier: Oban.Notifiers.Postgres, testing: :inline)
+      context
+      |> Map.get(:logger_opts, [])
+      |> Keyword.put_new(:level, :warning)
+      |> Telemetry.attach_default_logger()
+    end
 
-    logged =
-      capture_log(fn ->
-        Oban.insert_all(name, [
-          Worker.new(%{ref: 1, action: "OK"}),
-          Worker.new(%{ref: 2, action: "ERROR"})
-        ])
+    test "the default handler logs detailed event information" do
+      # Use the Postgres notifier to prevent a notifier switch event and test inline to force
+      # immediate execution.
+      name = start_supervised_oban!(notifier: Oban.Notifiers.Postgres, testing: :inline)
 
-        assert_receive {:ok, 1}
-        assert_receive {:error, 2}
-      end)
+      logged =
+        capture_log(fn ->
+          Oban.insert_all(name, [
+            Worker.new(%{ref: 1, action: "OK"}),
+            Worker.new(%{ref: 2, action: "ERROR"})
+          ])
 
-    # Start
+          assert_receive {:ok, 1}
+          assert_receive {:error, 2}
+        end)
 
-    assert logged =~ ~s("source":"oban")
-    assert logged =~ ~s("event":"job:start")
+      # Start
 
-    # Stop
+      assert logged =~ ~s("source":"oban")
+      assert logged =~ ~s("event":"job:start")
 
-    assert logged =~ ~s("event":"job:stop")
-    assert logged =~ ~s("args":{)
-    assert logged =~ ~s("attempt":1)
-    assert logged =~ ~s("id":)
-    assert logged =~ ~s("max_attempts":20)
-    assert logged =~ ~s("meta":{)
-    assert logged =~ ~s("queue":"alpha")
-    assert logged =~ ~s("state":"success")
-    assert logged =~ ~s("tags":[])
-    assert logged =~ ~s("worker":"Oban.Integration.Worker")
-    assert logged =~ ~r|"duration":\d{1,}|
-    assert logged =~ ~r|"queue_time":\d{1,}|
+      # Stop
 
-    # Exception
-    assert logged =~ ~s("event":"job:exception")
-    assert logged =~ ~s("state":"failure")
-    assert logged =~ ~s|"error":"** (Oban.PerformError)|
-  after
-    Telemetry.detach_default_logger()
-  end
+      assert logged =~ ~s("event":"job:stop")
+      assert logged =~ ~s("args":{)
+      assert logged =~ ~s("attempt":1)
+      assert logged =~ ~s("id":)
+      assert logged =~ ~s("max_attempts":20)
+      assert logged =~ ~s("meta":{)
+      assert logged =~ ~s("queue":"alpha")
+      assert logged =~ ~s("state":"success")
+      assert logged =~ ~s("tags":[])
+      assert logged =~ ~s("worker":"Oban.Integration.Worker")
+      assert logged =~ ~r|"duration":\d{1,}|
+      assert logged =~ ~r|"queue_time":\d{1,}|
 
-  test "the default handler logs stager switch events" do
-    :ok = Telemetry.attach_default_logger(:warning)
+      # Exception
+      assert logged =~ ~s("event":"job:exception")
+      assert logged =~ ~s("state":"failure")
+      assert logged =~ ~s|"error":"** (Oban.PerformError)|
+    end
 
-    logged =
-      capture_log(fn ->
-        :telemetry.execute([:oban, :stager, :switch], %{}, %{mode: :local})
-      end)
+    test "the default handler logs stager switch events" do
+      logged =
+        capture_log(fn ->
+          :telemetry.execute([:oban, :stager, :switch], %{}, %{mode: :local})
+        end)
 
-    assert logged =~ ~s("source":"oban")
-    assert logged =~ ~s("event":"stager:switch")
-    assert logged =~ ~s("message":"job staging switched to local mode)
-  after
-    Telemetry.detach_default_logger()
-  end
+      assert logged =~ ~s("source":"oban")
+      assert logged =~ ~s("event":"stager:switch")
+      assert logged =~ ~s("message":"job staging switched to local mode)
+    end
 
-  test "the default handler logs notifier switch events" do
-    :ok = Telemetry.attach_default_logger(:warning)
+    test "the default handler logs notifier switch events" do
+      logged =
+        capture_log(fn ->
+          :telemetry.execute([:oban, :notifier, :switch], %{}, %{status: :isolated})
+        end)
 
-    logged =
-      capture_log(fn ->
-        :telemetry.execute([:oban, :notifier, :switch], %{}, %{status: :isolated})
-      end)
+      assert logged =~ ~s("source":"oban")
+      assert logged =~ ~s("event":"notifier:switch")
+      assert logged =~ ~s("message":"notifier can't receive messages)
+    end
 
-    assert logged =~ ~s("source":"oban")
-    assert logged =~ ~s("event":"notifier:switch")
-    assert logged =~ ~s("message":"notifier can't receive messages)
-  after
-    Telemetry.detach_default_logger()
-  end
+    test "the default handler logs orphaned jobs at queue shutdown" do
+      logged =
+        capture_log(fn ->
+          :telemetry.execute([:oban, :queue, :shutdown], %{elapsed: 500}, %{
+            queue: "alpha",
+            orphaned: [100, 101, 102]
+          })
+        end)
 
-  test "the default handler logs orphaned jobs at queue shutdown" do
-    :ok = Telemetry.attach_default_logger(:warning)
+      assert logged =~ ~s|"source":"oban"|
+      assert logged =~ ~s|"event":"queue:shutdown"|
+      assert logged =~ ~s|"orphaned":[100,101,102]|
+      assert logged =~ ~s|"queue":"alpha"|
+      assert logged =~ ~s|"message":"jobs were orphaned because|
+    end
 
-    logged =
-      capture_log(fn ->
-        :telemetry.execute([:oban, :queue, :shutdown], %{elapsed: 500}, %{
-          queue: "alpha",
-          orphaned: [100, 101, 102]
-        })
-      end)
+    test "the default handler doesn't log anything on shutdown without orphans" do
+      logged =
+        capture_log(fn ->
+          :telemetry.execute([:oban, :queue, :shutdown], %{}, %{queue: "alpha", orphaned: []})
+        end)
 
-    assert logged =~ ~s|"source":"oban"|
-    assert logged =~ ~s|"event":"queue:shutdown"|
-    assert logged =~ ~s|"orphaned":[100,101,102]|
-    assert logged =~ ~s|"queue":"alpha"|
-    assert logged =~ ~s|"message":"jobs were orphaned because|
-  after
-    Telemetry.detach_default_logger()
-  end
+      refute logged =~ ~s|"event":"queue:shutdown"|
+    end
 
-  test "the default handler doesn't log anything on shutdown without orphans" do
-    :ok = Telemetry.attach_default_logger(:warning)
+    @tag logger_opts: [encode: false]
+    test "disabling encoding on the default logger" do
+      logged =
+        capture_log(fn ->
+          name = start_supervised_oban!(stage_interval: 10, queues: [alpha: 3])
 
-    logged =
-      capture_log(fn ->
-        :telemetry.execute([:oban, :queue, :shutdown], %{}, %{queue: "alpha", orphaned: []})
-      end)
+          insert!(ref: 1, action: "OK")
 
-    refute logged =~ ~s|"event":"queue:shutdown"|
-  after
-    Telemetry.detach_default_logger()
-  end
+          assert_receive {:ok, 1}
 
-  test "detaching the logger prevents logging" do
-    :ok = Telemetry.attach_default_logger(:warning)
-    :ok = Telemetry.detach_default_logger()
+          stop_supervised(name)
+        end)
 
-    assert capture_log(fn ->
-             :telemetry.execute([:oban, :notifier, :switch], %{}, %{status: :isolated})
-           end) == ""
-  end
+      assert logged =~ ~s(source: "oban")
+      assert logged =~ ~s(event: "job:start")
+    end
 
-  test "disabling encoding on the default logger" do
-    start_supervised_oban!(stage_interval: 10, queues: [alpha: 3])
+    @tag logger_opts: [encode: false, events: [:notifier, :stager]]
+    test "restricting events to the provided categories" do
+      logged =
+        capture_log(fn ->
+          :telemetry.execute([:oban, :notifier, :switch], %{}, %{status: :isolated})
+          :telemetry.execute([:oban, :queue, :shutdown], %{}, %{queue: "alpha", orphaned: []})
+          :telemetry.execute([:oban, :stager, :switch], %{}, %{mode: :local})
+        end)
 
-    :ok = Telemetry.attach_default_logger(encode: false, level: :warning)
-
-    logged =
-      capture_log(fn ->
-        insert!(ref: 1, action: "OK")
-
-        assert_receive {:ok, 1}
-
-        Logger.flush()
-      end)
-
-    assert logged =~ ~s(source: "oban")
-    assert logged =~ ~s(event: "job:start")
-  after
-    Telemetry.detach_default_logger()
+      assert logged =~ ~s(event: "notifier:switch")
+      assert logged =~ ~s(event: "stager:switch")
+      refute logged =~ ~s(event: "queue:shutdown")
+    end
   end
 end

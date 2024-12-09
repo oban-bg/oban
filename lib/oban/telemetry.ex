@@ -187,10 +187,10 @@ defmodule Oban.Telemetry do
   * `:was_leader?` — whether the peer was the leader before the election occurred
   * `:peer` — the module used for peering
 
-  ## Queue Shutdown Events
+  ## Queue Events
 
   Oban emits an event when a queue shuts down cleanly, e.g. without being brutally killed. Event
-  emission isn't guaranteed because it is emitted part of a `terminate/1` callback.
+  emission isn't guaranteed because it is emitted as part of a `terminate/1` callback.
 
   * `[:oban, :queue, :shutdown]`
 
@@ -286,6 +286,17 @@ defmodule Oban.Telemetry do
 
   require Logger
 
+  @typedoc """
+  The types of telemetry events, essentially the second element of each event list. For example,
+  in the event `[:oban, :job, :start]`, the "type" is `:job`.
+  """
+  @type event_types :: :job | :engine | :notifier | :plugin | :peer | :queue | :stager
+
+  @typedoc """
+  Available logging options.
+  """
+  @type logger_opts :: [encode: boolean(), events: :all | [event_types()], level: Logger.level()]
+
   @handler_id "oban-default-logger"
 
   @doc """
@@ -310,7 +321,7 @@ defmodule Oban.Telemetry do
   * `tags` — the job's tags
   * `worker` — the job's worker module
 
-  #### Queue Shutdown Events
+  #### Queue Events
 
   * `elapsed` — the amount of time the queue waited for shutdown, in milliseconds
   * `event` — always `queue:shutdown`
@@ -331,45 +342,64 @@ defmodule Oban.Telemetry do
 
   ## Options
 
+  * `:encode` — Whether to encode log output as JSON rather than using structured logging,
+    defaults to `true`
+
+  * `:events` — Which event categories to log, where the categories include `:job`, `:engine`,
+    `:notifier`, `:plugin`, `:peer`, `:queue`, `:stager`, or `:all`. Defaults to `:all`.
+
   * `:level` — The log level to use for logging output, defaults to `:info`
-  * `:encode` — Whether to encode log output as JSON, defaults to `true`
 
   ## Examples
 
   Attach a logger at the default `:info` level with JSON encoding:
 
-      :ok = Oban.Telemetry.attach_default_logger()
+      Oban.Telemetry.attach_default_logger()
 
   Attach a logger at the `:debug` level:
 
-      :ok = Oban.Telemetry.attach_default_logger(level: :debug)
+      Oban.Telemetry.attach_default_logger(level: :debug)
 
   Attach a logger with JSON logging disabled:
 
-      :ok = Oban.Telemetry.attach_default_logger(encode: false)
+      Oban.Telemetry.attach_default_logger(encode: false)
+
+  Explicitly attach a logger for all supported events:
+
+      Oban.Telemetry.attach_default_logger(events: :all)
+
+  Attach a logger with only `:notifier`, `:peer`, and `:stager` events logged:
+
+      Oban.Telemetry.attach_default_logger(events: ~w(notifier peer stager)a)
   """
   @doc since: "0.4.0"
-  @spec attach_default_logger(Logger.level() | Keyword.t()) :: :ok | {:error, :already_exists}
-  def attach_default_logger(opts \\ [encode: true, level: :info])
+  @spec attach_default_logger(Logger.level() | logger_opts()) :: :ok | {:error, :already_exists}
+  def attach_default_logger(opts \\ [])
 
   def attach_default_logger(level) when is_atom(level) do
     attach_default_logger(level: level)
   end
 
   def attach_default_logger(opts) when is_list(opts) do
-    events = [
-      [:oban, :job, :start],
-      [:oban, :job, :stop],
-      [:oban, :job, :exception],
-      [:oban, :notifier, :switch],
-      [:oban, :queue, :shutdown],
-      [:oban, :stager, :switch]
-    ]
-
     opts =
       opts
       |> Keyword.put_new(:encode, true)
+      |> Keyword.put_new(:events, :all)
       |> Keyword.put_new(:level, :info)
+
+    filter = opts[:events]
+
+    events =
+      for [category, action] <- [
+            ~w(job start)a,
+            ~w(job stop)a,
+            ~w(job exception)a,
+            ~w(notifier switch)a,
+            ~w(queue shutdown)a,
+            ~w(stager switch)a
+          ],
+          filter == :all or category in filter,
+          do: [:oban, category, action]
 
     :telemetry.attach_many(@handler_id, events, &__MODULE__.handle_event/4, opts)
   end
