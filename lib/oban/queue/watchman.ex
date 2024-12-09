@@ -32,14 +32,10 @@ defmodule Oban.Queue.Watchman do
   @impl GenServer
   def terminate(_reason, %State{} = state) do
     # The producer may not exist, and we don't want to raise during shutdown.
-    try do
-      :ok = Producer.shutdown(state.producer)
-      :ok = wait_for_executing(0, state)
-    catch
-      :exit, _reason -> :ok
-    end
-
-    :ok
+    :ok = Producer.shutdown(state.producer)
+    :ok = wait_for_executing(0, state)
+  catch
+    :exit, _reason -> :ok
   end
 
   defp wait_for_executing(elapsed, state) do
