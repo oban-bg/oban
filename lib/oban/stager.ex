@@ -3,7 +3,7 @@ defmodule Oban.Stager do
 
   use GenServer
 
-  alias Oban.{Engine, Job, Notifier, Peer, Plugin, Repo}
+  alias Oban.{Engine, Job, Notifier, Peer, Plugin, Registry, Repo}
   alias __MODULE__, as: State
 
   @type option :: Plugin.option() | {:interval, pos_integer()}
@@ -95,7 +95,7 @@ defmodule Oban.Stager do
   defp notify_queues(%{conf: conf, mode: :local}) do
     match = [{{{conf.name, {:producer, :"$1"}}, :"$2", :_}, [], [{{:"$1", :"$2"}}]}]
 
-    for {queue, pid} <- Registry.select(Oban.Registry, match) do
+    for {queue, pid} <- Registry.select(match) do
       send(pid, {:notification, :insert, %{"queue" => queue}})
     end
 
