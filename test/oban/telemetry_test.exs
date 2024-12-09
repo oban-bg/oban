@@ -181,18 +181,87 @@ defmodule Oban.TelemetryTest do
       logged =
         capture_log(fn ->
           :telemetry.execute([:oban, :peer, :election, :stop], %{}, %{
-            conf: %{node: "worker.1"},
+            conf: %{},
             leader: true,
             was_leader: false
           })
         end)
 
-      assert logged =~ ~s("source":"oban")
       assert logged =~ ~s("event":"peer:election")
       assert logged =~ ~s("leader":true)
       assert logged =~ ~s("was_leader":false)
-      assert logged =~ ~s("node":"worker.1")
       assert logged =~ ~s("message":"peer became leader")
+    end
+
+    test "logging cron plugin events" do
+      Code.ensure_loaded(Oban.Plugins.Cron)
+
+      logged =
+        capture_log(fn ->
+          :telemetry.execute([:oban, :plugin, :stop], %{duration: 1000}, %{
+            conf: %{},
+            plugin: Oban.Plugins.Cron,
+            jobs: [%{id: 1}, %{id: 2}]
+          })
+        end)
+
+      assert logged =~ ~s("event":"plugin:stop")
+      assert logged =~ ~s("plugin":"Oban.Plugins.Cron")
+      assert logged =~ ~s("jobs":[1,2])
+      assert logged =~ ~r|"duration":\d{1,}|
+    end
+
+    test "logging lifeline plugin events" do
+      Code.ensure_loaded(Oban.Plugins.Lifeline)
+
+      logged =
+        capture_log(fn ->
+          :telemetry.execute([:oban, :plugin, :stop], %{duration: 1000}, %{
+            conf: %{},
+            plugin: Oban.Plugins.Lifeline,
+            discarded_jobs: [%{id: 1}, %{id: 2}],
+            rescued_jobs: [%{id: 3}]
+          })
+        end)
+
+      assert logged =~ ~s("event":"plugin:stop")
+      assert logged =~ ~s("plugin":"Oban.Plugins.Lifeline")
+      assert logged =~ ~s("discarded_jobs":[1,2])
+      assert logged =~ ~s("rescued_jobs":[3])
+      assert logged =~ ~r|"duration":\d{1,}|
+    end
+
+    test "logging pruner plugin events" do
+      Code.ensure_loaded(Oban.Plugins.Pruner)
+
+      logged =
+        capture_log(fn ->
+          :telemetry.execute([:oban, :plugin, :stop], %{duration: 1000}, %{
+            conf: %{},
+            plugin: Oban.Plugins.Pruner,
+            pruned_count: 9
+          })
+        end)
+
+      assert logged =~ ~s("event":"plugin:stop")
+      assert logged =~ ~s("plugin":"Oban.Plugins.Pruner")
+      assert logged =~ ~s("pruned_count":9)
+      assert logged =~ ~r|"duration":\d{1,}|
+    end
+
+    test "logging plugin exception events" do
+      logged =
+        capture_log(fn ->
+          :telemetry.execute([:oban, :plugin, :exception], %{duration: 1000}, %{
+            conf: %{},
+            plugin: Oban.Pruner,
+            error: %RuntimeError{message: "something went wrong"}
+          })
+        end)
+
+      assert logged =~ ~s("event":"plugin:exception")
+      assert logged =~ ~s("plugin":"Oban.Pruner")
+      assert logged =~ ~s|"error":"** (RuntimeError)|
     end
 
     test "logging stager switch events" do
@@ -201,7 +270,6 @@ defmodule Oban.TelemetryTest do
           :telemetry.execute([:oban, :stager, :switch], %{}, %{mode: :local})
         end)
 
-      assert logged =~ ~s("source":"oban")
       assert logged =~ ~s("event":"stager:switch")
       assert logged =~ ~s("message":"job staging switched to local mode)
     end
@@ -215,7 +283,6 @@ defmodule Oban.TelemetryTest do
           })
         end)
 
-      assert logged =~ ~s|"source":"oban"|
       assert logged =~ ~s|"event":"queue:shutdown"|
       assert logged =~ ~s|"orphaned":[100,101,102]|
       assert logged =~ ~s|"queue":"alpha"|

@@ -112,6 +112,9 @@ defmodule Oban.Plugins.Cron do
     )
   end
 
+  @impl Plugin
+  def format_logger_output(_conf, %{jobs: jobs}), do: %{jobs: Enum.map(jobs, & &1.id)}
+
   @doc """
   Parse a crontab expression into a cron struct.
 

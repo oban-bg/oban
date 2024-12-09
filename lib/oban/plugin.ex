@@ -54,4 +54,11 @@ defmodule Oban.Plugin do
   Validate the structure, presence, or values of keyword options.
   """
   @callback validate([option()]) :: :ok | {:error, String.t()}
+
+  @doc """
+  Format telemetry event meta emitted by the for inclusion in the default logger.
+  """
+  @callback format_logger_output(Config.t(), map()) :: map()
+
+  @optional_callbacks [format_logger_output: 2]
 end

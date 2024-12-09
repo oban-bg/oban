@@ -91,6 +91,9 @@ defmodule Oban.Plugins.Pruner do
     )
   end
 
+  @impl Plugin
+  def format_logger_output(_conf, meta), do: Map.take(meta, [:pruned_count])
+
   @impl GenServer
   def init(state) do
     Process.flag(:trap_exit, true)

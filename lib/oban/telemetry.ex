@@ -309,7 +309,7 @@ defmodule Oban.Telemetry do
 
   * `args` — a map of the job's raw arguments
   * `attempt` — the job's execution atttempt
-  * `duration` — the job's runtime duration, in the native time unit
+  * `duration` — the job's runtime duration in microseconds
   * `event` — `job:start`, `job:stop`, `job:exception` depending on reporting telemetry event
   * `error` — a formatted error banner, without the extended stacktrace
   * `id` — the job's id
@@ -333,6 +333,21 @@ defmodule Oban.Telemetry do
   * `event` — always `notifier:switch`
   * `message` — information about the status switch
   * `status` — either `"isolated"`, `"solitary"`, or `"clustered"`
+
+  #### Peer Events
+
+  * `event` — always `peer:election`
+  * `leader` — boolean indicating whether the peer is the leader
+  * `message` — information about the peers role in an election
+  * `was_leader` — boolean indicating whether the peer was leader before the election
+
+  #### Plugin Events
+
+  * `event` — `plugin:stop` or `plugin:exception`
+  * `plugin` — the plugin module
+  * `duration` — the runtime duration in microseconds
+
+  Other values may be included depending on the plugin.
 
   #### Stager Events
 
@@ -396,6 +411,8 @@ defmodule Oban.Telemetry do
             ~w(job exception)a,
             ~w(notifier switch)a,
             ~w(peer election stop)a,
+            ~w(plugin exception)a,
+            ~w(plugin stop)a,
             ~w(queue shutdown)a,
             ~w(stager switch)a
           ],
@@ -426,7 +443,7 @@ defmodule Oban.Telemetry do
   end
 
   @doc false
-  @spec handle_event([atom()], map(), map(), Keyword.t()) :: :ok
+  @spec handle_event([atom()], map(), map(), Keyword.t()) :: term()
   def handle_event([:oban, :job, event], measure, meta, opts) do
     log(opts, fn ->
       details = Map.take(meta.job, ~w(attempt args id max_attempts meta queue tags worker)a)
@@ -488,7 +505,7 @@ defmodule Oban.Telemetry do
 
   def handle_event([:oban, :peer, :election, :stop], _measure, meta, opts) do
     log(opts, fn ->
-      %{conf: conf, leader: leader, was_leader: was_leader} = meta
+      %{leader: leader, was_leader: was_leader} = meta
 
       message =
         cond do
@@ -501,11 +518,44 @@ defmodule Oban.Telemetry do
       %{
         event: "peer:election",
         leader: leader,
-        node: conf.node,
         was_leader: was_leader,
         message: message
       }
     end)
+  end
+
+  def handle_event([:oban, :plugin, :exception], measure, meta, opts) do
+    log(opts, fn ->
+      error =
+        case meta do
+          %{kind: kind, reason: reason, stacktrace: stacktrace} ->
+            Exception.format_banner(kind, reason, stacktrace)
+
+          %{error: error} ->
+            Exception.format_banner(:error, error)
+        end
+
+      %{
+        duration: convert(measure.duration),
+        error: error,
+        event: "plugin:exception",
+        plugin: inspect(meta.plugin)
+      }
+    end)
+  end
+
+  def handle_event([:oban, :plugin, :stop], measure, meta, opts) do
+    %{conf: conf, plugin: plugin} = meta
+
+    if function_exported?(plugin, :format_logger_output, 2) do
+      log(opts, fn ->
+        formatted = plugin.format_logger_output(conf, meta)
+
+        %{event: "plugin:stop", plugin: inspect(plugin)}
+        |> Map.put(:duration, convert(measure.duration))
+        |> Map.merge(formatted)
+      end)
+    end
   end
 
   def handle_event([:oban, :queue, :shutdown], measure, %{orphaned: [_ | _]} = meta, opts) do

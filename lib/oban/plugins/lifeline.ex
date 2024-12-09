@@ -90,6 +90,14 @@ defmodule Oban.Plugins.Lifeline do
     )
   end
 
+  @impl Plugin
+  def format_logger_output(_conf, meta) do
+    for {key, val} <- meta,
+        key in ~w(discarded_jobs rescued_jobs)a,
+        into: %{},
+        do: {key, Enum.map(val, & &1.id)}
+  end
+
   @impl GenServer
   def init(state) do
     :telemetry.execute([:oban, :plugin, :init], %{}, %{conf: state.conf, plugin: __MODULE__})

@@ -88,6 +88,9 @@ defmodule Oban.Plugins.Reindexer do
     )
   end
 
+  @impl Plugin
+  def format_logger_output(_conf, _meta), do: %{}
+
   @impl GenServer
   def init(state) do
     Process.flag(:trap_exit, true)
