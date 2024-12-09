@@ -95,7 +95,7 @@ defmodule Oban.Peers.Database do
 
   @impl GenServer
   def handle_info(:election, %State{} = state) do
-    meta = %{conf: state.conf, leader: state.leader?, peer: __MODULE__, was_leader?: nil}
+    meta = %{conf: state.conf, leader: state.leader?, peer: __MODULE__, was_leader: nil}
 
     state =
       :telemetry.span([:oban, :peer, :election], meta, fn ->
@@ -107,14 +107,14 @@ defmodule Oban.Peers.Database do
 
         case Repo.transaction(state.conf, fun, retry: 1) do
           {:ok, state} ->
-            {state, %{meta | leader: state.leader?, was_leader?: meta.leader}}
+            {state, %{meta | leader: state.leader?, was_leader: meta.leader}}
 
           {:error, :rollback} ->
             # The peer maintains its current `leader?` status on rollback—this may cause
             # inconsistency if the leader encounters an error and multiple rollbacks happen in
             # sequence. That tradeoff is acceptable because the situation is unlikely and less of
             # an issue than crashing the peer.
-            {state, %{meta | was_leader?: meta.leader}}
+            {state, %{meta | was_leader: meta.leader}}
         end
       end)
 

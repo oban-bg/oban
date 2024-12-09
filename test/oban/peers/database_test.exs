@@ -19,10 +19,10 @@ defmodule Oban.Peers.DatabaseTest do
              |> Enum.filter(&Database.leader?/1)
 
     assert_received {:event, [:election, :start], _measure,
-                     %{leader: _, peer: Database, was_leader?: nil}}
+                     %{leader: _, peer: Database, was_leader: nil}}
 
     assert_received {:event, [:election, :stop], _measure,
-                     %{leader: _, peer: Database, was_leader?: false}}
+                     %{leader: _, peer: Database, was_leader: false}}
   end
 
   test "gracefully handling a missing oban_peers table" do

@@ -124,7 +124,7 @@ defmodule Oban.TelemetryTest do
       |> Telemetry.attach_default_logger()
     end
 
-    test "the default handler logs detailed event information" do
+    test "logging job event details" do
       # Use the Postgres notifier to prevent a notifier switch event and test inline to force
       # immediate execution.
       name = start_supervised_oban!(notifier: Oban.Notifiers.Postgres, testing: :inline)
@@ -166,18 +166,7 @@ defmodule Oban.TelemetryTest do
       assert logged =~ ~s|"error":"** (Oban.PerformError)|
     end
 
-    test "the default handler logs stager switch events" do
-      logged =
-        capture_log(fn ->
-          :telemetry.execute([:oban, :stager, :switch], %{}, %{mode: :local})
-        end)
-
-      assert logged =~ ~s("source":"oban")
-      assert logged =~ ~s("event":"stager:switch")
-      assert logged =~ ~s("message":"job staging switched to local mode)
-    end
-
-    test "the default handler logs notifier switch events" do
+    test "logging notifier switch events" do
       logged =
         capture_log(fn ->
           :telemetry.execute([:oban, :notifier, :switch], %{}, %{status: :isolated})
@@ -188,7 +177,36 @@ defmodule Oban.TelemetryTest do
       assert logged =~ ~s("message":"notifier can't receive messages)
     end
 
-    test "the default handler logs orphaned jobs at queue shutdown" do
+    test "logging peer leadership events" do
+      logged =
+        capture_log(fn ->
+          :telemetry.execute([:oban, :peer, :election, :stop], %{}, %{
+            conf: %{node: "worker.1"},
+            leader: true,
+            was_leader: false
+          })
+        end)
+
+      assert logged =~ ~s("source":"oban")
+      assert logged =~ ~s("event":"peer:election")
+      assert logged =~ ~s("leader":true)
+      assert logged =~ ~s("was_leader":false)
+      assert logged =~ ~s("node":"worker.1")
+      assert logged =~ ~s("message":"peer became leader")
+    end
+
+    test "logging stager switch events" do
+      logged =
+        capture_log(fn ->
+          :telemetry.execute([:oban, :stager, :switch], %{}, %{mode: :local})
+        end)
+
+      assert logged =~ ~s("source":"oban")
+      assert logged =~ ~s("event":"stager:switch")
+      assert logged =~ ~s("message":"job staging switched to local mode)
+    end
+
+    test "logging orphaned job information at queue shutdown" do
       logged =
         capture_log(fn ->
           :telemetry.execute([:oban, :queue, :shutdown], %{elapsed: 500}, %{
@@ -204,7 +222,7 @@ defmodule Oban.TelemetryTest do
       assert logged =~ ~s|"message":"jobs were orphaned because|
     end
 
-    test "the default handler doesn't log anything on shutdown without orphans" do
+    test "not logging anything on shutdown without orphans" do
       logged =
         capture_log(fn ->
           :telemetry.execute([:oban, :queue, :shutdown], %{}, %{queue: "alpha", orphaned: []})

@@ -177,14 +177,14 @@ defmodule Oban.Telemetry do
   | event        | measures       | metadata                                                       |
   | ------------ | -------------- | -------------------------------------------------------------- |
   | `:start`     | `:system_time` | `:conf`, `:leader`, `:peer`,                                   |
-  | `:stop`      | `:duration`    | `:conf`, `:leader`, `:peer`, `:was_leader?`                    |
+  | `:stop`      | `:duration`    | `:conf`, `:leader`, `:peer`, `:was_leader`                    |
   | `:exception` | `:duration`    | `:conf`, `:leader`, `:peer`, `:kind`, `:reason`, `:stacktrace` |
 
   #### Metadata
 
   * `:conf`, `:kind`, `:reason`, `:stacktrace` — see the explanation in notifier metadata above
   * `:leader` — whether the peer is the current leader
-  * `:was_leader?` — whether the peer was the leader before the election occurred
+  * `:was_leader` — whether the peer was the leader before the election occurred
   * `:peer` — the module used for peering
 
   ## Queue Events
@@ -290,7 +290,7 @@ defmodule Oban.Telemetry do
   The types of telemetry events, essentially the second element of each event list. For example,
   in the event `[:oban, :job, :start]`, the "type" is `:job`.
   """
-  @type event_types :: :job | :engine | :notifier | :plugin | :peer | :queue | :stager
+  @type event_types :: :job | :notifier | :plugin | :peer | :queue | :stager
 
   @typedoc """
   Available logging options.
@@ -345,8 +345,8 @@ defmodule Oban.Telemetry do
   * `:encode` — Whether to encode log output as JSON rather than using structured logging,
     defaults to `true`
 
-  * `:events` — Which event categories to log, where the categories include `:job`, `:engine`,
-    `:notifier`, `:plugin`, `:peer`, `:queue`, `:stager`, or `:all`. Defaults to `:all`.
+  * `:events` — Which event categories to log, where the categories include `:job`, `:notifier`,
+    `:plugin`, `:peer`, `:queue`, `:stager`, or `:all`. Defaults to `:all`.
 
   * `:level` — The log level to use for logging output, defaults to `:info`
 
@@ -390,16 +390,17 @@ defmodule Oban.Telemetry do
     filter = opts[:events]
 
     events =
-      for [category, action] <- [
+      for [category | rest] <- [
             ~w(job start)a,
             ~w(job stop)a,
             ~w(job exception)a,
             ~w(notifier switch)a,
+            ~w(peer election stop)a,
             ~w(queue shutdown)a,
             ~w(stager switch)a
           ],
           filter == :all or category in filter,
-          do: [:oban, category, action]
+          do: [:oban, category | rest]
 
     :telemetry.attach_many(@handler_id, events, &__MODULE__.handle_event/4, opts)
   end
@@ -482,6 +483,28 @@ defmodule Oban.Telemetry do
             message: "notifier is receiving messages from other nodes"
           }
       end
+    end)
+  end
+
+  def handle_event([:oban, :peer, :election, :stop], _measure, meta, opts) do
+    log(opts, fn ->
+      %{conf: conf, leader: leader, was_leader: was_leader} = meta
+
+      message =
+        cond do
+          leader and was_leader -> "peer remained leader"
+          leader and not was_leader -> "peer became leader"
+          not leader and was_leader -> "peer is no longer leader"
+          true -> "peer is not leader"
+        end
+
+      %{
+        event: "peer:election",
+        leader: leader,
+        node: conf.node,
+        was_leader: was_leader,
+        message: message
+      }
     end)
   end
 
