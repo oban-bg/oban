@@ -61,6 +61,20 @@ defmodule Oban.Registry do
   end
 
   @doc """
+  Select details of registered Oban processes using a full match spec.
+
+  ## Example
+
+  Get a list of all running Oban instances:
+
+      Oban.Registry.select([{{:"$1", :_, :_}, [{:is_atom, :"$1"}], [:"$1"]}])
+  """
+  @spec select(Registry.spec()) :: [term()]
+  def select(spec) do
+    Registry.select(__MODULE__, spec)
+  end
+
+  @doc """
   Returns the pid of a supervised Oban process, or `nil` if the process can't be found.
 
   ## Example

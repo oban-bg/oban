@@ -194,6 +194,10 @@ defmodule Oban do
         Oban.check_queue(__MODULE__, opts)
       end
 
+      def check_all_queues do
+        Oban.check_all_queues(__MODULE__)
+      end
+
       def config do
         Oban.config(__MODULE__)
       end
@@ -261,6 +265,7 @@ defmodule Oban do
       defoverridable cancel_all_jobs: 1,
                      cancel_job: 1,
                      check_queue: 1,
+                     check_all_queues: 0,
                      config: 0,
                      drain_queue: 1,
                      insert: 1,
@@ -1203,13 +1208,44 @@ defmodule Oban do
   def check_queue(name \\ __MODULE__, [_ | _] = opts) do
     validate_queue_opts!(opts, [:queue])
 
-    role = {:producer, to_string(opts[:queue])}
-
-    case Registry.whereis(name, role) do
-      pid when is_pid(pid) -> Producer.check(pid)
-      _ -> nil
-    end
+    name
+    |> Registry.whereis({:producer, to_string(opts[:queue])})
+    |> safe_check()
   end
+
+  @doc """
+  Check the current state of all queue producers.
+
+  ## Example
+
+  Get information about all running queues for the default instance:
+
+      Enum.map(Oban.check_all_queues(), &Map.take(&1, [:queue, :limit]))
+      [%{queue: "default", limit: 10}, %{queue: "other", limit: 5}]
+
+  Get information for an alternate instance:
+
+      Oban.check_all_queues(Other.Oban)
+  """
+  @spec check_all_queues(name()) :: [queue_state()]
+  def check_all_queues(name \\ __MODULE__) do
+    match = [{{{name, {:producer, :_}}, :"$1", :_}, [], [:"$1"]}]
+
+    match
+    |> Registry.select()
+    |> Task.async_stream(&safe_check/1)
+    |> Stream.map(&elem(&1, 1))
+    |> Stream.filter(&is_map/1)
+    |> Enum.sort_by(& &1.queue)
+  end
+
+  defp safe_check(pid) when is_pid(pid) do
+    if Process.alive?(pid), do: Producer.check(pid)
+  catch
+    :exit, _ -> nil
+  end
+
+  defp safe_check(nil), do: nil
 
   @doc """
   Sets a job as `available`, adding attempts if already maxed out. Jobs currently `available`,

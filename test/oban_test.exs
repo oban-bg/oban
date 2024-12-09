@@ -131,6 +131,25 @@ defmodule ObanTest do
     end
   end
 
+  describe "check_all_queues/2" do
+    test "checking all queues without any running" do
+      assert [] =
+               [queues: []]
+               |> start_supervised_oban!()
+               |> Oban.check_all_queues()
+    end
+
+    test "checking on the state of all running queues" do
+      name = start_supervised_oban!(queues: [alpha: 1, gamma: 2, delta: 3])
+
+      assert [alpha_check, delta_check, gamma_check] = Oban.check_all_queues(name)
+
+      assert %{limit: 1, queue: "alpha"} = alpha_check
+      assert %{limit: 3, queue: "delta"} = delta_check
+      assert %{limit: 2, queue: "gamma"} = gamma_check
+    end
+  end
+
   describe "drain_queue/2" do
     setup :start_supervised_oban
 
