@@ -310,6 +310,27 @@ defmodule Oban.Engines.Basic do
   end
 
   @impl Engine
+  def delete_job(%Config{} = conf, %Job{id: id}) do
+    delete_all_jobs(conf, where(Job, [j], j.id == ^id))
+
+    :ok
+  end
+
+  @impl Engine
+  def delete_all_jobs(%Config{} = conf, queryable) do
+    subquery = where(queryable, [j], j.state not in ["executing"])
+
+    query =
+      Job
+      |> join(:inner, [j], x in subquery(subquery), on: j.id == x.id)
+      |> select([_, x], map(x, [:id, :queue, :state]))
+
+    {_, deleted} = Repo.delete_all(conf, query)
+
+    {:ok, deleted}
+  end
+
+  @impl Engine
   def retry_job(%Config{} = conf, %Job{id: id}) do
     retry_all_jobs(conf, where(Job, [j], j.id == ^id))
 

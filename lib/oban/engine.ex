@@ -131,25 +131,37 @@ defmodule Oban.Engine do
   @callback cancel_job(conf(), Job.t()) :: :ok
 
   @doc """
+  Mark many `executing`, `available`, `scheduled` or `retryable` job as `cancelled` to prevent them
+  from running.
+  """
+  @callback cancel_all_jobs(conf(), queryable()) :: {:ok, [map()]}
+
+  @doc """
+  Delete a job that isn't currently `executing`.
+  """
+  @callback delete_job(conf(), Job.t()) :: :ok
+
+  @doc """
+  Delete many jobs that aren't currently `executing`.
+  """
+  @callback delete_all_jobs(conf(), queryable()) :: {:ok, [map()]}
+
+  @doc """
   Mark a job as `available`, adding attempts if already maxed out. If the job is currently
   `available`, `executing` or `scheduled` it should be ignored.
   """
   @callback retry_job(conf(), Job.t()) :: :ok
 
   @doc """
-  Mark many `executing`, `available`, `scheduled` or `retryable` job as `cancelled` to prevent them
-  from running.
-  """
-  @callback cancel_all_jobs(conf(), queryable()) :: {:ok, [Job.t()]}
-
-  @doc """
   Mark many jobs as `available`, adding attempts if already maxed out. Any jobs currently
   `available`, `executing` or `scheduled` should be ignored.
   """
-  @callback retry_all_jobs(conf(), queryable()) :: {:ok, [Job.t()]}
+  @callback retry_all_jobs(conf(), queryable()) :: {:ok, [map()]}
 
   @optional_callbacks [
     check_available: 1,
+    delete_job: 2,
+    delete_all_jobs: 2,
     insert_all_jobs: 5,
     insert_job: 5,
     prune_jobs: 3,
@@ -321,6 +333,26 @@ defmodule Oban.Engine do
   def cancel_all_jobs(%Config{} = conf, queryable) do
     with_span(:cancel_all_jobs, conf, %{queryable: queryable}, fn engine ->
       with {:ok, jobs} <- engine.cancel_all_jobs(conf, queryable) do
+        {:meta, {:ok, jobs}, %{jobs: jobs}}
+      end
+    end)
+  end
+
+  @doc false
+  def delete_job(%Config{} = conf, %Job{} = job) do
+    conf = with_compatible_engine(conf, :delete_job, 2)
+
+    with_span(:delete_job, conf, %{job: job}, fn engine ->
+      engine.delete_job(conf, job)
+    end)
+  end
+
+  @doc false
+  def delete_all_jobs(%Config{} = conf, queryable) do
+    conf = with_compatible_engine(conf, :delete_all_jobs, 2)
+
+    with_span(:delete_all_jobs, conf, %{queryable: queryable}, fn engine ->
+      with {:ok, jobs} <- engine.delete_all_jobs(conf, queryable) do
         {:meta, {:ok, jobs}, %{jobs: jobs}}
       end
     end)

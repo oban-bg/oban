@@ -202,6 +202,14 @@ defmodule Oban do
         Oban.config(__MODULE__)
       end
 
+      def delete_all_jobs(queryable) do
+        Oban.delete_all_jobs(__MODULE__, queryable)
+      end
+
+      def delete_job(job_or_id) do
+        Oban.delete_job(__MODULE__, job_or_id)
+      end
+
       def drain_queue(opts) do
         Oban.drain_queue(__MODULE__, opts)
       end
@@ -267,6 +275,8 @@ defmodule Oban do
                      check_queue: 1,
                      check_all_queues: 0,
                      config: 0,
+                     delete_job: 1,
+                     delete_all_jobs: 1,
                      drain_queue: 1,
                      insert: 1,
                      insert: 2,
@@ -1322,6 +1332,11 @@ defmodule Oban do
 
       Oban.cancel_job(job)
       :ok
+
+  Cancel a job for a custom instance:
+
+      Oban.cancel_job(MyOban, job)
+      :ok
   """
   @doc since: "1.3.0"
   @spec cancel_job(name(), job_or_id :: Job.t() | integer()) :: :ok
@@ -1337,10 +1352,10 @@ defmodule Oban do
 
   @doc """
   Cancel many jobs based on a queryable and mark them as `cancelled` to prevent them from running.
-  Any currently `executing` jobs are killed while the others are ignored.
 
-  If executing jobs happen to fail before cancellation then the state is set to `cancelled`.
-  However, any that complete successfully will remain `completed`.
+  Any currently `executing` jobs are killed. If executing jobs happen to fail before cancellation
+  then the state is set to `cancelled`. However, any that complete successfully will remain
+  `completed`.
 
   Only jobs with the statuses `executing`, `available`, `scheduled`, or `retryable` can be cancelled.
 
@@ -1373,6 +1388,57 @@ defmodule Oban do
     Notifier.notify(conf, :signal, payload)
 
     {:ok, length(cancelled_jobs)}
+  end
+
+  @doc """
+  Delete a job that's not currently `executing`.
+
+  ## Example
+
+  Delete a job:
+
+      Oban.delete_job(job)
+      :ok
+
+  Delete a job for a custom instance:
+
+      Oban.delete_job(MyOban, job)
+      :ok
+  """
+  @doc since: "1.19.0"
+  @spec delete_job(name(), job_or_id :: Job.t() | integer()) :: :ok
+  def delete_job(name \\ __MODULE__, job_or_id) do
+    conf = config(name)
+
+    if is_integer(job_or_id) do
+      Engine.delete_job(conf, %Job{id: job_or_id})
+    else
+      Engine.delete_job(conf, job_or_id)
+    end
+  end
+
+  @doc """
+  Delete many jobs based on a queryable.
+
+  Only jobs that aren't `executing` may be deleted.
+
+  ## Example
+
+  Delete all jobs for a specific worker:
+
+      Oban.Job
+      |> Ecto.Query.where(worker: "MyApp.MyWorker")
+      |> Oban.delete_all_jobs()
+      {:ok, 9}
+  """
+  @doc since: "1.19.0"
+  @spec delete_all_jobs(name(), queryable :: Ecto.Queryable.t()) :: {:ok, non_neg_integer()}
+  def delete_all_jobs(name \\ __MODULE__, queryable) do
+    conf = config(name)
+
+    {:ok, deleted_jobs} = Engine.delete_all_jobs(conf, queryable)
+
+    {:ok, length(deleted_jobs)}
   end
 
   ## Child Spec Helpers

@@ -229,6 +229,29 @@ defmodule Oban.Engines.Lite do
   end
 
   @impl Engine
+  def delete_job(%Config{} = conf, %Job{id: id}) do
+    delete_all_jobs(conf, where(Job, [j], j.id == ^id))
+
+    :ok
+  end
+
+  @impl Engine
+  def delete_all_jobs(%Config{} = conf, queryable) do
+    select_query =
+      queryable
+      |> select([j], map(j, [:id, :queue, :state]))
+      |> where([j], j.state != "executing")
+
+    deleted = Repo.all(conf, select_query)
+
+    if Enum.any?(deleted) do
+      Repo.delete_all(conf, where(Job, [j], j.id in ^Enum.map(deleted, & &1.id)))
+    end
+
+    {:ok, deleted}
+  end
+
+  @impl Engine
   def cancel_all_jobs(%Config{} = conf, queryable) do
     base_query = where(queryable, [j], j.state not in ["cancelled", "completed", "discarded"])
 

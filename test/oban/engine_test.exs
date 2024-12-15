@@ -553,6 +553,45 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite, Oban.Engines.Dolphin] do
       end
     end
 
+    describe "delete_job/2" do
+      setup :start_supervised_oban
+
+      test "deleting a single job", %{name: name} do
+        TelemetryHandler.attach_events(span_type: [:job, [:engine, :delete_job]])
+
+        job_1 = insert!(name, %{ref: 1}, [])
+        job_2 = insert!(name, %{ref: 2}, [])
+
+        assert :ok = Oban.delete_job(name, job_1)
+        assert :ok = Oban.delete_job(name, job_2.id)
+
+        refute reload(name, job_1)
+        refute reload(name, job_2)
+
+        assert_receive {:event, [:delete_job, :stop], _, %{job: _}}
+      end
+    end
+
+    describe "delete_all_jobs/2" do
+      setup :start_supervised_oban
+
+      test "deleting multiple jobs based on a query", %{name: name} do
+        TelemetryHandler.attach_events(span_type: [:job, [:engine, :delete_all_jobs]])
+
+        job_1 = insert!(name, %{ref: 1}, state: "available")
+        job_2 = insert!(name, %{ref: 2}, state: "scheduled")
+        job_3 = insert!(name, %{ref: 3}, state: "executing")
+
+        assert {:ok, 2} = Oban.delete_all_jobs(name, Job)
+
+        refute reload(name, job_1)
+        refute reload(name, job_2)
+        assert reload(name, job_3)
+
+        assert_receive {:event, [:delete_all_jobs, :stop], _, %{jobs: _}}
+      end
+    end
+
     describe "retry_job/2" do
       setup :start_supervised_oban
 

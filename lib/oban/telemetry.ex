@@ -69,9 +69,11 @@ defmodule Oban.Telemetry do
   Events for bulk operations also include `:jobs` for the `:stop` event:
 
   * `[:oban, :engine, :cancel_all_jobs, :start | :stop | :exception]`
+  * `[:oban, :engine, :delete_all_jobs, :start | :stop | :exception]`
   * `[:oban, :engine, :fetch_jobs, :start | :stop | :exception]`
   * `[:oban, :engine, :insert_all_jobs, :start | :stop | :exception]`
   * `[:oban, :engine, :prune_jobs, :start | :stop | :exception]`
+  * `[:oban, :engine, :rescue_jobs, :start | :stop | :exception]`
   * `[:oban, :engine, :retry_all_jobs, :start | :stop | :exception]`
   * `[:oban, :engine, :stage_jobs, :start | :stop | :exception]`
 
@@ -86,6 +88,7 @@ defmodule Oban.Telemetry do
 
   * `[:oban, :engine, :cancel_job, :start | :stop | :exception]`
   * `[:oban, :engine, :complete_job, :start | :stop | :exception]`
+  * `[:oban, :engine, :delete_job, :start | :stop | :exception]`
   * `[:oban, :engine, :discard_job, :start | :stop | :exception]`
   * `[:oban, :engine, :error_job, :start | :stop | :exception]`
   * `[:oban, :engine, :insert_job, :start | :stop | :exception]`
