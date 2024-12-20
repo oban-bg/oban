@@ -25,10 +25,10 @@ jobs:
               postgres: '12.13-alpine'
             exclude_tags: 'lite'
           - pair:
-              elixir: '1.17'
-              otp: '27.0'
+              elixir: '1.18'
+              otp: '27.2'
               mysql: '9.1'
-              postgres: '17.0-alpine'
+              postgres: '17.2-alpine'
             exclude_tags: 'gossip'
             lint: lint
 
