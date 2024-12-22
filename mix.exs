@@ -24,7 +24,7 @@ defmodule Oban.MixProject do
       # Hex
       package: package(),
       description: """
-      Robust job processing, backed by modern PostgreSQL and SQLite3.
+      Robust job processing, backed by modern PostgreSQL, SQLite3, and MySQL.
       """,
 
       # Dialyzer
