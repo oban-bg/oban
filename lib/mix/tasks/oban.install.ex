@@ -66,6 +66,14 @@ if Code.ensure_loaded?(Igniter) do
       test_code = [testing: :manual]
       tree_code = "Application.fetch_env!(#{app_name}, Oban)"
 
+      migration = """
+      use Ecto.Migration
+
+      def up, do: Oban.Migration.up(version: 12)
+
+      def down, do: Oban.Migration.down(version: 1)
+      """
+
       igniter
       |> ensure_repo_exists(repo)
       |> Igniter.Project.Deps.add_dep({:oban, "~> 2.18"})
@@ -73,27 +81,17 @@ if Code.ensure_loaded?(Igniter) do
       |> Igniter.Project.Config.configure("test.exs", app_name, [Oban], {:code, test_code})
       |> Igniter.Project.Application.add_new_child({Oban, {:code, tree_code}}, after: repo)
       |> Igniter.Project.Formatter.import_dep(:oban)
+      |> Igniter.Libs.Ecto.gen_migration(repo, "add_oban", body: migration)
     end
 
     defp ensure_repo_exists(igniter, repo) do
-      case Igniter.Project.Module.module_exists(repo) do
+      case Igniter.Project.Module.module_exists(igniter, repo) do
         {true, igniter} ->
           igniter
 
         {_boo, igniter} ->
           Igniter.add_issue(igniter, "The provided repo (#{inspect(repo)}) doesn't exist")
       end
-    end
-
-    defp repo_priv(app_name, repo) do
-      path =
-        repo.config()
-        |> Keyword.get(:priv, repo |> Module.split() |> List.last() |> Macro.underscore())
-        |> String.trim_leading("priv/")
-
-      app_name
-      |> :code.priv_dir()
-      |> Path.join(path)
     end
   end
 else
