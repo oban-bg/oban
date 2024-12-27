@@ -2,11 +2,11 @@ defmodule Mix.Tasks.Oban.Install.Docs do
   @moduledoc false
 
   def short_doc do
-    "Install Oban into the application"
+    "Install and configure Oban for use in an application."
   end
 
   def example do
-    "mix oban.install --repo MyApp.Repo"
+    "mix oban.install"
   end
 
   def long_doc do
@@ -15,8 +15,16 @@ defmodule Mix.Tasks.Oban.Install.Docs do
 
     ## Example
 
+    Install using the default Ecto repo and matching engine:
+
     ```bash
-    #{example()}
+    mix oban.install
+    ```
+
+    Specify a `SQLite3` repo and `Lite` engine explicitly:
+
+    ```bash
+    mix oban.install --repo MyApp.LiteRepo --engine Oban.Engines.Lite
     ```
 
     ## Options
@@ -47,9 +55,9 @@ if Code.ensure_loaded?(Igniter) do
         positional: [],
         composes: [],
         schema: [engine: :string, notifier: :string, repo: :string],
-        defaults: [engine: "Oban.Engines.Basic", notifier: "Oban.Notifiers.Postgres"],
+        defaults: [],
         aliases: [engine: :e, notifier: :n, repo: :r],
-        required: [:repo]
+        required: []
       }
     end
 
@@ -58,9 +66,9 @@ if Code.ensure_loaded?(Igniter) do
       app_name = Igniter.Project.Application.app_name(igniter)
 
       opts = igniter.args.options
-      engine = Igniter.Project.Module.parse(opts[:engine])
-      notifier = Igniter.Project.Module.parse(opts[:notifier])
-      repo = Igniter.Project.Module.parse(opts[:repo])
+      repo = parse_repo(app_name, opts[:repo])
+      engine = parse_engine(repo, opts[:engine])
+      notifier = parse_notifier(repo, opts[:notifier])
 
       conf_code = [engine: engine, notifier: notifier, queues: [default: 10], repo: repo]
       test_code = [testing: :manual]
@@ -69,7 +77,7 @@ if Code.ensure_loaded?(Igniter) do
       migration = """
       use Ecto.Migration
 
-      def up, do: Oban.Migration.up(version: 12)
+      def up, do: Oban.Migration.up()
 
       def down, do: Oban.Migration.down(version: 1)
       """
@@ -83,6 +91,35 @@ if Code.ensure_loaded?(Igniter) do
       |> Igniter.Project.Formatter.import_dep(:oban)
       |> Igniter.Libs.Ecto.gen_migration(repo, "add_oban", body: migration)
     end
+
+    defp parse_repo(app_name, nil) do
+      Application.load(app_name)
+
+      app_name
+      |> Application.get_env(:ecto_repos, [])
+      |> List.first()
+    end
+
+    defp parse_repo(_, repo), do: Igniter.Project.Module.parse(repo)
+
+    defp parse_engine(repo, nil) do
+      case repo.__adapter__() do
+        Ecto.Adapters.Postgres -> Oban.Engines.Basic
+        Ecto.Adapters.MyXQL -> Oban.Engines.Dolphin
+        Ecto.Adapters.SQLite3 -> Oban.Engines.Lite
+      end
+    end
+
+    defp parse_engine(_repo, module), do: Igniter.Project.Module.parse(module)
+
+    defp parse_notifier(repo, nil) do
+      case repo.__adapter__() do
+        Ecto.Adapters.Postgres -> Oban.Notifiers.Postgres
+        _ -> Oban.Notifiers.PG
+      end
+    end
+
+    defp parse_notifier(_repo, module), do: Igniter.Project.Module.parse(module)
 
     defp ensure_repo_exists(igniter, repo) do
       case Igniter.Project.Module.module_exists(igniter, repo) do
