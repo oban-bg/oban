@@ -67,16 +67,17 @@ if Code.ensure_loaded?(Igniter) do
       opts = igniter.args.options
 
       case extract_repo(igniter, app_name, opts[:repo]) do
-        {nil, igniter} ->
-          igniter
-
-        {repo, igniter} ->
+        {:ok, repo} ->
           engine = parse_engine(repo, opts[:engine])
           notifier = parse_notifier(repo, opts[:notifier])
 
           conf_code = [engine: engine, notifier: notifier, queues: [default: 10], repo: repo]
           test_code = [testing: :manual]
-          tree_code = "Application.fetch_env!(#{app_name}, Oban)"
+
+          tree_code =
+            quote do
+              Application.fetch_env!(unquote(app_name), Oban)
+            end
 
           migration = """
           use Ecto.Migration
@@ -90,31 +91,38 @@ if Code.ensure_loaded?(Igniter) do
           |> Igniter.Project.Deps.add_dep({:oban, "~> 2.18"})
           |> Igniter.Project.Config.configure("config.exs", app_name, [Oban], {:code, conf_code})
           |> Igniter.Project.Config.configure("test.exs", app_name, [Oban], {:code, test_code})
-          |> Igniter.Project.Application.add_new_child({Oban, {:code, tree_code}}, after: repo)
+          |> Igniter.Project.Application.add_new_child({Oban, {:code, tree_code}}, after: [repo])
           |> Igniter.Project.Formatter.import_dep(:oban)
           |> Igniter.Libs.Ecto.gen_migration(repo, "add_oban", body: migration)
+
+        {:error, igniter} ->
+          igniter
       end
     end
 
     defp extract_repo(igniter, app_name, nil) do
       case Application.get_env(app_name, :ecto_repos, []) do
         [repo | _] ->
-          {repo, igniter}
+          {:ok, repo}
 
         _ ->
-          {nil, Igniter.add_issue(igniter, "No ecto repos found for #{inspect(app_name)}")}
+          issue = """
+          No ecto repos found for #{inspect(app_name)}.
+
+          Ensure `:ecto` is installed and configured for the current application.
+          """
+
+          {:error, Igniter.add_issue(igniter, issue)}
       end
     end
 
     defp extract_repo(igniter, _app_name, module) do
       repo = Igniter.Project.Module.parse(module)
 
-      case Igniter.Project.Module.module_exists(igniter, repo) do
-        {true, igniter} ->
-          {repo, igniter}
-
-        {_boo, igniter} ->
-          {nil, Igniter.add_issue(igniter, "The provided repo (#{inspect(repo)}) doesn't exist")}
+      if Code.ensure_loaded?(repo) do
+        {:ok, repo}
+      else
+        {:error, Igniter.add_issue(igniter, "The provided repo (#{inspect(repo)}) doesn't exist")}
       end
     end
 
