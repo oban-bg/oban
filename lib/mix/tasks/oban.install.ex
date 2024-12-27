@@ -48,7 +48,7 @@ if Code.ensure_loaded?(Igniter) do
     def info(_argv, _composing_task) do
       %Igniter.Mix.Task.Info{
         group: :oban,
-        adds_deps: [:oban],
+        adds_deps: [oban: "oban"],
         installs: [],
         example: __MODULE__.Docs.example(),
         only: nil,
