@@ -38,9 +38,9 @@ end
 
 if Code.ensure_loaded?(Igniter) do
   defmodule Mix.Tasks.Oban.Install do
-    @moduledoc __MODULE__.Docs.long_doc()
-
     @shortdoc __MODULE__.Docs.short_doc()
+
+    @moduledoc __MODULE__.Docs.long_doc()
 
     use Igniter.Mix.Task
 
@@ -56,7 +56,7 @@ if Code.ensure_loaded?(Igniter) do
         composes: [],
         schema: [engine: :string, notifier: :string, repo: :string],
         defaults: [],
-        aliases: [engine: :e, notifier: :n, repo: :r],
+        aliases: [e: :engine, n: :notifier, r: :repo],
         required: []
       }
     end
@@ -64,43 +64,59 @@ if Code.ensure_loaded?(Igniter) do
     @impl Igniter.Mix.Task
     def igniter(igniter) do
       app_name = Igniter.Project.Application.app_name(igniter)
-
       opts = igniter.args.options
-      repo = parse_repo(app_name, opts[:repo])
-      engine = parse_engine(repo, opts[:engine])
-      notifier = parse_notifier(repo, opts[:notifier])
 
-      conf_code = [engine: engine, notifier: notifier, queues: [default: 10], repo: repo]
-      test_code = [testing: :manual]
-      tree_code = "Application.fetch_env!(#{app_name}, Oban)"
+      case extract_repo(igniter, app_name, opts[:repo]) do
+        {nil, igniter} ->
+          igniter
 
-      migration = """
-      use Ecto.Migration
+        {repo, igniter} ->
+          engine = parse_engine(repo, opts[:engine])
+          notifier = parse_notifier(repo, opts[:notifier])
 
-      def up, do: Oban.Migration.up()
+          conf_code = [engine: engine, notifier: notifier, queues: [default: 10], repo: repo]
+          test_code = [testing: :manual]
+          tree_code = "Application.fetch_env!(#{app_name}, Oban)"
 
-      def down, do: Oban.Migration.down(version: 1)
-      """
+          migration = """
+          use Ecto.Migration
 
-      igniter
-      |> ensure_repo_exists(repo)
-      |> Igniter.Project.Deps.add_dep({:oban, "~> 2.18"})
-      |> Igniter.Project.Config.configure("config.exs", app_name, [Oban], {:code, conf_code})
-      |> Igniter.Project.Config.configure("test.exs", app_name, [Oban], {:code, test_code})
-      |> Igniter.Project.Application.add_new_child({Oban, {:code, tree_code}}, after: repo)
-      |> Igniter.Project.Formatter.import_dep(:oban)
-      |> Igniter.Libs.Ecto.gen_migration(repo, "add_oban", body: migration)
+          def up, do: Oban.Migration.up()
+
+          def down, do: Oban.Migration.down(version: 1)
+          """
+
+          igniter
+          |> Igniter.Project.Deps.add_dep({:oban, "~> 2.18"})
+          |> Igniter.Project.Config.configure("config.exs", app_name, [Oban], {:code, conf_code})
+          |> Igniter.Project.Config.configure("test.exs", app_name, [Oban], {:code, test_code})
+          |> Igniter.Project.Application.add_new_child({Oban, {:code, tree_code}}, after: repo)
+          |> Igniter.Project.Formatter.import_dep(:oban)
+          |> Igniter.Libs.Ecto.gen_migration(repo, "add_oban", body: migration)
+      end
     end
 
-    defp parse_repo(app_name, nil) do
-      Application.load(app_name)
+    defp extract_repo(igniter, app_name, nil) do
+      case Application.get_env(app_name, :ecto_repos, []) do
+        [repo | _] ->
+          {repo, igniter}
 
-      app_name
-      |> Application.get_env(:ecto_repos, [])
-      |> List.first()
+        _ ->
+          {nil, Igniter.add_issue(igniter, "No ecto repos found for #{inspect(app_name)}")}
+      end
     end
 
-    defp parse_repo(_, repo), do: Igniter.Project.Module.parse(repo)
+    defp extract_repo(igniter, _app_name, module) do
+      repo = Igniter.Project.Module.parse(module)
+
+      case Igniter.Project.Module.module_exists(igniter, repo) do
+        {true, igniter} ->
+          {repo, igniter}
+
+        {_boo, igniter} ->
+          {nil, Igniter.add_issue(igniter, "The provided repo (#{inspect(repo)}) doesn't exist")}
+      end
+    end
 
     defp parse_engine(repo, nil) do
       case repo.__adapter__() do
@@ -120,22 +136,12 @@ if Code.ensure_loaded?(Igniter) do
     end
 
     defp parse_notifier(_repo, module), do: Igniter.Project.Module.parse(module)
-
-    defp ensure_repo_exists(igniter, repo) do
-      case Igniter.Project.Module.module_exists(igniter, repo) do
-        {true, igniter} ->
-          igniter
-
-        {_boo, igniter} ->
-          Igniter.add_issue(igniter, "The provided repo (#{inspect(repo)}) doesn't exist")
-      end
-    end
   end
 else
   defmodule Mix.Tasks.Oban.Install do
-    @moduledoc __MODULE__.Docs.long_doc()
+    @shortdoc "Install `igniter` in order to install Oban."
 
-    @shortdoc "#{__MODULE__.Docs.short_doc()} | Install `igniter` to use"
+    @moduledoc __MODULE__.Docs.long_doc()
 
     use Mix.Task
 
