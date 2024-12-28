@@ -67,9 +67,9 @@ if Code.ensure_loaded?(Igniter) do
       opts = igniter.args.options
 
       case extract_repo(igniter, app_name, opts[:repo]) do
-        {:ok, repo} ->
-          engine = parse_engine(repo, opts[:engine])
-          notifier = parse_notifier(repo, opts[:notifier])
+        {:ok, repo, adapter} ->
+          engine = parse_engine(adapter, opts[:engine])
+          notifier = parse_notifier(adapter, opts[:notifier])
 
           conf_code = [engine: engine, notifier: notifier, queues: [default: 10], repo: repo]
           test_code = [testing: :manual]
@@ -101,9 +101,9 @@ if Code.ensure_loaded?(Igniter) do
     end
 
     defp extract_repo(igniter, app_name, nil) do
-      case Application.get_env(app_name, :ecto_repos, []) do
-        [repo | _] ->
-          {:ok, repo}
+      case Igniter.Libs.Ecto.list_repos(igniter) do
+        {igniter, [repo | _]} ->
+          {:ok, repo, extract_adapter(igniter, repo)}
 
         _ ->
           issue = """
@@ -119,31 +119,47 @@ if Code.ensure_loaded?(Igniter) do
     defp extract_repo(igniter, _app_name, module) do
       repo = Igniter.Project.Module.parse(module)
 
-      if Code.ensure_loaded?(repo) do
-        {:ok, repo}
-      else
-        {:error, Igniter.add_issue(igniter, "The provided repo (#{inspect(repo)}) doesn't exist")}
+      case Igniter.Project.Module.module_exists(igniter, repo) do
+        {true, igniter} ->
+          {:ok, repo, extract_adapter(igniter, repo)}
+
+        {false, _} ->
+          {:error, Igniter.add_issue(igniter, "Provided repo (#{inspect(repo)}) doesn't exist")}
       end
     end
 
-    defp parse_engine(repo, nil) do
-      case repo.__adapter__() do
+    defp extract_adapter(igniter, repo) do
+      match_use = &match?({:use, _, [{:__aliases__, _, [:Ecto, :Repo]} | _]}, &1.node)
+      match_adp = &match?({{:__block__, _, [:adapter]}, {:__aliases__, _, _}}, &1.node)
+
+      with {:ok, {_, _, zipper}} <- Igniter.Project.Module.find_module(igniter, repo),
+           {:ok, zipper} <- Igniter.Code.Common.move_to(zipper, match_use),
+           {:ok, zipper} <- Igniter.Code.Common.move_to(zipper, match_adp),
+           {:ok, {:adapter, adapter}} <- Igniter.Code.Common.expand_literal(zipper) do
+        adapter
+      else
+        _ -> Ecto.Adapters.Postgres
+      end
+    end
+
+    defp parse_engine(adapter, nil) do
+      case adapter do
         Ecto.Adapters.Postgres -> Oban.Engines.Basic
         Ecto.Adapters.MyXQL -> Oban.Engines.Dolphin
         Ecto.Adapters.SQLite3 -> Oban.Engines.Lite
       end
     end
 
-    defp parse_engine(_repo, module), do: Igniter.Project.Module.parse(module)
+    defp parse_engine(_, module), do: Igniter.Project.Module.parse(module)
 
-    defp parse_notifier(repo, nil) do
-      case repo.__adapter__() do
+    defp parse_notifier(adapter, nil) do
+      case adapter do
         Ecto.Adapters.Postgres -> Oban.Notifiers.Postgres
         _ -> Oban.Notifiers.PG
       end
     end
 
-    defp parse_notifier(_repo, module), do: Igniter.Project.Module.parse(module)
+    defp parse_notifier(_, module), do: Igniter.Project.Module.parse(module)
   end
 else
   defmodule Mix.Tasks.Oban.Install do

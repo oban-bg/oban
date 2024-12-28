@@ -3,13 +3,11 @@ defmodule Mix.Tasks.Oban.InstallTest do
 
   import Igniter.Test
 
-  alias Mix.Tasks.Oban.Install
-
   describe "install" do
     test "installing without an available ecto repo" do
       assert {:error, [warning]} =
                test_project()
-               |> Install.igniter()
+               |> Igniter.compose_task("oban.install", [])
                |> apply_igniter()
 
       assert warning =~ "No ecto repos found for :test"
@@ -30,9 +28,21 @@ defmodule Mix.Tasks.Oban.InstallTest do
       end
       """
 
-      [app_name: :oban, files: %{"lib/oban/application.ex" => application}]
+      repo = """
+      defmodule Oban.Test.Repo do
+        @moduledoc false
+
+        use MyApp.CustomMacro, otp_app: :oban
+
+        use Ecto.Repo, otp_app: :oban, adapter: Ecto.Adapters.Postgres
+      end
+      """
+
+      files = %{"lib/oban/application.ex" => application, "lib/oban/repo.ex" => repo}
+
+      [app_name: :oban, files: files]
       |> test_project()
-      |> Install.igniter()
+      |> Igniter.compose_task("oban.install", [])
       |> assert_has_patch("config/config.exs", """
         | config :oban, Oban,
         |   engine: Oban.Engines.Basic,
@@ -50,10 +60,17 @@ defmodule Mix.Tasks.Oban.InstallTest do
     end
 
     test "installing selects correct config with alternate repo" do
-      [app_name: :oban]
+      repo = """
+      defmodule Oban.Test.LiteRepo do
+        @moduledoc false
+
+        use Ecto.Repo, otp_app: :oban, adapter: Ecto.Adapters.SQLite3
+      end
+      """
+
+      [app_name: :oban, files: %{"lib/oban/repo.ex" => repo}]
       |> test_project()
-      |> Map.replace!(:args, %{options: [repo: "Oban.Test.LiteRepo"]})
-      |> Install.igniter()
+      |> Igniter.compose_task("oban.install", ["--repo", "Oban.Test.LiteRepo"])
       |> assert_has_patch("config/config.exs", """
         | config :oban, Oban,
         |   engine: Oban.Engines.Lite,
