@@ -1,5 +1,23 @@
 # Installation
 
+Oban may be installed and configured via [igniter](https://hex.pm/packages/igniter) with a single command:
+
+```bash
+mix igniter.install oban
+```
+
+That will add the latest version of `oban` to your dependencies before running the installer.
+Installation will use the application's default Ecto repo, select the corresponding engine, and
+set the pubsub notifier accordingly.
+
+Use the `--repo` flag to specify an alternate repo manually:
+
+```bash
+mix igniter.install oban --repo MyApp.LiteRepo
+```
+
+## Manual Installation
+
 Oban is published on [Hex](https://hex.pm/packages/oban). Add it to your list of dependencies in
 `mix.exs`:
 
