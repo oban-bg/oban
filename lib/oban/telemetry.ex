@@ -42,14 +42,22 @@ defmodule Oban.Telemetry do
   * `:result` — the `perform/1` return value, always `nil` for an exception or crash
   * `:state` — one of `:success`, `:failure`, `:cancelled`, `:discard` or `:snoozed`
 
-  For `:exception` events the metadata also includes details about what caused the failure. The
-  `:kind` value is determined by how an error occurred. Here are the possible kinds:
+  For `:exception` events the metadata also includes details about what caused the failure.
 
-  * `:error` — from an `{:error, error}` return value. Some Erlang functions may also throw an
-    `:error` tuple, which will be reported as `:error`.
-  * `:exit` — from a caught process exit
-  * `:throw` — from a caught value, this doesn't necessarily mean that an error occurred and the
-    error value is unpredictable
+  * `:kind` — describes how an error occurred. Here are the possible kinds:
+    - `:error` — from an `{:error, error}` return value. Some Erlang functions may also throw an
+      `:error` tuple, which will be reported as `:error`.
+    - `:exit` — from a caught process exit
+    - `:throw` — from a caught value, this doesn't necessarily mean that an error occurred and the
+      error value is unpredictable
+
+  * `:reason` — a raised exception, wrapped crash, or wrapped error that caused the job to fail.
+    Raised exceptions are passes as is, crashes are wrapped in an `Oban.CrashError`, timeouts in
+    `Oban.TimeoutError`, and all other errors are normalized into an `Oban.PerformError`.
+
+  * `:stacktrace` — the `t:Exception.stacktrace/0` for crashes or raised exceptions. Failures from 
+    manual error returns won't contain any application code entries and may have an empty
+    stacktrace.
 
   ## Engine Events
 
