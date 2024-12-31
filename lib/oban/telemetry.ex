@@ -308,7 +308,13 @@ defmodule Oban.Telemetry do
   """
   @type logger_opts :: [encode: boolean(), events: :all | [event_types()], level: Logger.level()]
 
-  @handler_id "oban-default-logger"
+  @doc """
+  The unique id used to attach telemetry logging.
+
+  This is the constant `"oban-default-logger"` and exposed for testing purposes.
+  """
+  @doc since: "1.19.0"
+  def default_handler_id, do: "oban-default-logger"
 
   @doc """
   Attaches a default structured JSON Telemetry handler for logging.
@@ -430,7 +436,7 @@ defmodule Oban.Telemetry do
           filter == :all or category in filter,
           do: [:oban, category | rest]
 
-    :telemetry.attach_many(@handler_id, events, &__MODULE__.handle_event/4, opts)
+    :telemetry.attach_many(default_handler_id(), events, &__MODULE__.handle_event/4, opts)
   end
 
   @doc """
@@ -450,7 +456,7 @@ defmodule Oban.Telemetry do
   @doc since: "2.15.0"
   @spec detach_default_logger() :: :ok | {:error, :not_found}
   def detach_default_logger do
-    :telemetry.detach(@handler_id)
+    :telemetry.detach(default_handler_id())
   end
 
   @doc false
