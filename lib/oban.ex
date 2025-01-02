@@ -1258,8 +1258,8 @@ defmodule Oban do
   defp safe_check(nil), do: nil
 
   @doc """
-  Sets a job as `available`, adding attempts if already maxed out. Jobs currently `available`,
-  `executing` or `scheduled` are ignored. The job is scheduled for immediate execution.
+  Sets a job as `available`, adding attempts if already maxed out. Jobs currently `available` or
+  `executing` are ignored. The job is scheduled for immediate execution.
 
   ## Example
 
