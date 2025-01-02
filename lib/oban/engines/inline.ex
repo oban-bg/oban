@@ -104,8 +104,8 @@ defmodule Oban.Engines.Inline do
 
   defp json_encode_decode(map) do
     map
-    |> Jason.encode!()
-    |> Jason.decode!()
+    |> Oban.json_library().encode!()
+    |> Oban.json_library().decode!()
   end
 
   defp complete_job(%{job: job, state: :failure}) do
