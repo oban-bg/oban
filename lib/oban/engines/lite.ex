@@ -336,7 +336,10 @@ defmodule Oban.Engines.Lite do
               )
 
             true ->
-              dynamic([j], json_contains(field(j, ^field), ^Oban.json_library().encode!(value)) and ^acc)
+              dynamic(
+                [j],
+                json_contains(field(j, ^field), ^Oban.json_library().encode!(value)) and ^acc
+              )
           end
 
         field, acc ->
