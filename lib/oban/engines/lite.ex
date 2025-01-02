@@ -327,7 +327,7 @@ defmodule Oban.Engines.Lite do
               dynamic([j], field(j, ^field) == ^value and ^acc)
 
             keys == [] ->
-              encoded = Jason.encode!(value)
+              encoded = Oban.json_library().encode!(value)
 
               dynamic(
                 [j],
@@ -336,7 +336,7 @@ defmodule Oban.Engines.Lite do
               )
 
             true ->
-              dynamic([j], json_contains(field(j, ^field), ^Jason.encode!(value)) and ^acc)
+              dynamic([j], json_contains(field(j, ^field), ^Oban.json_library().encode!(value)) and ^acc)
           end
 
         field, acc ->
@@ -385,6 +385,6 @@ defmodule Oban.Engines.Lite do
   defp encode_unsaved(job) do
     job
     |> Job.format_attempt()
-    |> Jason.encode!()
+    |> Oban.json_library().encode!()
   end
 end

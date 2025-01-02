@@ -178,7 +178,7 @@ defmodule Oban.MixProject do
     [
       {:ecto_sql, "~> 3.10"},
       {:ecto_sqlite3, "~> 0.9", optional: true},
-      {:jason, "~> 1.1"},
+      {:jason, "~> 1.1", optional: true},
       {:igniter, "~> 0.5", optional: true},
       {:myxql, "~> 0.7", optional: true},
       {:postgrex, "~> 0.16", optional: true},

@@ -612,7 +612,7 @@ defmodule Oban.Telemetry do
       output = Map.put(fun.(), :source, "oban")
 
       if Keyword.fetch!(opts, :encode) do
-        Jason.encode_to_iodata!(output)
+        Oban.json_library().encode_to_iodata!(output)
       else
         output
       end

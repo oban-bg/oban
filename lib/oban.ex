@@ -1441,6 +1441,19 @@ defmodule Oban do
     {:ok, length(deleted_jobs)}
   end
 
+  @doc """
+  Returns the configured JSON encoding library for Oban.
+
+  To customize the JSON library, including the following
+  in your `config/config.exs`:
+
+      config :oban, :json_library, AlternativeJsonLibrary
+
+  """
+  def json_library do
+    Application.get_env(:oban, :json_library, Jason)
+  end
+
   ## Child Spec Helpers
 
   defp plugin_child_spec({module, opts}, conf) do

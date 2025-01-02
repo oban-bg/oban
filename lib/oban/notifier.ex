@@ -304,7 +304,7 @@ defmodule Oban.Notifier do
   defp encode(payload) do
     payload
     |> to_encodable()
-    |> Jason.encode!()
+    |> Oban.json_library().encode!()
     |> :zlib.gzip()
     |> Base.encode64()
   end
@@ -314,11 +314,11 @@ defmodule Oban.Notifier do
       {:ok, decoded} ->
         decoded
         |> :zlib.gunzip()
-        |> Jason.decode!()
+        |> Oban.json_library().decode!()
 
       # Messages emitted by the insert trigger aren't compressed.
       :error ->
-        Jason.decode!(payload)
+        Oban.json_library().decode!(payload)
     end
   end
 
