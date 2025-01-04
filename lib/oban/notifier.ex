@@ -77,7 +77,7 @@ defmodule Oban.Notifier do
       end
   """
 
-  alias Oban.{Config, Registry, Sonar}
+  alias Oban.{Config, JSON, Registry, Sonar}
 
   require Logger
 
@@ -304,7 +304,7 @@ defmodule Oban.Notifier do
   defp encode(payload) do
     payload
     |> to_encodable()
-    |> Jason.encode!()
+    |> JSON.encode_to_iodata!()
     |> :zlib.gzip()
     |> Base.encode64()
   end
@@ -314,11 +314,11 @@ defmodule Oban.Notifier do
       {:ok, decoded} ->
         decoded
         |> :zlib.gunzip()
-        |> Jason.decode!()
+        |> JSON.decode!()
 
       # Messages emitted by the insert trigger aren't compressed.
       :error ->
-        Jason.decode!(payload)
+        JSON.decode!(payload)
     end
   end
 

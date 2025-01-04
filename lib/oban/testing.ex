@@ -572,8 +572,8 @@ defmodule Oban.Testing do
 
   defp json_recode(map) do
     map
-    |> Jason.encode!()
-    |> Jason.decode!()
+    |> JSON.encode!()
+    |> JSON.decode!()
   end
 
   defp assert_valid_result(result) do

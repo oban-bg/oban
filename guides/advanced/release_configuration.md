@@ -32,12 +32,10 @@ defmodule MyApp.ConfigProvider do
   end
 
   defp parse_json(path) do
-    {:ok, _} = Application.ensure_all_started(:jason)
-
     if File.exists?(path) do
       path
       |> File.read!()
-      |> Jason.decode!()
+      |> JSON.decode!()
       |> Map.fetch!("queues")
       |> Keyword.new(fn {key, value} -> {String.to_atom(key), value} end)
     end

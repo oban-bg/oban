@@ -14,7 +14,7 @@ defmodule Oban.Engines.Inline do
   import DateTime, only: [utc_now: 0]
 
   alias Ecto.Changeset
-  alias Oban.{Config, Engine, Job}
+  alias Oban.{Config, Engine, Job, JSON}
   alias Oban.Queue.Executor
 
   @impl Engine
@@ -87,8 +87,8 @@ defmodule Oban.Engines.Inline do
       |> Changeset.put_change(:attempted_by, [conf.node])
       |> Changeset.put_change(:attempted_at, utc_now())
       |> Changeset.put_change(:scheduled_at, utc_now())
-      |> Changeset.update_change(:args, &json_encode_decode/1)
-      |> Changeset.update_change(:meta, &json_encode_decode/1)
+      |> Changeset.update_change(:args, &json_recode/1)
+      |> Changeset.update_change(:meta, &json_recode/1)
 
     case Changeset.apply_action(changeset, :insert) do
       {:ok, job} ->
@@ -102,10 +102,10 @@ defmodule Oban.Engines.Inline do
     end
   end
 
-  defp json_encode_decode(map) do
+  defp json_recode(map) do
     map
-    |> Jason.encode!()
-    |> Jason.decode!()
+    |> JSON.encode!()
+    |> JSON.decode!()
   end
 
   defp complete_job(%{job: job, state: :failure}) do

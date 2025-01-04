@@ -22,7 +22,7 @@ defmodule Oban.Engines.Lite do
 
   alias Ecto.Changeset
   alias Oban.Engines.Basic
-  alias Oban.{Config, Engine, Job, Repo}
+  alias Oban.{Config, Engine, Job, JSON, Repo}
 
   @forever 60 * 60 * 24 * 365 * 99
 
@@ -327,7 +327,7 @@ defmodule Oban.Engines.Lite do
               dynamic([j], field(j, ^field) == ^value and ^acc)
 
             keys == [] ->
-              encoded = Jason.encode!(value)
+              encoded = JSON.encode!(value)
 
               dynamic(
                 [j],
@@ -336,7 +336,7 @@ defmodule Oban.Engines.Lite do
               )
 
             true ->
-              dynamic([j], json_contains(field(j, ^field), ^Jason.encode!(value)) and ^acc)
+              dynamic([j], json_contains(field(j, ^field), ^JSON.encode!(value)) and ^acc)
           end
 
         field, acc ->
@@ -385,6 +385,6 @@ defmodule Oban.Engines.Lite do
   defp encode_unsaved(job) do
     job
     |> Job.format_attempt()
-    |> Jason.encode!()
+    |> JSON.encode!()
   end
 end
