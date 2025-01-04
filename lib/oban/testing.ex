@@ -101,7 +101,7 @@ defmodule Oban.Testing do
 
   alias Ecto.Changeset
 
-  alias Oban.{Config, Job, Queue.Executor, Repo, Worker}
+  alias Oban.{Config, Job, JSON, Queue.Executor, Repo, Worker}
 
   @type perform_opts :: Job.option() | Oban.option()
 

@@ -295,6 +295,8 @@ defmodule Oban.Telemetry do
   """
   @moduledoc since: "0.4.0"
 
+  alias Oban.JSON
+
   require Logger
 
   @typedoc """
