@@ -19,7 +19,7 @@ jobs:
       matrix:
         include:
           - pair:
-              elixir: '1.14'
+              elixir: '1.15'
               otp: '24.3'
               mysql: '8.4'
               postgres: '12.13-alpine'
