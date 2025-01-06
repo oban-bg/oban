@@ -69,14 +69,14 @@ use Oban.Worker, unique: [
 ## Reindexing
 
 To stop oban_jobs indexes from taking up so much space on disk, use the
-[`Oban.Plugins.Reindexer`][onp] plugin to rebuild indexes periodically. The Postgres transactional
+`Oban.Plugins.Reindexer` plugin to rebuild indexes periodically. The Postgres transactional
 model applies to indexes as well as tables. That leaves bloat from inserting, updating, and
 deleting jobs that auto-vacuuming won’t always fix.
 
 The reindexer rebuilds key indexes on a fixed schedule, concurrently. Concurrent rebuilds are low
 impact, they don’t lock the table, and they free up space while optimizing indexes.
 
-The [`Oban.Plugins.Reindexer`][onp] plugin is part of OSS Oban. It runs every day at midnight by
+The `Oban.Plugins.Reindexer` plugin is part of OSS Oban. It runs every day at midnight by
 default, but it accepts a cron-style schedule and you can tweak it to run less frequently.
 
 ```diff
