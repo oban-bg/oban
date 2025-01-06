@@ -129,16 +129,56 @@ if Code.ensure_loaded?(Igniter) do
     end
 
     defp extract_adapter(igniter, repo) do
-      match_use = &match?({:use, _, [{:__aliases__, _, [:Ecto, :Repo]} | _]}, &1.node)
-      match_adp = &match?({{:__block__, _, [:adapter]}, {:__aliases__, _, _}}, &1.node)
-
       with {:ok, {_, _, zipper}} <- Igniter.Project.Module.find_module(igniter, repo),
-           {:ok, zipper} <- Igniter.Code.Common.move_to(zipper, match_use),
-           {:ok, zipper} <- Igniter.Code.Common.move_to(zipper, match_adp),
-           {:ok, {:adapter, adapter}} <- Igniter.Code.Common.expand_literal(zipper) do
-        adapter
+           {:ok, zipper} <-
+             Igniter.Code.Module.move_to_module_using(zipper, [
+               Ecto.Repo,
+               AshPostgres.Repo,
+               AshSqlite.Repo
+             ]) do
+        with :error <- extract_adapter_from_ecto_repo(zipper),
+             :error <- extract_adapter_from_ash_postgres_repo(zipper),
+             :error <- extract_adapter_from_ash_sqlite_repo(zipper) do
+          Ecto.Adapters.Postgres
+        else
+          {:ok, adapter} ->
+            adapter
+        end
       else
-        _ -> Ecto.Adapters.Postgres
+        _ ->
+          Ecto.Adapters.Postgres
+      end
+    end
+
+    defp extract_adapter_from_ecto_repo(zipper) do
+      with {:ok, zipper} <- Igniter.Code.Module.move_to_use(zipper, Ecto.Repo),
+           {:ok, zipper} <- Igniter.Code.Function.move_to_nth_argument(zipper, 1),
+           {:ok, zipper} <- Igniter.Code.Keyword.get_key(zipper, :adapter),
+           {:ok, adapter} <- Igniter.Code.Common.expand_literal(zipper) do
+        {:ok, adapter}
+      else
+        _ ->
+          :error
+      end
+    end
+
+    defp extract_adapter_from_ash_postgres_repo(zipper) do
+      case Igniter.Code.Module.move_to_use(zipper, AshPostgres.Repo) do
+        {:ok, _zipper} ->
+          {:ok, Ecto.Adapters.Postgres}
+
+        _ ->
+          :error
+      end
+    end
+
+    defp extract_adapter_from_ash_sqlite_repo(zipper) do
+      case Igniter.Code.Module.move_to_use(zipper, AshSqlite.Repo) do
+        {:ok, _zipper} ->
+          {:ok, Ecto.Adapters.SQLite3}
+
+        _ ->
+          :error
       end
     end
 
