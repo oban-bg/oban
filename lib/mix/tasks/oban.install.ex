@@ -44,6 +44,8 @@ if Code.ensure_loaded?(Igniter) do
 
     use Igniter.Mix.Task
 
+    @known_repos [Ecto.Repo, AshPostgres.Repo, AshSqlite.Repo]
+
     @impl Igniter.Mix.Task
     def info(_argv, _composing_task) do
       %Igniter.Mix.Task.Info{
@@ -128,17 +130,44 @@ if Code.ensure_loaded?(Igniter) do
       end
     end
 
-    defp extract_adapter(igniter, repo) do
-      match_use = &match?({:use, _, [{:__aliases__, _, [:Ecto, :Repo]} | _]}, &1.node)
-      match_adp = &match?({{:__block__, _, [:adapter]}, {:__aliases__, _, _}}, &1.node)
+    # {:ok, zipper} <- Igniter.Code.Module.move_to_module_using(zipper, @known_repos) do
+    # with :error <- extract_adapter_from_ecto_repo(zipper),
+    #   :error <- extract_adapter_from_ash_postgres_repo(zipper),
+    #   :error <- extract_adapter_from_ash_sqlite_repo(zipper) do
+    # Ecto.Adapters.Postgres
+    # else
 
+    defp extract_adapter(igniter, repo) do
       with {:ok, {_, _, zipper}} <- Igniter.Project.Module.find_module(igniter, repo),
-           {:ok, zipper} <- Igniter.Code.Common.move_to(zipper, match_use),
-           {:ok, zipper} <- Igniter.Code.Common.move_to(zipper, match_adp),
-           {:ok, {:adapter, adapter}} <- Igniter.Code.Common.expand_literal(zipper) do
+           {:ok, zipper} <- Igniter.Code.Module.move_to_module_using(zipper, @known_repos) do
+        extract_adapter_from_repo(@known_repos, zipper)
+      end
+    end
+
+    defp extract_adapter_from_repo([], _zipper), do: Ecto.Adapters.Postgres
+
+    defp extract_adapter_from_repo([Ecto.Repo | tail], zipper) do
+      with {:ok, zipper} <- Igniter.Code.Module.move_to_use(zipper, Ecto.Repo),
+           {:ok, zipper} <- Igniter.Code.Function.move_to_nth_argument(zipper, 1),
+           {:ok, zipper} <- Igniter.Code.Keyword.get_key(zipper, :adapter),
+           {:ok, adapter} <- Igniter.Code.Common.expand_literal(zipper) do
         adapter
       else
-        _ -> Ecto.Adapters.Postgres
+        _ -> extract_adapter_from_repo(tail, zipper)
+      end
+    end
+
+    defp extract_adapter_from_repo([AshPostgres.Repo | tail], zipper) do
+      case Igniter.Code.Module.move_to_use(zipper, AshPostgres.Repo) do
+        {:ok, _zipper} -> Ecto.Adapters.Postgres
+        _ -> extract_adapter_from_repo(tail, zipper)
+      end
+    end
+
+    defp extract_adapter_from_repo([AshSqlite.Repo | tail], zipper) do
+      case Igniter.Code.Module.move_to_use(zipper, AshSqlite.Repo) do
+        {:ok, _zipper} -> Ecto.Adapters.SQLite3
+        _ -> extract_adapter_from_repo(tail, zipper)
       end
     end
 
