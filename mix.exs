@@ -168,8 +168,7 @@ defmodule Oban.MixProject do
       links: %{
         Website: "https://oban.pro",
         Changelog: "#{@source_url}/blob/main/CHANGELOG.md",
-        GitHub: @source_url,
-        Sponsor: "https://oban.pro"
+        GitHub: @source_url
       }
     ]
   end

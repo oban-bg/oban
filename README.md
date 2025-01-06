@@ -150,7 +150,7 @@ suitability for production.
 
 Oban requires:
 
-* Elixir 1.14+
+* Elixir 1.15+
 * Erlang 24+
 * PostgreSQL 12.0+, MySQL 8.0+, or SQLite3 3.37.0+
 
@@ -208,15 +208,12 @@ powered [Oban Training](https://github.com/oban-bg/oban_training/) curriculum.
 There are a few places to connect and communicate with other Oban users:
 
 - Ask questions and discuss *#oban* on the [Elixir Forum][forum]
-- [Request an invitation][invite] and join the *#oban* channel on [Slack][slack]
+- [Request an invitation][invite] and join the *#oban* channel on Slack
 - Learn about bug reports and upcoming features in the [issue tracker][issues]
-- Follow [@sorentwo][twitter] (Twitter)
 
 [invite]: https://elixir-slack.community/
-[slack]: https://elixir-lang.slack.com/
 [forum]: https://elixirforum.com/
 [issues]: https://github.com/sorentwo/oban/issues
-[twitter]: https://twitter.com/sorentwo
 
 ## Contributing
 
@@ -235,6 +232,5 @@ commands:
 * Lint with Credo (`mix credo --strict`)
 * Run all tests (`mix test --raise`)
 * Run Dialyzer (`mix dialyzer`)
-
 
 [pro]: https://oban.pro
