@@ -279,17 +279,31 @@ defmodule Oban.Engines.Dolphin do
 
   @impl Engine
   def cancel_all_jobs(%Config{} = conf, queryable) do
+    query =
+      queryable
+      |> where([j], j.state not in ~w(cancelled completed discarded))
+      |> select([j], map(j, [:id, :queue, :state]))
+      |> lock("FOR UPDATE SKIP LOCKED")
+
+    # Using literal SQL allows us to use `query_type: text`, which is required in environments
+    # such as Planetscale where the binary protocol is incompatible with prepared statements.
+    {sql, params} = Ecto.Adapters.SQL.to_sql(:all, conf.repo, query)
+
+    sql =
+      Enum.reduce(params, sql, fn param, acc ->
+        String.replace(acc, "?", to_string(param), global: false)
+      end)
+
     Repo.transaction(conf, fn ->
-      jobs =
-        queryable
-        |> where([j], j.state not in ~w(cancelled completed discarded))
-        |> select([j], map(j, [:id, :queue, :state]))
-        |> lock("FOR UPDATE SKIP LOCKED")
-        |> then(&Repo.all(conf, &1))
+      %{columns: columns, rows: rows} = Repo.query!(conf, sql, [], query_type: :text)
 
-      query = where(Job, [j], j.id in ^Enum.map(jobs, & &1.id))
+      jobs = Enum.map(rows, &conf.repo.load(Job, {columns, &1}))
 
-      Repo.update_all(conf, query, set: [state: "cancelled", cancelled_at: utc_now()])
+      updates = [set: [state: "cancelled", cancelled_at: utc_now()]]
+
+      # MySQL doesn't support selecting in an update. To accomplish the required functionality
+      # we have to select, then update.
+      Repo.update_all(conf, where(Job, [j], j.id in ^Enum.map(jobs, & &1.id)), updates)
 
       jobs
     end)
