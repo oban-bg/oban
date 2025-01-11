@@ -16,18 +16,30 @@ Use the `--repo` flag to specify an alternate repo manually:
 mix igniter.install oban --repo MyApp.LiteRepo
 ```
 
+## Semi-Automatic Installation
+
+It's possible to use the `oban.install` task without `igniter` available. First, add `oban` to
+your deps in `mix.exs`:
+
+```elixir
+{:oban, "~> 2.19"}
+```
+
+Run `mix deps.get` to fetch `oban`, then run the install task:
+
+```bash
+mix oban.install
+```
+
+That will automate all of the manual steps listed below!
+
 ## Manual Installation
 
-Oban is published on [Hex](https://hex.pm/packages/oban). Add it to your list of dependencies in
+Oban is published on [Hex](https://hex.pm/packages/oban). Add it to your list of deps in
 `mix.exs`:
 
 ```elixir
-# mix.exs
-def deps do
-  [
-    {:oban, "~> 2.18"}
-  ]
-end
+{:oban, "~> 2.19"}
 ```
 
 You'll optionally need to include [Postgrex][postgrex] for Postgres, [EctoSQLite3][ecto_sqlite3]
