@@ -78,11 +78,11 @@ defmodule Oban.Plugins.LifelineTest do
           repo: DolphinRepo
         )
 
-      [job_1, job_2] =
-        Oban.insert_all(name, [
-          Worker.new(%{}, state: "executing", attempted_at: seconds_ago(3)),
-          Worker.new(%{}, state: "executing", attempted_at: seconds_ago(8))
-        ])
+      job_1 =
+        Oban.insert!(name, Worker.new(%{}, state: "executing", attempted_at: seconds_ago(3)))
+
+      job_2 =
+        Oban.insert!(name, Worker.new(%{}, state: "executing", attempted_at: seconds_ago(8)))
 
       send_rescue(name)
 

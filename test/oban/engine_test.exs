@@ -659,12 +659,14 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite, Oban.Engines.Dolphin] do
       test "inserting and executing jobs", %{name: name} do
         TelemetryHandler.attach_events()
 
-        changesets =
+        [job_1, job_2, job_3, job_4, job_5] =
           ~w(OK CANCEL DISCARD ERROR SNOOZE)
           |> Enum.with_index(1)
-          |> Enum.map(fn {act, ref} -> Worker.new(%{action: act, ref: ref}) end)
-
-        [job_1, job_2, job_3, job_4, job_5] = Oban.insert_all(name, changesets)
+          |> Enum.map(fn {act, ref} ->
+            %{action: act, ref: ref}
+            |> Worker.new()
+            |> then(&Oban.insert!(name, &1))
+          end)
 
         assert_receive {:event, [:fetch_jobs, :stop], _, %{jobs: _}}
 
@@ -685,12 +687,14 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite, Oban.Engines.Dolphin] do
 
       @tag :capture_log
       test "safely executing jobs with any type of exit", %{name: name} do
-        changesets =
+        jobs =
           ~w(EXIT KILL TASK_ERROR TASK_EXIT)
           |> Enum.with_index(1)
-          |> Enum.map(fn {act, ref} -> Worker.new(%{action: act, ref: ref}) end)
-
-        jobs = Oban.insert_all(name, changesets)
+          |> Enum.map(fn {act, ref} ->
+            %{action: act, ref: ref}
+            |> Worker.new()
+            |> then(&Oban.insert!(name, &1))
+          end)
 
         assert_receive {:exit, 1}
         assert_receive {:kill, 2}
@@ -732,11 +736,8 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite, Oban.Engines.Dolphin] do
       end
 
       test "discarding jobs that exceed max attempts", %{name: name} do
-        [job_1, job_2] =
-          Oban.insert_all(name, [
-            Worker.new(%{action: "ERROR", ref: 1}, max_attempts: 1),
-            Worker.new(%{action: "ERROR", ref: 2}, max_attempts: 2)
-          ])
+        job_1 = Oban.insert!(name, Worker.new(%{action: "ERROR", ref: 1}, max_attempts: 1))
+        job_2 = Oban.insert!(name, Worker.new(%{action: "ERROR", ref: 2}, max_attempts: 2))
 
         assert_receive {:error, 1}
         assert_receive {:error, 2}

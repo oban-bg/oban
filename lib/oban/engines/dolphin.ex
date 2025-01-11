@@ -67,25 +67,11 @@ defmodule Oban.Engines.Dolphin do
 
   @impl Engine
   def insert_all_jobs(%Config{} = conf, changesets, opts) do
-    # MySQL doesn't return a primary key from a bulk insert, which violates the insert_all_jobs
-    # contract. Inserting one at a time is far less efficient, but it does what's required.
-    {:ok, jobs} =
-      Repo.transaction(conf, fn ->
-        Enum.map(changesets, fn changeset ->
-          case insert_job(conf, changeset, opts) do
-            {:ok, job} ->
-              job
+    jobs = Enum.map(changesets, &Job.to_map/1)
 
-            {:error, %Changeset{} = changeset} ->
-              raise Ecto.InvalidChangesetError, action: :insert, changeset: changeset
+    {_count, _jobs} = Repo.insert_all(conf, Job, jobs, opts)
 
-            {:error, reason} ->
-              raise RuntimeError, inspect(reason)
-          end
-        end)
-      end)
-
-    jobs
+    Enum.map(changesets, &Ecto.Changeset.apply_action!(&1, :insert))
   end
 
   @impl Engine
