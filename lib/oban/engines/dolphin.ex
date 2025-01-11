@@ -270,7 +270,6 @@ defmodule Oban.Engines.Dolphin do
         queryable
         |> where([j], j.state not in ~w(cancelled completed discarded))
         |> select([j], map(j, [:id, :queue, :state]))
-        |> lock("FOR UPDATE SKIP LOCKED")
         |> then(&Repo.all(conf, &1))
 
       query = where(Job, [j], j.id in ^Enum.map(jobs, & &1.id))
