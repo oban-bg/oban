@@ -181,7 +181,7 @@ defmodule Oban.TelemetryTest do
       logged =
         capture_log(fn ->
           :telemetry.execute([:oban, :peer, :election, :stop], %{}, %{
-            conf: %{},
+            conf: %{node: "worker.1"},
             leader: true,
             was_leader: false
           })
@@ -189,6 +189,7 @@ defmodule Oban.TelemetryTest do
 
       assert logged =~ ~s("event":"peer:election")
       assert logged =~ ~s("leader":true)
+      assert logged =~ ~s("node":"worker.1")
       assert logged =~ ~s("was_leader":false)
       assert logged =~ ~s("message":"peer became leader")
     end

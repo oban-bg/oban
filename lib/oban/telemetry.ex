@@ -358,6 +358,7 @@ defmodule Oban.Telemetry do
   * `event` — always `peer:election`
   * `leader` — boolean indicating whether the peer is the leader
   * `message` — information about the peers role in an election
+  * `node` — the name of the node that changed leadership
   * `was_leader` — boolean indicating whether the peer was leader before the election
 
   #### Plugin Events
@@ -537,8 +538,9 @@ defmodule Oban.Telemetry do
       %{
         event: "peer:election",
         leader: leader,
-        was_leader: was_leader,
-        message: message
+        message: message,
+        node: meta.conf.node,
+        was_leader: was_leader
       }
     end)
   end
