@@ -32,7 +32,7 @@
 ## Table of Contents
 
 - [Features](#features)
-- [Oban Web+Pro](#oban-webpro)
+- [Oban Pro](#oban-pro)
 - [Engines](#engines)
 - [Requirements](#requirements)
 - [Installation](#installation)
@@ -51,6 +51,8 @@
 [hexdoc]: https://hexdocs.pm/oban/Oban.html
 
 ---
+
+<!-- MDOC -->
 
 ## Features
 
@@ -122,19 +124,31 @@ without worrying about jobs being lost or orphaned due to crashes.
 
 [tele]: https://github.com/beam-telemetry/telemetry
 
-## Oban Web+Pro
+## 🌟 Oban Pro
 
-> [!TIP]
->
-> A web dashboard for managing Oban, along with an official set of extensions, plugins, and
-> workers that expand what Oban is capable of are available as licensed packages:
-> 
-> * [🧭 Oban Web](https://oban.pro#oban-web)
-> * [🌟 Oban Pro](https://oban.pro#oban-pro)
-> 
-> Learn more at [oban.pro][pro]!
+An official set of extensions, plugins, and workers that expand what Oban is capable of is
+available as a licensed package. It includes features like:
 
-<!-- MDOC -->
+* 🖇️ [Workflows][wor]
+* 🎨 [Decorators][dec]
+* ⛓️  [Chains][cha]
+* 🏗️ [Structured Jobs][str]
+* 🪝 [Worker Hooks][hoo]
+* 🌎 [Global Limits][glo]
+* 🔪 [Queue Partitioning][par]
+* 🎢 [Dynamic Queues][dyn]
+
+Plus [much more][ove]. Learn more about [Oban Pro](https://oban.pro#oban-pro)
+
+[cha]: https://oban.pro/docs/pro/Oban.Pro.Worker.html#module-chained-jobs
+[dec]: https://oban.pro/docs/pro/Oban.Pro.Decorator.html
+[dyn]: https://oban.pro/docs/pro/Oban.Pro.Plugins.DynamicQueues.html
+[glo]: https://oban.pro/docs/pro/Oban.Pro.Engines.Smart.html#module-global-concurrency
+[hoo]: https://oban.pro/docs/pro/Oban.Pro.Worker.html#module-worker-hooks
+[par]: https://oban.pro/docs/pro/Oban.Pro.Engines.Smart.html#module-queue-partitioning
+[ove]: https://oban.pro/docs/pro/overview.html
+[str]: https://oban.pro/docs/pro/Oban.Pro.Worker.html#module-structured-jobs
+[wor]: https://oban.pro/docs/pro/Oban.Pro.Workers.Workflow.html
 
 ## Engines
 
@@ -232,5 +246,3 @@ commands:
 * Lint with Credo (`mix credo --strict`)
 * Run all tests (`mix test --raise`)
 * Run Dialyzer (`mix dialyzer`)
-
-[pro]: https://oban.pro

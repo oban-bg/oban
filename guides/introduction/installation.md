@@ -155,10 +155,12 @@ iex(1)> Oban.config()
 #=> %Oban.Config{repo: MyApp.Repo}
 ```
 
-You're all set! Get started creating jobs and configuring queues in [Usage][use], or head to the
-[testing guide][test] to learn how to test with Oban.
+You're all set! Add the [Oban Web][web] dashboard for monitoring, get started creating jobs and
+configuring queues in [Usage][use], or head to the [testing guide][test] to learn how to test with
+Oban.
 
 [use]: Oban.html#Usage
+[web]: https://github.com/oban-bg/oban_web
 [test]: testing.md
 [postgrex]: https://hex.pm/packages/postgrex
 [ecto_sqlite3]: https://hex.pm/packages/ecto_sqlite3

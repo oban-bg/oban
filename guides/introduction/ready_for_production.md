@@ -133,9 +133,9 @@ job maintenance.
 For additional observability and introspection, consider integrating with one of these external
 tools built on `Oban.Telemetry`:
 
-* [Oban Web](https://oban.pro)—an official Oban package, it's a view of jobs, queues, and
-  metrics that you host directly within your application. Powered by Phoenix LiveView and Oban
-  Metrics, it is extremely lightweight and continuously updated.
+* [Oban Web](https://hex.pm/packages/oban_web)—an official Oban package, it's a view of jobs,
+  queues, and metrics that you host directly within your application. Powered by Phoenix LiveView
+  and Oban Metrics, it is extremely lightweight and continuously updated.
 
 * [PromEx](https://hex.pm/packages/prom_ex)—Prometheus metrics and Grafana dashboards based on
   metrics from job events, producer events, and also from internal polling jobs to monitor queue

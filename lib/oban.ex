@@ -4,17 +4,6 @@ defmodule Oban do
   @doc_header """
   Oban is a robust background job framework which uses PostgreSQL, MySQL, or SQLite3 for
   persistence.
-
-  > #### Oban Web+Pro {: .tip}
-  >
-  > A web dashboard for managing Oban, along with an official set of extensions, plugins, and
-  > workers that expand what Oban is capable of are available as licensed packages:
-  >
-  > * [🧭 Oban Web](https://oban.pro#oban-web)
-  > * [🌟 Oban Pro](https://oban.pro#oban-pro)
-  >
-  > Learn more at [oban.pro](https://oban.pro)!
-
   """
 
   @doc_footer readme
