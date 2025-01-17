@@ -1,6 +1,36 @@
 # Installation
 
-Oban may be installed and configured via [igniter](https://hex.pm/packages/igniter) with a single command:
+Before starting ensure your application has Ecto configured to use [Postgrex][postgrex] for
+Postgres, [EctoSQLite3][ecto_sqlite3] for SQLite3, or [MyXQL][myxql] for use with MySQL.
+
+There are three installation mechanisms available:
+
+* [Semi-Automatic Installation](#semi-automatic-installation) using an igniter powered mix task
+* [Igniter Installation](#igniter-installation) fully automatic installation using igniter
+* [Manual Installation](#manual-installation) add oban and handle all steps manually
+
+## Semi-Automatic Installation
+
+It's possible to use the `oban.install` task without the `igniter.install` escript available.
+First, add `oban` and `igniter` to your deps in `mix.exs`:
+
+```elixir
+{:igniter, "~> 0.5"},
+{:oban, "~> 2.19"}
+```
+
+Run `mix deps.get` to fetch `oban`, then run the install task:
+
+```bash
+mix oban.install
+```
+
+That will automate all of the manual steps listed below!
+
+## Igniter Installation
+
+For projects that have [igniter][igniter] available, Oban may be installed and configured with a
+single command:
 
 ```bash
 mix igniter.install oban
@@ -16,38 +46,16 @@ Use the `--repo` flag to specify an alternate repo manually:
 mix igniter.install oban --repo MyApp.LiteRepo
 ```
 
-## Semi-Automatic Installation
-
-It's possible to use the `oban.install` task without `igniter` available. First, add `oban` to
-your deps in `mix.exs`:
-
-```elixir
-{:oban, "~> 2.19"}
-```
-
-Run `mix deps.get` to fetch `oban`, then run the install task:
-
-```bash
-mix oban.install
-```
-
-That will automate all of the manual steps listed below!
-
 ## Manual Installation
 
-Oban is published on [Hex](https://hex.pm/packages/oban). Add it to your list of deps in
-`mix.exs`:
+Add `:oban` to your list of deps in `mix.exs`:
 
 ```elixir
 {:oban, "~> 2.19"}
 ```
 
-You'll optionally need to include [Postgrex][postgrex] for Postgres, [EctoSQLite3][ecto_sqlite3]
-for SQLite3, or [MyXQL][myxql] for use with MySQL. Then run `mix deps.get` to install Oban and its
-dependencies.
-
-After the packages are installed you must create a database migration to add the `oban_jobs` table
-to your database:
+Then run `mix deps.get` to install Oban and its dependencies. After the packages are installed you
+must create a database migration to add the `oban_jobs` table to your database:
 
 ```bash
 mix ecto.gen.migration add_oban_jobs_table
@@ -161,6 +169,7 @@ Oban.
 
 [use]: Oban.html#Usage
 [web]: https://github.com/oban-bg/oban_web
+[igniter]: https://hex.pm/packages/igniter
 [test]: testing.md
 [postgrex]: https://hex.pm/packages/postgrex
 [ecto_sqlite3]: https://hex.pm/packages/ecto_sqlite3
