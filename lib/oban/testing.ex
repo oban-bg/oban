@@ -215,7 +215,7 @@ defmodule Oban.Testing do
 
   ## Examples
 
-  Eexecute a job without any options:
+  Execute a job without any options:
 
       assert :ok = perform_job(job, [])
 
