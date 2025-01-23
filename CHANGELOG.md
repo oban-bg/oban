@@ -114,7 +114,7 @@ support the JSON module once the minimum supported Elixir version is v1.18.
 - [Oban] Start all queues in parallel on initialization.
 
   The midwife now starts queues using an async stream to parallelize startup and minimize boot
-  time for applications with many queues. Previously,
+  time for applications with many queues.
 
 - [Oban] Safely return `nil` from `check_queue/2` when checking queues that aren't running.
 
