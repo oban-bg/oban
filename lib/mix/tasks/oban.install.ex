@@ -90,12 +90,11 @@ if Code.ensure_loaded?(Igniter) do
           """
 
           igniter
-          |> Igniter.Project.Deps.add_dep({:oban, "~> 2.18"})
           |> Igniter.Project.Config.configure("config.exs", app_name, [Oban], {:code, conf_code})
           |> Igniter.Project.Config.configure("test.exs", app_name, [Oban], {:code, test_code})
           |> Igniter.Project.Application.add_new_child({Oban, {:code, tree_code}}, after: [repo])
           |> Igniter.Project.Formatter.import_dep(:oban)
-          |> Igniter.Libs.Ecto.gen_migration(repo, "add_oban", body: migration)
+          |> Igniter.Libs.Ecto.gen_migration(repo, "add_oban", body: migration, on_exists: :skip)
 
         {:error, igniter} ->
           igniter
