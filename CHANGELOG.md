@@ -107,6 +107,16 @@ is extremely rare) then it warns about a missing module.
 This approach was chosen over a config option for backward compatibility because Oban will only
 support the JSON module once the minimum supported Elixir version is v1.18.
 
+## v2.19.1 — 2025-01-27
+
+### Bug Fixes
+
+- [Mix] Improve igniter installer idempotency and compatibility.
+
+  The installer now uses `on_exists: :skip` when generating a migration, so it composes safely
+  with other igniter installers. It also removes unnecessary `add_dep` calls that would overwrite
+  a previously specified Oban version with `~> 2.18`.
+
 ## v2.19.0 — 2025-01-16
 
 ### Enhancements
