@@ -191,12 +191,19 @@ defmodule Oban.Repo do
     with_dynamic_repo(conf, name, args ++ [opts])
   end
 
-  defp with_dynamic_repo(%{get_dynamic_repo: fun} = conf, name, args) when is_function(fun, 0) do
+  defp with_dynamic_repo(%{get_dynamic_repo: fun} = conf, name, args)
+       when is_function(fun, 0) or is_tuple(fun) do
     prev_instance = conf.repo.get_dynamic_repo()
+
+    dynamic_repo =
+      case fun do
+        {module, func, args} -> apply(module, func, args)
+        fun -> fun.()
+      end
 
     try do
       if not in_transaction?(conf, prev_instance) do
-        conf.repo.put_dynamic_repo(fun.())
+        conf.repo.put_dynamic_repo(dynamic_repo)
       end
 
       apply(conf.repo, name, args)
