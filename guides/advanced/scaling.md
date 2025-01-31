@@ -148,6 +148,24 @@ defmodule MyApp.ObanRepo do
 end
 ```
 
+Then add a function to your main Repo
+
+```diff
+defmodule MyApp.Repo do
+  use Ecto.Repo,
+     adapter: Ecto.Adapters.Postgres,
+     otp_app: :my_app
+  
++ def use_dynamic_repo? do
++   if in_transaction?() do
++     MyApp.Repo
++   else
++     MyApp.ObanRepo
++   end
++ end
+end
+```
+
 Then switch the configured `repo`, and use `get_dynamic_repo` to ensure the same repo is used
 within a transaction:
 
@@ -155,7 +173,7 @@ within a transaction:
  config :my_app, Oban,
 -  repo: MyApp.Repo,
 +  repo: MyApp.ObanRepo,
-+  get_dynamic_repo: fn -> if MyApp.Repo.in_transaction?(), do: MyApp.Repo, else: MyApp.ObanRepo end
++  get_dynamic_repo: {MyApp.Repo, :use_dynamic_repo?, []}
    ...
 ```
 

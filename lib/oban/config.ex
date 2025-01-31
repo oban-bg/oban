@@ -13,7 +13,7 @@ defmodule Oban.Config do
   @type t :: %__MODULE__{
           dispatch_cooldown: pos_integer(),
           engine: module(),
-          get_dynamic_repo: nil | (-> pid() | atom()),
+          get_dynamic_repo: nil | (-> pid() | atom()) | {module(), atom(), list()},
           insert_trigger: boolean(),
           log: false | Logger.level(),
           name: Oban.name(),
@@ -140,7 +140,8 @@ defmodule Oban.Config do
     Validation.validate_schema(opts,
       dispatch_cooldown: :pos_integer,
       engine: {:behaviour, Oban.Engine},
-      get_dynamic_repo: {:or, [:falsy, {:function, 0}]},
+      get_dynamic_repo:
+        {:or, [:falsy, {:function, 0}, {:custom, &validate_mfa(:get_dynamic_repo, &1)}]},
       insert_trigger: :boolean,
       log: {:enum, @log_levels},
       name: :any,
@@ -384,4 +385,14 @@ defmodule Oban.Config do
   end
 
   defp normalize_plugins(plugins), do: plugins || []
+
+  defp validate_mfa(key, {module, function, args})
+       when is_atom(module) and is_atom(function) and is_list(args) do
+    if function_exported?(module, function, length(args)) do
+      :ok
+    else
+      {:error,
+       "expected #{inspect(Exception.format_mfa(module, function, length(args)))} to exist for #{key} but it does not exist"}
+    end
+  end
 end
