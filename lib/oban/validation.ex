@@ -169,11 +169,11 @@ defmodule Oban.Validation do
 
   defp validate_type(:mfa, key, {module, func, args})
        when is_atom(module) and is_atom(func) and is_list(args) do
-    if function_exported?(module, function, length(args)) do
+    if function_exported?(module, fun, length(args)) do
       :ok
     else
       {:error,
-       "missing function #{inspect(Exception.format_mfa(module, function, length(args)))} for #{key}"}
+       "missing function #{inspect(Exception.format_mfa(module, func, length(args)))} for #{key}"}
     end
   end
 
