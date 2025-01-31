@@ -156,7 +156,7 @@ defmodule MyApp.Repo do
      adapter: Ecto.Adapters.Postgres,
      otp_app: :my_app
   
-+ def use_dynamic_repo? do
++ def oban_repo do
 +   if in_transaction?() do
 +     MyApp.Repo
 +   else
@@ -173,7 +173,7 @@ within a transaction:
  config :my_app, Oban,
 -  repo: MyApp.Repo,
 +  repo: MyApp.ObanRepo,
-+  get_dynamic_repo: {MyApp.Repo, :use_dynamic_repo?, []}
++  get_dynamic_repo: {MyApp.Repo, :oban_repo, []}
    ...
 ```
 
