@@ -167,6 +167,15 @@ defmodule Oban.Validation do
     end
   end
 
+  defp validate_type(:mfa, key, {module, func, args})
+       when is_atom(module) and is_atom(func) and is_list(args) do
+    if function_exported?(module, func, length(args)) do
+      :ok
+    else
+      {:error, "missing function #{Exception.format_mfa(module, func, length(args))} for #{key}"}
+    end
+  end
+
   defp validate_type(:schedule, key, val) do
     case Expression.parse(val) do
       {:ok, _cron} ->

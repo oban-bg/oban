@@ -50,7 +50,7 @@ defmodule Oban do
   @type option ::
           {:dispatch_cooldown, pos_integer()}
           | {:engine, module()}
-          | {:get_dynamic_repo, nil | (-> pid() | atom())}
+          | {:get_dynamic_repo, nil | (-> pid() | atom()) | {module(), atom(), list()}}
           | {:log, false | Logger.level()}
           | {:name, name()}
           | {:node, oban_node()}

@@ -13,7 +13,7 @@ defmodule Oban.Config do
   @type t :: %__MODULE__{
           dispatch_cooldown: pos_integer(),
           engine: module(),
-          get_dynamic_repo: nil | (-> pid() | atom()),
+          get_dynamic_repo: nil | (-> pid() | atom()) | {module(), atom(), list()},
           insert_trigger: boolean(),
           log: false | Logger.level(),
           name: Oban.name(),
@@ -140,7 +140,7 @@ defmodule Oban.Config do
     Validation.validate_schema(opts,
       dispatch_cooldown: :pos_integer,
       engine: {:behaviour, Oban.Engine},
-      get_dynamic_repo: {:or, [:falsy, {:function, 0}]},
+      get_dynamic_repo: {:or, [:falsy, {:function, 0}, :mfa]},
       insert_trigger: :boolean,
       log: {:enum, @log_levels},
       name: :any,

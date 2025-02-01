@@ -13,6 +13,10 @@ defmodule Oban.Test.DynamicRepo do
     otp_app: :oban,
     adapter: Ecto.Adapters.Postgres
 
+  def use_dynamic_repo(pid) do
+    pid
+  end
+
   def init(_, _) do
     {:ok, Oban.Test.Repo.config()}
   end
