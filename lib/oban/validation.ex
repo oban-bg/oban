@@ -172,8 +172,7 @@ defmodule Oban.Validation do
     if function_exported?(module, func, length(args)) do
       :ok
     else
-      {:error,
-       "missing function #{inspect(Exception.format_mfa(module, func, length(args)))} for #{key}"}
+      {:error, "missing function #{Exception.format_mfa(module, func, length(args))} for #{key}"}
     end
   end
 
