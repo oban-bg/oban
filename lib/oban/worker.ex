@@ -7,20 +7,41 @@ defmodule Oban.Worker do
 
   ## Defining Workers
 
-  Worker modules are defined by using `Oban.Worker`. `use Oban.Worker` supports several options.
-  A bare `use Oban.Worker` invocation sets a worker with these defaults:
+  Worker modules are defined by using `Oban.Worker`. `use Oban.Worker` supports the following
+  options:
 
-  * `:max_attempts` — 20
-  * `:priority` — 0
-  * `:queue` — `:default`
-  * `:tags` — no tags set
-  * `:replace` — no replacement set
-  * `:unique` — no uniqueness set
+  * `:max_attempts` — Integer specifying how many times the job will be retried. Defaults to `20`
+  * `:priority` — Integer from 0 (highest priority) to 9 (lowest priority). Defaults to `0`
+  * `:queue` — Name of a queue as an atom. Defaults to `:default`
+  * `:tags` — A list of strings representing the tags to associate with jobs. Defaults to `[]`
+  * `:replace` — A nested list of job statuses and fields to be replaced when a job is executed.
+    Defaults to `[]`
+  * `:unique` — a keyword list that determines how jobs are uniquely identified. It may be `true`
+    to enable uniqueness with the default options, or `false` to explicitly disable uniqueness.
+    Defaults to `false`
 
-  To create a minimum worker using the defaults, including the `default` queue:
+  The following is a basic workers that uses the defaults:
 
       defmodule MyApp.Workers.Basic do
         use Oban.Worker
+
+        @impl Oban.Worker
+        def perform(%Oban.Job{args: args}) do
+          IO.inspect(args)
+          :ok
+        end
+      end
+
+  Which is equivalent to this worker, which sets all options explicitly:
+
+      defmodule MyApp.Workers.Basic do
+        use Oban.Worker,
+          max_attempts: 20,
+          priority: 0,
+          queue: :default,
+          tags: [],
+          replace: [],
+          unique: false
 
         @impl Oban.Worker
         def perform(%Oban.Job{args: args}) do
