@@ -191,9 +191,9 @@ defmodule Oban.WorkerTest do
   end
 
   test "validating the unique options provided to __using__" do
-    assert_raise ArgumentError, ~r/expected :unique to be a list/, fn ->
+    assert_raise ArgumentError, ~r/empty list isn't allowed/, fn ->
       defmodule InvalidUniqueType do
-        use Oban.Worker, unique: 0
+        use Oban.Worker, unique: []
 
         def perform(_), do: :ok
       end

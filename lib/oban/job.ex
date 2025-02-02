@@ -593,7 +593,7 @@ defmodule Oban.Job do
           changeset
 
         {:error, error} ->
-          add_error(changeset, :unique, "invalid unique option, #{inspect(error)}")
+          add_error(changeset, :unique, "invalid option, #{inspect(error)}")
       end
     else
       changeset
@@ -602,7 +602,9 @@ defmodule Oban.Job do
 
   def validate_unique(unique) when is_boolean(unique), do: :ok
 
-  def validate_unique(unique) do
+  def validate_unique([]), do: {:error, "an empty list isn't allowed, use `true`"}
+
+  def validate_unique([_ | _] = unique) do
     Validation.validate(:unique, unique, fn
       {:fields, [_ | _] = fields} ->
         if not Enum.all?(fields, &(&1 in @unique_fields)) do
