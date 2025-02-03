@@ -117,43 +117,39 @@ defmodule Oban.MixProject do
       Advanced: ~r{guides/advanced/[^\/]+\.md},
       Recipes: ~r{guides/recipes/.?},
       Testing: ~r{guides/testing/.?},
-      "Upgrade Guides": ~r{guides/upgrading/.*}
+      Upgrading: ~r{guides/upgrading/.*}
     ]
   end
 
   defp groups_for_modules do
     [
       Plugins: [
+        Oban.Plugin,
         Oban.Plugins.Cron,
-        Oban.Plugins.Gossip,
         Oban.Plugins.Lifeline,
         Oban.Plugins.Pruner,
-        Oban.Plugins.Reindexer,
-        Oban.Plugins.Repeater,
-        Oban.Plugins.Stager
+        Oban.Plugins.Reindexer
       ],
       Extending: [
         Oban.Config,
-        Oban.Engine,
-        Oban.Notifier,
-        Oban.Peer,
-        Oban.Plugin,
         Oban.Registry,
-        Oban.Repo
-      ],
-      Migrations: [
-        Oban.Migrations.Postgres
+        Oban.Repo,
+        Oban.Telemetry
       ],
       Notifiers: [
+        Oban.Notifier,
         Oban.Notifiers.Postgres,
         Oban.Notifiers.PG
       ],
       Peers: [
+        Oban.Peer,
         Oban.Peers.Database,
         Oban.Peers.Global
       ],
       Engines: [
+        Oban.Engine,
         Oban.Engines.Basic,
+        Oban.Engines.Dolphin,
         Oban.Engines.Inline,
         Oban.Engines.Lite
       ]
@@ -187,7 +183,7 @@ defmodule Oban.MixProject do
       {:benchee, "~> 1.0", only: [:test, :dev], runtime: false},
       {:credo, "~> 1.7.7-rc.0", only: [:test, :dev], runtime: false},
       {:dialyxir, "~> 1.0", only: [:test, :dev], runtime: false},
-      {:ex_doc, "~> 0.28", only: [:test, :dev], runtime: false},
+      {:ex_doc, "~> 0.36", only: [:test, :dev], runtime: false},
       {:makeup_diff, "~> 0.1", only: [:test, :dev], runtime: false}
     ]
   end
