@@ -2,6 +2,7 @@ defmodule Oban.Cron.Expression do
   @moduledoc false
 
   @type t :: %__MODULE__{
+          input: String.t(),
           minutes: MapSet.t(),
           hours: MapSet.t(),
           days: MapSet.t(),
@@ -10,7 +11,8 @@ defmodule Oban.Cron.Expression do
           reboot?: boolean()
         }
 
-  defstruct [:minutes, :hours, :days, :months, :weekdays, reboot?: false]
+  @derive {Inspect, only: [:input]}
+  defstruct [:input, :minutes, :hours, :days, :months, :weekdays, reboot?: false]
 
   @dow_map %{
     "SUN" => "0",
@@ -54,13 +56,12 @@ defmodule Oban.Cron.Expression do
     |> Enum.all?(&included?(&1, datetime))
   end
 
-  defp included?({_, :*}, _datetime), do: true
   defp included?({:minutes, set}, datetime), do: MapSet.member?(set, datetime.minute)
   defp included?({:hours, set}, datetime), do: MapSet.member?(set, datetime.hour)
   defp included?({:days, set}, datetime), do: MapSet.member?(set, datetime.day)
   defp included?({:months, set}, datetime), do: MapSet.member?(set, datetime.month)
   defp included?({:weekdays, set}, datetime), do: MapSet.member?(set, day_of_week(datetime))
-  defp included?({:reboot?, _}, _datetime), do: true
+  defp included?(_field, _datetime), do: true
 
   defp day_of_week(datetime) do
     if days_in_month(datetime) <= datetime.day do
@@ -98,7 +99,7 @@ defmodule Oban.Cron.Expression do
     vals =
       expr
       |> Map.from_struct()
-      |> Map.drop([:reboot?])
+      |> Map.drop([:input, :reboot?])
       |> Map.new(fn {key, val} -> {key, Enum.sort(val, :desc)} end)
 
     Process.put(:recur, 0)
@@ -108,7 +109,7 @@ defmodule Oban.Cron.Expression do
 
   defp last_match_at(expr, vals, time) when is_struct(time, DateTime) do
     case Process.get(:recur) do
-      val when val > 10 -> raise RuntimeError, inspect(time)
+      val when val > 10 -> raise RuntimeError, inspect({expr, time})
       val -> Process.put(:recur, val + 1)
     end
 
@@ -189,13 +190,14 @@ defmodule Oban.Cron.Expression do
   def parse("@midnight"), do: parse("0 0 * * *")
   def parse("@daily"), do: parse("0 0 * * *")
   def parse("@hourly"), do: parse("0 * * * *")
-  def parse("@reboot"), do: {:ok, %__MODULE__{reboot?: true}}
+  def parse("@reboot"), do: {:ok, %__MODULE__{input: "@reboot", reboot?: true}}
 
   def parse(input) when is_binary(input) do
     case String.split(input, ~r/\s+/, trim: true, parts: 5) do
       [mip, hrp, dap, mop, wdp] ->
         {:ok,
          %__MODULE__{
+           input: input,
            minutes: parse_field(mip, @min_range),
            hours: parse_field(hrp, @hrs_range),
            days: parse_field(dap, @day_range),
