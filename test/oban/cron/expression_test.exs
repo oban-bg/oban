@@ -115,7 +115,7 @@ defmodule Oban.Cron.ExpressionTest do
       assert ~U[2024-11-01 00:00:00Z] == last_at("0 0 1 * *", ~U[2024-11-21 01:01:00Z])
       assert ~U[2024-09-05 02:00:00Z] == last_at("0 0-2 5 9 *", ~U[2024-11-21 01:01:00Z])
       assert ~U[2023-09-05 02:00:00Z] == last_at("0 0-2 5 9 *", ~U[2024-09-04 00:00:00Z])
-      assert ~U[2022-09-05 01:00:00Z] == last_at("0 1 5 8-9 SUN", ~U[2024-11-21 00:00:00Z])
+      assert ~U[2022-09-05 01:00:00Z] == last_at("0 1 5 9 MON", ~U[2024-11-21 00:00:00Z])
     end
 
     property "the last_at time is always in the past" do

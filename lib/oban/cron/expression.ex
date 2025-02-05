@@ -45,35 +45,51 @@ defmodule Oban.Cron.Expression do
   @mon_range 1..12
   @dow_range 0..6
 
+  @recur_limit 100
+
+  @doc """
+  Check whether a cron expression matches the current date and time.
+
+  ## Example
+
+  Check against the default `utc_now`:
+
+      iex> now?("* * * * *")
+      true
+
+  Check against a provided date time:
+
+      iex> now?("0 1 * * *", ~U[2025-01-01 01:00:00Z])
+      true
+
+      iex> now?("0 1 * * *", ~U[2025-01-01 02:00:00Z])
+      false
+
+  Check if it is time to reboot:
+
+      iex> now?("@reboot")
+      true
+  """
   @spec now?(cron :: t(), datetime :: DateTime.t()) :: boolean()
   def now?(cron, datetime \\ DateTime.utc_now())
 
   def now?(%__MODULE__{reboot?: true}, _datetime), do: true
 
   def now?(%__MODULE__{} = cron, datetime) do
-    cron
-    |> Map.from_struct()
-    |> Enum.all?(&included?(&1, datetime))
+    MapSet.member?(cron.months, datetime.month) and
+      MapSet.member?(cron.weekdays, day_of_week(datetime)) and
+      MapSet.member?(cron.days, datetime.day) and
+      MapSet.member?(cron.hours, datetime.hour) and
+      MapSet.member?(cron.minutes, datetime.minute)
   end
-
-  defp included?({:minutes, set}, datetime), do: MapSet.member?(set, datetime.minute)
-  defp included?({:hours, set}, datetime), do: MapSet.member?(set, datetime.hour)
-  defp included?({:days, set}, datetime), do: MapSet.member?(set, datetime.day)
-  defp included?({:months, set}, datetime), do: MapSet.member?(set, datetime.month)
-  defp included?({:weekdays, set}, datetime), do: MapSet.member?(set, day_of_week(datetime))
-  defp included?(_field, _datetime), do: true
 
   defp day_of_week(datetime) do
-    if days_in_month(datetime) <= datetime.day do
-      datetime
-      |> Date.day_of_week()
-      |> Integer.mod(7)
-    else
-      0
-    end
+    datetime
+    |> Date.day_of_week()
+    |> Integer.mod(7)
   end
 
-  @spec last_at(t(), DateTime.t() | Calendar.timezone()) :: DateTime.t()
+  @spec last_at(t(), DateTime.t() | Calendar.time_zone()) :: DateTime.t()
   def last_at(expr, timezone \\ "Etc/UTC")
 
   def last_at(%{reboot?: true}, _timezone_or_datetime) do
@@ -102,39 +118,34 @@ defmodule Oban.Cron.Expression do
       |> Map.drop([:input, :reboot?])
       |> Map.new(fn {key, val} -> {key, Enum.sort(val, :desc)} end)
 
-    Process.put(:recur, 0)
-
-    last_match_at(expr, vals, time)
+    last_match_at(expr, vals, time, 0)
   end
 
-  defp last_match_at(expr, vals, time) when is_struct(time, DateTime) do
-    case Process.get(:recur) do
-      val when val > 10 -> raise RuntimeError, inspect({expr, time})
-      val -> Process.put(:recur, val + 1)
+  defp last_match_at(expr, vals, time, recur) do
+    if recur > @recur_limit do
+      raise RuntimeError, inspect({expr, time})
     end
-
-    IO.inspect(time)
 
     cond do
       now?(expr, time) ->
         time
 
       not MapSet.member?(expr.months, time.month) ->
-        last_match_at(expr, vals, prev_month(vals, time))
+        last_match_at(expr, vals, prev_month(vals, time), recur + 1)
 
       not MapSet.member?(expr.days, time.day) ->
-        last_match_at(expr, vals, prev_day(vals, time))
+        last_match_at(expr, vals, prev_day(vals, time), recur + 1)
 
       not MapSet.member?(expr.hours, time.hour) ->
-        last_match_at(expr, vals, prev_hour(vals, time))
+        last_match_at(expr, vals, prev_hour(vals, time), recur + 1)
 
       true ->
-        last_match_at(expr, vals, prev_minute(vals, time))
+        last_match_at(expr, vals, prev_minute(vals, time), recur + 1)
     end
   end
 
   defp prev_month(vals, time) do
-    case Enum.find(vals.months, &(&1 <= time.month)) do
+    case Enum.find(vals.months, &(&1 < time.month)) do
       nil ->
         %{time | day: 31, month: 12, year: time.year - 1}
 
@@ -156,14 +167,14 @@ defmodule Oban.Cron.Expression do
         |> then(&(&1 in vals.weekdays))
     end
 
-    case Enum.find(vals.days, &(matches_weekday?.(&1) and &1 <= time.day)) do
+    case Enum.find(vals.days, &(matches_weekday?.(&1) and &1 < time.day)) do
       nil -> prev_month(vals, time)
       day -> %{time | day: day, hour: 23}
     end
   end
 
   defp prev_hour(vals, time) do
-    case Enum.find(vals.hours, &(&1 <= time.hour)) do
+    case Enum.find(vals.hours, &(&1 < time.hour)) do
       nil -> prev_day(vals, time)
       hour -> %{time | hour: hour, minute: 59}
     end
