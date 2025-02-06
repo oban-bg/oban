@@ -45,8 +45,6 @@ defmodule Oban.Cron.Expression do
   @mon_range 1..12
   @dow_range 0..6
 
-  @recur_limit 100
-
   @doc """
   Check whether a cron expression matches the current date and time.
 
@@ -54,20 +52,20 @@ defmodule Oban.Cron.Expression do
 
   Check against the default `utc_now`:
 
-      iex> now?("* * * * *")
+      iex> "* * * * *" |> parse!() |> now?()
       true
 
   Check against a provided date time:
 
-      iex> now?("0 1 * * *", ~U[2025-01-01 01:00:00Z])
+      iex> "0 1 * * *" |> parse!() |> now?(~U[2025-01-01 01:00:00Z])
       true
 
-      iex> now?("0 1 * * *", ~U[2025-01-01 02:00:00Z])
+      iex> "0 1 * * *" |> parse!() |> now?(~U[2025-01-01 02:00:00Z])
       false
 
   Check if it is time to reboot:
 
-      iex> now?("@reboot")
+      iex> "@reboot" |> parse!() |> now?()
       true
   """
   @spec now?(cron :: t(), datetime :: DateTime.t()) :: boolean()
@@ -76,27 +74,162 @@ defmodule Oban.Cron.Expression do
   def now?(%__MODULE__{reboot?: true}, _datetime), do: true
 
   def now?(%__MODULE__{} = cron, datetime) do
+    dow = day_of_week(datetime)
+
     MapSet.member?(cron.months, datetime.month) and
-      MapSet.member?(cron.weekdays, day_of_week(datetime)) and
+      MapSet.member?(cron.weekdays, dow) and
       MapSet.member?(cron.days, datetime.day) and
       MapSet.member?(cron.hours, datetime.hour) and
       MapSet.member?(cron.minutes, datetime.minute)
   end
 
-  defp day_of_week(datetime) do
-    datetime
-    |> Date.day_of_week()
-    |> Integer.mod(7)
+  @doc """
+  Returns the next DateTime that matches the cron expression.
+
+  When given a DateTime, it finds the next matching time after that DateTime. When given
+  a timezone string, it finds the next matching time in that timezone.
+
+  ## Examples
+
+  Find the next matching time after a given DateTime:
+
+      iex> "0 1 * * *" |> parse!() |> next_at(~U[2025-01-01 00:00:00Z])
+      ~U[2025-01-01 01:00:00Z]
+
+  Find the next matching time in a specific timezone:
+
+      iex> "0 1 * * *" |> parse!() |> next_at("America/New_York")
+      ~U[2025-01-02 01:00:00-05:00]
+  """
+  @spec next_at(t(), DateTime.t() | Calendar.time_zone()) :: :unknown | DateTime.t()
+  def next_at(expr, timezone \\ "Etc/UTC")
+
+  def next_at(%{reboot?: true}, _timezone_or_datetime), do: :unknown
+
+  def next_at(expr, timezone) when is_binary(timezone) do
+    next_at(expr, DateTime.now!(timezone))
   end
 
+  def next_at(expr, time) when is_struct(time, DateTime) do
+    time =
+      time
+      |> DateTime.add(1, :minute)
+      |> DateTime.truncate(:second)
+      |> Map.put(:second, 0)
+
+    match_at(expr, time, :next)
+  end
+
+  defp match_at(expr, time, dir) do
+    cond do
+      now?(expr, time) ->
+        time
+
+      not MapSet.member?(expr.months, time.month) ->
+        match_at(expr, bump_month(expr, time, dir), dir)
+
+      not MapSet.member?(expr.days, time.day) ->
+        match_at(expr, bump_day(expr, time, dir), dir)
+
+      not MapSet.member?(expr.hours, time.hour) ->
+        match_at(expr, bump_hour(expr, time, dir), dir)
+
+      true ->
+        match_at(expr, bump_minute(expr, time, dir), dir)
+    end
+  end
+
+  defp bump_year(_expr, time, :next) do
+    %{time | month: 0, year: time.year + 1}
+  end
+
+  defp bump_year(_expr, time, :last) do
+    %{time | month: 13, year: time.year - 1}
+  end
+
+  defp bump_month(expr, time, dir) do
+    day = if dir == :next, do: 0, else: 32
+
+    case find_best(expr.months, time.month, dir) do
+      nil -> bump_year(expr, time, dir)
+      month -> %{time | day: day, month: month}
+    end
+  end
+
+  defp bump_day(expr, time, dir) do
+    hour = if dir == :next, do: -1, else: 24
+    days = days_in_month(time)
+
+    matches_weekday? = fn day ->
+      day <= days and
+        %{time | day: day}
+        |> day_of_week()
+        |> then(&(&1 in expr.weekdays))
+    end
+
+    expr.days
+    |> Enum.filter(matches_weekday?)
+    |> find_best(time.day, dir)
+    |> case do
+      nil -> bump_month(expr, time, dir)
+      day -> %{time | day: day, hour: hour}
+    end
+  end
+
+  defp bump_hour(expr, time, dir) do
+    minute = if dir == :next, do: -1, else: 60
+
+    case find_best(expr.hours, time.hour, dir) do
+      nil -> bump_day(expr, time, dir)
+      hour -> %{time | hour: hour, minute: minute}
+    end
+  end
+
+  defp bump_minute(expr, time, dir) do
+    case find_best(expr.minutes, time.minute, dir) do
+      nil -> bump_hour(expr, time, dir)
+      minute -> %{time | minute: minute}
+    end
+  end
+
+  defp find_best(set, value, :next) do
+    set
+    |> Enum.sort()
+    |> Enum.find(&(&1 > value))
+  end
+
+  defp find_best(set, value, :last) do
+    set
+    |> Enum.sort(:desc)
+    |> Enum.find(&(&1 < value))
+  end
+
+  @doc """
+  Returns the most recent DateTime that matches the cron expression.
+
+  When given a DateTime, it finds the last matching time before that DateTime. When given
+  a timezone string, it finds the last matching time in that timezone.
+
+  ## Examples
+
+  Find the last matching time before a given DateTime:
+
+      iex> "0 1 * * *" |> parse!() |> last_at(~U[2025-01-01 01:00:00Z])
+      ~U[2025-01-01 00:01:00Z]
+
+  Find the last matching time in a specific timezone:
+
+      iex> "0 1 * * *" |> parse!() |> last_at("America/New_York")
+      ~U[2025-01-01 05:01:00-05:00]
+  """
   @spec last_at(t(), DateTime.t() | Calendar.time_zone()) :: DateTime.t()
   def last_at(expr, timezone \\ "Etc/UTC")
 
   def last_at(%{reboot?: true}, _timezone_or_datetime) do
-    {ms, _} = :erlang.statistics(:wall_clock)
+    {uptime, _} = :erlang.statistics(:wall_clock)
 
     DateTime.utc_now()
-    |> DateTime.add(-ms, :millisecond)
+    |> DateTime.add(-uptime, :millisecond)
     |> DateTime.truncate(:second)
     |> Map.put(:second, 0)
   end
@@ -112,85 +245,21 @@ defmodule Oban.Cron.Expression do
       |> DateTime.truncate(:second)
       |> Map.put(:second, 0)
 
-    vals =
-      expr
-      |> Map.from_struct()
-      |> Map.drop([:input, :reboot?])
-      |> Map.new(fn {key, val} -> {key, Enum.sort(val, :desc)} end)
-
-    last_match_at(expr, vals, time, 0)
+    match_at(expr, time, :last)
   end
 
-  defp last_match_at(expr, vals, time, recur) do
-    if recur > @recur_limit do
-      raise RuntimeError, inspect({expr, time})
-    end
-
-    cond do
-      now?(expr, time) ->
-        time
-
-      not MapSet.member?(expr.months, time.month) ->
-        last_match_at(expr, vals, prev_month(vals, time), recur + 1)
-
-      not MapSet.member?(expr.days, time.day) ->
-        last_match_at(expr, vals, prev_day(vals, time), recur + 1)
-
-      not MapSet.member?(expr.hours, time.hour) ->
-        last_match_at(expr, vals, prev_hour(vals, time), recur + 1)
-
-      true ->
-        last_match_at(expr, vals, prev_minute(vals, time), recur + 1)
+  defp day_of_week(datetime) do
+    if Calendar.ISO.valid_date?(datetime.year, datetime.month, datetime.day) do
+      datetime
+      |> Date.day_of_week()
+      |> Integer.mod(7)
+    else
+      -1
     end
   end
 
-  defp prev_month(vals, time) do
-    case Enum.find(vals.months, &(&1 < time.month)) do
-      nil ->
-        %{time | day: 31, month: 12, year: time.year - 1}
-
-      month ->
-        day = days_in_month(%{time | month: month})
-
-        %{time | day: day, month: month}
-    end
-  end
-
-  defp prev_day(vals, time) do
-    days_in_month = days_in_month(time)
-
-    matches_weekday? = fn day ->
-      day <= days_in_month and
-        time.year
-        |> Date.new!(time.month, day)
-        |> Date.day_of_week()
-        |> then(&(&1 in vals.weekdays))
-    end
-
-    case Enum.find(vals.days, &(matches_weekday?.(&1) and &1 < time.day)) do
-      nil -> prev_month(vals, time)
-      day -> %{time | day: day, hour: 23}
-    end
-  end
-
-  defp prev_hour(vals, time) do
-    case Enum.find(vals.hours, &(&1 < time.hour)) do
-      nil -> prev_day(vals, time)
-      hour -> %{time | hour: hour, minute: 59}
-    end
-  end
-
-  defp prev_minute(vals, time) do
-    case Enum.find(vals.minutes, &(&1 < time.minute)) do
-      nil -> prev_hour(vals, time)
-      minute -> %{time | minute: minute}
-    end
-  end
-
-  defp days_in_month(time) do
-    time
-    |> DateTime.to_date()
-    |> Date.days_in_month()
+  defp days_in_month(datetime) do
+    Calendar.ISO.days_in_month(datetime.year, datetime.month)
   end
 
   @spec parse(input :: binary()) :: {:ok, t()} | {:error, Exception.t()}
