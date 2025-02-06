@@ -198,6 +198,7 @@ defmodule Oban.Queue.Executor do
       exec.job.attempted_at
       |> DateTime.diff(exec.job.scheduled_at, :nanosecond)
       |> max(0)
+      |> System.convert_time_unit(:nanosecond, :native)
 
     %{exec | duration: duration, queue_time: queue_time, stop_mono: stop_mono}
   end
