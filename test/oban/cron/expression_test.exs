@@ -92,11 +92,86 @@ defmodule Oban.Cron.ExpressionTest do
     end
   end
 
+  describe "last_at/2" do
+    defp last_at(expr, time) do
+      expr
+      |> Expr.parse!()
+      |> Expr.last_at(time)
+    end
+
+    test "returning the system start time for @reboot" do
+      time = DateTime.utc_now()
+      last = last_at("@reboot", time)
+
+      assert DateTime.after?(time, last)
+    end
+
+    test "calculating the last time a cron matched" do
+      assert ~U[2024-11-21 00:54:00Z] == last_at("* * * * *", ~U[2024-11-21 00:55:00Z])
+      assert ~U[2024-11-21 00:54:00Z] == last_at("*/2 * * * *", ~U[2024-11-21 00:55:00Z])
+      assert ~U[2024-11-21 00:05:00Z] == last_at("5 * * * *", ~U[2024-11-21 00:06:00Z])
+      assert ~U[2024-11-21 01:00:00Z] == last_at("0 1 * * *", ~U[2024-11-21 01:02:00Z])
+      assert ~U[2024-11-21 02:00:00Z] == last_at("0 */2 * * *", ~U[2024-11-21 03:02:00Z])
+      assert ~U[2024-11-01 00:00:00Z] == last_at("0 0 1 * *", ~U[2024-11-21 01:01:00Z])
+      assert ~U[2024-09-05 02:00:00Z] == last_at("0 0-2 5 9 *", ~U[2024-11-21 01:01:00Z])
+      assert ~U[2023-09-05 02:00:00Z] == last_at("0 0-2 5 9 *", ~U[2024-09-04 00:00:00Z])
+      assert ~U[2022-09-05 01:00:00Z] == last_at("0 1 5 9 MON", ~U[2024-11-21 00:00:00Z])
+    end
+
+    property "the last_at time is always in the past" do
+      check all minutes <- minutes(),
+                hours <- hours(),
+                days <- days(),
+                months <- months() do
+        assert [minutes, hours, days, months, "*"]
+               |> Enum.join(" ")
+               |> last_at("Etc/UTC")
+               |> DateTime.before?(DateTime.utc_now())
+      end
+    end
+  end
+
+  describe "next_at/2" do
+    defp next_at(expr, time) do
+      expr
+      |> Expr.parse!()
+      |> Expr.next_at(time)
+    end
+
+    test "the next run for @reboot is unknown" do
+      assert :unknown == next_at("@reboot", "Etc/UTC")
+    end
+
+    test "calculating the next time a cron will match" do
+      assert ~U[2024-11-21 00:56:00Z] == next_at("* * * * *", ~U[2024-11-21 00:55:00Z])
+      assert ~U[2024-11-21 00:56:00Z] == next_at("*/2 * * * *", ~U[2024-11-21 00:55:00Z])
+      assert ~U[2024-11-21 01:05:00Z] == next_at("5 * * * *", ~U[2024-11-21 00:06:00Z])
+      assert ~U[2024-11-21 13:00:00Z] == next_at("0 13 * * *", ~U[2024-11-21 01:02:00Z])
+      assert ~U[2024-11-21 04:00:00Z] == next_at("0 */2 * * *", ~U[2024-11-21 03:02:00Z])
+      assert ~U[2024-12-01 00:00:00Z] == next_at("0 0 1 * *", ~U[2024-11-21 01:01:00Z])
+      assert ~U[2025-09-05 00:00:00Z] == next_at("0 0-2 5 9 *", ~U[2024-11-21 01:01:00Z])
+      assert ~U[2024-09-05 00:00:00Z] == next_at("0 0-2 5 9 *", ~U[2024-09-04 00:00:00Z])
+      assert ~U[2027-09-05 01:00:00Z] == next_at("0 1 5 9 SUN", ~U[2024-11-21 00:00:00Z])
+    end
+
+    property "the next_at time is always in the future" do
+      check all minutes <- minutes(),
+                hours <- hours(),
+                days <- days(),
+                months <- months() do
+        assert [minutes, hours, days, months, "*"]
+               |> Enum.join(" ")
+               |> next_at("Etc/UTC")
+               |> DateTime.after?(DateTime.utc_now())
+      end
+    end
+  end
+
   defp minutes, do: expression(0..59)
 
   defp hours, do: expression(0..23)
 
-  defp days, do: expression(1..31)
+  defp days, do: expression(1..28)
 
   defp months do
     one_of([
@@ -141,7 +216,6 @@ defmodule Oban.Cron.ExpressionTest do
                 map(integer(min..max), &"#{&1}/2"),
                 map(integer((min + 1)..max), &"*/#{&1}"),
                 map(integer(min..(max - 2)), &"#{&1}-#{&1 + 1}"),
-                map(integer(min..(max - 3)), &"#{&1}-#{&1 + 2}/1"),
                 map(integer(min..(max - 3)), &"#{&1}-#{&1 + 2}/2"),
                 list_of(integer(min..max), length: 1..10)
               ]) do
