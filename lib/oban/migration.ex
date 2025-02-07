@@ -43,7 +43,7 @@ defmodule Oban.Migration do
   additional migrations. To do this, generate a new migration:
 
   ```bash
-  mix ecto.gen.migration upgrade_oban_to_v11
+  mix ecto.gen.migration upgrade_oban_to_v12
   ```
 
   Open the generated migration in your editor and call the `up` and `down` functions on
@@ -53,9 +53,9 @@ defmodule Oban.Migration do
   defmodule MyApp.Repo.Migrations.UpgradeObanToV11 do
     use Ecto.Migration
 
-    def up, do: Oban.Migrations.up(version: 11)
+    def up, do: Oban.Migrations.up(version: 12)
 
-    def down, do: Oban.Migrations.down(version: 11)
+    def down, do: Oban.Migrations.down(version: 12)
   end
   ```
 
