@@ -15,8 +15,8 @@ It's possible to use the `oban.install` task without the `igniter.install` escri
 First, add `oban` and `igniter` to your deps in `mix.exs`:
 
 ```elixir
-{:igniter, "~> 0.5"},
-{:oban, "~> 2.19"}
+{:oban, "~> 2.19"},
+{:igniter, "~> 0.5", only: [:dev]},
 ```
 
 Run `mix deps.get` to fetch `oban`, then run the install task:
