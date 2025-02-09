@@ -9,7 +9,7 @@ versions of Elixir.
 
 Oban officially supports MySQL with the new `Dolphin` engine. Oban supports modern (read "with
 full JSON support") MySQL [versions from 8.4][m84] on, and has been tested on the highly scalable
-[Plantescale][pla] database.
+[Planetscale][pla] database.
 
 Running on MySQL is as simple as specifying the `Dolphin` engine in your configuration:
 
