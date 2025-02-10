@@ -36,7 +36,7 @@ defmodule Oban.Plugins.Cron do
   would look like this:
 
   ```elixir
-  %Oban.Job{meta: %{"cron" => true, "cron_expr" => "@daily"}}
+  %Oban.Job{meta: %{"cron" => true, "cron_expr" => "@daily", "cron_tz" => "Etc/UTC"}}
   ```
 
   ## Options
@@ -214,7 +214,7 @@ defmodule Oban.Plugins.Cron do
         not Keyword.keyword?(opts) ->
           {:error, "options must be a keyword list, got: #{inspect(opts)}"}
 
-        not build_changeset(expr, worker, opts).valid? ->
+        not build_changeset(worker, opts, expr, "Etc/UTC").valid? ->
           {:error, "expected valid job options, got: #{inspect(opts)}"}
 
         true ->
@@ -254,7 +254,7 @@ defmodule Oban.Plugins.Cron do
       {:ok, datetime} = DateTime.now(state.timezone)
 
       for {expr, parsed, worker, opts} <- state.crontab, Expression.now?(parsed, datetime) do
-        Oban.insert!(state.conf.name, build_changeset(expr, worker, opts))
+        Oban.insert!(state.conf.name, build_changeset(worker, opts, expr, state.timezone))
       end
     end
 
@@ -271,10 +271,10 @@ defmodule Oban.Plugins.Cron do
     end)
   end
 
-  defp build_changeset(expr, worker, opts) do
+  defp build_changeset(worker, opts, expr, timezone) do
     {args, opts} = Keyword.pop(opts, :args, %{})
 
-    meta = %{cron: true, cron_expr: expr}
+    meta = %{cron: true, cron_expr: expr, cron_tz: timezone}
 
     opts =
       worker.__opts__()
