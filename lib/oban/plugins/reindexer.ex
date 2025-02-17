@@ -154,7 +154,7 @@ defmodule Oban.Plugins.Reindexer do
           AND NOT indisvalid
           AND starts_with(relname, 'oban_jobs')
       LOOP
-        EXECUTE format('DROP INDEX %s.%s', rec.namespace, rec.relname);
+        EXECUTE format('DROP INDEX CONCURRENTLY %s.%s', rec.namespace, rec.relname);
       END LOOP;
     END $$
     """
