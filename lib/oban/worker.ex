@@ -155,7 +155,7 @@ defmodule Oban.Worker do
   to **schedule** jobs in the future, see the guide for [*Scheduling Jobs*](scheduling_jobs.html).
 
   See `Oban.Job` for all available options, and the
-  [*Job Uniqueness* guide](job_uniqueness.html) for more information about unique jobs.
+  [*Unique Jobs* guide](unique_jobs.html) for more information about unique jobs.
 
   ## Customizing Backoff
 
