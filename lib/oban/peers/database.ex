@@ -102,7 +102,7 @@ defmodule Oban.Peers.Database do
         fun = fn ->
           state
           |> delete_expired_peers()
-          |> upsert_peer()
+          |> attempt_leadership()
         end
 
         case Repo.transaction(state.conf, fun, retry: 1) do
@@ -163,14 +163,7 @@ defmodule Oban.Peers.Database do
   end
 
   def handle_call(:get_leader, _from, %State{conf: conf} = state) do
-    query =
-      "oban_peers"
-      |> where([p], p.name == ^inspect(conf.name))
-      |> select([p], p.node)
-
-    leader = Repo.one(conf, query)
-
-    {:reply, leader, state}
+    {:reply, query_leader(conf), state}
   end
 
   # Helpers
@@ -199,11 +192,16 @@ defmodule Oban.Peers.Database do
     Repo.delete_all(conf, query)
   end
 
-  defp notify_down(%State{conf: conf}) do
-    Notifier.notify(conf, :leader, %{down: inspect(conf.name)})
+  defp query_leader(conf) do
+    query =
+      "oban_peers"
+      |> where([p], p.name == ^inspect(conf.name))
+      |> select([p], p.node)
+
+    Repo.one(conf, query)
   end
 
-  defp upsert_peer(%State{conf: conf} = state) do
+  defp attempt_leadership(%State{conf: conf} = state) do
     started_at = DateTime.utc_now()
     expires_at = DateTime.add(started_at, state.interval, :millisecond)
 
@@ -214,24 +212,46 @@ defmodule Oban.Peers.Database do
       expires_at: expires_at
     }
 
-    # MySQL only supports auto-inference and not conflict_target.
-    base_opts =
+    leader? =
       if state.conf.engine == Oban.Engines.Dolphin do
-        []
+        dolphin_insert(peer_data, state)
       else
-        [conflict_target: :name]
+        regular_upsert(peer_data, state)
       end
 
+    %{state | leader?: leader?}
+  end
+
+  defp regular_upsert(peer_data, state) do
     repo_opts =
       if state.leader? do
-        Keyword.put(base_opts, :on_conflict, set: [expires_at: expires_at])
+        [conflict_target: :name, on_conflict: [set: [expires_at: peer_data.expires_at]]]
+      else
+        [conflict_target: :name, on_conflict: :nothing]
+      end
+
+    case Repo.insert_all(state.conf, "oban_peers", [peer_data], repo_opts) do
+      {0, nil} -> false
+      {_, nil} -> true
+    end
+  end
+
+  defp dolphin_insert(peer_data, state) do
+    repo_opts =
+      if state.leader? do
+        [on_conflict: [set: [expires_at: peer_data.expires_at]]]
       else
         [on_conflict: :nothing]
       end
 
-    case Repo.insert_all(conf, "oban_peers", [peer_data], repo_opts) do
-      {0, nil} -> %{state | leader?: false}
-      {_, nil} -> %{state | leader?: true}
-    end
+    # MySQL always returns the number of entries attempted, even when nothing was added. We have
+    # to check the leader after update.
+    Repo.insert_all(state.conf, "oban_peers", [peer_data], repo_opts)
+
+    query_leader(state.conf) == peer_data.node
+  end
+
+  defp notify_down(%State{conf: conf}) do
+    Notifier.notify(conf, :leader, %{down: inspect(conf.name)})
   end
 end
