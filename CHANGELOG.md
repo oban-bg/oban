@@ -107,6 +107,55 @@ is extremely rare) then it warns about a missing module.
 This approach was chosen over a config option for backward compatibility because Oban will only
 support the JSON module once the minimum supported Elixir version is v1.18.
 
+## v2.19.2 — 2025-02-18
+
+### Bug Fixes
+
+- [Peer] Correct leadership elections for the `Dolphin` engine
+
+  MySQL always returns the number of entries attempted, even when nothing was added. The previous
+  match caused all nodes to believe they were the leader. This uses a secondary query within the
+  same transaction to detect if the current instance is the leader.
+
+- [Reindexer] Drop invalid indexes concurrently when reindexing.
+
+  The `DROP INDEX` query would lock the whole table with an `ACCESS EXCLUSIVE` lock and could
+  cause queries to fail unexpectedly.
+
+- [Testing] Use `Ecto.Type.cast/2` for backward compatibility
+
+  The `cast!/2` function wasn't added until Ecto 3.12. This reverts time casting to use `cast/2`
+  for compatibility with earlier Ecto versions.
+
+- [Worker] Validate that the `unique` option isn't an empty list.
+
+  An empty list was accepted at compile time, but wouldn't be valid later at runtime. Now the two
+  validations match for greater parity.
+
+### Enhancements
+
+- [Oban] Allow setting a MFA in `:get_dynamic_repo`
+
+  Anonymous functions don't work with OTP releases, as anonymous functions cannot be used in
+  configuration. Now a MFA tuple can be passed instead of a fun, and the scaling guide recommends
+  a function instead.
+
+- [Cron] Include configured timezone in cron job metadata
+
+  Along with the cron expression, stored as `cron_expr`, the configured timezone is also recorded
+  as `cron_tz` in cron job metadata.
+
+- [Cron] Add `next_at/2` and `last_at/2` for cron time calculations
+
+  This implements jumping functions for cron expressions. Rather than naively iterating through
+  minutes, it uses the expression values to efficiently jump to the next or last cron run time.
+
+- [Executor] Always convert `queue_time` to native time unit
+
+  The telemetry docs state that measurements are recorded in `native` time units. However, that
+  hasn't been the case for `queue_time` for a while now. It usually worked anyway native and
+  nanosecond is of the same resolution, but now it is guaranteed.
+
 ## v2.19.1 — 2025-01-27
 
 ### Bug Fixes
