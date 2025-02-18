@@ -661,12 +661,16 @@ defmodule Oban.Testing do
         time -> {time, 1}
       end
 
-    datetime = Ecto.Type.cast!(:utc_datetime_usec, time)
+    case Ecto.Type.cast(:utc_datetime_usec, time) do
+      {:ok, datetime} ->
+        begin = DateTime.add(datetime, -delta, :second)
+        until = DateTime.add(datetime, +delta, :second)
 
-    begin = DateTime.add(datetime, -delta, :second)
-    until = DateTime.add(datetime, +delta, :second)
+        where(query, [j], fragment("? BETWEEN ? AND ?", field(j, ^key), ^begin, ^until))
 
-    where(query, [j], fragment("? BETWEEN ? AND ?", field(j, ^key), ^begin, ^until))
+      :error ->
+        raise Ecto.CastError, type: :utc_datetime_usec, value: time
+    end
   end
 
   defp conditions({key, value}, query), do: where(query, ^[{key, value}])
