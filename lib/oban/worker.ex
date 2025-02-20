@@ -363,6 +363,7 @@ defmodule Oban.Worker do
 
   See `Oban.Job.new/2` for the available options.
   """
+  @callback new(args :: Job.args()) :: Job.changeset()
   @callback new(args :: Job.args(), opts :: [Job.option()]) :: Job.changeset()
 
   @doc """
