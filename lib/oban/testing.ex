@@ -543,11 +543,9 @@ defmodule Oban.Testing do
   end
 
   defp implements_worker?(worker) do
-    :attributes
-    |> worker.__info__()
-    |> Keyword.get_values(:behaviour)
-    |> List.flatten()
-    |> Enum.member?(Oban.Worker)
+    functions = worker.__info__(:functions)
+
+    Enum.all?([new: 2, perform: 1], &(&1 in functions))
   end
 
   defp assert_valid_changeset(changeset) do
