@@ -109,29 +109,6 @@ support the JSON module once the minimum supported Elixir version is v1.18.
 
 ## v2.19.2 — 2025-02-18
 
-### Bug Fixes
-
-- [Peer] Correct leadership elections for the `Dolphin` engine
-
-  MySQL always returns the number of entries attempted, even when nothing was added. The previous
-  match caused all nodes to believe they were the leader. This uses a secondary query within the
-  same transaction to detect if the current instance is the leader.
-
-- [Reindexer] Drop invalid indexes concurrently when reindexing.
-
-  The `DROP INDEX` query would lock the whole table with an `ACCESS EXCLUSIVE` lock and could
-  cause queries to fail unexpectedly.
-
-- [Testing] Use `Ecto.Type.cast/2` for backward compatibility
-
-  The `cast!/2` function wasn't added until Ecto 3.12. This reverts time casting to use `cast/2`
-  for compatibility with earlier Ecto versions.
-
-- [Worker] Validate that the `unique` option isn't an empty list.
-
-  An empty list was accepted at compile time, but wouldn't be valid later at runtime. Now the two
-  validations match for greater parity.
-
 ### Enhancements
 
 - [Oban] Allow setting a MFA in `:get_dynamic_repo`
@@ -155,6 +132,29 @@ support the JSON module once the minimum supported Elixir version is v1.18.
   The telemetry docs state that measurements are recorded in `native` time units. However, that
   hasn't been the case for `queue_time` for a while now. It usually worked anyway native and
   nanosecond is of the same resolution, but now it is guaranteed.
+
+### Bug Fixes
+
+- [Peer] Correct leadership elections for the `Dolphin` engine
+
+  MySQL always returns the number of entries attempted, even when nothing was added. The previous
+  match caused all nodes to believe they were the leader. This uses a secondary query within the
+  same transaction to detect if the current instance is the leader.
+
+- [Reindexer] Drop invalid indexes concurrently when reindexing.
+
+  The `DROP INDEX` query would lock the whole table with an `ACCESS EXCLUSIVE` lock and could
+  cause queries to fail unexpectedly.
+
+- [Testing] Use `Ecto.Type.cast/2` for backward compatibility
+
+  The `cast!/2` function wasn't added until Ecto 3.12. This reverts time casting to use `cast/2`
+  for compatibility with earlier Ecto versions.
+
+- [Worker] Validate that the `unique` option isn't an empty list.
+
+  An empty list was accepted at compile time, but wouldn't be valid later at runtime. Now the two
+  validations match for greater parity.
 
 ## v2.19.1 — 2025-01-27
 
