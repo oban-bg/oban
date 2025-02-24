@@ -339,7 +339,7 @@ defmodule Oban.Queue.Executor do
   defp log_warning(%__MODULE__{safe: true, worker: worker}, returned) do
     Logger.warning(fn ->
       """
-      Expected #{worker}.perform/1 to return:
+      Expected #{inspect(worker)}.perform/1 to return:
 
       - `:ok`
       - `:discard`
