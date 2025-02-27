@@ -56,6 +56,10 @@ defmodule Oban.Validation do
 
   # Type Validators
 
+  defp validate_type(nil, key, val) when not is_nil(val) do
+    {:error, "expected #{inspect(key)} to be nil, got: #{inspect(val)}"}
+  end
+
   defp validate_type(:any, _key, _val), do: :ok
 
   defp validate_type(:atom, key, val) when not is_atom(val) do
@@ -98,6 +102,12 @@ defmodule Oban.Validation do
     end
   end
 
+  defp validate_type({:custom, fun}, key, val) when is_function(fun, 1) do
+    with {:error, message} <- fun.(val) do
+      {:error, "invalid value for #{inspect(key)}, #{message}"}
+    end
+  end
+
   defp validate_type(:falsy, key, val) when not is_nil(val) and val != false do
     {:error, "expected #{inspect(key)} to be falsy, got: #{inspect(val)}"}
   end
@@ -106,33 +116,25 @@ defmodule Oban.Validation do
     {:error, "expected #{inspect(key)} to be #{arity} arity function, got: #{inspect(val)}"}
   end
 
-  defp validate_type(nil, key, val) when not is_nil(val) do
-    {:error, "expected #{inspect(key)} to be nil, got: #{inspect(val)}"}
-  end
-
-  defp validate_type(:non_neg_integer, key, val) when not is_integer(val) or val < 0 do
-    {:error, "expected #{inspect(key)} to be a non negative integer, got: #{inspect(val)}"}
-  end
-
-  defp validate_type(:pos_integer, key, val) when not is_integer(val) or val < 1 do
-    {:error, "expected #{inspect(key)} to be a positive integer, got: #{inspect(val)}"}
-  end
-
-  defp validate_type({:pattern, regex}, key, val) do
-    cond do
-      not is_binary(val) ->
-        {:error, "expected #{inspect(key)} to be a binary, got: #{inspect(val)}"}
-
-      not Regex.match?(regex, val) ->
-        {:error, "expected #{inspect(key)} to match #{inspect(regex)}, got: #{inspect(val)}"}
-
-      true ->
-        :ok
+  defp validate_type({:list, type}, key, val) when is_list(val) do
+    if Enum.all?(val, &(:ok == validate_type(type, key, &1))) do
+      :ok
+    else
+      {:error, "expected #{inspect(key)} to be a list of #{inspect(type)}, got: #{inspect(val)}"}
     end
   end
 
-  defp validate_type({:range, min..max//_}, key, val) when val < min or val > max do
-    {:error, "expected #{inspect(key)} to be between #{min}..#{max}, got: #{inspect(val)}"}
+  defp validate_type({:list, _type}, key, val) do
+    {:error, "expected #{inspect(key)} to be a list, got: #{inspect(val)}"}
+  end
+
+  defp validate_type(:mfa, key, {module, func, args})
+       when is_atom(module) and is_atom(func) and is_list(args) do
+    if function_exported?(module, func, length(args)) do
+      :ok
+    else
+      {:error, "missing function #{Exception.format_mfa(module, func, length(args))} for #{key}"}
+    end
   end
 
   defp validate_type({:module, funs}, key, val) do
@@ -148,13 +150,37 @@ defmodule Oban.Validation do
     end
   end
 
-  defp validate_type(:mfa, key, {module, func, args})
-       when is_atom(module) and is_atom(func) and is_list(args) do
-    if function_exported?(module, func, length(args)) do
+  defp validate_type(:non_neg_integer, key, val) when not is_integer(val) or val < 0 do
+    {:error, "expected #{inspect(key)} to be a non negative integer, got: #{inspect(val)}"}
+  end
+
+  defp validate_type({:or, types}, key, val) do
+    if Enum.any?(types, &(:ok == validate_type(&1, key, val))) do
       :ok
     else
-      {:error, "missing function #{Exception.format_mfa(module, func, length(args))} for #{key}"}
+      {:error, "expected #{inspect(key)} to be one of #{inspect(types)}, got: #{inspect(val)}"}
     end
+  end
+
+  defp validate_type({:pattern, regex}, key, val) do
+    cond do
+      not is_binary(val) ->
+        {:error, "expected #{inspect(key)} to be a binary, got: #{inspect(val)}"}
+
+      not Regex.match?(regex, val) ->
+        {:error, "expected #{inspect(key)} to match #{inspect(regex)}, got: #{inspect(val)}"}
+
+      true ->
+        :ok
+    end
+  end
+
+  defp validate_type(:pos_integer, key, val) when not is_integer(val) or val < 1 do
+    {:error, "expected #{inspect(key)} to be a positive integer, got: #{inspect(val)}"}
+  end
+
+  defp validate_type({:range, min..max//_}, key, val) when val < min or val > max do
+    {:error, "expected #{inspect(key)} to be between #{min}..#{max}, got: #{inspect(val)}"}
   end
 
   defp validate_type(:schedule, key, val) do
@@ -185,29 +211,18 @@ defmodule Oban.Validation do
     end
   end
 
-  defp validate_type({:custom, fun}, key, val) when is_function(fun, 1) do
-    with {:error, message} <- fun.(val) do
-      {:error, "invalid value for #{inspect(key)}, #{message}"}
-    end
-  end
+  defp validate_type({:tuple, list_of_type}, key, val) when is_tuple(val) do
+    all_valid? =
+      val
+      |> Tuple.to_list()
+      |> Enum.zip(list_of_type)
+      |> Enum.all?(fn {sub_val, type} -> :ok == validate_type(type, key, sub_val) end)
 
-  defp validate_type({:list, type}, key, val) when is_list(val) do
-    if Enum.all?(val, &(:ok == validate_type(type, key, &1))) do
+    if all_valid? do
       :ok
     else
-      {:error, "expected #{inspect(key)} to be a list of #{inspect(type)}, got: #{inspect(val)}"}
-    end
-  end
-
-  defp validate_type({:list, _type}, key, val) do
-    {:error, "expected #{inspect(key)} to be a list, got: #{inspect(val)}"}
-  end
-
-  defp validate_type({:or, types}, key, val) do
-    if Enum.any?(types, &(:ok == validate_type(&1, key, val))) do
-      :ok
-    else
-      {:error, "expected #{inspect(key)} to be one of #{inspect(types)}, got: #{inspect(val)}"}
+      {:error,
+       "expected #{inspect(key)} to be a tuple of #{inspect(list_of_type)}, got: #{inspect(val)}"}
     end
   end
 
