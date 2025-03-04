@@ -105,6 +105,28 @@ defmodule Mix.Tasks.Oban.InstallTest do
       """)
     end
 
+    test "installing doesnt override existing config" do
+      repo = """
+      defmodule Oban.Test.LiteRepo do
+        @moduledoc false
+
+        use Ecto.Repo, otp_app: :oban, adapter: Ecto.Adapters.SQLite3
+      end
+      """
+
+      conf_code = [engine: :foo, notifier: :bar, queues: [foobar: 10], repo: :repo]
+      test_code = [testing: :is_awesome]
+
+      [app_name: :oban, files: %{"lib/oban/repo.ex" => repo}]
+      |> test_project()
+      |> Igniter.Project.Config.configure("config.exs", :oban, [Oban], {:code, conf_code})
+      |> Igniter.Project.Config.configure("test.exs", :oban, [Oban], {:code, test_code})
+      |> apply_igniter!()
+      |> Igniter.compose_task("oban.install", ["--repo", "Oban.Test.LiteRepo"])
+      |> assert_unchanged("config/config.exs")
+      |> assert_unchanged("config/test.exs")
+    end
+
     test "installing selects correct config with alternate repo" do
       repo = """
       defmodule Oban.Test.LiteRepo do
