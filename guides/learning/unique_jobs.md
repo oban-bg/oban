@@ -134,3 +134,33 @@ Uniqueness *does not* rely on unique constraints in the database, which leaves i
 conditions in some circumstances.
 
 [pro-smart-engine]: https://oban.pro/docs/pro/Oban.Pro.Engines.Smart.html
+
+## Relationship between `:fields` and `:keys`
+
+The relationship between `:fields` and `:keys` for uniqueness works like this:
+
+1. `:fields` determines which high-level attributes to compare (`:args`, `:queue`, `:worker`, `:meta`)
+2. If `:args` is in `:fields` **AND** you specify `:keys`, then Oban will only compare those specific keys within the
+  args map
+
+Let's see this with examples from the docs:
+
+```elixir
+# Example 1: Default behavior
+use Oban.Worker,
+  unique: [
+    fields: [:worker, :queue, :args]  # Default
+  ]
+# This compares the entire args map
+
+# Example 2: Using keys to narrow down args comparison
+use Oban.Worker,
+  unique: [
+    keys: [:url],                     # Only compare the :url key within args
+    fields: [:worker, :args]          # Include args in fields to use the keys option
+  ]
+  # This compares only the :url key within the args map
+```
+
+In Example 2 from the docs, even though `:args` is specified in `:fields`, the uniqueness check will only look at the
+`:url` key within the args map because `:keys` is specified.
