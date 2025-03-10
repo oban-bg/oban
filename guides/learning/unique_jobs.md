@@ -135,3 +135,27 @@ conditions in some circumstances. However, Pro's Smart Engine does rely on uniqu
 provides strong uniqueness guarantees.
 
 [pro-smart-engine]: https://oban.pro/docs/pro/Oban.Pro.Engines.Smart.html
+
+## Relationship Between `:fields` and `:keys`
+
+The `:fields` option determines which high-level job attributes Oban will consider when
+checking for uniqueness, including `:args`, `:queue`, `:worker`, and `:meta`.
+
+When `:args` or `:meta` are included in the `:fields` list, the `:keys` option provides additional
+specificity by allowing you to designate particular keys within the map for comparison, rather
+than comparing the entire args map.
+
+Let's see this with an example:
+
+```elixir
+# This compares the entire args map
+use Oban.Worker,
+  unique: [fields: [:worker, :queue, :args]]
+
+# This compares only the :url key within the args map
+use Oban.Worker,
+  unique: [keys: [:url], fields: [:worker, :queue, :args]]
+```
+
+In the second example, the uniqueness check only looks at the `:url` key within the `:args` map
+because `:keys` is specified.
