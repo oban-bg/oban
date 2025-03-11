@@ -62,7 +62,7 @@ defmodule Oban.Engines.Lite do
   def insert_job(%Config{} = conf, %Changeset{} = changeset, _opts) do
     with {:ok, job} <- fetch_unique(conf, changeset),
          {:ok, job} <- resolve_conflict(conf, job, changeset) do
-      {:ok, %Job{job | conflict?: true}}
+      {:ok, %{job | conflict?: true}}
     else
       :not_found ->
         Repo.insert(conf, changeset)

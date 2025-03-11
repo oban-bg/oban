@@ -407,11 +407,11 @@ defmodule Oban.Engines.Basic do
          :ok <- acquire_lock(conf, lock_key),
          {:ok, job} <- fetch_job(conf, query, opts),
          {:ok, job} <- resolve_conflict(conf, job, changeset, opts) do
-      {:ok, %Job{job | conflict?: true}}
+      {:ok, %{job | conflict?: true}}
     else
       {:error, :locked} ->
         with {:ok, job} <- Changeset.apply_action(changeset, :insert) do
-          {:ok, %Job{job | conflict?: true}}
+          {:ok, %{job | conflict?: true}}
         end
 
       nil ->
