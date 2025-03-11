@@ -109,22 +109,22 @@ defmodule Oban.Engines.Inline do
   end
 
   defp complete_job(%{job: job, state: :failure}) do
-    %Job{job | errors: [Job.format_attempt(job)], state: "retryable", scheduled_at: utc_now()}
+    %{job | errors: [Job.format_attempt(job)], state: "retryable", scheduled_at: utc_now()}
   end
 
   defp complete_job(%{job: job, state: :cancelled}) do
-    %Job{job | errors: [Job.format_attempt(job)], state: "cancelled", cancelled_at: utc_now()}
+    %{job | errors: [Job.format_attempt(job)], state: "cancelled", cancelled_at: utc_now()}
   end
 
   defp complete_job(%{job: job, state: state}) when state in [:discard, :exhausted] do
-    %Job{job | errors: [Job.format_attempt(job)], state: "discarded", discarded_at: utc_now()}
+    %{job | errors: [Job.format_attempt(job)], state: "discarded", discarded_at: utc_now()}
   end
 
   defp complete_job(%{job: job, state: :success}) do
-    %Job{job | state: "completed", completed_at: utc_now()}
+    %{job | state: "completed", completed_at: utc_now()}
   end
 
   defp complete_job(%{job: job, result: {:snooze, snooze}, state: :snoozed}) do
-    %Job{job | state: "scheduled", scheduled_at: DateTime.add(utc_now(), snooze, :second)}
+    %{job | state: "scheduled", scheduled_at: DateTime.add(utc_now(), snooze, :second)}
   end
 end

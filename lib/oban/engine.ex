@@ -401,7 +401,7 @@ defmodule Oban.Engine do
     if function_exported?(engine, function, arity) do
       conf
     else
-      %Config{conf | engine: Oban.Engines.Basic}
+      %{conf | engine: Oban.Engines.Basic}
     end
   end
 

@@ -55,7 +55,7 @@ defmodule Oban.Engines.Dolphin do
   def insert_job(%Config{} = conf, %Changeset{} = changeset, opts) do
     with {:ok, job} <- fetch_unique(conf, changeset, opts),
          {:ok, job} <- resolve_conflict(conf, job, changeset, opts) do
-      {:ok, %Job{job | conflict?: true}}
+      {:ok, %{job | conflict?: true}}
     else
       :not_found ->
         Repo.insert(conf, changeset)
