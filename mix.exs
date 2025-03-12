@@ -13,12 +13,6 @@ defmodule Oban.MixProject do
       start_permanent: Mix.env() == :prod,
       deps: deps(),
       aliases: aliases(),
-      preferred_cli_env: [
-        bench: :test,
-        "test.ci": :test,
-        "test.reset": :test,
-        "test.setup": :test
-      ],
       xref: [exclude: [Postgrex.Error, MyXQL.Error]],
 
       # Hex
@@ -50,6 +44,10 @@ defmodule Oban.MixProject do
         skip_undefined_reference_warnings_on: ["CHANGELOG.md"]
       ]
     ]
+  end
+
+  def cli do
+    [preferred_envs: [bench: :test, "test.ci": :test, "test.reset": :test, "test.setup": :test]]
   end
 
   def application do
