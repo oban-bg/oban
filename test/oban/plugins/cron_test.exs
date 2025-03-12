@@ -1,5 +1,5 @@
 defmodule Oban.Plugins.CronTest do
-  use Oban.Case, async: true
+  use Oban.Case, async: false
 
   alias Oban.Cron.Expression
   alias Oban.Plugins.Cron
