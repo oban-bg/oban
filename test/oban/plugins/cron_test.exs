@@ -1,9 +1,18 @@
 defmodule Oban.Plugins.CronTest do
   use Oban.Case, async: true
 
+  import Ecto.Query, only: [where: 2]
+
   alias Oban.Cron.Expression
   alias Oban.Plugins.Cron
   alias Oban.{Job, Registry, TelemetryHandler}
+
+  defmodule CronWork do
+    use Oban.Worker, queue: :cron
+
+    @impl Oban.Worker
+    def perform(_job), do: :ok
+  end
 
   defmodule WorkerWithoutPerform do
   end
@@ -13,12 +22,12 @@ defmodule Oban.Plugins.CronTest do
       refute_valid("expected crontab entry to be", crontab: ["* * * *"])
       refute_valid("expected crontab entry to be", crontab: ["* * * * *"])
 
-      assert_valid(crontab: [{"* * * * *", Worker}])
-      assert_valid(crontab: [{"* * * * *", Worker, queue: "special"}])
+      assert_valid(crontab: [{"* * * * *", CronWork}])
+      assert_valid(crontab: [{"* * * * *", CronWork, queue: "special"}])
     end
 
     test ":crontab worker existence is validated" do
-      refute_valid("Fake not found", crontab: [{"* * * * *", Worker}, {"* * * * *", Fake}])
+      refute_valid("Fake not found", crontab: [{"* * * * *", CronWork}, {"* * * * *", Fake}])
     end
 
     test ":crontab worker perform/1 callback is validated" do
@@ -29,12 +38,12 @@ defmodule Oban.Plugins.CronTest do
 
     test ":crontab worker options format is validated" do
       refute_valid("options must be a keyword list",
-        crontab: [{"* * * * *", Worker, %{foo: "bar"}}]
+        crontab: [{"* * * * *", CronWork, %{foo: "bar"}}]
       )
     end
 
     test ":crontab worker options are validated" do
-      refute_valid("expected valid job options", crontab: [{"* * * * *", Worker, priority: -1}])
+      refute_valid("expected valid job options", crontab: [{"* * * * *", CronWork, priority: -1}])
     end
 
     test ":timezone is validated as a known timezone" do
@@ -69,9 +78,9 @@ defmodule Oban.Plugins.CronTest do
 
     run_with_opts(
       crontab: [
-        {"* * * * *", Worker, args: worker_args(1)},
-        {"59 23 31 12 0", Worker, args: worker_args(2)},
-        {"* * * * *", Worker, args: worker_args(3)}
+        {"* * * * *", CronWork, args: worker_args(1)},
+        {"59 23 31 12 0", CronWork, args: worker_args(2)},
+        {"* * * * *", CronWork, args: worker_args(3)}
       ]
     )
 
@@ -90,8 +99,8 @@ defmodule Oban.Plugins.CronTest do
     run_with_opts(
       timezone: "America/Chicago",
       crontab: [
-        {"* #{chi_hour} * * *", Worker, args: worker_args(1)},
-        {"* #{utc_hour} * * *", Worker, args: worker_args(2)}
+        {"* #{chi_hour} * * *", CronWork, args: worker_args(1)},
+        {"* #{utc_hour} * * *", CronWork, args: worker_args(2)}
       ]
     )
 
@@ -102,8 +111,8 @@ defmodule Oban.Plugins.CronTest do
     run_with_opts(
       timezone: "America/Chicago",
       crontab: [
-        {"@reboot", Worker, args: worker_args(1)},
-        {"* * * * *", Worker, args: worker_args(2)}
+        {"@reboot", CronWork, args: worker_args(1)},
+        {"* * * * *", CronWork, args: worker_args(2)}
       ]
     )
 
@@ -115,7 +124,7 @@ defmodule Oban.Plugins.CronTest do
   end
 
   test "reboot jobs are enqueued on startup" do
-    run_with_opts(crontab: [{"@reboot", Worker, args: worker_args(1)}])
+    run_with_opts(crontab: [{"@reboot", CronWork, args: worker_args(1)}])
 
     assert [1] == inserted_refs()
   end
@@ -124,7 +133,7 @@ defmodule Oban.Plugins.CronTest do
     name =
       start_supervised_oban!(
         peer: {Oban.Peers.Isolated, leader?: false},
-        plugins: [{Cron, crontab: [{"@reboot", Worker, args: worker_args(1)}]}]
+        plugins: [{Cron, crontab: [{"@reboot", CronWork, args: worker_args(1)}]}]
       )
 
     send_evaluate(name)
@@ -156,7 +165,7 @@ defmodule Oban.Plugins.CronTest do
   end
 
   defp worker_args(ref) do
-    %{ref: ref, action: "OK", bin_pid: Worker.pid_to_bin()}
+    %{ref: ref, action: "OK"}
   end
 
   defp run_with_opts(opts) do
@@ -177,6 +186,7 @@ defmodule Oban.Plugins.CronTest do
 
   defp inserted_refs do
     Job
+    |> where(queue: "cron")
     |> Repo.all()
     |> Enum.map(fn job -> job.args["ref"] end)
     |> Enum.sort()
