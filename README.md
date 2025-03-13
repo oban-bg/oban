@@ -81,8 +81,11 @@ without worrying about jobs being lost or orphaned due to crashes.
 #### Advanced Features
 
 - **Isolated Queues** — Jobs are stored in a single table but are executed in distinct queues.
-  Each queue runs in isolation, ensuring that a job in a single slow queue can't back up other
-  faster queues.
+  Each queue runs in isolation, with its own concurrency limits, ensuring that a job in a single
+  slow queue can't back up other faster queues.
+
+- **Isolated Jobs** — Every job runs in a dedicated process to provide fully concurrent execution,
+  a clean environment between jobs, and efficient cleanup after the job runs.
 
 - **Queue Control** — Queues can be started, stopped, paused, resumed and scaled independently at
   runtime locally or across _all_ running nodes (even in environments like Heroku, without
