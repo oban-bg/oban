@@ -56,8 +56,9 @@ defmodule Oban.SonarTest do
       name = start_supervised_oban!(notifier: Oban.Notifiers.Isolated)
       time = System.monotonic_time(:millisecond)
 
-      Notifier.notify(name, :sonar, %{node: "web.1", time: time + :timer.seconds(29)})
-      Notifier.notify(name, :sonar, %{node: "web.2", time: time + :timer.seconds(31)})
+      Notifier.notify(name, :sonar, %{node: "web.0", time: time - :timer.seconds(10)})
+      Notifier.notify(name, :sonar, %{node: "web.1", time: time - :timer.seconds(29)})
+      Notifier.notify(name, :sonar, %{node: "web.2", time: time - :timer.seconds(31)})
 
       nodes =
         name

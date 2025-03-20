@@ -115,8 +115,9 @@ defmodule Oban.Sonar do
   end
 
   defp prune_stale_nodes(state) do
-    stale = System.monotonic_time(:millisecond) + state.interval * state.stale_mult
-    nodes = Map.reject(state.nodes, fn {_, recorded} -> recorded > stale end)
+    stime = System.monotonic_time(:millisecond)
+    stale = state.interval * state.stale_mult
+    nodes = Map.reject(state.nodes, fn {_, recorded} -> stime - recorded > stale end)
 
     %{state | nodes: nodes}
   end
