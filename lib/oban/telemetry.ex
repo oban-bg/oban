@@ -55,7 +55,7 @@ defmodule Oban.Telemetry do
     Raised exceptions are passes as is, crashes are wrapped in an `Oban.CrashError`, timeouts in
     `Oban.TimeoutError`, and all other errors are normalized into an `Oban.PerformError`.
 
-  * `:stacktrace` — the `t:Exception.stacktrace/0` for crashes or raised exceptions. Failures from 
+  * `:stacktrace` — the `t:Exception.stacktrace/0` for crashes or raised exceptions. Failures from
     manual error returns won't contain any application code entries and may have an empty
     stacktrace.
 
@@ -524,25 +524,28 @@ defmodule Oban.Telemetry do
   end
 
   def handle_event([:oban, :peer, :election, :stop], _measure, meta, opts) do
-    log(opts, fn ->
-      %{leader: leader, was_leader: was_leader} = meta
+    %{leader: leader, was_leader: was_leader} = meta
 
-      message =
-        cond do
-          leader and was_leader -> "peer remained leader"
-          leader and not was_leader -> "peer became leader"
-          not leader and was_leader -> "peer is no longer leader"
-          true -> "peer is not leader"
-        end
+    message =
+      cond do
+        leader and not was_leader -> "peer became leader"
+        not leader and was_leader -> "peer is no longer leader"
+        true -> :ignore
+      end
 
-      %{
-        event: "peer:election",
-        leader: leader,
-        message: message,
-        node: meta.conf.node,
-        was_leader: was_leader
-      }
-    end)
+    if message != :ignore do
+      log(opts, fn ->
+        %{
+          event: "peer:election",
+          leader: leader,
+          message: message,
+          node: meta.conf.node,
+          was_leader: was_leader
+        }
+      end)
+    else
+      :ok
+    end
   end
 
   def handle_event([:oban, :plugin, :exception], measure, meta, opts) do
