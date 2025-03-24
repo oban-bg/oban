@@ -107,6 +107,42 @@ is extremely rare) then it warns about a missing module.
 This approach was chosen over a config option for backward compatibility because Oban will only
 support the JSON module once the minimum supported Elixir version is v1.18.
 
+## v2.19.3 — 2025-03-24
+
+### Bug Fixes
+
+- [Install] Use `configure_new` for idempotent installation.
+
+  Prevent overwriting existing `:oban` configuration when running installer.
+
+- [Sonar] Correct stale node logic for sonar tracking.
+
+  The original code had a logical error. By calculating `stale` as current time + interval *
+  multiplier, it would reject nodes that were recorded in the future relative to the current time
+  (which is unlikely to be the intended behavior) The new code correctly identifies stale nodes by
+  checking if they're older than the threshold.
+
+### Enhancements
+
+- [Worker] Check for worker functions rather than behaviour
+
+  Behaviours can't contain overlapping callbacks. In order to have a worker-like module that
+  defines it's own `timeout/1` or `backoff/1`, we must use an alternate callback.
+
+- [Worker] Improve warning message on incorrect return from `perform/1`.
+
+- [Telemetry] Skip logging peer events unless node leadership changes.
+
+  The default logger only outputs peer events when something changed: either the peer became
+  leader or lost the leader.
+
+- [Validation] Add schema validator for tuple options.
+
+  Being able to validate tuples eliminates the need for custom validator functions in several
+  locations.
+
+- [Oban] Compatiblity updates for changes in the upcoming Elixir v1.19
+
 ## v2.19.2 — 2025-02-18
 
 ### Enhancements
