@@ -6,6 +6,8 @@ defmodule Oban.Stager do
   alias Oban.{Engine, Job, Notifier, Peer, Plugin, Registry, Repo}
   alias __MODULE__, as: State
 
+  require Logger
+
   @type option :: Plugin.option() | {:interval, pos_integer()}
 
   defstruct [
@@ -64,6 +66,16 @@ defmodule Oban.Stager do
     end)
 
     {:noreply, schedule_staging(state)}
+  end
+
+  def handle_info(message, state) do
+    Logger.warning(
+      message: "Received unexpected message: #{inspect(message)}",
+      source: :oban,
+      module: __MODULE__
+    )
+
+    {:noreply, state}
   end
 
   defp stage_and_notify(true = _leader, state) do

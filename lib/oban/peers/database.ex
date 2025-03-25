@@ -141,13 +141,7 @@ defmodule Oban.Peers.Database do
     end
   end
 
-  def handle_info(message, state) do
-    Logger.warning(
-      message: "Received unexpected message: #{inspect(message)}",
-      source: :oban,
-      module: __MODULE__
-    )
-
+  def handle_info(_message, state) do
     {:noreply, state}
   end
 

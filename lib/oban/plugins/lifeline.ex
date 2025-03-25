@@ -56,6 +56,8 @@ defmodule Oban.Plugins.Lifeline do
   alias Oban.{Engine, Job, Peer, Plugin, Repo, Validation}
   alias __MODULE__, as: State
 
+  require Logger
+
   @type option ::
           Plugin.option()
           | {:interval, timeout()}
@@ -127,6 +129,16 @@ defmodule Oban.Plugins.Lifeline do
     end)
 
     {:noreply, schedule_rescue(state)}
+  end
+
+  def handle_info(message, state) do
+    Logger.warning(
+      message: "Received unexpected message: #{inspect(message)}",
+      source: :oban,
+      module: __MODULE__
+    )
+
+    {:noreply, state}
   end
 
   # Scheduling

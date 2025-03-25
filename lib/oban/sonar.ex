@@ -6,6 +6,8 @@ defmodule Oban.Sonar do
   alias Oban.Notifier
   alias __MODULE__, as: State
 
+  require Logger
+
   defstruct [
     :conf,
     :timer,
@@ -85,6 +87,16 @@ defmodule Oban.Sonar do
       state
       |> Map.update!(:nodes, &Map.put(&1, node, time))
       |> update_status()
+
+    {:noreply, state}
+  end
+
+  def handle_info(message, state) do
+    Logger.warning(
+      message: "Received unexpected message: #{inspect(message)}",
+      source: :oban,
+      module: __MODULE__
+    )
 
     {:noreply, state}
   end

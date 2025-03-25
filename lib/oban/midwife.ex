@@ -6,6 +6,8 @@ defmodule Oban.Midwife do
   alias Oban.{Config, Notifier, Queue, Registry}
   alias __MODULE__, as: State
 
+  require Logger
+
   defstruct [:conf]
 
   @spec start_link(Keyword.t()) :: GenServer.on_start()
@@ -90,7 +92,13 @@ defmodule Oban.Midwife do
     {:noreply, state}
   end
 
-  def handle_info(_message, state) do
+  def handle_info(message, state) do
+    Logger.warning(
+      message: "Received unexpected message: #{inspect(message)}",
+      source: :oban,
+      module: __MODULE__
+    )
+
     {:noreply, state}
   end
 

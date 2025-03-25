@@ -69,6 +69,8 @@ defmodule Oban.Plugins.Cron do
   alias Oban.{Cron, Job, Peer, Plugin, Repo, Validation, Worker}
   alias __MODULE__, as: State
 
+  require Logger
+
   @opaque expression :: Expression.t()
 
   @type cron_input :: {binary(), module()} | {binary(), module(), [Job.option()]}
@@ -184,6 +186,16 @@ defmodule Oban.Plugins.Cron do
     else
       {:noreply, schedule_evaluate(state)}
     end
+  end
+
+  def handle_info(message, state) do
+    Logger.warning(
+      message: "Received unexpected message: #{inspect(message)}",
+      source: :oban,
+      module: __MODULE__
+    )
+
+    {:noreply, state}
   end
 
   # Parsing & Validation Helpers

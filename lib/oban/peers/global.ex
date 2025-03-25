@@ -116,6 +116,10 @@ defmodule Oban.Peers.Global do
     end
   end
 
+  def handle_info(_message, state) do
+    {:noreply, state}
+  end
+
   # Helpers
 
   defp schedule_election(%State{interval: interval} = state) do

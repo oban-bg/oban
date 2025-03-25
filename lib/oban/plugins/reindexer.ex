@@ -49,6 +49,8 @@ defmodule Oban.Plugins.Reindexer do
   alias Oban.{Cron, Peer, Plugin, Repo, Validation}
   alias __MODULE__, as: State
 
+  require Logger
+
   @type option ::
           Plugin.option()
           | {:indexes, [String.t()]}
@@ -115,6 +117,16 @@ defmodule Oban.Plugins.Reindexer do
           {:error, Map.put(meta, :error, error)}
       end
     end)
+
+    {:noreply, state}
+  end
+
+  def handle_info(message, state) do
+    Logger.warning(
+      message: "Received unexpected message: #{inspect(message)}",
+      source: :oban,
+      module: __MODULE__
+    )
 
     {:noreply, state}
   end

@@ -54,6 +54,8 @@ defmodule Oban.Plugins.Pruner do
   alias Oban.{Engine, Job, Peer, Plugin, Repo, Validation}
   alias __MODULE__, as: State
 
+  require Logger
+
   @type option ::
           Plugin.option()
           | {:interval, pos_integer()}
@@ -127,6 +129,20 @@ defmodule Oban.Plugins.Pruner do
     {:noreply, schedule_prune(state)}
   end
 
+  def handle_info(message, state) do
+    Logger.warning(
+      message: "Received unexpected message: #{inspect(message)}",
+      source: :oban,
+      module: __MODULE__
+    )
+
+    {:noreply, state}
+  end
+
+  defp schedule_prune(state) do
+    %{state | timer: Process.send_after(self(), :prune, state.interval)}
+  end
+
   defp check_leadership_and_delete_jobs(state) do
     if Peer.leader?(state.conf) do
       Repo.transaction(state.conf, fn ->
@@ -138,9 +154,5 @@ defmodule Oban.Plugins.Pruner do
     else
       {:ok, %{pruned_count: 0, pruned_jobs: []}}
     end
-  end
-
-  defp schedule_prune(state) do
-    %{state | timer: Process.send_after(self(), :prune, state.interval)}
   end
 end

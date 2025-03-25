@@ -73,4 +73,8 @@ defmodule Oban.Notifiers.Isolated do
   def handle_info({:DOWN, _ref, :process, pid, _reason}, state) do
     {:noreply, %{state | listeners: Map.delete(state.listeners, pid)}}
   end
+
+  def handle_info(_message, state) do
+    {:noreply, state}
+  end
 end
