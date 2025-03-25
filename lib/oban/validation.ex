@@ -54,6 +54,27 @@ defmodule Oban.Validation do
     end
   end
 
+  @doc false
+  def validate_integer(key, value, opts \\ []) do
+    min = Keyword.get(opts, :min, 1)
+
+    if is_integer(value) and value > min - 1 do
+      :ok
+    else
+      {:error, "expected #{inspect(key)} to be a positive integer, got: #{inspect(value)}"}
+    end
+  end
+
+  @doc false
+  def validate_timeout(key, value) do
+    if (is_integer(value) and value > 0) or value == :infinity do
+      :ok
+    else
+      {:error,
+       "expected #{inspect(key)} to be a positive integer or :infinity, got: #{inspect(value)}"}
+    end
+  end
+
   # Type Validators
 
   defp validate_type(nil, key, val) when not is_nil(val) do
