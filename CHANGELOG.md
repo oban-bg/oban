@@ -107,6 +107,21 @@ is extremely rare) then it warns about a missing module.
 This approach was chosen over a config option for backward compatibility because Oban will only
 support the JSON module once the minimum supported Elixir version is v1.18.
 
+## v2.19.4 — 2025-03-25
+
+### Bug Fixes
+
+- [Validation] Partially revert removal of unused validators.
+
+  Some validations are actively used by the current version of Oban Pro and shouldn't have been
+  removed.
+
+- [Plugins] Handle and log all unexpected messages.
+
+  Some genservers handled unexpected messages while others did not. Now all plugins and other
+  genservers consistently handle those messages. Public facing modules, such as plugins, all log a
+  warning about the message while internal modules ignore them.
+
 ## v2.19.3 — 2025-03-24
 
 ### Bug Fixes
