@@ -651,7 +651,7 @@ defmodule Oban.Job do
       not (is_list(keys) and Enum.all?(keys, &is_atom/1)) ->
         {:error, "expected :keys to be a list of atoms"}
 
-      is_nil(keys) and Enum.any?(@keyable_fields, &(&1 in Keyword.get(unique, :fields)))) ->
+      not (is_list(keys) and Enum.any?(@keyable_fields, &(&1 in Keyword.get(unique, :fields)))) ->
         {:error,
          "using :keys expects :fields to contain at least one of #{inspect(@keyable_fields)}"}
 
