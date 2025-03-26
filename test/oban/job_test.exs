@@ -129,6 +129,38 @@ defmodule Oban.JobTest do
       assert Job.new(%{}, worker: Fake, unique: [states: [:random]]).errors[:unique]
       assert Job.new(%{}, worker: Fake, unique: [timestamp: :updated_at]).errors[:unique]
     end
+
+    test "empty keys don't require args or meta in fields" do
+      assert Job.new(%{}, worker: Fake, unique: [keys: [], fields: [:worker]]).valid?
+    end
+
+    test "unique keys are accepted with args or meta in fields" do
+      assert Job.new(%{}, worker: Fake, unique: [keys: [], fields: [:worker, :args]]).valid?
+
+      assert Job.new(%{}, worker: Fake, unique: [keys: [:some_key], fields: [:worker, :args]]).valid?
+
+      assert Job.new(%{}, worker: Fake, unique: [keys: [:some_key], fields: [:worker, :meta]]).valid?
+
+      assert Job.new(%{}, worker: Fake, unique: [keys: [:some_key], fields: [:args]]).valid?
+      assert Job.new(%{}, worker: Fake, unique: [keys: [:some_key], fields: [:meta]]).valid?
+    end
+
+    test "unique keys are rejected without args or meta in fields" do
+      assert Job.new(%{},
+               worker: Fake,
+               unique: [keys: [:some_key], fields: []]
+             ).errors[:unique]
+
+      assert Job.new(%{},
+               worker: Fake,
+               unique: [keys: [:some_key], fields: [:worker]]
+             ).errors[:unique]
+
+      assert Job.new(%{},
+               worker: Fake,
+               unique: [keys: [:some_key], fields: [:worker, :queue]]
+             ).errors[:unique]
+    end
   end
 
   describe "replace options with new/2" do

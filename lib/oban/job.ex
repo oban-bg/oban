@@ -201,6 +201,7 @@ defmodule Oban.Job do
 
   @unique_fields ~w(args meta queue worker)a
   @unique_timestamps ~w(inserted_at scheduled_at)a
+  @keyable_fields ~w(args meta)a
 
   @unique_defaults %{
     fields: ~w(args queue worker)a,
@@ -612,9 +613,7 @@ defmodule Oban.Job do
         end
 
       {:keys, keys} ->
-        if not (is_list(keys) and Enum.all?(keys, &is_atom/1)) do
-          {:error, "expected :keys to be a list of atoms"}
-        end
+        validate_keys(keys, unique)
 
       {:period, :infinity} ->
         :ok
@@ -642,5 +641,22 @@ defmodule Oban.Job do
       option ->
         {:error, "unknown option, #{inspect(option)}"}
     end)
+  end
+
+  defp validate_keys(keys, unique) do
+    cond do
+      keys == [] ->
+        :ok
+
+      not (is_list(keys) and Enum.all?(keys, &is_atom/1)) ->
+        {:error, "expected :keys to be a list of atoms"}
+
+      not (is_list(keys) and Enum.any?(@keyable_fields, &(&1 in Keyword.get(unique, :fields)))) ->
+        {:error,
+         "using :keys expects :fields to contain at least one of #{inspect(@keyable_fields)}"}
+
+      true ->
+        :ok
+    end
   end
 end
