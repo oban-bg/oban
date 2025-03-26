@@ -130,7 +130,13 @@ defmodule Oban.JobTest do
       assert Job.new(%{}, worker: Fake, unique: [timestamp: :updated_at]).errors[:unique]
     end
 
+    test "empty keys don't require args or meta in fields" do
+      assert Job.new(%{}, worker: Fake, unique: [keys: [], fields: [:worker]]).valid?
+    end
+
     test "unique keys are accepted with args or meta in fields" do
+      assert Job.new(%{}, worker: Fake, unique: [keys: [], fields: [:worker, :args]]).valid?
+
       assert Job.new(%{}, worker: Fake, unique: [keys: [:some_key], fields: [:worker, :args]]).valid?
 
       assert Job.new(%{}, worker: Fake, unique: [keys: [:some_key], fields: [:worker, :meta]]).valid?
