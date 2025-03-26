@@ -201,7 +201,7 @@ defmodule Oban.Job do
 
   @unique_fields ~w(args meta queue worker)a
   @unique_timestamps ~w(inserted_at scheduled_at)a
-  @key_compatible_fields ~w(args meta)a
+  @keyable_fields ~w(args meta)a
 
   @unique_defaults %{
     fields: ~w(args queue worker)a,
@@ -651,10 +651,9 @@ defmodule Oban.Job do
       not (is_list(keys) and Enum.all?(keys, &is_atom/1)) ->
         {:error, "expected :keys to be a list of atoms"}
 
-      not (is_list(keys) and
-               Enum.any?(@key_compatible_fields, &(&1 in Keyword.get(unique, :fields)))) ->
+      is_nil(keys) and Enum.any?(@keyable_fields, &(&1 in Keyword.get(unique, :fields)))) ->
         {:error,
-         "using :keys expects :fields to contain at least one of #{inspect(@key_compatible_fields)}"}
+         "using :keys expects :fields to contain at least one of #{inspect(@keyable_fields)}"}
 
       true ->
         :ok
