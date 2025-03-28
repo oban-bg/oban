@@ -3,6 +3,8 @@ defmodule Mix.Tasks.Oban.InstallTest do
 
   import Igniter.Test
 
+  @moduletag :igniter
+
   describe "install" do
     test "installing without an available ecto repo" do
       assert {:error, [warning]} =
