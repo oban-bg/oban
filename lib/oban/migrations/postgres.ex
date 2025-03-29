@@ -6,7 +6,7 @@ defmodule Oban.Migrations.Postgres do
   use Ecto.Migration
 
   @initial_version 1
-  @current_version 12
+  @current_version 13
   @default_prefix "public"
 
   @doc false
