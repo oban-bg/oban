@@ -124,7 +124,9 @@ defmodule Oban.Validation do
   end
 
   defp validate_type({:custom, fun}, key, val) when is_function(fun, 1) do
-    with {:error, message} <- fun.(val) do
+    with {:error, error} <- fun.(val) do
+      message = if is_exception(error), do: error.message, else: error
+
       {:error, "invalid value for #{inspect(key)}, #{message}"}
     end
   end

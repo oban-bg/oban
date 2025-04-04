@@ -42,6 +42,10 @@ defmodule Oban.Plugins.CronTest do
       )
     end
 
+    test ":crontab worker range expression is validated" do
+      refute_valid(crontab: [{"* * * * SAT-SUN", CronWork}])
+    end
+
     test ":crontab worker options are validated" do
       refute_valid("expected valid job options", crontab: [{"* * * * *", CronWork, priority: -1}])
     end
