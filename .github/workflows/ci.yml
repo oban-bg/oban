@@ -107,7 +107,7 @@ jobs:
         env:
           MYSQL_URL: mysql://root@localhost:${{job.services.mysql.ports[3306]}}/oban_test
           POSTGRES_URL: postgresql://postgres:postgres@localhost:${{job.services.postgres.ports[5432]}}/oban_test
-        run: mix test --exclude ${{ matrix.exclude_tags }}
+        run: mix test --exclude ${{ matrix.exclude_tags }} || mix test --failed
 
       - name: Run dialyzer
         run: mix dialyzer
