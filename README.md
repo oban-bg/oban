@@ -32,7 +32,7 @@
 ## Table of Contents
 
 - [Features](#features)
-- [Oban Pro](#oban-pro)
+- [Oban Pro](#-oban-pro)
 - [Engines](#engines)
 - [Requirements](#requirements)
 - [Installation](#installation)
