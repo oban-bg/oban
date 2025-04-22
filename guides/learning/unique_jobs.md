@@ -21,10 +21,15 @@ Uniqueness is based on a combination of job attributes based on the following op
     historic jobs. This allows a job with multiple key/value pairs in its arguments to be compared
     using only a subset of them.
 
-  * `:states` — The job states that are checked for duplicates. The available states are
-    described in `t:Oban.Job.unique_state/0`. By default, Oban checks all states except for
-    `:discarded` and `:cancelled`, which prevents duplicates even if the previous job has been
-    completed.
+  * `:states` — The job states that are checked for duplicates. You can use a named group or
+    a list of individual states. The available named groups are:
+
+    * `:all` - All states
+    * `:incomplete` - Jobs that haven't completed processing
+    * `:scheduled` - Only `scheduled` jobs (useful for "debouncing")
+    * `:successful` - Jobs that aren't `cancelled` or `discarded` (the default)
+
+    By default, `:successful` is used, which prevents duplicates even if the previous job has been completed.
 
   * `:timestamp` — Which job timestamp to check the period against. The available timestamps are
     `:inserted_at` or `:scheduled_at`. Defaults to `:inserted_at` for legacy reasons.
@@ -48,7 +53,7 @@ use Oban.Worker,
     # Don't consider the whole :args field, but just the :url field within :args
     keys: [:url],
     # Consider a job unique across all states, including :cancelled/:discarded
-    states: Oban.Job.states(),
+    states: :all,
     # Consider a job unique across queues; only compare the :url key within
     # the :args, as per the :keys configuration above
     fields: [:worker, :args]
@@ -136,7 +141,7 @@ provides strong uniqueness guarantees.
 
 [pro-smart-engine]: https://oban.pro/docs/pro/Oban.Pro.Engines.Smart.html
 
-## Relationship Between `:fields` and `:keys`
+## Specifying Fields and Keys
 
 The `:fields` option determines which high-level job attributes Oban will consider when
 checking for uniqueness, including `:args`, `:queue`, `:worker`, and `:meta`.

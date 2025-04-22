@@ -92,7 +92,7 @@ defmodule Oban.JobTest do
                fields: [:args, :queue, :worker],
                keys: [],
                period: 60,
-               states: [:scheduled, :available, :executing, :retryable, :completed],
+               states: ~w(scheduled available executing retryable completed)a,
                timestamp: :inserted_at
              }
     end
@@ -160,6 +160,12 @@ defmodule Oban.JobTest do
                worker: Fake,
                unique: [keys: [:some_key], fields: [:worker, :queue]]
              ).errors[:unique]
+    end
+
+    test "unique state groups are expanded into a list of states" do
+      changeset = Job.new(%{}, unique: [states: :incomplete])
+
+      assert ~w(available scheduled executing retryable)a = changeset.changes.unique.states
     end
   end
 
