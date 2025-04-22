@@ -68,6 +68,7 @@ defmodule Oban.MixProject do
 
       # Learning
       "guides/learning/defining_queues.md",
+      "guides/learning/job_lifecycle.md",
       "guides/learning/scheduling_jobs.md",
       "guides/learning/periodic_jobs.md",
       "guides/learning/unique_jobs.md",
@@ -110,6 +111,7 @@ defmodule Oban.MixProject do
 
   defp groups_for_extras do
     [
+      External: ~r{https:},
       Introduction: ~r{guides/introduction/[^\/]+\.md},
       Learning: ~r{guides/learning/[^\/]+\.md},
       Advanced: ~r{guides/advanced/[^\/]+\.md},
