@@ -24,7 +24,7 @@ defmodule Oban.Plugins.Cron do
          {"0 * * * *", MyApp.HourlyWorker, args: %{custom: "arg"}},
          {"0 0 * * *", MyApp.DailyWorker, max_attempts: 1},
          {"0 12 * * MON", MyApp.MondayWorker, queue: :scheduled, tags: ["mondays"]},
-         {"@daily", MyApp.AnotherDailyWorker}
+         {"@daily", MyApp.AnotherDailyWorker, timezone: "Europe/City"}
        ]}
     ]
   ```
@@ -46,9 +46,10 @@ defmodule Oban.Plugins.Cron do
   * `:crontab` — a list of cron expressions that enqueue jobs on a periodic basis. See [*Periodic
     Jobs* guide][perjob] for syntax and details.
 
-  * `:timezone` — which timezone to use when scheduling cron jobs. To use a timezone other than
-    the default of `Etc/UTC` you *must* have a timezone database like [tz][tz] installed and
-    configured.
+  * `:timezone` — which timezone to use when scheduling cron jobs.
+    You can override the plugin's timezone by passing a `:timezone` option to individual cron jobs.
+    To use a timezone other than the default of `Etc/UTC` you *must*
+    have a timezone database like [tz][tz] installed and configured.
 
   ## Instrumenting with Telemetry
 
@@ -73,7 +74,8 @@ defmodule Oban.Plugins.Cron do
 
   @opaque expression :: Expression.t()
 
-  @type cron_input :: {binary(), module()} | {binary(), module(), [Job.option()]}
+  @type cron_opt :: {:timezone, Calendar.time_zone()}
+  @type cron_input :: {binary(), module()} | {binary(), module(), [Job.option() | cron_opt()]}
 
   @type option ::
           Plugin.option()
@@ -229,6 +231,9 @@ defmodule Oban.Plugins.Cron do
         not build_changeset(worker, opts, expr, "Etc/UTC").valid? ->
           {:error, "expected valid job options, got: #{inspect(opts)}"}
 
+        not timezone_valid?(opts) ->
+          {:error, "invalid timezone option: #{inspect(opts[:timezone])}"}
+
         true ->
           :ok
       end
@@ -245,7 +250,10 @@ defmodule Oban.Plugins.Cron do
        "{expression, worker, options} tuple, got: #{inspect(invalid)}"}
   end
 
-  # Scheduling Helpers
+  defp timezone_valid?(opts) do
+    timezone = opts[:timezone]
+    !timezone or match?({:ok, _}, DateTime.now(timezone))
+  end
 
   defp schedule_evaluate(state) do
     timer = Process.send_after(self(), :evaluate, interval_to_next_minute())
@@ -263,10 +271,16 @@ defmodule Oban.Plugins.Cron do
 
   defp insert_scheduled_jobs(state) do
     fun = fn ->
-      {:ok, datetime} = DateTime.now(state.timezone)
+      utc_now = DateTime.now!("Etc/UTC")
 
-      for {expr, parsed, worker, opts} <- state.crontab, Expression.now?(parsed, datetime) do
-        Oban.insert!(state.conf.name, build_changeset(worker, opts, expr, state.timezone))
+      for {expr, parsed, worker, opts} <- state.crontab,
+          (
+            {cron_timezone, job_opts} = Keyword.pop(opts, :timezone)
+            timezone = cron_timezone || state.timezone
+            datetime = DateTime.shift_zone!(utc_now, timezone)
+            Expression.now?(parsed, datetime)
+          ) do
+        Oban.insert!(state.conf.name, build_changeset(worker, job_opts, expr, timezone))
       end
     end
 
