@@ -178,8 +178,49 @@ defmodule Oban.Repo do
 
   defp jittery_sleep(delay), do: delay |> Backoff.jitter() |> Process.sleep()
 
+  @doc """
+  Executes a function with a dynamic repo using the provided configuration.
+
+  This function allows executing queries with a dynamically chosen repo, which may be determined
+  through either a function or a module/function/args tuple. When used within a transaction, the
+  dynamic repo is not switched from the current repo.
+
+  ## Examples
+
+      config = Oban.config(Oban)
+
+      Oban.Repo.with_dynamic_repo(config, fn repo ->
+        repo.all(Oban.Job)
+      end)
+  """
+  @doc since: "2.20.0"
+  def with_dynamic_repo(%{get_dynamic_repo: dyn_fun, repo: repo} = conf, fun)
+      when (is_function(dyn_fun, 0) or is_tuple(dyn_fun)) and is_function(fun, 1) do
+    prev_repo = repo.get_dynamic_repo()
+
+    dyna_repo =
+      case dyn_fun do
+        {mod, fun, arg} -> apply(mod, fun, arg)
+        fun -> fun.()
+      end
+
+    try do
+      if not in_transaction?(conf, prev_repo) do
+        repo.put_dynamic_repo(dyna_repo)
+      end
+
+      fun.(repo)
+    after
+      repo.put_dynamic_repo(prev_repo)
+    end
+  end
+
+  def with_dynamic_repo(%{repo: repo}, fun) when is_function(fun, 1) do
+    fun.(repo)
+  end
+
   defp __dispatch__(name, [%Config{} = conf | args]) do
-    with_dynamic_repo(conf, name, args)
+    dynamic_dispatch(conf, name, args)
   end
 
   defp __dispatch__(name, [%Config{} = conf | args], opts) when is_list(opts) do
@@ -188,32 +229,11 @@ defmodule Oban.Repo do
       |> default_options()
       |> Keyword.merge(opts)
 
-    with_dynamic_repo(conf, name, args ++ [opts])
+    dynamic_dispatch(conf, name, args ++ [opts])
   end
 
-  defp with_dynamic_repo(%{get_dynamic_repo: fun} = conf, name, args)
-       when is_function(fun, 0) or is_tuple(fun) do
-    prev_instance = conf.repo.get_dynamic_repo()
-
-    dynamic_repo =
-      case fun do
-        {module, func, args} -> apply(module, func, args)
-        fun -> fun.()
-      end
-
-    try do
-      if not in_transaction?(conf, prev_instance) do
-        conf.repo.put_dynamic_repo(dynamic_repo)
-      end
-
-      apply(conf.repo, name, args)
-    after
-      conf.repo.put_dynamic_repo(prev_instance)
-    end
-  end
-
-  defp with_dynamic_repo(conf, name, args) do
-    apply(conf.repo, name, args)
+  defp dynamic_dispatch(conf, name, args) do
+    with_dynamic_repo(conf, fn repo -> apply(repo, name, args) end)
   end
 
   defp in_transaction?(conf, instance) when is_pid(instance), do: conf.repo.in_transaction?()
