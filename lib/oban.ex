@@ -215,11 +215,11 @@ defmodule Oban do
         Oban.insert!(__MODULE__, changeset, opts)
       end
 
-      def insert_all(changesets, opts) do
+      def insert_all(changesets, opts \\ []) do
         Oban.insert_all(__MODULE__, changesets, opts)
       end
 
-      def insert_all(multi, multi_name, changesets, opts) do
+      def insert_all(multi, multi_name, changesets, opts \\ []) do
         Oban.insert_all(__MODULE__, multi, multi_name, changesets, opts)
       end
 
@@ -273,7 +273,9 @@ defmodule Oban do
                      insert: 4,
                      insert!: 1,
                      insert!: 2,
+                     insert_all: 1,
                      insert_all: 2,
+                     insert_all: 3,
                      insert_all: 4,
                      start_queue: 1,
                      pause_queue: 1,
