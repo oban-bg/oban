@@ -468,30 +468,35 @@ defmodule Oban.Telemetry do
     log(opts, fn ->
       details = Map.take(meta.job, ~w(attempt args id max_attempts meta queue tags worker)a)
 
-      extra =
+      {extra, metadata} =
         case event do
           :start ->
-            %{event: "job:start", system_time: measure.system_time}
+            {%{event: "job:start", system_time: measure.system_time}, []}
 
           :stop ->
-            %{
+            extra = %{
               duration: convert(measure.duration),
               event: "job:stop",
               queue_time: convert(measure.queue_time),
               state: meta.state
             }
 
+            {extra, []}
+
           :exception ->
-            %{
+            extra = %{
               error: Exception.format_banner(meta.kind, meta.reason, meta.stacktrace),
               event: "job:exception",
               duration: convert(measure.duration),
               queue_time: convert(measure.queue_time),
               state: meta.state
             }
+
+            {extra, crash_reason: to_crash_reason(meta.kind, meta.reason, meta.stacktrace)}
         end
 
-      Map.merge(details, extra)
+      report = Map.merge(details, extra)
+      {report, metadata}
     end)
   end
 
@@ -550,21 +555,24 @@ defmodule Oban.Telemetry do
 
   def handle_event([:oban, :plugin, :exception], measure, meta, opts) do
     log(opts, fn ->
-      error =
+      {error, crash_reason} =
         case meta do
           %{kind: kind, reason: reason, stacktrace: stacktrace} ->
-            Exception.format_banner(kind, reason, stacktrace)
+            {Exception.format_banner(kind, reason, stacktrace),
+             to_crash_reason(kind, reason, stacktrace)}
 
           %{error: error} ->
-            Exception.format_banner(:error, error)
+            {Exception.format_banner(:error, error), {error, []}}
         end
 
-      %{
+      message = %{
         duration: convert(measure.duration),
         error: error,
         event: "plugin:exception",
         plugin: inspect(meta.plugin)
       }
+
+      {message, crash_reason: crash_reason}
     end)
   end
 
@@ -621,16 +629,31 @@ defmodule Oban.Telemetry do
   defp log(opts, fun) do
     level = Keyword.fetch!(opts, :level)
 
-    Logger.log(level, fn ->
-      output = Map.put(fun.(), :source, "oban")
-
-      if Keyword.fetch!(opts, :encode) do
-        JSON.encode_to_iodata!(output)
-      else
-        output
+    {message, metadata} =
+      case fun.() do
+        {message, metadata} -> {message, metadata}
+        message -> {message, []}
       end
-    end)
+
+    message = Map.put(message, :source, "oban")
+
+    Logger.log(
+      level,
+      fn ->
+        if Keyword.fetch!(opts, :encode) do
+          JSON.encode_to_iodata!(message)
+        else
+          message
+        end
+      end,
+      metadata
+    )
   end
 
   defp convert(value), do: System.convert_time_unit(value, :native, :microsecond)
+
+  defp to_crash_reason(:throw, reason, stacktrace), do: {{:nocatch, reason}, stacktrace}
+
+  defp to_crash_reason(kind, reason, stacktrace),
+    do: {Exception.normalize(kind, reason, stacktrace), stacktrace}
 end
