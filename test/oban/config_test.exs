@@ -195,8 +195,8 @@ defmodule Oban.ConfigTest do
       assert %{stage_interval: 1_000} = conf([])
       assert %{stage_interval: 2_000} = conf(poll_interval: 2_000)
       assert %{stage_interval: 1_000} = conf(poll_interval: :infinity, stage_interval: 1_000)
-      assert %{stage_interval: 1_000} = conf(plugins: [Oban.Plugins.Stager])
-      assert %{stage_interval: 2_000} = conf(plugins: [{Oban.Plugins.Stager, interval: 2_000}])
+      assert %{stage_interval: 1_000} = conf(plugins: [Oban.Stager])
+      assert %{stage_interval: 2_000} = conf(plugins: [{Oban.Stager, interval: 2_000}])
     end
 
     test "translating :peer false to the disabled module" do

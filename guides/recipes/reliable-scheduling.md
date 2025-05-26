@@ -80,13 +80,10 @@ very_soon = DateTime.utc_now() |> DateTime.add(500, :millisecond)
 |> Oban.insert()
 ```
 
-your workers may not be aware of/attempt to perform the job until the next tick
-as specific by the [Oban Stager][stag] `:interval` option. By default this is
-set to `1_000ms`.
+your workers may not be aware of/attempt to perform the job until the next tick as specific by the
+`Oban.Stager` `:interval` option. By default this is set to `1_000ms`.
 
 **Be aware:** Configuring the `:interval` option below the recommended default
 can have a considerable impact on database performance! It is not advised to
 lower this value and should only be done as a last resort after considering
 other ways to achieve your desired outcome.
-
-[stag]: Oban.Plugins.Stager.html

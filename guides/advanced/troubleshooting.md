@@ -53,10 +53,8 @@ There are several options available to ensure functional notifications:
 
 3. Use a dedicated Repo that connects directly to the database, bypassing `PgBouncer`.
 
-If none of those options work, the [Stager][stag] will switch to `local` polling mode to ensure
+If none of those options work, the `Oban.Stager` will switch to `local` polling mode to ensure
 that queues keep processing jobs.
-
-[stag]: Oban.Plugins.Stager.html
 
 ## Unexpectedly Re-running All Migrations
 

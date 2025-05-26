@@ -320,7 +320,7 @@ defmodule Oban.Config do
         |> Keyword.delete(:poll_interval)
 
       Keyword.keyword?(opts[:plugins]) ->
-        {stager_opts, opts} = pop_in(opts, [:plugins, Oban.Plugins.Stager])
+        {stager_opts, opts} = pop_in(opts, [:plugins, Oban.Stager])
 
         if is_list(stager_opts) and Keyword.has_key?(stager_opts, :interval) do
           Keyword.put_new(opts, :stage_interval, stager_opts[:interval])
