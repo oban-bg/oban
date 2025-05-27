@@ -82,8 +82,6 @@ if Code.ensure_loaded?(Igniter) do
             end
 
           migration = """
-          use Ecto.Migration
-
           def up, do: Oban.Migration.up()
 
           def down, do: Oban.Migration.down(version: 1)
