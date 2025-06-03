@@ -25,6 +25,11 @@ defmodule Oban do
   """
   @type name :: term()
 
+  @typedoc """
+  A job identifier that can be either a Job struct or the job's integer id.
+  """
+  @type job_or_id :: Job.t() | integer()
+
   @type oban_node :: String.t()
 
   @type queue_name :: atom() | binary()
@@ -1272,7 +1277,7 @@ defmodule Oban do
       :ok
   """
   @doc since: "2.2.0"
-  @spec retry_job(name(), job_or_id :: Job.t() | integer()) :: :ok
+  @spec retry_job(name(), job_or_id()) :: :ok
   def retry_job(name \\ __MODULE__, job_or_id) do
     conf = config(name)
 
@@ -1342,7 +1347,7 @@ defmodule Oban do
       :ok
   """
   @doc since: "1.3.0"
-  @spec cancel_job(name(), job_or_id :: Job.t() | integer()) :: :ok
+  @spec cancel_job(name(), job_or_id()) :: :ok
   def cancel_job(name \\ __MODULE__, job_or_id)
 
   def cancel_job(name, %Job{id: job_id}), do: cancel_job(name, job_id)
@@ -1409,7 +1414,7 @@ defmodule Oban do
       :ok
   """
   @doc since: "1.19.0"
-  @spec delete_job(name(), job_or_id :: Job.t() | integer()) :: :ok
+  @spec delete_job(name(), job_or_id()) :: :ok
   def delete_job(name \\ __MODULE__, job_or_id) do
     conf = config(name)
 
@@ -1495,7 +1500,7 @@ defmodule Oban do
       end)
   """
   @doc since: "2.20.0"
-  @spec update_job(name(), Job.t() | integer(), map() | (Job.t() -> map())) ::
+  @spec update_job(name(), job_or_id(), map() | (Job.t() -> map())) ::
           {:ok, Job.t()} | {:error, term()}
   def update_job(name \\ __MODULE__, job_or_id, changes_or_fun) do
     conf = config(name)
