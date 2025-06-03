@@ -30,17 +30,32 @@ defmodule Oban do
   """
   @type job_or_id :: Job.t() | integer()
 
+  @typedoc """
+  A string identifier for an Oban node.
+  """
   @type oban_node :: String.t()
 
+  @typedoc """
+  The name of a queue, which can be either an atom or a binary string.
+  """
   @type queue_name :: atom() | binary()
 
+  @typedoc """
+  Shared options for queue configuration operations.
+  """
   @type queue_option ::
           {:local_only, boolean()}
           | {:node, oban_node()}
           | {:queue, queue_name()}
 
+  @typedoc """
+  Shared options for configuration operations that affect all queues.
+  """
   @type queue_all_option :: {:local_only, boolean()} | {:node, oban_node()}
 
+  @typedoc """
+  The current state of a queue, containing information about its configuration and runtime status.
+  """
   @type queue_state :: %{
           :limit => pos_integer(),
           :node => oban_node(),
@@ -52,6 +67,11 @@ defmodule Oban do
           optional(atom()) => any()
         }
 
+  @typedoc """
+  Configuration options for starting an Oban instance.
+
+  See `start_link1/` for more information on individual options.
+  """
   @type option ::
           {:dispatch_cooldown, pos_integer()}
           | {:engine, module()}
@@ -69,6 +89,9 @@ defmodule Oban do
           | {:stage_interval, timeout()}
           | {:testing, :disabled | :inline | :manual}
 
+  @typedoc """
+  Options for draining jobs from a queue.
+  """
   @type drain_option ::
           {:queue, queue_name()}
           | {:with_limit, pos_integer()}
@@ -76,6 +99,9 @@ defmodule Oban do
           | {:with_safety, boolean()}
           | {:with_scheduled, boolean() | DateTime.t()}
 
+  @typedoc """
+  The result of a queue drain operation, containing counts of jobs by their final state.
+  """
   @type drain_result :: %{
           cancelled: non_neg_integer(),
           discard: non_neg_integer(),
@@ -84,11 +110,29 @@ defmodule Oban do
           success: non_neg_integer()
         }
 
+  @typedoc """
+  A job changeset or a function that generates a job changeset.
+  """
   @type changeset_or_fun :: Job.changeset() | Job.changeset_fun()
+
+  @typedoc """
+  A list of job changesets or a wrapper containing changesets.
+  """
   @type changesets_or_wrapper :: Job.changeset_list() | changeset_wrapper()
+
+  @typedoc """
+  A list of job changesets, a wrapper containing changesets, or a function that generates them.
+  """
   @type changesets_or_wrapper_or_fun :: changesets_or_wrapper() | Job.changeset_list_fun()
+
+  @typedoc """
+  A wrapper map containing a list of job changesets and optional additional metadata.
+  """
   @type changeset_wrapper :: %{:changesets => Job.changeset_list(), optional(atom()) => term()}
-  @type multi :: Multi.t()
+
+  @typedoc """
+  A name for an operation within an Ecto.Multi.
+  """
   @type multi_name :: Multi.name()
 
   defguardp is_changeset_or_fun(cf)
@@ -567,7 +611,7 @@ defmodule Oban do
     |> Engine.insert_job(changeset, opts)
   end
 
-  @spec insert(multi(), multi_name(), changeset_or_fun()) :: multi()
+  @spec insert(Multi.t(), multi_name(), changeset_or_fun()) :: Multi.t()
   def insert(%Multi{} = multi, multi_name, changeset) when is_changeset_or_fun(changeset) do
     insert(__MODULE__, multi, multi_name, changeset, [])
   end
@@ -598,7 +642,7 @@ defmodule Oban do
       |> MyApp.Repo.transaction()
   """
   @doc since: "0.7.0"
-  @spec insert(name, multi(), multi_name(), changeset_or_fun(), Keyword.t()) :: multi()
+  @spec insert(name, Multi.t(), multi_name(), changeset_or_fun(), Keyword.t()) :: Multi.t()
   def insert(name, multi, multi_name, changeset, opts)
       when is_changeset_or_fun(changeset) and is_list(opts) do
     name
@@ -713,10 +757,10 @@ defmodule Oban do
   """
   @doc since: "0.9.0"
   @spec insert_all(
-          name() | multi(),
+          name() | Multi.t(),
           changesets_or_wrapper() | multi_name(),
           Keyword.t() | changesets_or_wrapper_or_fun()
-        ) :: [Job.t()] | multi()
+        ) :: [Job.t()] | Multi.t()
   def insert_all(name \\ __MODULE__, changesets, opts \\ [])
 
   def insert_all(name, changesets, opts) when is_list_or_wrapper(changesets) and is_list(opts) do
@@ -767,8 +811,8 @@ defmodule Oban do
       |> MyApp.Repo.transaction()
   """
   @doc since: "0.9.0"
-  @spec insert_all(name(), multi(), multi_name(), changesets_or_wrapper_or_fun(), Keyword.t()) ::
-          multi()
+  @spec insert_all(name(), Multi.t(), multi_name(), changesets_or_wrapper_or_fun(), Keyword.t()) ::
+          Multi.t()
   def insert_all(name, multi, multi_name, changesets, opts)
       when is_list_or_wrapper(changesets) and is_list(opts) do
     name
