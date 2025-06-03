@@ -158,6 +158,11 @@ defmodule Oban.Engine do
   """
   @callback retry_all_jobs(conf(), queryable()) :: {:ok, [map()]}
 
+  @doc """
+  Update a job with the given changes map. The job must not be currently executing.
+  """
+  @callback update_job(conf(), Job.t(), map()) :: {:ok, Job.t()} | {:error, term()}
+
   @optional_callbacks [
     check_available: 1,
     delete_job: 2,
@@ -166,7 +171,8 @@ defmodule Oban.Engine do
     insert_job: 5,
     prune_jobs: 3,
     rescue_jobs: 3,
-    stage_jobs: 3
+    stage_jobs: 3,
+    update_job: 3
   ]
 
   @doc false
@@ -370,6 +376,17 @@ defmodule Oban.Engine do
     with_span(:retry_all_jobs, conf, %{queryable: queryable}, fn engine ->
       with {:ok, jobs} <- engine.retry_all_jobs(conf, queryable) do
         {:meta, {:ok, jobs}, %{jobs: jobs}}
+      end
+    end)
+  end
+
+  @doc false
+  def update_job(%Config{} = conf, %Job{} = job, changes) when is_map(changes) do
+    conf = with_compatible_engine(conf, :update_job, 3)
+
+    with_span(:update_job, conf, %{job: job, changes: changes}, fn engine ->
+      with {:ok, updated_job} <- engine.update_job(conf, job, changes) do
+        {:meta, {:ok, updated_job}, %{job: updated_job}}
       end
     end)
   end

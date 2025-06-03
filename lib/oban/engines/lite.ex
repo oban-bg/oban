@@ -303,6 +303,20 @@ defmodule Oban.Engines.Lite do
     {:ok, jobs}
   end
 
+  @impl Engine
+  def update_job(%Config{} = conf, %Job{} = job, changes) when is_map(changes) do
+    updater = fn ->
+      job
+      |> Job.update(changes)
+      |> then(&Repo.update(conf, &1))
+    end
+
+    case Repo.transaction(conf, updater) do
+      {:ok, result} -> result
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
   # Insertion
 
   defp fetch_unique(conf, %{changes: %{unique: %{} = unique}} = changeset) do

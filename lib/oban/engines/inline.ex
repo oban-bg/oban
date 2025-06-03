@@ -71,6 +71,13 @@ defmodule Oban.Engines.Inline do
   @impl Engine
   def retry_all_jobs(_conf, _queryable), do: {:ok, []}
 
+  @impl Engine
+  def update_job(_conf, %Job{} = job, changes) when is_map(changes) do
+    job
+    |> Job.update(changes)
+    |> Ecto.Changeset.apply_action(:update)
+  end
+
   # Changeset Helpers
 
   defp expand(value), do: expand(value, %{})

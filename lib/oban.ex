@@ -16,7 +16,7 @@ defmodule Oban do
   use Supervisor
 
   alias Ecto.{Changeset, Multi}
-  alias Oban.{Config, Engine, Job, Notifier, Nursery, Peer, Registry, Sonar, Stager}
+  alias Oban.{Config, Engine, Job, Notifier, Nursery, Peer, Registry, Repo, Sonar, Stager}
   alias Oban.Queue.{Drainer, Producer}
 
   @typedoc """
@@ -259,6 +259,10 @@ defmodule Oban do
         Oban.retry_all_jobs(__MODULE__, queryable)
       end
 
+      def update_job(job_or_id, changes_or_fun) do
+        Oban.update_job(__MODULE__, job_or_id, changes_or_fun)
+      end
+
       defoverridable cancel_all_jobs: 1,
                      cancel_job: 1,
                      check_queue: 1,
@@ -285,7 +289,8 @@ defmodule Oban do
                      scale_queue: 1,
                      stop_queue: 1,
                      retry_job: 1,
-                     retry_all_jobs: 1
+                     retry_all_jobs: 1,
+                     update_job: 2
     end
   end
 
@@ -1437,6 +1442,89 @@ defmodule Oban do
     {:ok, deleted_jobs} = Engine.delete_all_jobs(conf, queryable)
 
     {:ok, length(deleted_jobs)}
+  end
+
+  @doc """
+  Update a job with the given changes.
+
+  This function accepts either a job struct or id, along with either a map of changes or a
+  function that receives the job and returns a map of changes.
+
+  The update operation is wrapped in a transaction with a locking clause (when available) to
+  prevent concurrent modifications.
+
+  ### Fields and Validations
+
+  All changes are validated using the same validations as `insert/2`. Only the following subset of
+  fields can be updated:
+
+  * `:args`
+  * `:max_attempts`
+  * `:meta`
+  * `:priority`
+  * `:queue`
+  * `:scheduled_at`
+  * `:tags`
+  * `:worker`
+
+  > #### Updating Executing Jobs {: .warning}
+  >
+  > Use caution when updating jobs that are currently `executing`. Modifying fields like `:args`,
+  > `:queue`, or `:worker` while a job is running may lead to unexpected behavior or inconsistent
+  > state. Consider whether the job should be cancelled first, or if the update should be deferred
+  > until after execution completes.
+
+  ## Examples
+
+  Update a job with a map of changes:
+
+      Oban.update_job(job, %{tags: ["urgent"], priority: 0})
+
+  Update a job by id:
+
+      Oban.update_job(123, %{tags: ["processed"], meta: %{batch_id: 456}})
+
+  Update a job using a function:
+
+      Oban.update_job(job, fn job -> %{tags: ["retry" | job.tags]} end)
+
+  Using a named Oban instance:
+
+      Oban.update_job(MyApp.Oban, job, fn job ->
+        %{meta: Map.put(job.meta, "processed_at", DateTime.utc_now())}
+      end)
+  """
+  @doc since: "2.20.0"
+  @spec update_job(name(), Job.t() | integer(), map() | (Job.t() -> map())) ::
+          {:ok, Job.t()} | {:error, term()}
+  def update_job(name \\ __MODULE__, job_or_id, changes_or_fun) do
+    conf = config(name)
+
+    with {:ok, job} <- resolve_job(conf, job_or_id),
+         {:ok, changes} <- resolve_changes(job, changes_or_fun) do
+      Engine.update_job(conf, job, changes)
+    end
+  end
+
+  defp resolve_job(_conf, %Job{} = job), do: {:ok, job}
+
+  defp resolve_job(conf, job_id) when is_integer(job_id) do
+    case Repo.get(conf, Job, job_id) do
+      nil -> {:error, :not_found}
+      job -> {:ok, job}
+    end
+  end
+
+  defp resolve_changes(_job, changes) when is_map(changes), do: {:ok, changes}
+
+  defp resolve_changes(job, fun) when is_function(fun, 1) do
+    case fun.(job) do
+      changes when is_map(changes) ->
+        {:ok, changes}
+
+      other ->
+        {:error, "function must return a map, got: #{inspect(other)}"}
+    end
   end
 
   ## Child Spec Helpers

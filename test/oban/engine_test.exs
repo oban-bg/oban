@@ -638,6 +638,29 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite, Oban.Engines.Dolphin] do
       end
     end
 
+    describe "update_job/3" do
+      setup :start_supervised_oban
+
+      test "updating jobs with a map of changes or function", %{name: name} do
+        TelemetryHandler.attach_events(span_type: [[:engine, :update_job]])
+
+        job_1 = insert!(name, %{}, priority: 1)
+        job_2 = insert!(name, %{}, priority: 1)
+        job_3 = insert!(name, %{}, priority: 1, tags: ["original"])
+
+        assert {:ok, job_1} = Oban.update_job(name, job_1, %{tags: ["tag"], priority: 5})
+        assert {:ok, job_2} = Oban.update_job(name, job_2.id, %{tags: ["tag"], priority: 5})
+        assert {:ok, job_3} = Oban.update_job(name, job_3.id, &%{tags: ["updated" | &1.tags]})
+        assert {:error, :not_found} = Oban.update_job(name, 0, &%{tags: ["updated" | &1.tags]})
+
+        assert %{tags: ["tag"], priority: 5} = job_1
+        assert %{tags: ["tag"], priority: 5} = job_2
+        assert %{tags: ["updated", "original"], priority: 1} = job_3
+
+        assert_receive {:event, [:update_job, :stop], _, %{job: _}}
+      end
+    end
+
     describe "shutdown/2" do
       setup :start_supervised_oban
 

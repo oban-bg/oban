@@ -340,6 +340,9 @@ defmodule Oban.Engines.Dolphin do
     end)
   end
 
+  @impl Engine
+  defdelegate update_job(conf, job, changes), to: Basic
+
   # Insertion
 
   defp fetch_unique(conf, %{changes: %{unique: %{} = unique}} = changeset, opts) do

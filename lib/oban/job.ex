@@ -183,6 +183,17 @@ defmodule Oban.Job do
     worker
   )a
 
+  @updatable_params ~w(
+    args
+    max_attempts
+    meta
+    priority
+    queue
+    scheduled_at
+    tags
+    worker
+  )a
+
   @required_params ~w(worker args)a
   @replace_options ~w(args max_attempts meta priority queue scheduled_at tags worker)a
   @virtual_params ~w(replace replace_args schedule_in unique)a
@@ -322,6 +333,31 @@ defmodule Oban.Job do
     |> validate_unique()
     |> normalize_state()
     |> check_constraint(:attempt, name: :attempt_range)
+    |> check_constraint(:max_attempts, name: :positive_max_attempts)
+    |> check_constraint(:priority, name: :priority_range)
+  end
+
+  @doc """
+  Construct a changeset for updating an existing job with the given changes.
+
+  Only a subset of fields are allowed to be updated, and all validations from `new/2`
+  are applied to ensure data integrity.
+
+  ## Examples
+
+  Update the tags and priority of a job:
+
+      Oban.Job.update(job, %{tags: ["urgent"], priority: 5})
+  """
+  @doc since: "2.20.0"
+  @spec update(t(), map()) :: Ecto.Changeset.t()
+  def update(%__MODULE__{} = job, changes) when is_map(changes) do
+    job
+    |> cast(changes, @updatable_params)
+    |> validate_length(:queue, min: 1, max: 128)
+    |> validate_length(:worker, min: 1, max: 128)
+    |> validate_number(:max_attempts, greater_than: 0)
+    |> validate_number(:priority, greater_than: -1, less_than: 10)
     |> check_constraint(:max_attempts, name: :positive_max_attempts)
     |> check_constraint(:priority, name: :priority_range)
   end

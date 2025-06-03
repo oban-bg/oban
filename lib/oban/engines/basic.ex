@@ -361,6 +361,31 @@ defmodule Oban.Engines.Basic do
     {:ok, jobs}
   end
 
+  @impl Engine
+  def update_job(%Config{} = conf, %Job{id: id}, changes) when is_map(changes) do
+    updater = fn ->
+      query =
+        Job
+        |> where([j], j.id == ^id)
+        |> lock("FOR UPDATE SKIP LOCKED")
+
+      case Repo.one(conf, query) do
+        nil ->
+          {:error, :locked_or_not_found}
+
+        job ->
+          job
+          |> Job.update(changes)
+          |> then(&Repo.update(conf, &1))
+      end
+    end
+
+    case Repo.transaction(conf, updater) do
+      {:ok, result} -> result
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
   # Validation
 
   defp validate_meta_opt(opt, _acc) do
