@@ -36,6 +36,30 @@ The solution is to disable leadership with `peer: false` on any node that doesn'
 config :my_app, Oban, peer: false, ...
 ```
 
+## Cron @reboot Not Running in Development
+
+The `@reboot` cron expression depends on leadership to prevent duplicate job insertion across
+nodes. In development, when you shut down your application (e.g., by exiting IEx), the node may
+not cleanly relinquish leadership in the database. This creates a delay before the node can become
+leader again on the next startup, making it appear as though `@reboot` jobs aren't working.
+
+### Solutions
+
+1. **Wait for leadership** - The default peer will eventually assume leadership, typically within 30 seconds.
+
+2. **Use the Global peer in development** - The `Global` peer handles restarts more gracefully:
+
+   ```elixir
+   # In config/dev.exs
+   config :my_app, Oban,
+     peer: Oban.Peers.Global,
+     ...
+   ```
+
+3. **Clear leadership manually** - If needed, you can clear the `oban_peers` table in your database to force immediate leadership.
+
+Keep the default peer in production for better reliability and persistence across restarts.
+
 ## No Notifications with PgBouncer
 
 Using PgBouncer's "Transaction Pooling" setup disables all of PostgreSQL's `LISTEN` and `NOTIFY`

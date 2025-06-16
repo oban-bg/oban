@@ -104,6 +104,28 @@ Oban supports these common cron aliases for better readability:
 | `@yearly` (or `@annually`) | `0 0 1 1 *`                                     |
 | `@reboot`                  | Run once at boot time across the entire cluster |
 
+### The @reboot Expression
+
+The `@reboot` expression is special—it runs once when a node becomes the leader, rather than at a
+specific time. This behavior depends on Oban's leadership system, which can cause unexpected
+delays in development environments.
+
+In development, when you shut down your application the node may not cleanly relinquish
+leadership. This creates a delay before the node can become leader again on the next startup,
+making it appear as though `@reboot` jobs aren't working.
+
+To avoid this delay in development, you can use the `Global` peer instead of the default:
+
+```elixir
+# In config/dev.exs
+config :my_app, Oban,
+  peer: Oban.Peers.Global,
+  ...
+```
+
+The `Global` peer uses Erlang's global registration, which handles development restarts more
+gracefully. Keep the default peer in production for better reliability.
+
 ### Examples
 
 ### Practical Examples
@@ -136,7 +158,8 @@ For more in depth information, see the man documentation for `cron` and `crontab
 
 * **Cluster Behavior**: Only the leader node inserts periodic jobs, which prevents duplicate job
   creation in a cluster. However, any node with the appropriate queue and workers can execute the
-  job once it's inserted.
+  job once it's inserted. This leadership-based approach is particularly important for `@reboot`
+  jobs—they only run when a node becomes the leader, not necessarily immediately at startup.
 
 * **Resolution Limit**: Cron scheduling has a one-minute resolution at minimum. For more frequent
   executions, consider alternative approaches.
