@@ -34,7 +34,7 @@ is essential for preventing duplicate work—only the leader node runs global pl
 
 ### Available Peer Implementations
 
-Oban provides three peer implementations:
+Oban provides two peer implementations:
 
 * `Oban.Peers.Database` — Uses the `oban_peers` table for leadership coordination. Works in any
   environment, with or without clustering. This is the default and recommended for production.
@@ -43,9 +43,9 @@ Oban provides three peer implementations:
   Erlang, but handles development restarts more gracefully. Recommended for development
   environments where leadership delays can be problematic.
 
-* `Oban.Peers.Isolated` — Set this with `peer: false` or `plugins: false`, this mode disables
-  leadership entirely. Use this when you explicitly don't want a node to become leader (e.g.,
-  web-only nodes that don't run plugins).
+A third, psuedo, mode is to disable leadership entirely with `peer: false` or `plugins: false`.
+This is useful when you explicitly don't want a node to become leader (e.g., web-only nodes that
+don't run plugins).
 
 ### Configuring Peers
 
