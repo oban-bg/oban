@@ -54,13 +54,57 @@ use Oban.Worker,
     keys: [:url],
     # Consider a job unique across all states, including :cancelled/:discarded
     states: :all,
-    # Consider a job unique across queues; only compare the :url key within
+    # Consider a job unique across queues; only compare the :worker and :url key within
     # the :args, as per the :keys configuration above
     fields: [:worker, :args]
   ]
 ```
 
-## Detecting Unique Conflicts
+> #### Unique Guarantees {: .tip}
+> 
+> Oban strives for uniqueness of jobs through transactional locks and database queries. Uniqueness
+> *does not* rely on unique constraints in the database, which leaves it prone to race conditions
+> in some circumstances.
+>
+> 🌟 [Pro's Smart Engine][pro-smart-engine] *does* rely on unique constraints and provides strong
+> uniqueness guarantees.
+
+[pro-smart-engine]: https://oban.pro/docs/pro/Oban.Pro.Engines.Smart.html
+
+## Uniqueness vs Concurrency
+
+Understanding the distinction between uniqueness and concurrency is crucial for designing
+efficient processing pipelines. While these concepts may seem related, they operate at
+different stages of a job's lifecycle.
+
+Uniqueness operates at **job insertion time**. When a job is marked as unique, Oban checks
+whether an identical job already exists in the queue before inserting a new one.
+
+* **When it applies**-During job insertion
+* **What it prevents**-Duplicate jobs from being inserted
+* **What it doesn't affect**-Which jobs run concurrently
+
+A common misunderstanding is that unique jobs run one at a time or in sequence. This isn't
+true—uniqueness only prevents duplicate insertions. Once unique jobs are in the queue, they'll run
+according to the queue's concurrency settings.
+
+For example, given the following configuration that allows 10 concurrent email jobs:
+
+```elixir
+config :my_app, Oban, queues: [emails: 10]
+```
+
+These 10 unique jobs will all run concurrently:
+
+```elixir
+1..10
+|> Enum.map(&MyApp.EmailWorker.new(%{user_id: &1}, unique: true))
+|> Oban.insert_all()
+```
+
+To restrict the number of jobs that run at once you must set concurrency accordingly.
+
+## Detecting Conflicts
 
 When unique settings match an existing job, the return value of `Oban.insert/2` is still `{:ok,
 job}`. However, you can detect a unique conflict by checking the job's `:conflict?` field. If
@@ -80,13 +124,6 @@ case Oban.insert(changeset) do
     result
 end
 ```
-
-> #### Caveat with `insert_all` {: .warning}
->
-> Unless you are using Oban Pro's [Smart Engine][pro-smart-engine], Oban only detects conflicts
-> for jobs enqueued through [`Oban.insert/2,3`](`Oban.insert/2`). When using the [Basic
-> Engine](`Oban.Engines.Basic`), jobs enqueued through `Oban.insert_all/2` *do not* use per-job
-> unique configuration.
 
 ## Replacing Values
 
@@ -121,7 +158,7 @@ Another example is bumping the scheduled time on conflict. Either `:scheduled_at
 UrgentWorker.new(args, schedule_in: 1, replace: [scheduled: [:scheduled_at]])
 ```
 
-> #### Jobs in the `:executing` State {: .error}
+> #### Jobs in the `:executing` State {: .warning}
 >
 > If you use this feature to replace a field (such as `:args`) in the `:executing` state by doing
 > something like
@@ -131,15 +168,6 @@ UrgentWorker.new(args, schedule_in: 1, replace: [scheduled: [:scheduled_at]])
 > ```
 >
 > then Oban will update `:args`, but the job will continue executing with the original value.
-
-## Unique Guarantees
-
-Oban **strives** for uniqueness of jobs through transactional locks and database queries.
-Uniqueness *does not* rely on unique constraints in the database, which leaves it prone to race
-conditions in some circumstances. However, Pro's Smart Engine does rely on unique constraints and
-provides strong uniqueness guarantees.
-
-[pro-smart-engine]: https://oban.pro/docs/pro/Oban.Pro.Engines.Smart.html
 
 ## Specifying Fields and Keys
 
@@ -164,3 +192,4 @@ use Oban.Worker,
 
 In the second example, the uniqueness check only looks at the `:url` key within the `:args` map
 because `:keys` is specified.
+
