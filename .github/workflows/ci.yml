@@ -2,6 +2,8 @@ name: ci
 
 on:
   push:
+    branches:
+      - main
     paths-ignore:
       - 'guides/**'
   pull_request:
