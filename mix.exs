@@ -172,18 +172,22 @@ defmodule Oban.MixProject do
   defp deps do
     [
       {:ecto_sql, "~> 3.10"},
+      {:telemetry, "~> 1.3"},
+
+      # Optional
       {:ecto_sqlite3, "~> 0.9", optional: true},
       {:jason, "~> 1.1", optional: true},
       {:igniter, "~> 0.5", optional: true},
       {:myxql, "~> 0.7", optional: true},
-      {:postgrex, "~> 0.16", optional: true},
-      {:telemetry, "~> 0.4 or ~> 1.0"},
+      {:postgrex, "~> 0.20", optional: true},
+
+      # Test and Dev
       {:stream_data, "~> 1.0", only: [:test, :dev]},
       {:tz, "~> 0.24", only: [:test, :dev]},
-      {:benchee, "~> 1.0", only: [:test, :dev], runtime: false},
-      {:credo, "~> 1.7.7-rc.0", only: [:test, :dev], runtime: false},
-      {:dialyxir, "~> 1.0", only: [:test, :dev], runtime: false},
-      {:ex_doc, "~> 0.36", only: [:test, :dev], runtime: false},
+      {:benchee, "~> 1.4", only: [:test, :dev], runtime: false},
+      {:credo, "~> 1.7", only: [:test, :dev], runtime: false},
+      {:dialyxir, "~> 1.4", only: [:test, :dev], runtime: false},
+      {:ex_doc, "~> 0.38", only: [:test, :dev], runtime: false},
       {:makeup_diff, "~> 0.1", only: [:test, :dev], runtime: false}
     ]
   end
