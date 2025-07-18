@@ -169,7 +169,7 @@ Oban requires:
 
 * Elixir 1.15+
 * Erlang 24+
-* PostgreSQL 12.0+, MySQL 8.0+, or SQLite3 3.37.0+
+* PostgreSQL 12.0+, MySQL 8.4+, or SQLite3 3.37.0+
 
 ## Installation
 
