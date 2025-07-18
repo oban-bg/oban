@@ -102,6 +102,20 @@ defmodule Oban.TestingTest do
     end
   end
 
+  describe "perform_job/1,2" do
+    test "executing a job created with build_job/3" do
+      assert {:ok, %{"foo" => "bar"}} =
+               EchoWorker
+               |> build_job(%{field: :meta}, meta: %{foo: "bar"})
+               |> perform_job()
+
+      assert {:ok, %{"foo" => "bar"}} =
+               EchoWorker
+               |> build_job(%{field: :meta}, meta: %{foo: "bar"})
+               |> perform_job(prefix: "private")
+    end
+  end
+
   describe "perform_job/3" do
     test "verifying that the worker implements the Oban.Worker behaviour" do
       message = "worker to be a module that implements"

@@ -127,7 +127,21 @@ defmodule Oban.Testing do
 
       defdelegate build_job(worker, args, opts \\ []), to: Testing
 
-      def perform_job(worker, args, opts \\ []) do
+      def perform_job(job) when is_struct(job) do
+        perform_job(job, [])
+      end
+
+      def perform_job(job, opts) when is_struct(job) and is_list(opts) do
+        opts = Keyword.merge(unquote(repo_opts), opts)
+
+        Testing.perform_job(job, opts)
+      end
+
+      def perform_job(worker, args) when is_atom(worker) do
+        perform_job(worker, args, [])
+      end
+
+      def perform_job(worker, args, opts) do
         opts = Keyword.merge(unquote(repo_opts), opts)
 
         Testing.perform_job(worker, args, opts)
