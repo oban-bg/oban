@@ -16,7 +16,7 @@ defmodule Oban do
   use Supervisor
 
   alias Ecto.{Changeset, Multi}
-  alias Oban.{Config, Engine, Job, Notifier, Nursery, Peer, Registry, Repo, Sonar, Stager}
+  alias Oban.{Config, Engine, Harbor, Job, Notifier, Nursery, Peer, Registry, Repo, Sonar}
   alias Oban.Queue.{Drainer, Producer}
 
   @typedoc """
@@ -537,16 +537,15 @@ defmodule Oban do
   def whereis(name), do: Registry.whereis(name)
 
   @impl Supervisor
-  def init(%Config{name: name, plugins: plugins} = conf) do
+  def init(%Config{name: name} = conf) do
     children = [
       {Notifier, conf: conf, name: Registry.via(name, Notifier)},
       {Nursery, conf: conf, name: Registry.via(name, Nursery)},
       {Peer, conf: conf, name: Registry.via(name, Peer)},
       {Sonar, conf: conf, name: Registry.via(name, Sonar)},
-      {Stager, conf: conf, name: Registry.via(name, Stager)}
+      {Harbor, conf: conf, name: Registry.via(name, Harbor)}
     ]
 
-    children = children ++ Enum.map(plugins, &plugin_child_spec(&1, conf))
     children = children ++ event_child_spec(conf)
 
     Supervisor.init(children, strategy: :one_for_one)
@@ -1577,13 +1576,6 @@ defmodule Oban do
   end
 
   ## Child Spec Helpers
-
-  defp plugin_child_spec({module, opts}, conf) do
-    name = Registry.via(conf.name, {:plugin, module})
-    opts = Keyword.merge(opts, conf: conf, name: name)
-
-    Supervisor.child_spec({module, opts}, id: {:plugin, module})
-  end
 
   defp event_child_spec(conf) do
     time = %{system_time: System.system_time()}
