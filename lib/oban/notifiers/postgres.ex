@@ -24,7 +24,7 @@ if Code.ensure_loaded?(Postgrex) do
     are only delivered **after a transaction completes** and are de-duplicated before publishing.
     This means that notifications sent during a transaction will not be sent if the transaction is
     rolled back, providing consistency; this is the only notifer which provides that guarantee.
-    However, it is not as scalable as other notifiers because because each notification requires a
+    However, it is not as scalable as other notifiers because each notification requires a
     separate query and notifications can't exceed 8kb.
 
     Typically, applications run Ecto in sandbox mode while testing, but sandbox mode wraps each test
