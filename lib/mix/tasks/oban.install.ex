@@ -137,13 +137,6 @@ if Code.ensure_loaded?(Igniter) do
       end
     end
 
-    # {:ok, zipper} <- Igniter.Code.Module.move_to_module_using(zipper, @known_repos) do
-    # with :error <- extract_adapter_from_ecto_repo(zipper),
-    #   :error <- extract_adapter_from_ash_postgres_repo(zipper),
-    #   :error <- extract_adapter_from_ash_sqlite_repo(zipper) do
-    # Ecto.Adapters.Postgres
-    # else
-
     defp extract_adapter(igniter, repo) do
       with {:ok, {_, _, zipper}} <- Igniter.Project.Module.find_module(igniter, repo),
            {:ok, zipper} <- Igniter.Code.Module.move_to_module_using(zipper, @known_repos) do
