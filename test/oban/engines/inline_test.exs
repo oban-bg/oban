@@ -37,6 +37,13 @@ defmodule Oban.Engines.InlineTest do
     end
   end
 
+  test "executing unscheduled or unavailable jobs skips execution" do
+    name = start_supervised_oban!(testing: :inline)
+
+    assert {:ok, _} = Oban.insert(name, Worker.new(%{action: "FAIL"}, state: "cancelled"))
+    assert {:ok, _} = Oban.insert(name, Worker.new(%{action: "FAIL"}, state: "completed"))
+  end
+
   test "executing multiple jobs inserted from a stream" do
     name = start_supervised_oban!(testing: :inline)
 

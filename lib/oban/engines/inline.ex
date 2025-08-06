@@ -98,11 +98,14 @@ defmodule Oban.Engines.Inline do
       |> Changeset.update_change(:meta, &json_recode/1)
 
     case Changeset.apply_action(changeset, :insert) do
-      {:ok, job} ->
+      {:ok, job} when job.state in ["scheduled", "available"] ->
         conf
         |> Executor.new(job, safe: false)
         |> Executor.call()
         |> complete_job()
+
+      {:ok, job} ->
+        job
 
       {:error, changeset} ->
         raise Ecto.InvalidChangesetError, action: :insert, changeset: changeset
