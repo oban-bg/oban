@@ -165,9 +165,13 @@ defmodule Oban.Queue.Executor do
         %{exec | result: result, state: :snoozed, snooze: seconds}
 
       returned ->
-        log_warning(exec, returned)
-
-        %{exec | state: :success, result: returned}
+        if is_tuple(returned) and elem(returned, 0) == :error do
+          %{exec | result: result, state: :failure, error: perform_error(worker, result)}
+        else 
+          log_warning(exec, returned)
+  
+          %{exec | state: :success, result: returned}
+        end
     end
   rescue
     error ->
