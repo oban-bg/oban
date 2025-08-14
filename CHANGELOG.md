@@ -1,339 +1,116 @@
-# Changelog for Oban v2.19
+# Changelog for Oban v2.20
 
 _🌟 Looking for changes to [Oban Pro][pro]? Check the [Oban.Pro Changelog][opc] 🌟_
 
-The minimum Elixir version is now v1.15. The official policy is to only support the three latest
-versions of Elixir.
+This release brings a fantastic new helper function, an optional migration to aid pruning, some
+stability improvements, and a bevy of documentation updates.
 
-## 🐬 MySQL Support
+See the [Upgrade Guide](v2-20.html) for _optional_ upgrade instructions.
 
-Oban officially supports MySQL with the new `Dolphin` engine. Oban supports modern (read "with
-full JSON support") MySQL [versions from 8.4][m84] on, and has been tested on the highly scalable
-[Planetscale][pla] database.
+## 🦋 Update Job
 
-Running on MySQL is as simple as specifying the `Dolphin` engine in your configuration:
+This introduces the `Oban.update_job/2,3` function to simplify updating existing jobs while
+ensuring data consistency and safety. Previously, updating jobs required manually constructing
+change operations or complex queries that could lead to race conditions or invalid state changes.
 
-```elixir
-config :my_app, Oban,
-  engine: Oban.Engines.Dolphin,
-  queues: [default: 10],
-  repo: MyApp.Repo
-```
+Only a curated subset of job fields, e.g. `:args`, `:max_attempts`, `:meta`, etc. may be updated
+and they use the same validation rules as insertion to prevent invalid data. Updates are also
+wrapped in a transaction with locking clauses to prevent concurrent modifications.
 
-With this addition, Oban can run in [estimated 10% more][myx] Elixir applications!
-
-[m84]: https://dev.mysql.com/doc/relnotes/mysql/8.4/en/
-[pla]: https://planetscale.com/
-[myx]: https://hex.pm/packages/myxql
-
-## ⚗️ Automated Installer
-
-Installing Oban into a new application is simplified with a new [igniter][ign] powered `mix` task.
-The new `oban.install` task handles installing and configuring a standard Oban installation, and
-it will deduce the correct `engine` and `notifier` automatically based on the database adapter.
-
-```bash
-mix igniter.install oban
-```
-
-This `oban.install` task is currently the [recommended way to install][ins] Oban. As a bonus, the
-task composes together with other igniter installers, making it possible to install `phoenix`,
-`ash`, `oban`, and other packages with a single command:
-
-```bash
-mix igniter.install phoenix ash_phoenix ash_postgres ash_oban
-```
-
-Look at the [`Mix.Oban.Install`][mio] docs for full usage and options.
-
-[ign]: https://hexdocs.pm/igniter/readme.html
-[ins]: installation.html
-[mio]: Mix.Tasks.Oban.Install.html
-
-## 📔 Logging Enhancements
-
-Logging in a busy system may be noisy due to job events, but there are other events that are
-particularly useful for diagnosing issues. A new `events` option for `attach_default_logger/1`
-allows selective event logging, so it's possible to receive important notices such as notifier
-connectivity issues, without logging all job activity:
+The function supports direct map changes:
 
 ```elixir
-Oban.Telemetry.attach_default_logger(events: ~w(notifier peer stager)a)
+Oban.update_job(job, %{priority: 0, tags: ["urgent"]})
 ```
 
-Along with filtering, there are new events to make diagnosing operational problems easier.
-
-A `peer:election` events logs leadership changes to indicate when nodes gain or lose leadership.
-Leadership issues are rare, but insidious, and make diagnosing production problems especially
-tricky.
+It also has a convenient function-based mode for dynamic changes:
 
 ```elixir
-[
-  message: "peer became leader",
-  source: "oban",
-  event: "peer:election",
-  node: "worker.1",
-  leader: true,
-  was_leader: false
-]
+Oban.update_job(job, fn job -> 
+  %{meta: Map.put(job.meta, "processed_by", current_node())} 
+end)
 ```
 
-Helpfully, `plugin:stop` events are now logged for all core plugins via an optional callback, and
-`plugin:exception` events are logged for all plugins regardless of whether they implement the
-callback. Runtime information is logged for `Cron`, `Lifeline`, `Pruner`, `Stager`, and
-`Reindexer` plugins.
+## ❄️ Unique State Groups
 
-For example, every time `Cron` runs successfully it will output details about the execution time
-and all of the inserted job ids:
+There are now named unique state groups to replace custom state lists for unique jobs, promoting
+better uniqueness design and reducing configuration errors.
 
-```elixir
-[
-  source: "oban",
-  duration: 103,
-  event: "plugin:stop",
-  plugin: "Oban.Plugins.Cron",
-  jobs: [1, 2, 3]
-]
-```
+Previously, developers had to manually specify lists of job states for uniqueness, which was
+error-prone and could lead to subtle bugs when states were omitted or incorrectly combined. The
+new predefined groups ensure correctness and consistency across applications.
 
-## ⛵️ Official JSON
+The new state groups are:
 
-Oban will default to using the official `JSON` module built into Elixir v1.18+ when available.
+- **`:all`** - All job states
+- **`:incomplete`** - Jobs that haven't finished (`~w(available scheduled executing retryable)a`)
+- **`:scheduled`** - Only scheduled jobs (`[:scheduled]`)
+- **`:successful`** - Jobs that completed successfully (`~w(available scheduled executing retryable completed)a`)
 
-A new `Oban.JSON` module detects whether the official Elixir `JSON` module is available at compile
-time. If it isn't available, then it falls back to `Jason`, and if `Jason` isn't available (which
-is extremely rare) then it warns about a missing module.
+These groups eliminate the risk of accidentally creating incomplete or incorrect state lists that 
+could allow duplicate jobs to be created when they shouldn't be, or prevent valid job creation 
+when duplicates should be allowed.
 
-This approach was chosen over a config option for backward compatibility because Oban will only
-support the JSON module once the minimum supported Elixir version is v1.18.
+## 🪺 Nested Plugin Supervision
 
-## v2.19.4 — 2025-03-25
+Plugins and the internal Stager are now nested within a secondary supervision tree to improve
+system resilience and stability.
 
-### Bug Fixes
+Previously, plugins were supervised directly under the main Oban supervisor alongside core
+process. This meant that plugin failures could potentially impact the entire Oban system, and
+frequent plugin restarts could trigger cascading failures in the primary supervision tree.
 
-- [Validation] Partially revert removal of unused validators.
+The new supervisor has more lenient restart limits to allow for more plugin restart attempts
+before giving up. This change makes Oban more robust in production environments where plugins may
+experience transient failures due to database or connectivity issues.
 
-  Some validations are actively used by the current version of Oban Pro and shouldn't have been
-  removed.
-
-- [Plugins] Handle and log all unexpected messages.
-
-  Some genservers handled unexpected messages while others did not. Now all plugins and other
-  genservers consistently handle those messages. Public facing modules, such as plugins, all log a
-  warning about the message while internal modules ignore them.
-
-## v2.19.3 — 2025-03-24
-
-### Bug Fixes
-
-- [Install] Use `configure_new` for idempotent installation.
-
-  Prevent overwriting existing `:oban` configuration when running installer.
-
-- [Sonar] Correct stale node logic for sonar tracking.
-
-  The original code had a logical error. By calculating `stale` as current time + interval *
-  multiplier, it would reject nodes that were recorded in the future relative to the current time
-  (which is unlikely to be the intended behavior) The new code correctly identifies stale nodes by
-  checking if they're older than the threshold.
+## v2.20.0 — 2025-08-13
 
 ### Enhancements
 
-- [Worker] Check for worker functions rather than behaviour
+- `Migration` Add V13 migration for indexing cancelled and discarded states.
 
-  Behaviours can't contain overlapping callbacks. In order to have a worker-like module that
-  defines it's own `timeout/1` or `backoff/1`, we must use an alternate callback.
+  A new V13 migration adds compound indexes to significantly improve `Oban.Plugins.Pruner`
+  performance when cleaning up `discarded` and `cancelled` jobs. This is especially beneficial for
+  applications that process large volumes of jobs and retain them for extended periods.
 
-- [Worker] Improve warning message on incorrect return from `perform/1`.
+- `Repo` Expose dynamic repo switching as `with_dynamic_repo/2`
 
-- [Telemetry] Skip logging peer events unless node leadership changes.
-
-  The default logger only outputs peer events when something changed: either the peer became
-  leader or lost the leader.
-
-- [Validation] Add schema validator for tuple options.
-
-  Being able to validate tuples eliminates the need for custom validator functions in several
-  locations.
-
-- [Oban] Compatiblity updates for changes in the upcoming Elixir v1.19
-
-## v2.19.2 — 2025-02-18
-
-### Enhancements
-
-- [Oban] Allow setting a MFA in `:get_dynamic_repo`
-
-  Anonymous functions don't work with OTP releases, as anonymous functions cannot be used in
-  configuration. Now a MFA tuple can be passed instead of a fun, and the scaling guide recommends
-  a function instead.
-
-- [Cron] Include configured timezone in cron job metadata
-
-  Along with the cron expression, stored as `cron_expr`, the configured timezone is also recorded
-  as `cron_tz` in cron job metadata.
-
-- [Cron] Add `next_at/2` and `last_at/2` for cron time calculations
-
-  This implements jumping functions for cron expressions. Rather than naively iterating through
-  minutes, it uses the expression values to efficiently jump to the next or last cron run time.
-
-- [Executor] Always convert `queue_time` to native time unit
-
-  The telemetry docs state that measurements are recorded in `native` time units. However, that
-  hasn't been the case for `queue_time` for a while now. It usually worked anyway native and
-  nanosecond is of the same resolution, but now it is guaranteed.
+  The function was previously internal, which made impossible to use in external modules or extend
+  upon. Now custom plugins and extensions can use `Repo.with_dynamic_repo/2` to use the configured
+  dynamic repo options.
 
 ### Bug Fixes
 
-- [Peer] Correct leadership elections for the `Dolphin` engine
+- [Oban] Allow `insert_all/1,3` via Oban facade
 
-  MySQL always returns the number of entries attempted, even when nothing was added. The previous
-  match caused all nodes to believe they were the leader. This uses a secondary query within the
-  same transaction to detect if the current instance is the leader.
+  The `insert_all/1` and `insert_all/3` function variants were missing from the generated Oban 
+  facade functions when using a named instance.
 
-- [Reindexer] Drop invalid indexes concurrently when reindexing.
+- [Testing] Generate correct `perform_job/1,2,3` clauses.
 
-  The `DROP INDEX` query would lock the whole table with an `ACCESS EXCLUSIVE` lock and could
-  cause queries to fail unexpectedly.
+  The `perform_job/2,3` clauses generated by `use Oban.Testing` didn't handle the `perform_job/2` 
+  variant designed to run jobs created with `build_job/3`. This caused test failures when trying 
+  to execute jobs built using the `build_job/3` helper function.
 
-- [Testing] Use `Ecto.Type.cast/2` for backward compatibility
+  The fix generates the missing `perform_job/2` clause along with a convenient `perform_job/1` 
+  variant, ensuring all testing scenarios work seamlessly regardless of how jobs are constructed.
 
-  The `cast!/2` function wasn't added until Ecto 3.12. This reverts time casting to use `cast/2`
-  for compatibility with earlier Ecto versions.
+- [Testing] Restrict inline execution to `available` and `scheduled` states.
 
-- [Worker] Validate that the `unique` option isn't an empty list.
+  Jobs in the `completed` state or other non-runnable states were incorrectly attempted by the 
+  inline engine, potentially causing errors or unexpected behavior during testing.
 
-  An empty list was accepted at compile time, but wouldn't be valid later at runtime. Now the two
-  validations match for greater parity.
+- [Worker] Disallow `:keys` when `:fields` doesn't contain `:args` or `:meta`
 
-## v2.19.1 — 2025-01-27
+  Unique job configurations using `:keys` were allowed even when `:fields` didn't include `:args` 
+  or `:meta`, which would result in runtime errors since keys can only extract values from these 
+  keyable fields.
 
-### Bug Fixes
+- [Cron] Fix error message when the crontab has an invalid range.
 
-- [Mix] Improve igniter installer idempotency and compatibility.
-
-  The installer now uses `on_exists: :skip` when generating a migration, so it composes safely
-  with other igniter installers. It also removes unnecessary `add_dep` calls that would overwrite
-  a previously specified Oban version with `~> 2.18`.
-
-## v2.19.0 — 2025-01-16
-
-### Enhancements
-
-- [Oban] Start all queues in parallel on initialization.
-
-  The midwife now starts queues using an async stream to parallelize startup and minimize boot
-  time for applications with many queues.
-
-- [Oban] Safely return `nil` from `check_queue/2` when checking queues that aren't running.
-
-  Checking on a queue that wasn't currently running on the local node now returns `nil` rather
-  than causing a crash. This makes it safer to check the whether a queue is running at all without
-  a `try/catch` clause.
-
-- [Oban] Add `check_all_queues/1` to gather all queue status in a single function.
-
-  This new helper gathers the "check" details from all running queues on the local node. While it
-  was previously possible to pull the queues list from config and call `check_queue/2` on each
-  entry, this more accurately pulls from the registry and checks each producer concurrently.
-
-- [Oban] Add `delete_job/2` and `delete_all_jobs/2` operations.
-
-  This adds `Oban.delete_job/2`, `Oban.delete_all_jobs/2`, Engine callbacks, and associated
-  operations for all native engines. Deleting jobs is now easier and safer, due to automatic state
-  protections.
-
-- [Engine] Record when a queue starts shutting down
-
-  Queue producer metadata now includes a `shutdown_started_at` field to indicate that a queue
-  isn't just paused, but is actually shutting down as well.
-
-- [Engine] Add `rescue_jobs/3` callback for all engines.
-
-  The `Lifeline` plugin formerly used two queries to rescue jobs—one to mark jobs with remaining
-  attempts as `available` and another that `discarded` the remaining stuck jobs. Those are now
-  combined into a single callback, with the base definition in the `Basic` engine.
-
-  MySQL won't accept a select in an update statement. The Dolphin implementation of
-  `rescue_jobs/3` uses multiple queries to return the relevant telemetry data and make multiple
-  updates.
-
-- [Cron] Introduce `Oban.Cron` with `schedule_interval/4`
-
-  The new `Cron` module allows processes, namely plugins, to get cron-like scheduled functionality
-  with a single function call. This will allow plugins to removes boilerplate around parsing,
-  scheduling, and evaluating for cron behavior.
-
-- [Registry] Add `select/1 ` to simplify querying for registered modules.
-
-- [Testing] Add `build_job/3` helper for easier testing.
-
-  Extract the mechanism for verifying and building jobs out of `perform_job/3` so that it's usable
-  in isolation. This also introduces `perform_job/2` for executing built jobs.
-
-- [Telemetry] Add information on leadership changes to `oban.peer.election` event.
-
-  An additional `was_leader?` field is included in `[:oban, :peer, :election | _]` event metadata
-  to make hooking into leadership change events simpler.
-
-- [Telemetry] Add callback powered logging for plugin events.
-
-  Events are now logged for plugins that implement the a new optional callback, and exceptions are
-  logged for all plugins regardless of whether they implement the callback.
-
-  This adds logging for `Cron`, `Lifeline`, `Pruner`, `Stager`, and `Reindexer`.
-
-- [Telemetry] Add peer election logging to default logger.
-
-  The default logger now includes leadership events to make identifying the leader, and leadership
-  changes between nodes, easier.
-
-- [Telemetry] Add option to restrict logging to certain events.
-
-  Logging in a busy system may be noisy due to job events, but there are other events that are
-  particularly useful for diagnosing issues. This adds an `events` option to
-  `attach_default_logger/1` to allow selective event logging.
-
-- [Telemetry] Expose `default_handler_id/0` for telemetry testing.
-
-  Simplifies testing whether the default logger is attached or detached in application code.
-
-### Chores
-
-- [Peer] The default database-backed peer was renamed from `Postgres` to `Database` because it is
-  also used for MySQL databases.
-
-### Bug Fixes
-
-- [Oban] Allow overwriting all `insert/*` functions arities after `use Oban`.
-
-- [Node] Correctly handle `:node` option for `scale_queue/2`
-
-  Scoping `scale_queue/2` calls to a single node didn't work as advertised due to some extra
-  validation for producer meta compatibility.
-
-- [Migration] Fix version query for databases with non-unique `oid`
-
-  Use `pg_catalog.obj_description(object_oid, catalog_name)`, introduced in PostgreSQL 7.2, to
-  specify the `pg_class` catalog so only the `oban_jobs` description is returned.
-
-- [Pruner] Use state specific fields when querying for prunable jobs.
-
-  Using `scheduled_at` is not correct in all situations. Depending on job state,  one of
-  `cancelled_at`, `discarded_at`, or `scheduled_at` should be used.
-
-- [Peer] Conditionally return the current node as leader for isolated peers.
-
-  Prevents returning the current node name when leadership is disabled.
-
-- [Testing] Retain time as microseconds for `scheduled_at` tests.
-
-  Include microseconds in the `begin` and `until` times used for scheduled_at tests with a delta.
-  The prior version would truncate, which rounded the `until` down and broke microsecond level
-  checks.
-
-- [Telemetry] Correct spelling of "elapsed" in `oban.queue.shutdown` metadata.
+  Cron validation errors for invalid ranges were returning exception structs instead of readable 
+  error messages, making it difficult to understand and fix crontab configuration issues.
 
 [pro]: https://oban.pro
 [opc]: https://oban.pro/docs/pro/changelog.html
