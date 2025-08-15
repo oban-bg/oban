@@ -70,6 +70,9 @@ experience transient failures due to database or connectivity issues.
 
 - [Worker] Handle missing fields in unique Worker validation.
 
+  Workers that specified `keys` without `fields` would fail validation at compile time. Now
+  default values are considered for `use Oban.Worker` as well as `Job.new/2`.
+
 ## v2.20.0 — 2025-08-13
 
 ### Enhancements
