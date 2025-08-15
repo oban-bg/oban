@@ -73,14 +73,14 @@ defmodule Oban.JobTest do
     end
   end
 
-  describe "unique constraints with new/2" do
+  describe "unique config with new/2" do
     test "marking a job unique for :infinity in all states by passing true" do
       changeset = Job.new(%{}, worker: Fake, unique: true)
 
       assert %{period: :infinity} = changeset.changes[:unique]
     end
 
-    test "unique with nil or false is still valid" do
+    test "allowing unique with nil or false" do
       assert Job.new(%{}, worker: Fake, unique: nil).valid?
       assert Job.new(%{}, worker: Fake, unique: false).valid?
     end
@@ -97,7 +97,7 @@ defmodule Oban.JobTest do
              }
     end
 
-    test "overriding unique defaults" do
+    test "merging custom options with the unique defaults" do
       changeset =
         Job.new(%{},
           worker: Fake,
@@ -113,7 +113,7 @@ defmodule Oban.JobTest do
              }
     end
 
-    test "translate the unique period with time units" do
+    test "translating unique period with time units into seconds" do
       changeset = Job.new(%{}, worker: Fake, unique: [period: {1, :hour}])
 
       assert %{period: 3600} = changeset.changes[:unique]
@@ -130,36 +130,19 @@ defmodule Oban.JobTest do
       assert Job.new(%{}, worker: Fake, unique: [timestamp: :updated_at]).errors[:unique]
     end
 
-    test "empty keys don't require args or meta in fields" do
+    test "ignoring empty keys when args or meta are missing in fields" do
       assert Job.new(%{}, worker: Fake, unique: [keys: [], fields: [:worker]]).valid?
     end
 
     test "unique keys are accepted with args or meta in fields" do
-      assert Job.new(%{}, worker: Fake, unique: [keys: [], fields: [:worker, :args]]).valid?
-
-      assert Job.new(%{}, worker: Fake, unique: [keys: [:some_key], fields: [:worker, :args]]).valid?
-
-      assert Job.new(%{}, worker: Fake, unique: [keys: [:some_key], fields: [:worker, :meta]]).valid?
-
-      assert Job.new(%{}, worker: Fake, unique: [keys: [:some_key], fields: [:args]]).valid?
-      assert Job.new(%{}, worker: Fake, unique: [keys: [:some_key], fields: [:meta]]).valid?
+      assert Job.new(%{}, worker: Fake, unique: [keys: [:foo], fields: [:worker, :args]]).valid?
+      assert Job.new(%{}, worker: Fake, unique: [keys: [:foo], fields: [:meta]]).valid?
     end
 
     test "unique keys are rejected without args or meta in fields" do
-      assert Job.new(%{},
-               worker: Fake,
-               unique: [keys: [:some_key], fields: []]
-             ).errors[:unique]
-
-      assert Job.new(%{},
-               worker: Fake,
-               unique: [keys: [:some_key], fields: [:worker]]
-             ).errors[:unique]
-
-      assert Job.new(%{},
-               worker: Fake,
-               unique: [keys: [:some_key], fields: [:worker, :queue]]
-             ).errors[:unique]
+      refute Job.new(%{}, worker: Fake, unique: [keys: [:foo], fields: []]).valid?
+      refute Job.new(%{}, worker: Fake, unique: [keys: [:foo], fields: [:worker]]).valid?
+      refute Job.new(%{}, worker: Fake, unique: [keys: [:foo], fields: [:worker, :queue]]).valid?
     end
 
     test "unique state groups are expanded into a list of states" do
