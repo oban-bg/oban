@@ -21,6 +21,13 @@ defmodule Oban.WorkerTest do
     def perform(_job), do: :ok
   end
 
+  defmodule SomeKeysUniqueWorker do
+    use Worker, unique: [keys: [:id]]
+
+    @impl Worker
+    def perform(_job), do: :ok
+  end
+
   defmodule CustomWorker do
     # Using a module attribute to ensure that module attributes and other non-primitive values can
     # be used when compiling a worker.

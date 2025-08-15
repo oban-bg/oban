@@ -718,14 +718,16 @@ defmodule Oban.Job do
   end
 
   defp validate_keys(keys, unique) do
+    fields = Keyword.get(unique, :fields, [])
+
     cond do
-      keys == [] ->
+      keys == [] or fields == [] ->
         :ok
 
       not (is_list(keys) and Enum.all?(keys, &is_atom/1)) ->
         {:error, "expected :keys to be a list of atoms"}
 
-      not (is_list(keys) and Enum.any?(@keyable_fields, &(&1 in Keyword.get(unique, :fields)))) ->
+      not (is_list(keys) and Enum.any?(@keyable_fields, &(&1 in fields))) ->
         {:error,
          "using :keys expects :fields to contain at least one of #{inspect(@keyable_fields)}"}
 
