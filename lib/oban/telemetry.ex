@@ -25,9 +25,9 @@ defmodule Oban.Telemetry do
   * `[:oban, :job, :stop]` — after a job succeeds and the success is recorded in the database
   * `[:oban, :job, :exception]` — after a job fails and the failure is recorded in the database
 
-  Jobs that complete with `:ok`, `:cancelled`, `:snoozed`, and `:discard` count as 
-  suceeded and emit the `:stop` event. Jobs that complete with an `:error` or raised an exception
-  emit the `:exception` event.
+  Jobs that complete with `:ok`, `:cancelled`, or `:snoozed`count as succeeded and emit the `:stop`
+  event. Jobs that finish with an `:error`, exception, or crash will emit the `:exception`
+  event.
 
   All job events share the same details about the job that was executed. In addition, failed jobs
   provide the error type, the error itself, and the stacktrace. The following chart shows which
