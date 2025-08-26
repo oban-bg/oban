@@ -96,3 +96,27 @@ COMMENT ON TABLE public.oban_jobs IS '10'"
 
 Once the comment is in place only the migrations from that version onward will
 run.
+
+## Database Queries from Every Queue Every Second
+
+If every queue is polling the database every second, job staging has switched from efficient
+**global mode** to **local mode**. In global mode, only the leader queries for jobs and notifies
+queues via pubsub. In local mode, each queue polls independently.
+
+This typically happens when:
+
+1. No node has leadership (common in development after restarts)
+2. Using PgBouncer with transaction pooling (disables pubsub notifications)
+3. Running using the `PG` notifier without clustering and functional pubsub
+
+Look for these log messages confirming the switch to local mode:
+
+```
+"job staging switched to local mode. local mode polls for jobs for every queue"
+```
+
+### Solutions
+
+- Wait for leadership restablishment after a restart in development
+- Use `Oban.Peers.Global` in development
+- Fix clustering and pubsub notifications in production
