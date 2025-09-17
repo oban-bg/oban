@@ -387,9 +387,10 @@ defmodule Oban.Worker do
   @doc """
   The `c:perform/1` function is called to execute a job.
 
-  Each `c:perform/1` function should return `:ok` or a success tuple. When the return is an error
-  tuple, an uncaught exception or a throw then the error is recorded and the job may be retried if
-  there are any attempts remaining.
+  Each `c:perform/1` function should return a `t:result/0` value (see that type's documentation
+  for details on what each does). When the return is an error tuple, an exception is not rescued,
+  or a throw is not caught then the error is recorded and the job may be retried if there are
+  any attempts remaining.
 
   > #### `args` Are Stored as JSON {: .info}
   >
