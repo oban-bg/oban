@@ -129,13 +129,13 @@ defmodule Oban.Plugins.CronTest do
 
     assert %{"cron" => true, "cron_tz" => "America/Chicago"} = meta_1
 
-    assert %{"cron_expr" => "* * * * *", "cron_id" => cron_id_1} = meta_1
-    assert %{"cron_expr" => "* * * * *", "cron_id" => cron_id_2} = meta_2
-    assert %{"cron_expr" => "@reboot", "cron_id" => cron_id_3} = meta_3
+    assert %{"cron_expr" => "* * * * *", "cron_name" => cron_name_1} = meta_1
+    assert %{"cron_expr" => "* * * * *", "cron_name" => cron_name_2} = meta_2
+    assert %{"cron_expr" => "@reboot", "cron_name" => cron_name_3} = meta_3
 
-    refute cron_id_1 == cron_id_2
-    refute cron_id_1 == cron_id_3
-    refute cron_id_2 == cron_id_3
+    refute cron_name_1 == cron_name_2
+    refute cron_name_1 == cron_name_3
+    refute cron_name_2 == cron_name_3
   end
 
   test "reboot jobs are enqueued on startup" do
