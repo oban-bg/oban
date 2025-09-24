@@ -115,16 +115,27 @@ defmodule Oban.Plugins.CronTest do
     run_with_opts(
       timezone: "America/Chicago",
       crontab: [
+        {"* * * * *", CronWork, args: worker_args(2)},
         {"@reboot", CronWork, args: worker_args(1)},
-        {"* * * * *", CronWork, args: worker_args(2)}
+        {"* * * * *", CronWork, args: worker_args(3)}
       ]
     )
 
-    assert [{true, "* * * * *", "America/Chicago"}, {true, "@reboot", "America/Chicago"}] ==
-             Job
-             |> Repo.all()
-             |> Enum.map(&{&1.meta["cron"], &1.meta["cron_expr"], &1.meta["cron_tz"]})
-             |> Enum.sort()
+    [meta_1, meta_2, meta_3] =
+      Job
+      |> Repo.all()
+      |> Enum.map(& &1.meta)
+      |> Enum.sort_by(& &1["cron_expr"])
+
+    assert %{"cron" => true, "cron_tz" => "America/Chicago"} = meta_1
+
+    assert %{"cron_expr" => "* * * * *", "cron_id" => cron_id_1} = meta_1
+    assert %{"cron_expr" => "* * * * *", "cron_id" => cron_id_2} = meta_2
+    assert %{"cron_expr" => "@reboot", "cron_id" => cron_id_3} = meta_3
+
+    refute cron_id_1 == cron_id_2
+    refute cron_id_1 == cron_id_3
+    refute cron_id_2 == cron_id_3
   end
 
   test "reboot jobs are enqueued on startup" do

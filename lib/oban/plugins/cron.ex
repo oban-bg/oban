@@ -158,6 +158,9 @@ defmodule Oban.Plugins.Cron do
   @doc false
   defdelegate interval_to_next_minute(), to: Cron
 
+  @doc false
+  def entry_id(entry) when is_tuple(entry), do: :erlang.phash2(entry)
+
   @impl GenServer
   def init(state) do
     Process.flag(:trap_exit, true)
@@ -284,9 +287,11 @@ defmodule Oban.Plugins.Cron do
   end
 
   defp build_changeset(worker, opts, expr, timezone) do
+    crid = entry_id({worker, expr, opts})
+
     {args, opts} = Keyword.pop(opts, :args, %{})
 
-    meta = %{cron: true, cron_expr: expr, cron_tz: timezone}
+    meta = %{cron: true, cron_expr: expr, cron_id: crid, cron_tz: timezone}
 
     opts =
       worker.__opts__()
