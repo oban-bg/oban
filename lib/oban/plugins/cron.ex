@@ -287,7 +287,7 @@ defmodule Oban.Plugins.Cron do
   end
 
   defp build_changeset(worker, opts, expr, timezone) do
-    name = entry_name({worker, expr, opts})
+    name = entry_name({expr, worker, opts})
 
     {args, opts} = Keyword.pop(opts, :args, %{})
 
