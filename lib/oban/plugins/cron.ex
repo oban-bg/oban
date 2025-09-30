@@ -159,7 +159,23 @@ defmodule Oban.Plugins.Cron do
   defdelegate interval_to_next_minute(), to: Cron
 
   @doc false
-  def entry_name(entry) when is_tuple(entry), do: :erlang.phash2(entry)
+  def entry_name({expr, worker, opts}) do
+    opts =
+      opts
+      |> Map.new()
+      |> stringify()
+      |> Map.replace_lazy("args", &stringify/1)
+
+    {expr, Worker.to_string(worker), opts}
+    |> :erlang.phash2()
+    |> to_string()
+  end
+
+  defp stringify(map) when is_map(map) do
+    Map.new(map, fn {key, val} -> {to_string(key), val} end)
+  end
+
+  defp stringify(val), do: val
 
   @impl GenServer
   def init(state) do
