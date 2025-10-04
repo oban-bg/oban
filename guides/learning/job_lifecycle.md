@@ -6,7 +6,7 @@ state.
 
 ## Job States
 
-Jobs exist in one of six possible states:
+Jobs exist in one of seven possible states:
 
 - `available` — Jobs ready to be executed
 - `scheduled` — Jobs waiting for a specific time to become available for execution
