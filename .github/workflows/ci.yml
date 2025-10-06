@@ -10,10 +10,19 @@ on:
     paths-ignore:
       - 'guides/**'
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   ci:
     env:
       MIX_ENV: test
+      MYSQL_URL: mysql://root@localhost:${{job.services.mysql.ports[3306]}}/oban_test
+      POSTGRES_URL: postgresql://postgres:postgres@localhost:${{job.services.postgres.ports[5432]}}/oban_test
     strategy:
       fail-fast: false
       matrix:
@@ -100,15 +109,9 @@ jobs:
         if: ${{ matrix.lint }}
 
       - name: Run mix ecto.migrate
-        env:
-          MYSQL_URL: mysql://root@localhost:${{job.services.mysql.ports[3306]}}/oban_test
-          POSTGRES_URL: postgresql://postgres:postgres@localhost:${{job.services.postgres.ports[5432]}}/oban_test
         run: mix test.setup
 
       - name: Run mix test
-        env:
-          MYSQL_URL: mysql://root@localhost:${{job.services.mysql.ports[3306]}}/oban_test
-          POSTGRES_URL: postgresql://postgres:postgres@localhost:${{job.services.postgres.ports[5432]}}/oban_test
         run: mix test --exclude ${{ matrix.exclude_tags }} || mix test --failed
 
       - name: Run dialyzer
