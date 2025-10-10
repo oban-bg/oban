@@ -21,8 +21,8 @@ jobs:
   ci:
     env:
       MIX_ENV: test
-      MYSQL_URL: mysql://root@localhost:${{job.services.mysql.ports[3306]}}/oban_test
-      POSTGRES_URL: postgresql://postgres:postgres@localhost:${{job.services.postgres.ports[5432]}}/oban_test
+      MYSQL_URL: mysql://root@localhost:3306/oban_test
+      POSTGRES_URL: postgresql://postgres:postgres@localhost:5432/oban_test
     strategy:
       fail-fast: false
       matrix:
@@ -56,7 +56,7 @@ jobs:
           --health-timeout 5s
           --health-retries 5
         ports:
-          - 5432/tcp
+          - 5432:5432
       mysql:
         image: mysql:${{matrix.pair.mysql}}
         env:
@@ -67,7 +67,7 @@ jobs:
           --health-timeout 5s
           --health-retries 5
         ports:
-          - 3306/tcp
+          - 3306:3306
 
     steps:
       - uses: actions/checkout@v5
