@@ -36,7 +36,6 @@ defmodule Oban.Queue.Executor do
     :error,
     :job,
     :meta,
-    :pid,
     :result,
     :snooze,
     :start_mono,
@@ -59,7 +58,6 @@ defmodule Oban.Queue.Executor do
       conf: conf,
       job: %{job | conf: conf},
       meta: event_metadata(conf, job),
-      pid: self(),
       safe: Keyword.get(opts, :safe, true),
       start_mono: System.monotonic_time(),
       start_time: System.system_time()
@@ -323,14 +321,14 @@ defmodule Oban.Queue.Executor do
   defp measurements(exec) do
     %{
       duration: exec.duration,
-      memory: info_for(exec, :memory),
+      memory: info_for(:memory),
       queue_time: exec.queue_time,
-      reductions: info_for(exec, :reductions)
+      reductions: info_for(:reductions)
     }
   end
 
-  defp info_for(%__MODULE__{pid: pid}, item) do
-    case Process.info(pid, item) do
+  defp info_for(item) do
+    case Process.info(self(), item) do
       {^item, value} -> value
       nil -> 0
     end
