@@ -358,6 +358,7 @@ defmodule Oban.Job do
     |> validate_length(:worker, min: 1, max: 128)
     |> validate_number(:max_attempts, greater_than: 0)
     |> validate_number(:priority, greater_than: -1, less_than: 10)
+    |> normalize_state()
     |> check_constraint(:max_attempts, name: :positive_max_attempts)
     |> check_constraint(:priority, name: :priority_range)
   end

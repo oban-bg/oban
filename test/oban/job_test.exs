@@ -1,6 +1,8 @@
 defmodule Oban.JobTest do
   use Oban.Case, async: true
 
+  alias Ecto.Changeset
+
   doctest Oban.Job
 
   describe "new/2" do
@@ -188,6 +190,21 @@ defmodule Oban.JobTest do
 
       refute changes.(sched: [:args]).valid?
       refute changes.(scheduled: [:state]).valid?
+    end
+  end
+
+  describe "update/2" do
+    test "setting the state when scheduled_at is provided" do
+      job =
+        %{}
+        |> Job.new(worker: Fake)
+        |> Changeset.apply_action!(:insert)
+
+      assert "available" == job.state
+
+      changeset = Job.update(job, %{scheduled_at: DateTime.utc_now()})
+
+      assert %{state: "scheduled", scheduled_at: %{}} = changeset.changes
     end
   end
 
