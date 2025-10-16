@@ -43,7 +43,7 @@ Oban provides two peer implementations:
   Erlang, but handles development restarts more gracefully. Recommended for development
   environments where leadership delays can be problematic.
 
-A third, psuedo, mode is to disable leadership entirely with `peer: false` or `plugins: false`.
+A third, pseudo, mode is to disable leadership entirely with `peer: false` or `plugins: false`.
 This is useful when you explicitly don't want a node to become leader (e.g., web-only nodes that
 don't run plugins).
 
