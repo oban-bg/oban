@@ -625,15 +625,19 @@ defmodule Oban.Telemetry do
   defp log(opts, fun) do
     level = Keyword.fetch!(opts, :level)
 
-    Logger.log(level, fn ->
-      output = Map.put(fun.(), :source, "oban")
+    Logger.log(
+      level,
+      fn ->
+        output = Map.put(fun.(), :source, "oban")
 
-      if Keyword.fetch!(opts, :encode) do
-        JSON.encode_to_iodata!(output)
-      else
-        output
-      end
-    end)
+        if Keyword.fetch!(opts, :encode) do
+          JSON.encode_to_iodata!(output)
+        else
+          output
+        end
+      end,
+      domain: [:oban]
+    )
   end
 
   defp convert(value), do: System.convert_time_unit(value, :native, :microsecond)

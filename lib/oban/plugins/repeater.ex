@@ -11,12 +11,15 @@ defmodule Oban.Plugins.Repeater do
 
   @impl Plugin
   def start_link(_opts) do
-    Logger.warning("""
-    Repeater is deprecated.
+    Logger.warning(
+      """
+      Repeater is deprecated.
 
-    Stager automatically forces polling when notifications aren't available. You can safely remove
-    the Repeater from your plugins.
-    """)
+      Stager automatically forces polling when notifications aren't available. You can safely remove
+      the Repeater from your plugins.
+      """,
+      domain: [:oban]
+    )
 
     GenServer.start_link(__MODULE__, [])
   end

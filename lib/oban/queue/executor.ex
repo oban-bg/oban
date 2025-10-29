@@ -335,25 +335,28 @@ defmodule Oban.Queue.Executor do
   end
 
   defp log_warning(%__MODULE__{safe: true, worker: worker}, returned) do
-    Logger.warning(fn ->
-      """
-      Expected #{inspect(worker)}.perform/1 to return:
+    Logger.warning(
+      fn ->
+        """
+        Expected #{inspect(worker)}.perform/1 to return:
 
-      - `:ok`
-      - `:discard`
-      - `{:ok, value}`
-      - `{:error, reason}`,
-      - `{:cancel, reason}`
-      - `{:discard, reason}`
-      - `{:snooze, seconds}`
+        - `:ok`
+        - `:discard`
+        - `{:ok, value}`
+        - `{:error, reason}`,
+        - `{:cancel, reason}`
+        - `{:discard, reason}`
+        - `{:snooze, seconds}`
 
-      Instead received:
+        Instead received:
 
-      #{inspect(returned, pretty: true)}
+        #{inspect(returned, pretty: true)}
 
-      The job will be considered a success.
-      """
-    end)
+        The job will be considered a success.
+        """
+      end,
+      domain: [:oban]
+    )
   end
 
   defp log_warning(_exec, _returned), do: :noop

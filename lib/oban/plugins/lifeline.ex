@@ -133,9 +133,12 @@ defmodule Oban.Plugins.Lifeline do
 
   def handle_info(message, state) do
     Logger.warning(
-      message: "Received unexpected message: #{inspect(message)}",
-      source: :oban,
-      module: __MODULE__
+      [
+        message: "Received unexpected message: #{inspect(message)}",
+        source: :oban,
+        module: __MODULE__
+      ],
+      domain: [:oban]
     )
 
     {:noreply, state}

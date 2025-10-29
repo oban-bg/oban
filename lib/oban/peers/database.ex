@@ -122,12 +122,15 @@ defmodule Oban.Peers.Database do
   rescue
     error in [DBConnection.ConnectionError, Postgrex.Error, MyXQL.Error] ->
       if match?(%{postgres: %{code: :undefined_table}}, error) do
-        Logger.error("""
-        The `oban_peers` table is undefined and leadership is disabled.
+        Logger.error(
+          """
+          The `oban_peers` table is undefined and leadership is disabled.
 
-        Run migrations up to v11 to restore peer leadership. In the meantime, distributed plugins
-        (e.g. Cron, Pruner) will not run on any nodes.
-        """)
+          Run migrations up to v11 to restore peer leadership. In the meantime, distributed plugins
+          (e.g. Cron, Pruner) will not run on any nodes.
+          """,
+          domain: [:oban]
+        )
       end
 
       {:noreply, schedule_election(%{state | leader?: false})}

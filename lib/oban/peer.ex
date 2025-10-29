@@ -143,9 +143,12 @@ defmodule Oban.Peer do
   catch
     :exit, {:timeout, _} = reason ->
       Logger.warning(
-        message: "Oban.Peer.#{fun}/2 check failed due to #{inspect(reason)}",
-        source: :oban,
-        module: __MODULE__
+        [
+          message: "Oban.Peer.#{fun}/2 check failed due to #{inspect(reason)}",
+          source: :oban,
+          module: __MODULE__
+        ],
+        domain: [:oban]
       )
 
       default

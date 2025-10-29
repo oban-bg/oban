@@ -253,9 +253,12 @@ defmodule Oban.Notifier do
   catch
     :exit, {:timeout, _} = reason ->
       Logger.warning(
-        message: "Oban.Notifier.status/1 check failed due to #{inspect(reason)}",
-        source: :oban,
-        module: __MODULE__
+        [
+          message: "Oban.Notifier.status/1 check failed due to #{inspect(reason)}",
+          source: :oban,
+          module: __MODULE__
+        ],
+        domain: [:oban]
       )
 
       :unknown
