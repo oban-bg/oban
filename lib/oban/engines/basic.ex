@@ -138,8 +138,8 @@ defmodule Oban.Engines.Basic do
       queryable
       |> select([:id, :state])
       |> where([j], j.state in ~w(scheduled retryable))
-      |> where([j], not is_nil(j.queue))
       |> where([j], j.scheduled_at <= ^DateTime.utc_now())
+      |> order_by(desc: :scheduled_at, desc: :id)
       |> limit(^limit)
 
     query =
