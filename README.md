@@ -178,7 +178,7 @@ and configuring Oban in your application.
 
 ## Quick Getting Started
 
-  1. [Configure queues](https://hexdocs.pm/oban/Oban.html#module-configuring-queues) and an Ecto repo for Oban to
+  1. [Configure queues](https://hexdocs.pm/oban/defining_queues.html) and an Ecto repo for Oban to
      use:
 
      ```elixir
