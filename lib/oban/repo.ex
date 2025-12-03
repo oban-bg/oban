@@ -172,6 +172,7 @@ defmodule Oban.Repo do
       transaction(conf, fun_or_multi, opts, attempt + 1)
   end
 
+  defp expected_error?(%_{postgres: %{code: :deadlock_detected}}), do: true
   defp expected_error?(%_{postgres: %{code: :lock_not_available}}), do: true
   defp expected_error?(%_{postgres: %{code: :serialization_failure}}), do: true
   defp expected_error?(_error), do: false
