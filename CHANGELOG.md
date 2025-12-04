@@ -64,6 +64,52 @@ The new supervisor has more lenient restart limits to allow for more plugin rest
 before giving up. This change makes Oban more robust in production environments where plugins may
 experience transient failures due to database or connectivity issues.
 
+## v2.20.2 — 2025-12-04
+
+### Enhancements
+
+- [Telemetry] Add domain to `attach_default_logger` metadata
+
+  Although this information is present in the source attribute, it’s not part of the metadata,
+  it’s part of the attributes. And when `encode = true`, it’s generated as a string, which makes
+  it less convenient to work with.
+
+- [Cron] Add unique cron entry identifiers to job meta
+
+  A id value is generated for each cron entry and stored in the job's meta to distinguish between
+  different cron jobs with the same expression.
+
+### Bug Fixes
+
+- [Stager] Order staging query to maximize compound index usage
+
+  The core compound index couldn't be utilized by staging queries when the planner estimated a
+  large number of hits. Changing the query to order by `scheduled_at` and `id`, it becomes an
+  index scan.
+
+  It would still be more efficient to use a dedicated index, but OSS doesn't have any mechanisms
+  for automatic concurrent index creation and we have to save it for later.
+
+- [Executor] Take measurements from the executing process
+
+  When Producer starts jobs, it calls `Executor.new` in its own process, before handing it off to
+  `Task.Supervisor.async_nolink` to call `Executor.call`. That means it used the Producer `pid`,
+  and took measurements from that process.
+
+- [Oban] Set `scheduled` state correctly when updating with `update_job/3`
+
+  When the `scheduled_at` timestamp is set during `update_job`, the state is automatically set to
+  `scheduled`. This mirrors the functionality of `insert_job`.
+
+  Note that the value of the timestamp isn't considered. Setting a timestamp in the past will set
+  the job as `scheduled`. This isn't a problem in practice because the stager will change the
+  state to `available` on the next cycle anyhow.
+
+- [Repo] Include `:deadlock_detected` in expected errors
+
+  Deadlocks are automatically resolved by Postgres because it aborts one transaction. At that
+  point, the retry should succeed quickly since the blocking transaction is gone.
+
 ## v2.20.1 — 2025-08-15
 
 ### Bug Fixes
