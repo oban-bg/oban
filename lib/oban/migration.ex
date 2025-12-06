@@ -77,7 +77,7 @@ defmodule Oban.Migration do
   end
   ```
 
-  The migration will create the "private" schema and all tables, functions and triggers within
+  The migration will create the "private" schema and all tables, functions, and triggers within
   that schema. With the database migrated you'll then specify the prefix in your configuration:
 
   ```elixir
@@ -110,7 +110,7 @@ defmodule Oban.Migration do
   `mix ecto.migrate --log-migrations-sql`. That will log all of the generated SQL, which you can
   then paste into your migration system of choice.
 
-  Alternatively, if you'd like a more automated approach, try using the [oban_migations_sql][sql]
+  Alternatively, if you'd like a more automated approach, try using the [oban_migrations_sql][sql]
   project to generate `up` and `down` SQL migrations for you.
 
   [sql]: https://github.com/btwb/oban_migrations_sql
