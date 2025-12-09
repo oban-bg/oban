@@ -135,26 +135,28 @@ defmodule Oban.Config do
   """
   @spec validate([Oban.option()]) :: :ok | {:error, String.t()}
   def validate(opts) when is_list(opts) do
-    opts = normalize(opts)
+    with :ok <- validate_unique_opts(opts) do
+      opts = normalize(opts)
 
-    Validation.validate_schema(opts,
-      dispatch_cooldown: :pos_integer,
-      engine: {:behaviour, Oban.Engine},
-      get_dynamic_repo: {:or, [:falsy, {:function, 0}, :mfa]},
-      insert_trigger: :boolean,
-      log: {:enum, @log_levels},
-      name: :any,
-      node: {:pattern, ~r/^\S+$/},
-      notifier: {:behaviour, Oban.Notifier},
-      peer: {:or, [:falsy, {:behaviour, Oban.Peer}]},
-      plugins: {:custom, &validate_plugins/1},
-      prefix: {:or, [:falsy, :string]},
-      queues: {:custom, &validate_queues(opts, &1)},
-      repo: {:module, [config: 0]},
-      shutdown_grace_period: :non_neg_integer,
-      stage_interval: :timeout,
-      testing: {:enum, @testing_modes}
-    )
+      Validation.validate_schema(opts,
+        dispatch_cooldown: :pos_integer,
+        engine: {:behaviour, Oban.Engine},
+        get_dynamic_repo: {:or, [:falsy, {:function, 0}, :mfa]},
+        insert_trigger: :boolean,
+        log: {:enum, @log_levels},
+        name: :any,
+        node: {:pattern, ~r/^\S+$/},
+        notifier: {:behaviour, Oban.Notifier},
+        peer: {:or, [:falsy, {:behaviour, Oban.Peer}]},
+        plugins: {:custom, &validate_plugins/1},
+        prefix: {:or, [:falsy, :string]},
+        queues: {:custom, &validate_queues(opts, &1)},
+        repo: {:module, [config: 0]},
+        shutdown_grace_period: :non_neg_integer,
+        stage_interval: :timeout,
+        testing: {:enum, @testing_modes}
+      )
+    end
   end
 
   @doc false
@@ -280,6 +282,17 @@ defmodule Oban.Config do
         {:error,
          "expected queue #{inspect(name)} opts to be a positive integer limit or a " <>
            "keyword list, got: #{inspect(opts)}"}
+    end
+  end
+
+  defp validate_unique_opts(opts) do
+    keys = Keyword.keys(opts)
+    dupe = keys -- Enum.uniq(keys)
+
+    if Enum.empty?(dupe) do
+      :ok
+    else
+      {:error, "found duplicate options: #{inspect(dupe)}"}
     end
   end
 

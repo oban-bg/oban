@@ -145,6 +145,19 @@ defmodule Oban.ConfigTest do
 
       assert {:error, "unknown option :nam, did you mean :name?"} = Config.validate(nam: :web)
     end
+
+    test "duplicated values are rejected" do
+      assert {:error, "found duplicate options: [:peer]"} ==
+               Config.validate(peer: false, peer: Oban.Peers.Postgres)
+
+      assert {:error, "found duplicate options: [:peer, :plugins]"} ==
+               Config.validate(
+                 peer: false,
+                 peer: Oban.Peers.Postgres,
+                 plugins: [Pruner],
+                 plugins: false
+               )
+    end
   end
 
   describe "new/1" do
