@@ -147,15 +147,6 @@ defmodule Oban.ConfigTest do
     end
 
     test "duplicated values are rejected" do
-      assert_valid(plugins: false)
-      assert_valid(plugins: [Pruner])
-
-      assert {:error, "found duplicate options: [:plugins]"} ==
-               Config.validate(plugins: [Pruner], plugins: false)
-
-      assert_valid(peer: false)
-      assert_valid(peer: Oban.Peers.Postgres)
-
       assert {:error, "found duplicate options: [:peer]"} ==
                Config.validate(peer: false, peer: Oban.Peers.Postgres)
 

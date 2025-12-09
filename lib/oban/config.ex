@@ -135,7 +135,7 @@ defmodule Oban.Config do
   """
   @spec validate([Oban.option()]) :: :ok | {:error, String.t()}
   def validate(opts) when is_list(opts) do
-    with :ok <- validate_no_duplicate_option(opts) do
+    with :ok <- validate_unique_opts(opts) do
       opts = normalize(opts)
 
       Validation.validate_schema(opts,
@@ -285,17 +285,14 @@ defmodule Oban.Config do
     end
   end
 
-  defp validate_no_duplicate_option(opts) do
-    opts_keys = Keyword.keys(opts)
-    unique_keys = Enum.uniq(opts_keys)
-    duplicate_keys = Enum.uniq(opts_keys -- unique_keys)
+  defp validate_unique_opts(opts) do
+    keys = Keyword.keys(opts)
+    dupe = keys -- Enum.uniq(keys)
 
-    valid? = Enum.empty?(duplicate_keys)
-
-    if valid? do
+    if Enum.empty?(dupe) do
       :ok
     else
-      {:error, "found duplicate options: #{inspect(duplicate_keys)}"}
+      {:error, "found duplicate options: #{inspect(dupe)}"}
     end
   end
 
