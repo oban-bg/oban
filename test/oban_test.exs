@@ -486,7 +486,7 @@ defmodule ObanTest do
       assert_invalid_opts(name, :start_queue, wat: -1)
     end
 
-    test "starting individual queues dynamically" do
+    test "starting queues dynamically" do
       name = start_supervised_oban!(queues: [alpha: 9])
 
       assert :ok = Oban.start_queue(name, queue: :gamma, limit: 5, refresh_interval: 10)
@@ -500,11 +500,23 @@ defmodule ObanTest do
       end)
     end
 
-    test "starting individual queues only on the local node" do
+    test "starting queues only on the local node" do
       name1 = start_supervised_oban!(queues: [])
       name2 = start_supervised_oban!(queues: [])
 
       assert :ok = Oban.start_queue(name1, queue: :alpha, limit: 1, local_only: true)
+
+      with_backoff(fn ->
+        assert supervised_queue?(name1, "alpha")
+        refute supervised_queue?(name2, "alpha")
+      end)
+    end
+
+    test "starting queues on a specific node" do
+      name1 = start_supervised_oban!(node: "worker.1", queues: [])
+      name2 = start_supervised_oban!(node: "worker.2", queues: [])
+
+      assert :ok = Oban.start_queue(name1, queue: :alpha, limit: 1, node: "worker.1")
 
       with_backoff(fn ->
         assert supervised_queue?(name1, "alpha")

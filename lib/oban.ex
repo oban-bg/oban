@@ -954,7 +954,7 @@ defmodule Oban do
   def start_queue(name \\ __MODULE__, [_ | _] = opts) do
     conf = config(name)
 
-    validate_queue_opts!(opts, ~w(local_only queue)a)
+    validate_queue_opts!(opts, ~w(local_only node queue)a)
     validate_engine_meta!(conf, opts)
 
     data =
@@ -962,6 +962,7 @@ defmodule Oban do
       |> Map.new()
       |> Map.put(:action, :start)
       |> Map.put(:ident, scope_signal(conf, opts))
+      |> Map.drop([:node])
 
     Notifier.notify(conf, :signal, data)
   end
