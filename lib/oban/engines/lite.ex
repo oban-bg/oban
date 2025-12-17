@@ -146,7 +146,7 @@ defmodule Oban.Engines.Lite do
     select_query =
       queryable
       |> select([j], map(j, [:id, :queue, :state]))
-      |> where([j], j.state == "completed" and j.scheduled_at < ^time)
+      |> where([j], j.state == "completed" and j.completed_at < ^time)
       |> or_where([j], j.state == "cancelled" and j.cancelled_at < ^time)
       |> or_where([j], j.state == "discarded" and j.discarded_at < ^time)
       |> limit(^limit)

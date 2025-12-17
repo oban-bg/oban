@@ -20,8 +20,13 @@ defmodule Oban.Migrations.SQLite do
       add :max_attempts, :integer, null: false, default: 20
       add :priority, :integer, null: false, default: 0
 
-      add :inserted_at, :utc_datetime_usec, null: false, default: fragment("CURRENT_TIMESTAMP")
-      add :scheduled_at, :utc_datetime_usec, null: false, default: fragment("CURRENT_TIMESTAMP")
+      add :inserted_at, :utc_datetime_usec,
+        null: false,
+        default: fragment("(strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))")
+
+      add :scheduled_at, :utc_datetime_usec,
+        null: false,
+        default: fragment("(strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))")
 
       add :attempted_at, :utc_datetime_usec
       add :attempted_by, :json, null: false, default: []
