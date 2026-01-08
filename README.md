@@ -132,26 +132,25 @@ without worrying about jobs being lost or orphaned due to crashes.
 An official set of extensions, plugins, and workers that expand what Oban is capable of is
 available as a licensed package. It includes features like:
 
-* 🖇️ [Workflows][wor]
-* 🎨 [Decorators][dec]
-* ⛓️  [Chains][cha]
-* 🏗️ [Structured Jobs][str]
-* 🪝 [Worker Hooks][hoo]
-* 🌎 [Global Limits][glo]
-* 🔪 [Queue Partitioning][par]
-* 🎢 [Dynamic Queues][dyn]
+- **Smart Engine** — Enables global concurrency, global rate limiting, queue partitioning, and
+  auto insert batching for truly distributed job processing.
 
-Plus [much more][ove]. Learn more about [Oban Pro](https://oban.pro#oban-pro)
+- **Pro Worker** — Extends workers with execution hooks, structured args, output recording,
+  encrypted args at rest, and chained execution.
 
-[cha]: https://oban.pro/docs/pro/Oban.Pro.Worker.html#module-chained-jobs
-[dec]: https://oban.pro/docs/pro/Oban.Pro.Decorator.html
-[dyn]: https://oban.pro/docs/pro/Oban.Pro.Plugins.DynamicQueues.html
-[glo]: https://oban.pro/docs/pro/Oban.Pro.Engines.Smart.html#module-global-concurrency
-[hoo]: https://oban.pro/docs/pro/Oban.Pro.Worker.html#module-worker-hooks
-[par]: https://oban.pro/docs/pro/Oban.Pro.Engines.Smart.html#module-queue-partitioning
-[ove]: https://oban.pro/docs/pro/overview.html
-[str]: https://oban.pro/docs/pro/Oban.Pro.Worker.html#module-structured-jobs
-[wor]: https://oban.pro/docs/pro/Oban.Pro.Workers.Workflow.html
+- **Workflows** — Compose jobs with arbitrary dependencies for sequential, fan-out, and fan-in
+  execution patterns.
+
+- **Batches** — Process related jobs while tracking overall progress across all nodes and
+  executing optional callbacks.
+
+- **Dynamic Plugins** — Runtime configuration of cron schedules, queues, job priorities, and
+  automatic scaling—ideal for applications that manage jobs dynamically.
+
+- **Decorator** — Build and insert jobs directly from regular functions without defining worker
+  modules.
+
+[Learn more about Oban Pro →](https://oban.pro)
 
 ## Engines
 
