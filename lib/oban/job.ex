@@ -11,29 +11,21 @@ defmodule Oban.Job do
   use Ecto.Schema
 
   import Ecto.Changeset
+  import Oban.Period, only: [is_valid_period: 1]
 
   alias Ecto.Changeset
+  alias Oban.Period
   alias Oban.Validation
 
   @type args :: map()
   @type errors :: [%{at: DateTime.t(), attempt: pos_integer(), error: binary()}]
   @type tags :: [binary()]
 
-  @type time_unit ::
-          :second
-          | :seconds
-          | :minute
-          | :minutes
-          | :hour
-          | :hours
-          | :day
-          | :days
-          | :week
-          | :weeks
+  @type time_unit :: Period.time_unit()
 
   @type unique_field :: :args | :meta | :queue | :worker
 
-  @type unique_period :: pos_integer() | {pos_integer(), time_unit()} | :infinity
+  @type unique_period :: Period.t() | :infinity
 
   @type unique_state_group :: :all | :incomplete | :scheduled | :successful
 
@@ -481,20 +473,8 @@ defmodule Oban.Job do
   end
 
   @doc false
-  @spec cast_period(unique_period()) :: pos_integer()
-  def cast_period({value, unit}) do
-    unit = to_string(unit)
-
-    cond do
-      unit in ~w(second seconds) -> value
-      unit in ~w(minute minutes) -> value * 60
-      unit in ~w(hour hours) -> value * 60 * 60
-      unit in ~w(day days) -> value * 24 * 60 * 60
-      unit in ~w(week weeks) -> value * 24 * 60 * 60 * 7
-      true -> unit
-    end
-  end
-
+  @spec cast_period(unique_period()) :: pos_integer() | :infinity
+  def cast_period(period) when is_valid_period(period), do: Period.to_seconds(period)
   def cast_period(period), do: period
 
   @doc false
