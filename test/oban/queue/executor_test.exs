@@ -1,6 +1,8 @@
 defmodule Oban.Queue.ExecutorTest do
   use Oban.Case, async: true
 
+  import ExUnit.CaptureLog
+
   alias Oban.{CrashError, PerformError, TimeoutError}
   alias Oban.Queue.Executor
 
@@ -12,6 +14,10 @@ defmodule Oban.Queue.ExecutorTest do
     def perform(%{args: %{"mode" => "result"}}), do: {:ok, :result}
     def perform(%{args: %{"mode" => "snooze_zero"}}), do: {:snooze, 0}
     def perform(%{args: %{"mode" => "snooze"}}), do: {:snooze, 1}
+    def perform(%{args: %{"mode" => "snooze_minutes"}}), do: {:snooze, {5, :minutes}}
+    def perform(%{args: %{"mode" => "snooze_hours"}}), do: {:snooze, {1, :hour}}
+    def perform(%{args: %{"mode" => "snooze_days"}}), do: {:snooze, {2, :days}}
+    def perform(%{args: %{"mode" => "snooze_invalid_unit"}}), do: {:snooze, {5, :invalid}}
     def perform(%{args: %{"mode" => "raise"}}), do: raise(ArgumentError)
     def perform(%{args: %{"mode" => "catch"}}), do: throw({:error, :no_reason})
     def perform(%{args: %{"mode" => "error"}}), do: {:error, "no reason"}
@@ -35,6 +41,22 @@ defmodule Oban.Queue.ExecutorTest do
     test "reporting :snooze status" do
       assert %{state: :snoozed, snooze: 0} = call_with_mode("snooze_zero")
       assert %{state: :snoozed, snooze: 1} = call_with_mode("snooze")
+    end
+
+    test "reporting :snooze status with time unit tuples" do
+      assert %{state: :snoozed, snooze: 300} = call_with_mode("snooze_minutes")
+      assert %{state: :snoozed, snooze: 3600} = call_with_mode("snooze_hours")
+      assert %{state: :snoozed, snooze: 172_800} = call_with_mode("snooze_days")
+    end
+
+    test "handling invalid snooze time units gracefully" do
+      # Invalid unit should be treated as success with warning
+      logged =
+        capture_log(fn ->
+          assert %{state: :success} = call_with_mode("snooze_invalid_unit")
+        end)
+
+      assert logged =~ "The job will be considered a success."
     end
 
     test "reporting :discard status" do
