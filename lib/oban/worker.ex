@@ -100,8 +100,9 @@ defmodule Oban.Worker do
     already, the job is marked as `retryable` and scheduled to run again. Otherwise, the job is
     marked as `discarded` and won't be retried.
 
-  * `{:snooze, seconds}` — mark the job as `snoozed` and schedule it to run again `seconds` in the
-    future. See [Snoozing](#module-snoozing-jobs) for more details.
+  * `{:snooze, period}` — mark the job as `snoozed` and schedule it to run again after the specified
+    period. The period can be a number of seconds or a tuple like `{5, :minutes}`.
+    See [Snoozing](#module-snoozing-jobs) for more details.
 
   In addition to explicit return values, any _unhandled exception_, _exit_ or _throw_ will fail
   the job and schedule a retry under the same conditions as in the `{:error, error}` case.
@@ -260,13 +261,40 @@ defmodule Oban.Worker do
 
   ## Snoozing Jobs
 
-  When returning `{:snooze, snooze_time}` in `c:perform/1`, the job is postponed for at least
-  `snooze_time` seconds. Snoozing is done by incrementing the job's `max_attempts` field and
-  scheduling execution for `snooze_time` seconds in the future.
+  When returning `{:snooze, period}` in `c:perform/1`, the job is postponed for at least
+  the specified period. The period can be specified as:
+
+  * An integer representing seconds: `{:snooze, 60}` - snooze for 60 seconds
+  * A tuple with a value and time unit: `{:snooze, {5, :minutes}}` - snooze for 5 minutes
+
+  Supported time units are: `:second`, `:seconds`, `:minute`, `:minutes`, `:hour`, `:hours`,
+  `:day`, `:days`, `:week`, `:weeks`.
+
+  Snoozing is done by incrementing the job's `max_attempts` field and scheduling execution for
+  the specified period in the future.
 
   Executing bumps a job's `attempt` count. Despite snooze incrementing the `max_attempts` to
   preserve total retries, the change to `attempt` will affect the default backoff retry
   algorithm.
+
+  ### Examples
+
+  ```elixir
+    # Snooze for 60 seconds
+    def perform(job) do
+      if ready?(job), do: :ok, else: {:snooze, 60}
+    end
+
+    # Snooze for 5 minutes
+    def perform(job) do
+      if ready?(job), do: :ok, else: {:snooze, {5, :minutes}}
+    end
+
+    # Snooze for 1 hour
+    def perform(job) do
+      if rate_limited?(job), do: {:snooze, {1, :hour}}, else: :ok
+    end
+    ```
 
   > #### 🌟 Snoozes and Attempts {: .info}
   >
@@ -331,7 +359,7 @@ defmodule Oban.Worker do
 
   import Kernel, except: [to_string: 1]
 
-  alias Oban.{Backoff, Job, Validation}
+  alias Oban.{Backoff, Job, Period, Validation}
 
   @type t :: module()
 
@@ -343,7 +371,8 @@ defmodule Oban.Worker do
   - `{:cancel, reason}` - the job is marked as `cancelled` for the provided reason and no longer retried.
   - `{:error, reason}` - the job is marked as `retryable` for the provided reason, or `discarded`
     if it has  exhausted all attempts.
-  - `{:snooze, seconds}` - mark the job as `scheduled` to run again `seconds` in the future.
+  - `{:snooze, period}` - mark the job as `scheduled` to run again after the specified period.
+    The period can be an integer (seconds) or a tuple like `{5, :minutes}`.
 
   > #### Deprecated {: .warning}
   >
@@ -357,7 +386,7 @@ defmodule Oban.Worker do
           | {:discard, reason :: term()}
           | {:ok, ignored :: term()}
           | {:error, reason :: term()}
-          | {:snooze, seconds :: non_neg_integer()}
+          | {:snooze, period :: Period.t()}
 
   @doc """
   Build a job changeset for this worker with optional overrides.

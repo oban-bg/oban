@@ -59,6 +59,11 @@ defmodule Oban.Integration.Worker do
 
         {:snooze, 60}
 
+      "SNOOZE_MINUTES" ->
+        send(pid, {:snooze, ref})
+
+        {:snooze, {1, :minute}}
+
       "TASK_ERROR" ->
         send(pid, {:async, ref})
 

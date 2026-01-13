@@ -1,7 +1,9 @@
 defmodule Oban.Queue.Executor do
   @moduledoc false
 
-  alias Oban.{Backoff, Config, CrashError, Engine, Job}
+  import Oban.Period, only: [is_valid_period: 1]
+
+  alias Oban.{Backoff, Config, CrashError, Engine, Job, Period}
   alias Oban.{PerformError, TimeoutError, Worker}
 
   require Logger
@@ -159,8 +161,8 @@ defmodule Oban.Queue.Executor do
       {:error, _reason} = result ->
         %{exec | result: result, state: :failure, error: perform_error(worker, result)}
 
-      {:snooze, seconds} = result when is_integer(seconds) and seconds >= 0 ->
-        %{exec | result: result, state: :snoozed, snooze: seconds}
+      {:snooze, period} = result when is_valid_period(period) ->
+        %{exec | result: result, state: :snoozed, snooze: Period.to_seconds(period)}
 
       returned ->
         log_warning(exec, returned)
@@ -346,7 +348,7 @@ defmodule Oban.Queue.Executor do
         - `{:error, reason}`,
         - `{:cancel, reason}`
         - `{:discard, reason}`
-        - `{:snooze, seconds}`
+        - `{:snooze, period}`
 
         Instead received:
 
