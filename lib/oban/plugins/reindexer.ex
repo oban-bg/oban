@@ -138,40 +138,45 @@ defmodule Oban.Plugins.Reindexer do
 
   defp check_leadership_and_reindex(state) do
     if Peer.leader?(state.conf) do
-      queries = [deindex_query(state) | Enum.map(state.indexes, &reindex_query(state, &1))]
+      with {:ok, deindex_queries} <- fetch_deindex_queries(state) do
+        reindex_queries = Enum.map(state.indexes, &reindex_query(state, &1))
 
-      Enum.reduce_while(queries, :ok, fn query, _ ->
-        case Repo.query(state.conf, query, [], timeout: state.timeout) do
-          {:ok, _} -> {:cont, :ok}
-          error -> {:halt, error}
-        end
-      end)
+        Enum.reduce_while(deindex_queries ++ reindex_queries, :ok, fn query, _ ->
+          case Repo.query(state.conf, query, [], timeout: state.timeout) do
+            {:ok, _} -> {:cont, :ok}
+            error -> {:halt, error}
+          end
+        end)
+      end
     end
+  end
+
+  defp fetch_deindex_queries(state) do
+    query = """
+    SELECT relnamespace::regnamespace::text AS namespace, relname
+    FROM pg_index i
+    JOIN pg_class c ON c.oid = i.indexrelid
+    WHERE relnamespace = '#{state.conf.prefix}'::regnamespace
+      AND NOT indisvalid
+      AND starts_with(relname, 'oban_jobs')
+    """
+
+    case Repo.query(state.conf, query, [], timeout: state.timeout) do
+      {:ok, %{rows: rows}} ->
+        {:ok, Enum.map(rows, fn [namespace, relname] -> deindex_query(namespace, relname) end)}
+
+      error ->
+        error
+    end
+  end
+
+  defp deindex_query(namespace, relname) do
+    "DROP INDEX CONCURRENTLY #{namespace}.#{relname}"
   end
 
   defp reindex_query(state, index) do
     prefix = inspect(state.conf.prefix)
 
     "REINDEX INDEX CONCURRENTLY #{prefix}.#{index}"
-  end
-
-  defp deindex_query(state) do
-    """
-    DO $$
-    DECLARE
-      rec record;
-    BEGIN
-      FOR rec IN
-        SELECT relname, relnamespace::regnamespace AS namespace
-        FROM pg_index i
-        JOIN pg_class c on c.oid = i.indexrelid
-        WHERE relnamespace = '#{state.conf.prefix}'::regnamespace
-          AND NOT indisvalid
-          AND starts_with(relname, 'oban_jobs')
-      LOOP
-        EXECUTE format('DROP INDEX CONCURRENTLY %s.%s', rec.namespace, rec.relname);
-      END LOOP;
-    END $$
-    """
   end
 end

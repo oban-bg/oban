@@ -44,8 +44,6 @@ defmodule Oban.Plugins.ReindexerTest do
   end
 
   describe "integration" do
-    @describetag :reindex
-
     setup do
       TelemetryHandler.attach_events()
     end
@@ -63,7 +61,7 @@ defmodule Oban.Plugins.ReindexerTest do
     end
 
     test "reindexing according to the provided schedule" do
-      name = start_supervised_oban!(plugins: [{Reindexer, schedule: "* * * * *"}])
+      name = start_supervised_oban!(plugins: [Reindexer])
 
       name
       |> Registry.whereis({:plugin, Reindexer})
@@ -71,6 +69,34 @@ defmodule Oban.Plugins.ReindexerTest do
 
       assert_receive {:event, :start, _, %{plugin: Reindexer}}, 500
       assert_receive {:event, :stop, _, %{plugin: Reindexer}}, 500
+
+      stop_supervised(name)
+    end
+
+    @tag :unboxed
+    test "dropping invalid indexes before reindexing" do
+      index_name = "oban_jobs_test_invalid_idx"
+
+      on_exit(fn ->
+        UnboxedRepo.query("DROP INDEX IF EXISTS #{index_name}")
+      end)
+
+      UnboxedRepo.query!("CREATE INDEX CONCURRENTLY #{index_name} ON oban_jobs(id)")
+
+      UnboxedRepo.query!(
+        "UPDATE pg_index SET indisvalid = false WHERE indexrelid = 'public.#{index_name}'::regclass"
+      )
+
+      name = start_supervised_oban!(repo: UnboxedRepo, plugins: [Reindexer])
+
+      name
+      |> Registry.whereis({:plugin, Reindexer})
+      |> send(:reindex)
+
+      assert_receive {:event, :stop, _, %{plugin: Reindexer}}, 500
+
+      result = UnboxedRepo.query!("SELECT 1 FROM pg_class WHERE relname = '#{index_name}'")
+      assert result.rows == []
 
       stop_supervised(name)
     end
