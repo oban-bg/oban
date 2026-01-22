@@ -73,6 +73,11 @@ experience transient failures due to database or connectivity issues.
   It's now possible to snooze jobs with a period such as `{1, :minute}` instead of just a raw
   number of seconds.
 
+- [Oban] Validate no duplicate options are passed to config on init
+
+  Because options are provided as a keyword list, duplicate options were accepted while only one
+  was actually used.
+
 ### Bug Fixes
 
 - [Oban] Fix starting a queue on a specific node
