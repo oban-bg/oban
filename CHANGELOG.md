@@ -64,6 +64,52 @@ The new supervisor has more lenient restart limits to allow for more plugin rest
 before giving up. This change makes Oban more robust in production environments where plugins may
 experience transient failures due to database or connectivity issues.
 
+## v2.20.3 — 2025-01-22
+
+### Enhancements
+
+- [Worker] Allow snoozing jobs by returning a tuple period
+
+  It's now possible to snooze jobs with a period such as `{1, :minute}` instead of just a raw
+  number of seconds.
+
+### Bug Fixes
+
+- [Oban] Fix starting a queue on a specific node
+
+  The `:node` option was incorrectly preserved when starting a queue, which would crash it. Now
+  the `:node` is dropped after scoping the start signal.
+
+- [Reindexer] Fix dropping invalid indexes from the reindexer
+
+  The reindexer would fail sliently with "DROP INDEX CONCURRENTLY" cannot be executed from a
+  function message because the deindex operation used a `DO` block to loop through and drop
+  invalid indexes, but PostgreSQL prohibits `CONCURRENTLY` operations inside functions or DO
+  blocks. Now invalid indexes are fetched first, then dropped as individual queries.
+
+- [Installer] Prevent installer crash with unsupported adapters
+
+  The installer would crash with a `CaseClauseError` when a project had an Ecto repo using an
+  unsupported adapter like `Ecto.Adapters.Tds`.
+
+  Now the installer filters repos to find one with a supported adapter, skipping unsupported ones
+  automatically. Without a compatible repo, it displays an error message listing the found repos
+  and their adapters, along with guidance on how to specify a repo explicitly.
+
+- [Pruner] Better sqlite timestamp default and pruning query
+
+  The `CURRENT_TIMESTAMP` type lacks a trailing `z`, which causes it to be compared incorrectly
+  against UTC datetimes. Any jobs inserted without a `scheduled_at`, where the default is used,
+  could be returned in queries that compare against a `DateTime`.
+
+  This prevents the issue in the future two ways:
+
+  1. Switch the default `inserted_at/scheduled_at` timestamp to a format that can be queried
+     properly.
+  2. Change the pruning check to use `completed_at` rather than `scheduled_at` for existing
+     databases. This is a more accurate query that was avoided before because it didn't match the
+  `Basic` engine.
+
 ## v2.20.2 — 2025-12-04
 
 ### Enhancements
