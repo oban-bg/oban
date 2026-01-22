@@ -139,19 +139,17 @@ if Code.ensure_loaded?(Igniter) do
     end
 
     defp find_supported_repo(igniter, app_name, repos) do
-      repos_with_adapters = Enum.map(repos, &{&1, extract_adapter(igniter, &1)})
+      with_adapters = Enum.map(repos, &{&1, extract_adapter(igniter, &1)})
 
-      case Enum.find(repos_with_adapters, fn {_repo, adapter} ->
-             adapter in @supported_adapters
-           end) do
+      case Enum.find(with_adapters, fn {_, adapter} -> adapter in @supported_adapters end) do
         {repo, adapter} ->
           {:ok, repo, adapter}
 
         nil ->
           unsupported_list =
-            repos_with_adapters
-            |> Enum.map(fn {repo, adapter} -> "  * #{inspect(repo)} (#{inspect(adapter)})" end)
-            |> Enum.join("\n")
+            Enum.map_join(with_adapters, "\n", fn {repo, adapter} ->
+              "  * #{inspect(repo)} (#{inspect(adapter)})"
+            end)
 
           issue = """
           No compatible Ecto repo found for #{inspect(app_name)}.
