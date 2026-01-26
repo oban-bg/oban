@@ -98,6 +98,7 @@ defmodule Oban.Testing do
 
   import ExUnit.Assertions, only: [assert: 2, refute: 2, flunk: 1]
   import Ecto.Query, only: [order_by: 2, select: 3, where: 2, where: 3]
+  import Oban.Period, only: [is_valid_period: 1]
 
   alias Ecto.Changeset
 
@@ -596,7 +597,7 @@ defmodule Oban.Testing do
         {:cancel, _value} -> true
         {:error, _value} -> true
         {:discard, _value} -> true
-        {:snooze, snooze} when is_integer(snooze) -> true
+        {:snooze, snooze} when is_valid_period(snooze) -> true
         :discard -> true
         _ -> false
       end
