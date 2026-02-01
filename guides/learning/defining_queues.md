@@ -53,7 +53,8 @@ This expanded configuration demonstrates several advanced options:
 ### Paused Queues
 
 When a queue is configured with `paused: true`, it won't process any jobs until explicitly
-started. This is useful for:
+started. Note that this pause will only affect the queue for the local node.
+This is useful for:
 
 * Maintenance periods
 * Controlling when resource-intensive jobs can run
