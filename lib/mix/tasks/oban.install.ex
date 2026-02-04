@@ -65,6 +65,13 @@ if Code.ensure_loaded?(Igniter) do
     end
 
     @impl Igniter.Mix.Task
+    def supports_umbrella?() do
+      # https://github.com/ash-project/igniter/blob/22aa432d3807cd77cdbdddcba27ac9738cc3767b/lib/mix/task.ex#L24
+      # "At the moment, this is still experimental and we suggest not turning it on."
+      false
+    end
+
+    @impl Igniter.Mix.Task
     def igniter(igniter) do
       app_name = Igniter.Project.Application.app_name(igniter)
       opts = igniter.args.options
