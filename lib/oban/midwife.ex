@@ -8,7 +8,7 @@ defmodule Oban.Midwife do
 
   require Logger
 
-  defstruct [:conf]
+  defstruct [:conf, :notifier_ref]
 
   @spec start_link(Keyword.t()) :: GenServer.on_start()
   def start_link(opts) do
@@ -67,8 +67,13 @@ defmodule Oban.Midwife do
   @impl GenServer
   def handle_continue(:start, %State{conf: conf} = state) do
     Notifier.listen(conf.name, :signal)
+    ref = monitor_notifier(conf)
 
-    {:noreply, state}
+    {:noreply, %{state | notifier_ref: ref}}
+  end
+
+  def handle_continue(:resubscribe, state) do
+    resubscribe(state)
   end
 
   @impl GenServer
@@ -92,6 +97,14 @@ defmodule Oban.Midwife do
     {:noreply, state}
   end
 
+  def handle_info({:DOWN, ref, :process, _pid, _reason}, %State{notifier_ref: ref} = state) do
+    {:noreply, %{state | notifier_ref: nil}, {:continue, :resubscribe}}
+  end
+
+  def handle_info(:resubscribe, state) do
+    resubscribe(state)
+  end
+
   def handle_info(message, state) do
     Logger.warning(
       [
@@ -103,6 +116,27 @@ defmodule Oban.Midwife do
     )
 
     {:noreply, state}
+  end
+
+  defp resubscribe(%State{conf: conf} = state) do
+    case Registry.whereis(conf.name, Oban.Notifier) do
+      pid when is_pid(pid) ->
+        Notifier.listen(conf.name, :signal)
+
+        {:noreply, %{state | notifier_ref: Process.monitor(pid)}}
+
+      nil ->
+        Process.send_after(self(), :resubscribe, 100)
+
+        {:noreply, state}
+    end
+  end
+
+  defp monitor_notifier(conf) do
+    case Registry.whereis(conf.name, Oban.Notifier) do
+      pid when is_pid(pid) -> Process.monitor(pid)
+      nil -> nil
+    end
   end
 
   defp foreman(conf), do: Registry.via(conf.name, Foreman)

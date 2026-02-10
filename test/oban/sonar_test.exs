@@ -69,4 +69,43 @@ defmodule Oban.SonarTest do
       refute "web.2" in nodes
     end
   end
+
+  describe "notifier crash recovery" do
+    @tag :capture_log
+    test "sonar re-registers as listener after notifier crash" do
+      name = start_supervised_oban!(notifier: Oban.Notifiers.Isolated)
+
+      with_backoff(fn ->
+        assert :solitary = Notifier.status(name)
+      end)
+
+      sonar_pid = Registry.whereis(name, Sonar)
+      notifier_pid = Registry.whereis(name, Notifier)
+      Process.exit(notifier_pid, :kill)
+
+      # Wait for the notifier to restart with a new pid.
+      with_backoff(fn ->
+        new_pid = Registry.whereis(name, Notifier)
+        assert is_pid(new_pid) and new_pid != notifier_pid
+      end)
+
+      # Sonar was not restarted
+      assert Registry.whereis(name, Sonar) == sonar_pid
+
+      # Trigger a ping to re-register Sonar as a listener.
+      send(sonar_pid, :ping)
+
+      # Synchronize: ensures the ping was fully processed before proceeding.
+      _ = Notifier.status(name)
+
+      # Send a notification from a fake external node. If Sonar re-registered as
+      # a listener on the new notifier, it receives this and becomes :clustered.
+      # Without re-registration the notification goes nowhere.
+      Notifier.notify(name, :sonar, %{node: "external.1"})
+
+      with_backoff(fn ->
+        assert :clustered = Notifier.status(name)
+      end)
+    end
+  end
 end

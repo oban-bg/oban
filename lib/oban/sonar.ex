@@ -69,7 +69,12 @@ defmodule Oban.Sonar do
 
   @impl GenServer
   def handle_info(:ping, state) do
-    :ok = Notifier.notify(state.conf, :sonar, %{node: state.conf.node, ping: true})
+    try do
+      Notifier.listen(state.conf.name, :sonar)
+      Notifier.notify(state.conf, :sonar, %{node: state.conf.node, ping: true})
+    catch
+      :exit, _ -> :ok
+    end
 
     state =
       state
