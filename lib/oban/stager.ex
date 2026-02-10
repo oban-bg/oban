@@ -104,7 +104,11 @@ defmodule Oban.Stager do
 
     payload = Enum.map(queues, &%{queue: &1})
 
-    Notifier.notify(conf, :insert, payload)
+    try do
+      Notifier.notify(conf, :insert, payload)
+    catch
+      :exit, _ -> :ok
+    end
   end
 
   defp notify_queues(%{conf: conf, mode: :local}) do
