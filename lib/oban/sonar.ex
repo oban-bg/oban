@@ -61,6 +61,12 @@ defmodule Oban.Sonar do
     {:reply, state.status, state}
   end
 
+  def handle_call(:ping, _from, state) do
+    {:noreply, state} = handle_info(:ping, state)
+
+    {:reply, :ok, state}
+  end
+
   def handle_call(:prune_nodes, _from, state) do
     state = prune_stale_nodes(state)
 

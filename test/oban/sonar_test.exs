@@ -93,10 +93,7 @@ defmodule Oban.SonarTest do
       assert Registry.whereis(name, Sonar) == sonar_pid
 
       # Trigger a ping to re-register Sonar as a listener.
-      send(sonar_pid, :ping)
-
-      # Synchronize: ensures the ping was fully processed before proceeding.
-      _ = Notifier.status(name)
+      GenServer.call(sonar_pid, :ping)
 
       # Send a notification from a fake external node. If Sonar re-registered as
       # a listener on the new notifier, it receives this and becomes :clustered.
