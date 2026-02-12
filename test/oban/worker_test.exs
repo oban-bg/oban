@@ -104,6 +104,23 @@ defmodule Oban.WorkerTest do
     end
   end
 
+  describe "__opts__/0" do
+    test "returns only the worker name with default options" do
+      assert BasicWorker.__opts__() == [worker: "Oban.WorkerTest.BasicWorker"]
+    end
+
+    test "returns all configured options along with the worker name" do
+      opts = CustomWorker.__opts__()
+
+      assert opts
+             |> Keyword.keys()
+             |> Enum.sort() == ~w(max_attempts priority queue replace tags unique worker)a
+
+      assert opts[:worker] == "Oban.WorkerTest.CustomWorker"
+      assert opts[:queue] == "special"
+    end
+  end
+
   describe "perform/1" do
     test "arguments from the complete job struct are extracted" do
       args = %{"a" => 2, "b" => 3}

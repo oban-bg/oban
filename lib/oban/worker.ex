@@ -433,6 +433,36 @@ defmodule Oban.Worker do
   """
   @callback perform(job :: Job.t()) :: result()
 
+  @doc """
+  Returns the worker's compile-time options.
+
+  These options are defined when using `use Oban.Worker` and include:
+
+  * `:max_attempts` — Maximum retry attempts
+  * `:priority` — Job priority (0-9)
+  * `:queue` — Queue name
+  * `:tags` — Job tags
+  * `:replace` — Replacement rules
+  * `:unique` — Uniqueness constraints
+  * `:worker` — The worker module name as a string (automatically added)
+
+  The options returned by this callback are used as defaults when building job changesets with
+  `c:new/2`. They can be overridden at runtime by passing options to `new/2`.
+
+  ## Example
+
+      defmodule MyApp.Worker do
+        use Oban.Worker, queue: :events, max_attempts: 5
+
+        @impl Oban.Worker
+        def perform(_job), do: :ok
+      end
+
+      MyApp.Worker.__opts__()
+      #=> [queue: :events, max_attempts: 5, worker: "MyApp.Worker"]
+  """
+  @callback __opts__() :: Keyword.t()
+
   @clamped_max 20
 
   @doc false
@@ -443,9 +473,9 @@ defmodule Oban.Worker do
       @after_compile Worker
       @behaviour Worker
 
-      @doc false
+      @impl Worker
       def __opts__ do
-        Keyword.put(unquote(opts), :worker, to_string(__MODULE__))
+        Keyword.put(unquote(opts), :worker, inspect(__MODULE__))
       end
 
       @impl Worker
