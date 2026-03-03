@@ -44,7 +44,7 @@ defmodule Oban.Job do
           {:fields, [unique_field()]}
           | {:keys, [atom()]}
           | {:period, unique_period()}
-          | {:states, [unique_state()]}
+          | {:states, unique_state_group() | [unique_state()]}
           | {:timestamp, unique_timestamp()}
 
   @type replace_option :: [
