@@ -424,7 +424,7 @@ defmodule Oban.TestingTest do
 
         assert_enqueued worker: Worker
 
-        refute_received {:ok, 1}, 25
+        refute_received {:ok, 1}
       end)
     end
 

@@ -135,16 +135,19 @@ defmodule Oban do
   """
   @type multi_name :: Multi.name()
 
+  defguardp is_stream(value)
+            when is_struct(value, Stream) or is_function(value, 2)
+
   defguardp is_changeset_or_fun(cf)
             when is_struct(cf, Changeset) or is_function(cf, 1)
 
-  defguardp is_list_or_wrapper(cw)
+  defguardp is_insertable(cw)
             when is_list(cw) or
-                   is_struct(cw, Stream) or
+                   is_stream(cw) or
                    is_function(cw, 1) or
                    (is_map_key(cw, :changesets) and is_list(cw.changesets)) or
-                   (is_map_key(cw, :changesets) and is_struct(cw.changesets, Stream)) or
-                   (is_map_key(cw, :changesets) and is_function(cw.changesets))
+                   (is_map_key(cw, :changesets) and is_stream(cw.changesets)) or
+                   (is_map_key(cw, :changesets) and is_function(cw.changesets, 1))
 
   @doc """
   Creates a facade for `Oban` functions and automates fetching configuration from the application
@@ -689,7 +692,7 @@ defmodule Oban do
   end
 
   @doc false
-  def insert_all(changesets, opts) when is_list_or_wrapper(changesets) do
+  def insert_all(changesets, opts) when is_insertable(changesets) do
     insert_all(__MODULE__, changesets, opts)
   end
 
@@ -762,24 +765,23 @@ defmodule Oban do
         ) :: [Job.t()] | Multi.t()
   def insert_all(name \\ __MODULE__, changesets, opts \\ [])
 
-  def insert_all(name, changesets, opts) when is_list_or_wrapper(changesets) and is_list(opts) do
+  def insert_all(name, changesets, opts) when is_insertable(changesets) and is_list(opts) do
     name
     |> config()
     |> Engine.insert_all_jobs(changesets, opts)
   end
 
-  def insert_all(%Multi{} = multi, multi_name, changesets) when is_list_or_wrapper(changesets) do
+  def insert_all(%Multi{} = multi, multi_name, changesets) when is_insertable(changesets) do
     insert_all(__MODULE__, multi, multi_name, changesets, [])
   end
 
   @doc false
-  def insert_all(%Multi{} = multi, multi_name, changesets, opts)
-      when is_list_or_wrapper(changesets) do
+  def insert_all(%Multi{} = multi, multi_name, changesets, opts) when is_insertable(changesets) do
     insert_all(__MODULE__, multi, multi_name, changesets, opts)
   end
 
   @doc false
-  def insert_all(name, multi, multi_name, changesets) when is_list_or_wrapper(changesets) do
+  def insert_all(name, multi, multi_name, changesets) when is_insertable(changesets) do
     insert_all(name, multi, multi_name, changesets, [])
   end
 
@@ -813,7 +815,7 @@ defmodule Oban do
   @spec insert_all(name(), Multi.t(), multi_name(), changesets_or_wrapper_or_fun(), Keyword.t()) ::
           Multi.t()
   def insert_all(name, multi, multi_name, changesets, opts)
-      when is_list_or_wrapper(changesets) and is_list(opts) do
+      when is_insertable(changesets) and is_list(opts) do
     name
     |> config()
     |> Engine.insert_all_jobs(multi, multi_name, changesets, opts)
