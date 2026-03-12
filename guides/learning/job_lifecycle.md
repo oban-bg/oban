@@ -6,8 +6,9 @@ state.
 
 ## Job States
 
-Jobs exist in one of seven possible states:
+Jobs exist in one of eight possible states:
 
+- `suspended` — Jobs that are held and won't be processed until they are resumed
 - `available` — Jobs ready to be executed
 - `scheduled` — Jobs waiting for a specific time to become available for execution
 - `executing` — Jobs currently running

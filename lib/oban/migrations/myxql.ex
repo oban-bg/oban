@@ -8,7 +8,7 @@ defmodule Oban.Migrations.MyXQL do
   @impl Oban.Migration
   def up(_opts) do
     states =
-      :"ENUM('available', 'scheduled', 'executing', 'retryable', 'completed', 'cancelled', 'discarded')"
+      :"ENUM('suspended', 'available', 'scheduled', 'executing', 'retryable', 'completed', 'cancelled', 'discarded')"
 
     create_if_not_exists table(:oban_jobs, primary_key: false) do
       add :id, :bigserial, primary_key: true

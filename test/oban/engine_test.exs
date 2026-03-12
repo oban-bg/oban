@@ -168,6 +168,7 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite, Oban.Engines.Dolphin] do
         %Job{id: id_2} = insert!(name, %{id: 2}, state: "completed")
         %Job{id: id_3} = insert!(name, %{id: 3}, state: "executing")
         %Job{id: id_4} = insert!(name, %{id: 4}, state: "discarded")
+        %Job{id: id_5} = insert!(name, %{id: 5}, state: "suspended")
 
         uniq_insert = fn args, states ->
           Oban.insert(name, Worker.new(args, unique: [states: states]))
@@ -178,6 +179,7 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite, Oban.Engines.Dolphin] do
         assert {:ok, %{id: ^id_2}} = uniq_insert.(%{id: 2}, [:completed, :discarded])
         assert {:ok, %{id: ^id_3}} = uniq_insert.(%{id: 3}, [:completed, :executing])
         assert {:ok, %{id: ^id_4}} = uniq_insert.(%{id: 4}, [:completed, :discarded])
+        assert {:ok, %{id: ^id_5}} = uniq_insert.(%{id: 5}, [:suspended])
       end
 
       @tag :unique

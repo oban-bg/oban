@@ -37,6 +37,7 @@ defmodule Oban.Job do
           | :executing
           | :retryable
           | :scheduled
+          | :suspended
 
   @type unique_timestamp :: :inserted_at | :scheduled_at
 
@@ -66,6 +67,7 @@ defmodule Oban.Job do
           | {:executing, [replace_option()]}
           | {:retryable, [replace_option()]}
           | {:scheduled, [replace_option()]}
+          | {:suspended, [replace_option()]}
 
   @type schedule_in_option :: pos_integer() | {pos_integer(), time_unit()}
 
@@ -363,9 +365,11 @@ defmodule Oban.Job do
   ## Examples
 
       iex> Oban.Job.states() -- [:completed, :discarded]
-      ~w(scheduled available executing retryable cancelled)a
+      ~w(suspended scheduled available executing retryable cancelled)a
 
   ## Job State Transitions
+
+  * `:suspended`—Jobs that are held and won't be processed until they are resumed
 
   * `:scheduled`—Jobs inserted with `scheduled_at` in the future are `:scheduled`. After the
     `scheduled_at` time has elapsed Oban's job staging will transition them to `:available`
@@ -389,7 +393,7 @@ defmodule Oban.Job do
   """
   @doc since: "2.1.0"
   def states do
-    ~w(scheduled available executing retryable completed discarded cancelled)a
+    ~w(suspended scheduled available executing retryable completed discarded cancelled)a
   end
 
   @doc """
@@ -405,7 +409,7 @@ defmodule Oban.Job do
   ## Examples
 
       iex> Oban.Job.unique_states(:incomplete)
-      ~w(available scheduled executing retryable)a
+      ~w(suspended available scheduled executing retryable)a
 
       iex> Oban.Job.unique_states(:scheduled)
       ~w(scheduled)a
@@ -413,9 +417,11 @@ defmodule Oban.Job do
   """
   @doc since: "2.20.0"
   def unique_states(:all), do: states()
-  def unique_states(:incomplete), do: ~w(available scheduled executing retryable)a
+  def unique_states(:incomplete), do: ~w(suspended available scheduled executing retryable)a
   def unique_states(:scheduled), do: ~w(scheduled)a
-  def unique_states(:successful), do: ~w(available scheduled executing retryable completed)a
+
+  def unique_states(:successful),
+    do: ~w(suspended available scheduled executing retryable completed)a
 
   @doc """
   Convert a Job changeset into a map suitable for database insertion.

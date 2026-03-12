@@ -150,7 +150,8 @@ defmodule Oban.JobTest do
     test "unique state groups are expanded into a list of states" do
       changeset = Job.new(%{}, unique: [states: :incomplete])
 
-      assert ~w(available scheduled executing retryable)a = changeset.changes.unique.states
+      assert ~w(suspended available scheduled executing retryable)a =
+               changeset.changes.unique.states
     end
   end
 
@@ -160,9 +161,9 @@ defmodule Oban.JobTest do
         Job.new(%{}, Keyword.put(opts, :worker, Fake)).changes[:replace]
       end
 
-      assert [{:scheduled, [:args]} | _] = changes.(replace_args: true)
-      assert [{:scheduled, [:tags]} | _] = changes.(replace: [:tags])
-      assert [{:scheduled, [:args, :tags]} | _] = changes.(replace: [:tags], replace_args: true)
+      assert [{:suspended, [:args]} | _] = changes.(replace_args: true)
+      assert [{:suspended, [:tags]} | _] = changes.(replace: [:tags])
+      assert [{:suspended, [:args, :tags]} | _] = changes.(replace: [:tags], replace_args: true)
     end
 
     test "allows a subset of fields for replacement" do
