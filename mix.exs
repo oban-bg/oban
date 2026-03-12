@@ -34,6 +34,7 @@ defmodule Oban.MixProject do
         main: "Oban",
         api_reference: false,
         logo: "assets/oban-logo.svg",
+        assets: %{"assets" => "assets"},
         source_ref: "v#{@version}",
         source_url: @source_url,
         extra_section: "GUIDES",
