@@ -31,7 +31,7 @@ jobs:
               elixir: '1.15'
               otp: '24.3'
               mysql: '8.4'
-              postgres: '12.13-alpine'
+              postgres: '14.0-alpine'
             exclude_tags: 'lite'
           - pair:
               elixir: '1.19'

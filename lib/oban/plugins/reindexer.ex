@@ -8,9 +8,6 @@ defmodule Oban.Plugins.Reindexer do
   The plugin uses `REINDEX` with the `CONCURRENTLY` option to rebuild without taking any locks
   that prevent concurrent inserts, updates, or deletes on the table.
 
-  Note: This plugin requires the `CONCURRENTLY` option, which is only available in Postgres 12 and
-  above.
-
   ## Using the Plugin
 
   By default, the plugin will reindex once a day, at midnight UTC:

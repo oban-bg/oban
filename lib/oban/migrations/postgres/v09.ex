@@ -9,42 +9,7 @@ defmodule Oban.Migrations.Postgres.V09 do
       add_if_not_exists(:cancelled_at, :utc_datetime_usec)
     end
 
-    execute """
-    DO $$
-    DECLARE
-      version int;
-      already bool;
-    BEGIN
-      SELECT current_setting('server_version_num')::int INTO version;
-      SELECT '{cancelled}' <@ enum_range(NULL::#{quoted}.oban_job_state)::text[] INTO already;
-
-      IF already THEN
-        RETURN;
-      ELSIF version >= 120000 THEN
-        ALTER TYPE #{quoted}.oban_job_state ADD VALUE IF NOT EXISTS 'cancelled';
-      ELSE
-        ALTER TYPE #{quoted}.oban_job_state RENAME TO old_oban_job_state;
-
-        CREATE TYPE #{quoted}.oban_job_state AS ENUM (
-          'available',
-          'scheduled',
-          'executing',
-          'retryable',
-          'completed',
-          'discarded',
-          'cancelled'
-        );
-
-        ALTER TABLE #{quoted}.oban_jobs RENAME column state TO _state;
-        ALTER TABLE #{quoted}.oban_jobs ADD state #{quoted}.oban_job_state NOT NULL default 'available';
-
-        UPDATE #{quoted}.oban_jobs SET state = _state::text::#{quoted}.oban_job_state;
-
-        ALTER TABLE #{quoted}.oban_jobs DROP column _state;
-        DROP TYPE #{quoted}.old_oban_job_state;
-      END IF;
-    END$$;
-    """
+    execute "ALTER TYPE #{quoted}.oban_job_state ADD VALUE IF NOT EXISTS 'cancelled'"
 
     create_if_not_exists index(:oban_jobs, [:state, :queue, :priority, :scheduled_at, :id],
                            prefix: prefix

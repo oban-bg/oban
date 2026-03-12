@@ -168,7 +168,7 @@ Oban requires:
 
 * Elixir 1.15+
 * Erlang 24+
-* PostgreSQL 12.0+, MySQL 8.4+, or SQLite3 3.37.0+
+* PostgreSQL 14.0+, MySQL 8.4+, or SQLite3 3.37.0+
 
 ## Installation
 
@@ -233,7 +233,7 @@ There are a few places to connect and communicate with other Oban users:
 
 ## Contributing
 
-To run the Oban test suite you must have PostgreSQL 12+ and MySQL 8+ running. Follow these steps
+To run the Oban test suite you must have PostgreSQL 14+ and MySQL 8+ running. Follow these steps
 to create the database, create the database and run all migrations:
 
 ```bash
