@@ -11,6 +11,14 @@ defmodule Oban.ConfigTest do
       assert_valid(circuit_backoff: 10)
     end
 
+    test ":disable_sonar is validated as a boolean" do
+      refute_valid(disable_sonar: nil)
+      refute_valid(disable_sonar: 1)
+
+      assert_valid(disable_sonar: true)
+      assert_valid(disable_sonar: false)
+    end
+
     test ":engine is validated as an engine module" do
       refute_valid(engine: nil)
       refute_valid(engine: Repo)

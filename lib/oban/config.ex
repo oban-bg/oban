@@ -11,6 +11,7 @@ defmodule Oban.Config do
   alias Oban.Validation
 
   @type t :: %__MODULE__{
+          disable_sonar: boolean(),
           dispatch_cooldown: pos_integer(),
           engine: module(),
           get_dynamic_repo: nil | (-> pid() | atom()) | {module(), atom(), list()},
@@ -29,7 +30,8 @@ defmodule Oban.Config do
           testing: :disabled | :inline | :manual
         }
 
-  defstruct dispatch_cooldown: 5,
+  defstruct disable_sonar: false,
+            dispatch_cooldown: 5,
             engine: Oban.Engines.Basic,
             get_dynamic_repo: nil,
             insert_trigger: true,
@@ -139,6 +141,7 @@ defmodule Oban.Config do
       opts = normalize(opts)
 
       Validation.validate_schema(opts,
+        disable_sonar: :boolean,
         dispatch_cooldown: :pos_integer,
         engine: {:behaviour, Oban.Engine},
         get_dynamic_repo: {:or, [:falsy, {:function, 0}, :mfa]},

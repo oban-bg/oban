@@ -1,5 +1,33 @@
 defmodule Oban.Sonar do
-  @moduledoc false
+  @moduledoc """
+  Monitors cluster connectivity by exchanging periodic pings over the notifier.
+
+  Sonar maintains a view of which nodes are active in the cluster and reports
+  the instance's connectivity status (`:isolated`, `:solitary`, or `:clustered`)
+  via telemetry events. It opens a persistent listener on the notifier and sends
+  a `pg_notify` ping every 5 seconds by default.
+
+  ## Disabling Sonar
+
+  Insert-only Oban instances — those configured with `peer: false`, `queues: []`,
+  and `plugins: []` — exist solely to enqueue jobs for a separate processing app.
+  In these cases Sonar is unnecessary overhead: it holds an open notifier
+  connection and emits pings that no one consumes.
+
+  Rather than misusing `testing: :manual` (which has side effects on
+  `Oban.Config.get_engine/1`), you can explicitly disable Sonar on insert-only instances:
+
+      Oban.start_link(
+        repo: MyApp.Repo,
+        peer: false,
+        queues: [],
+        plugins: [],
+        disable_sonar: true
+      )
+
+  When `disable_sonar` is `true`, `start_link/1` returns `:ignore` and no Sonar
+  process is started.
+  """
 
   use GenServer
 
@@ -23,7 +51,7 @@ defmodule Oban.Sonar do
 
     conf = Keyword.fetch!(opts, :conf)
 
-    if conf.testing != :disabled do
+    if conf.testing != :disabled or conf.disable_sonar do
       :ignore
     else
       GenServer.start_link(__MODULE__, struct!(State, opts), name: name)

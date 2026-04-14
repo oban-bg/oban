@@ -3,6 +3,14 @@ defmodule Oban.SonarTest do
 
   alias Oban.{Notifier, Registry, Sonar}
 
+  describe "start_link/1" do
+    test "sonar is disabled when disable_sonar is true" do
+      name = start_supervised_oban!(disable_sonar: true)
+
+      assert Registry.whereis(name, Sonar) == nil
+    end
+  end
+
   describe "integration" do
     setup do
       :telemetry_test.attach_event_handlers(self(), [[:oban, :notifier, :switch]])
