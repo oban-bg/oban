@@ -242,7 +242,7 @@ if Code.ensure_loaded?(Postgrex) do
     defp put_channels(state, pid, channels) do
       listener_channels =
         for channel <- channels, reduce: state.channels do
-          acc -> Map.update(acc, channel, [pid], &[pid | &1])
+          acc -> Map.update(acc, channel, [pid], &Enum.uniq([pid | &1]))
         end
 
       %{state | channels: listener_channels}
