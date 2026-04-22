@@ -85,6 +85,19 @@ for notifier <- [Oban.Notifiers.Isolated, Oban.Notifiers.PG, Oban.Notifiers.Post
       end
     end
 
+    test "repeated listen calls don't deliver multiple notifications" do
+      unboxed_run(fn ->
+        name = start_supervised_oban!(notifier: @notifier)
+
+        :ok = Notifier.listen(name, :signal)
+        :ok = Notifier.listen(name, :signal)
+        :ok = Notifier.notify(name, :signal, %{value: "once"})
+
+        assert_receive {:notification, :signal, %{"value" => "once"}}
+        refute_received {:notification, :signal, _}
+      end)
+    end
+
     if @notifier == Oban.Notifiers.PG do
       defp await_joined do
         case :pg.get_local_members(Oban.Notifiers.PG, "public") do
@@ -97,21 +110,6 @@ for notifier <- [Oban.Notifiers.Isolated, Oban.Notifiers.PG, Oban.Notifiers.Post
     end
 
     if @notifier == Oban.Notifiers.Postgres do
-      test "repeated listen calls don't duplicate channel entries or deliver multiple notifications" do
-        unboxed_run(fn ->
-          name = start_supervised_oban!(notifier: @notifier)
-
-          :ok = Notifier.listen(name, :signal)
-          :ok = Notifier.listen(name, :signal)
-          :ok = Notifier.listen(name, :signal)
-
-          :ok = Notifier.notify(name, :signal, %{value: "once"})
-
-          assert_receive {:notification, :signal, %{"value" => "once"}}
-          refute_receive {:notification, :signal, _}, 100
-        end)
-      end
-
       defp unboxed_run(fun), do: Sandbox.unboxed_run(Repo, fun)
     else
       defp unboxed_run(fun), do: fun.()

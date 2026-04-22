@@ -48,8 +48,7 @@ defmodule Oban.Sonar do
 
   @impl GenServer
   def handle_continue(:start, state) do
-    :ok = Notifier.listen(state.conf.name, :sonar)
-    :ok = Notifier.notify(state.conf, :sonar, %{node: state.conf.node, ping: true})
+    listen_notify(state.conf)
 
     {:noreply, schedule_ping(state)}
   end
@@ -80,12 +79,7 @@ defmodule Oban.Sonar do
     prev_status = state.status
     prev_nodes = Map.keys(state.nodes)
 
-    try do
-      Notifier.listen(state.conf.name, :sonar)
-      Notifier.notify(state.conf, :sonar, %{node: state.conf.node, ping: true})
-    catch
-      :exit, _ -> :ok
-    end
+    listen_notify(state.conf)
 
     state =
       state
@@ -127,6 +121,13 @@ defmodule Oban.Sonar do
   end
 
   # Helpers
+
+  defp listen_notify(conf) do
+    Notifier.listen(conf, :sonar)
+    Notifier.notify(conf, :sonar, %{node: conf.node, ping: true})
+  catch
+    :exit, _ -> :ok
+  end
 
   defp schedule_ping(state) do
     timer = Process.send_after(self(), :ping, Backoff.jitter(state.interval))
