@@ -21,7 +21,7 @@ defmodule Oban.Plugin do
 
         @impl Oban.Plugin
         def validate(opts) do
-          if is_atom(opts[:mode])
+          if is_atom(opts[:mode]) do
             :ok
           else
             {:error, "expected opts to have a :mode key"}
