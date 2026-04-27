@@ -91,7 +91,12 @@ defmodule Oban.Stager do
       staged
     end)
   rescue
-    error in Repo.retryable_exceptions() -> {:error, error}
+    error in Repo.retryable_exceptions() ->
+      # Force notifying in local mode after an unrecovered database exception. This ensures jobs
+      # keep processing when staging or database driven notifications fail.
+      safe_notify(state)
+
+      {:error, error}
   end
 
   defp stage_and_notify(_leader, state) do
@@ -100,16 +105,20 @@ defmodule Oban.Stager do
     {:ok, []}
   end
 
+  defp safe_notify(state) do
+    notify_queues(state)
+  rescue
+    _ -> notify_queues(%{state | mode: :local})
+  catch
+    :exit, _ -> notify_queues(%{state | mode: :local})
+  end
+
   defp notify_queues(%{conf: conf, mode: :global}) do
     {:ok, queues} = Engine.check_available(conf)
 
     payload = Enum.map(queues, &%{queue: &1})
 
-    try do
-      Notifier.notify(conf, :insert, payload)
-    catch
-      :exit, _ -> :ok
-    end
+    Notifier.notify(conf, :insert, payload)
   end
 
   defp notify_queues(%{conf: conf, mode: :local}) do
