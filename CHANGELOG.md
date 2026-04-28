@@ -1,126 +1,139 @@
-# Changelog for Oban v2.21
+# Changelog for Oban v2.22
 
 _🌟 Looking for changes to [Oban Pro][pro]? Check the [Oban.Pro Changelog][opc] 🌟_
 
-This release requires PostgreSQL 14+, adds a new `suspended` job state, includes targeted
-performance improvements for job execution and notifications, and a variety of bug fixes.
+Adds a job querying API, migration checking in test mode, smarter notifier ping cadence, and a
+handful of bug fixes around recovery and resilience.
 
-See the [Upgrade Guide](v2-21.html) for upgrade instructions.
+## 📇 Job Querying
 
-## 🚟 Suspended State
+Two new functions make it easier to load jobs without hand-rolling Ecto queries.
+`Oban.Job.query/1` builds a composable query from a keyword list of field filters,
+and `Oban.all_jobs/2` runs any queryable through the configured repo.
 
-The new `suspended` state allows jobs to be held without processing until they are explicitly
-resumed. Unlike `scheduled` jobs that become `available` when their time comes, suspended jobs
-remain paused indefinitely until an external action resumes them.
+For example, to fetch every `available` job for a worker with `account_id: 1`:
 
-While Oban itself doesn't make use of suspended jobs, the state enables Pro workflows to defer
-execution without any workarounds or performance impact.
+```elixir
+[args: %{account_id: 1}, worker: MyApp.Worker, state: :available]
+|> Oban.Job.query()
+|> Oban.all_jobs()
+```
 
-See the [Upgrade Guide](v2-21.html) for details on migrating.
+The result is an `Ecto.Queryable`, so it composes with further `Ecto.Query` calls, and pairs
+naturally with with `Oban.cancel_all_jobs/2` and `Oban.delete_all_jobs/2`:
 
-## 📏 Performance Tweaks
+```elixir
+[state: :available, queue: :media]
+|> Oban.Job.query()
+|> limit(10)
+|> Oban.cancel_all_jobs()
+```
 
-Two targeted optimizations reduce overhead in high-throughput systems:
+## 📡 Smarter Sonar Pings
 
-- Selective Compression — Notifications under 512 bytes skip gzip compression entirely, avoiding
-  CPU overhead for typical small messages like queue signals and insert events. Encoding is 12x
-  faster for small payloads (4μs → 0.3μs) and wire size is halved (80 → 41 bytes). Large payloads
-  still compress with no regression.
+Sonar, the notifier monitor, used to ping every 5 seconds from every node. That resulted in 120
+messages a minute to confirm connectivity, even in a stable environment.
 
-- Batched Process Metrics — Job execution telemetry now gathers memory and reduction metrics in a
-  single `Process.info/2` call instead of two separate calls, cutting per-job measurement overhead
-  in half.
+Pings are now status-aware and back off when the cluster is quiet. A solitary node settles to one
+ping a minute. A clustered group scales the per-node interval with peer count, so aggregate
+traffic stays roughly constant as the cluster grows.
 
-## v2.21.1 — 2026-03-26
+There is no configuration required. When a node joins, drops, or recovers, pings snap back to the
+fast cadence immediately.
 
-### Bug Fixes
+## 🧪 Migration Checks at Startup
 
-- [Migration] Use `ALTER TYPE` to add suspended to state enum
+When Oban boots in a testing mode, it now verifies that the `oban_jobs` table exists and that the
+migration version is current. A missing or outdated migration fails fast with an actionable
+message instead of surfacing later as cryptic database errors mid-test.
 
-  The previous DO/BEGIN technique attempted to alter the enum type with a enum rename/column copy
-  dance in order for the type to be usable within the same transaction. That's not necessary, and
-  the column copy isn't appropriate for larger tables. As we now require PG 14+, we can reliably
-  use `ALTER TYPE` to add the `suspended` value.
+For example, forgetting to run the v2.21 migration after upgrading would previously fail somewhere
+deep in a test with an enum mismatch on the new `suspended` state. Now Oban refuses to start:
 
-## v2.21.0 — 2026-03-25
+```
+** (RuntimeError) Oban migrations are outdated. Found version 12, but version 13 is required.
 
-### Changes
+    Run migrations to update:
 
-- [Oban] Support a minimum of PostgreSQL 14+
+        mix ecto.migrate
+```
 
-  PG 12 was end of life in November 2024, and PG 13 was end of life in November 2025. We now
-  support PG 14+, and with PG 19 due out in a few months, we're dropping official support for
-  older versions.
+The check is limited to `testing` mode and geared toward catching migration requirements before
+they hit production.
+
+## v2.22.0 — 2026-04-27
 
 ### Enhancements
 
-- [Oban] Add suspended job state
+- [Oban] Add `Oban.all_jobs/2` and `Oban.Job.query/1`
 
-  The suspended state allows jobs to be held without processing until they are explicitly resumed.
-  It is accepted for unique and replace operations, and is part of the incomplete state group. The
-  suspended state is used by Pro extensions rather than by Oban itself.
+  Introduce `Oban.Job.query/1`, a keyword-based builder that composes Ecto queryable from a small
+  set of field filters. Scalar values become equality matches, lists become `IN` matches, atoms
+  are coerced, and `args` or `meta` are compiled to a containment check.
 
-- [Worker] Elevate `__opts__/0` to a documented callback
+  That pairs with `Oban.all_jobs/2`, a thin function that runs any queryable through the
+  configured repo.
 
-  The `__opts__/0` function, which returns a worker's compile-time options, is now a public
-  callback with full documentation. This makes it easier to introspect worker configuration at
-  runtime, such as checking the default queue, max attempts, or uniqueness settings for any worker
-  module.
+- [Oban] Verify migrations at startup in testing mode
 
-- [Period] Document and publicize `Oban.Period` module
+  When Oban starts in a testing mode, it now verifies that migrations have been run and are up to
+  date. This catches migration issues early in CI rather than failing with confusing database
+  errors during test execution or worse, in production.
 
-  The `t:Period.t()` type is referenced by several public types and should be visible to users in
-  documentation.
+  For Postgres, the check verifies the migration version is current, while for SQLite and MySQL,
+  the check verifies the `oban_jobs` table exists.
 
-- [Executor] Batch process info calls in executor measurements
+- [Sonar] Reduce ping rate with status-aware intervals
 
-  Reduces system call overhead by combining separate memory and reductions queries into a single
-  `Process.info/2` call per job execution.
+  Sonar previously pinged every 5s regardless of cluster state, which is aggressive for systems
+  where nothing is changing. It now walks between a min and max interval, resetting on any status
+  change and otherwise backing off toward a status driven target:
 
-- [Notifier] Skip compression for small notification payloads
+  - `:clustered` scales with peer count so aggregate traffic stays ~1 ping per `min_interval`
+    regardless of cluster size
+  - `:solitary` drifts to the max interval, since its only job is verifying the notifier channel
+  - `:isolated` and `:unknown` stay at `min_interval` to keep recovery probes
 
-  Notifications under 512 bytes are sent as plain JSON, avoiding gzip overhead for typical small
-  messages like queue signals and insert events.
+  Stale-node pruning now uses an absolute window (default 120s) instead of a multiple of the
+  current interval, and scheduled pings are jittered to avoid synchronizing nodes.
 
-  Encode is 12x faster for small payloads (4.08 μs → 0.34 μs) and decode is 6.7x faster (1.78 μs →
-  0.26 μs). Wire size is halved (80 → 41 bytes).
+- [Repo] The Repo retry behavior is now compile-time configurable, partially for
+  testing purposes, but also to allow tweaking the internal retry behavior
+  based on system requirements.
 
-  Large payloads retain compression with no performance regression.
+- [Repo] Allow disabling `transaction/3` retries
 
-- [Notifier] Remove wrapper from notifier LISTEN/UNLISTEN
-
-  SimpleConnection uses the simple query protocol which handles multiple semicolon-separated
-  statements directly, eliminating the need for a `DO $$BEGIN ... END$$` anonymous block. This
-  makes the Postgres notifier _more_ compatible with Postgres-compatible databases like
-  PlanetScale.
+  Pass `retry: 0` or `retry: false` to skip retries entirely, including for expected conflicts
+  like deadlocks and serialization failures. This is intended for callers invoking queries like
+  `Oban.insert/2` from within an existing transaction, where a retry inside a savepoint would mask
+  the real error from the outer transaction.
 
 ### Bug Fixes
 
-- [Testing] Support snooze periods with testing helpers
+- [Stager] Notify queues regardless of staging success
 
-  The `perform_job/3` helper wasn't aware of snooze periods and considered snoozing with a period
-  an error.
+  When `stage_jobs/3` raises a non-recoverable exception (e.g. a unique constraint violation), the
+  wrapping transaction rolls back and the queue notification never fires. Pre-existing `available`
+  jobs would then sit until the stager either recovered or the cluster was restarted.
 
-- [Oban] Correct type checking for `insert_all/3` streams
+  The stager now falls back to notifying queues outside the failed transaction, preferring the
+  configured global path so the whole cluster is reached, and dropping to a local registry notify
+  if the database itself is unreachable.
 
-  Some stream functions return a multi arity function rather than a Struct. This updates the
-  `Oban.insert_all` guard to handle all stream variants properly. Thanks Elixir 1.20!
+- [Testing] Include suspended jobs in test helper queries
 
-- [Notifier] Fix Sonar and Midwife listener loss after Notifier crash
+  The query used by test helpers like `all_enqueued/0,1` now includes `suspended` jobs in addition
+  to `available` and `scheduled` states.
 
-  Both Sonar and Midwife register as listeners on the Notifier during init, but under the
-  one_for_one supervisor strategy, a Notifier crash only restarts the Notifier rather than any
-  siblings. The new Notifier starts with an empty listener map, silently breaking notification
-  delivery.
+- [Repo] Tolerate unavailable Repo modules from all operations
 
-  For Sonar, this means pings are sent but never received back, causing it to degrade to :isolated
-  status. For Midwife, signal notifications (queue start/stop) are never delivered.
+  In development using containers, where recompiles take several seconds, the repo module can be
+  purged and not-yet-reloaded for long enough that multiple `Stager` ticks occur. Each tick may
+  crash with `UndefinedFunctionError`, blowing through the supervisor's restart quota.
 
-- [Stager] Protect from Notifier crash during staging
+  The Repo now rescues `UndefinedFunctionError` alongside the existing connection errors.
 
-  Prevent an exit from a dead or dying Notifier from cascading into a Stager crash.
+- [Notifier] Fix duplicate pid accumulation in Postgres notifier
 
-- [Job] Update `t:unique_option/0` to support state groups
-
-[pro]: https://oban.pro
-[opc]: https://oban.pro/docs/pro/changelog.html
+  Registering from the same process multiple times would accumulate duplicate pids in the Postgres
+  notifier. Listening was deduplicated, but process registration wasn't.
