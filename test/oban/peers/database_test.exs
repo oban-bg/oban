@@ -1,8 +1,6 @@
 defmodule Oban.Peers.DatabaseTest do
   use Oban.Case
 
-  import ExUnit.CaptureLog
-
   alias Oban.Peer
   alias Oban.Peers.Database
   alias Oban.TelemetryHandler
@@ -46,31 +44,5 @@ defmodule Oban.Peers.DatabaseTest do
 
     assert_receive {:event, [:election, :stop], _measure,
                     %{leader: true, peer: Database, was_leader: false}}
-  end
-
-  test "gracefully handling a missing oban_peers table" do
-    mangle_peers_table!()
-
-    logged =
-      capture_log(fn ->
-        name = start_supervised_oban!(peer: Database)
-        conf = Oban.config(name)
-
-        start_supervised!({Peer, conf: conf, name: Peer})
-
-        refute Database.leader?(Peer)
-      end)
-
-    assert logged =~ "leadership is disabled"
-  after
-    reform_peers_table!()
-  end
-
-  defp mangle_peers_table! do
-    Repo.query!("ALTER TABLE oban_peers RENAME TO oban_reeps")
-  end
-
-  defp reform_peers_table! do
-    Repo.query!("ALTER TABLE oban_reeps RENAME TO oban_peers")
   end
 end

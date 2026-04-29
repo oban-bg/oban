@@ -29,9 +29,6 @@ defmodule Oban.Peers.Database do
   alias Oban.{Backoff, Notifier, Repo}
   alias __MODULE__, as: State
 
-  require Logger
-  require Oban.Errors
-
   defstruct [
     :conf,
     :timer,
@@ -120,21 +117,6 @@ defmodule Oban.Peers.Database do
       end)
 
     {:noreply, schedule_election(state)}
-  rescue
-    error in Oban.Errors.retryable_errors() ->
-      if match?(%{postgres: %{code: :undefined_table}}, error) do
-        Logger.error(
-          """
-          The `oban_peers` table is undefined and leadership is disabled.
-
-          Run migrations up to v11 to restore peer leadership. In the meantime, distributed plugins
-          (e.g. Cron, Pruner) will not run on any nodes.
-          """,
-          domain: [:oban]
-        )
-      end
-
-      {:noreply, schedule_election(%{state | leader?: false})}
   end
 
   def handle_info({:notification, :leader, %{"down" => name}}, %State{conf: conf} = state) do
