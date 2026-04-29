@@ -53,6 +53,8 @@ defmodule Oban.Repo do
 
   alias Oban.{Backoff, Config}
 
+  require Oban.Errors
+
   @callbacks_without_opts [
     config: 0,
     default_options: 1,
@@ -117,15 +119,6 @@ defmodule Oban.Repo do
     """
     def unquote(fun)(unquote_splicing(args), opts \\ []) do
       __dispatch__(unquote(fun), unquote(args), opts)
-    end
-  end
-
-  # Macros
-
-  @doc false
-  defmacro retryable_exceptions do
-    quote do
-      [DBConnection.ConnectionError, MyXQL.Error, Postgrex.Error, UndefinedFunctionError]
     end
   end
 
@@ -214,7 +207,7 @@ defmodule Oban.Repo do
   defp transaction(conf, fun_or_multi, opts, attempt) do
     __dispatch__(:transaction, [conf, fun_or_multi], opts)
   rescue
-    error in [DBConnection.ConnectionError, MyXQL.Error, Postgrex.Error] ->
+    error in Oban.Errors.database_errors() ->
       opts = Keyword.merge(@retry_opts, opts)
 
       cond do

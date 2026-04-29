@@ -1,6 +1,8 @@
 defmodule Oban.Backoff do
   @moduledoc false
 
+  require Oban.Errors
+
   @type jitter_mode :: :inc | :dec | :both
 
   @retry_mult Application.compile_env(:oban, [Oban.Backoff, :retry_mult], 100)
@@ -102,15 +104,13 @@ defmodule Oban.Backoff do
     with_retry(fun, retries, 1)
   end
 
-  @db_errors [DBConnection.ConnectionError, MyXQL.Error, Postgrex.Error]
-
   defp with_retry(fun, retries, attempt) do
     fun.()
   rescue
-    error in @db_errors ->
+    error in Oban.Errors.database_errors() ->
       retry_or_raise(fun, retries, attempt, :error, error, __STACKTRACE__)
   catch
-    :exit, {error, _} = reason when error in [:timeout | @db_errors] ->
+    :exit, {error, _} = reason when error in [:timeout | Oban.Errors.database_errors()] ->
       retry_or_raise(fun, retries, attempt, :exit, reason, __STACKTRACE__)
   end
 

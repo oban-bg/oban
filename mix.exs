@@ -13,7 +13,6 @@ defmodule Oban.MixProject do
       start_permanent: Mix.env() == :prod,
       deps: deps(),
       aliases: aliases(),
-      xref: [exclude: [Postgrex.Error, MyXQL.Error]],
 
       # Hex
       package: package(),

@@ -7,7 +7,7 @@ defmodule Oban.Stager do
   alias __MODULE__, as: State
 
   require Logger
-  require Oban.Repo
+  require Oban.Errors
 
   @type option :: Plugin.option() | {:interval, pos_integer()}
 
@@ -91,7 +91,7 @@ defmodule Oban.Stager do
       staged
     end)
   rescue
-    error in Repo.retryable_exceptions() ->
+    error in Oban.Errors.retryable_errors() ->
       # Force notifying in local mode after an unrecovered database exception. This ensures jobs
       # keep processing when staging or database driven notifications fail.
       safe_notify(state)
