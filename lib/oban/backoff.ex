@@ -110,7 +110,7 @@ defmodule Oban.Backoff do
     error in Oban.Errors.database_errors() ->
       retry_or_raise(fun, retries, attempt, :error, error, __STACKTRACE__)
   catch
-    :exit, {error, _} = reason when error in [:timeout | Oban.Errors.database_errors()] ->
+    :exit, {:timeout, _} = reason ->
       retry_or_raise(fun, retries, attempt, :exit, reason, __STACKTRACE__)
   end
 
