@@ -89,7 +89,7 @@ defmodule Oban.Migrations.Postgres do
 
     opts
     |> Map.put(:quoted_prefix, inspect(opts.prefix))
-    |> Map.put(:escaped_prefix, String.replace(opts.prefix, "'", "\\'"))
+    |> Map.put(:escaped_prefix, String.replace(opts.prefix, "'", "''"))
     |> Map.put_new(:unlogged, true)
     |> Map.put_new(:create_schema, opts.prefix != @default_prefix)
   end
