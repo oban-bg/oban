@@ -61,6 +61,54 @@ deep in a test with an enum mismatch on the new `suspended` state. Now Oban refu
 The check is limited to `testing` mode and geared toward catching migration requirements before
 they hit production.
 
+## v2.22.1 — 2026-04-30
+
+### Bug Fixes
+
+- [Repo] Conditionally reference database driver errors
+
+  The retryable_exceptions macro previously hard-coded references to `MyXQL.Error` and
+  `Postgrex.Error`, which Elixir v1.20.0.rc.2+ flags as missing module references at macro
+  expansion time when the corresponding driver isn't a project dependency. The missing module
+  reference could escalate into a deadlock, and compilation would halt entirely.
+
+  Driver error lists are now resolved at compile time and only include modules that are actually
+  loaded, so projects using `Postgrex` without `MyXQL` (or vice versa) compile cleanly.
+
+- [Cron] Reject impossible combinations in cron expressions
+
+  Cron strings whose day and month fields could never align (e.g. "0 0 30 2 *", or "0 0 31 4 *")
+  parsed, but caused `next_at/2` and `last_at/2` to loop indefinitely.
+
+  Now expressions are validated to ensure at least one day fits within the maximum length of at
+  least one selected month.
+
+- [Cron] Validate cron range bounds before expansion
+
+  Range parts like 0-99999999 were accepted and expanded into the full integer range before the
+  out-of-bounds check fired. For sufficiently large upper bounds that could stall the BEAM and
+  risk OOM. The same path was reachable via the step variant 0-99999999/1 and the open-ended form
+  99999999/1.
+
+  Expression parsing now compares against the field's allowed min/max and rejects out-of-range
+  values before any range is materialized.
+
+- [Migration] Fix prefix escaping in Postgres migrations
+
+  Switch to the standard doubled-quote escape so it works under default Postgres configuration.
+
+  The escaped_prefix value was using `\'` to escape single quotes, which hasn't been enabled by
+  default since 9.1. Under default settings, the backslash was treated literally and the quote
+  terminated the string, allowing a crafted prefix to break out of the SQL literal in
+  `migrated_version/1` and the notify trigger bodies.
+
+- [Backoff] Narrow `with_retry` exit catch to :timeout
+
+  Exits never carry a database error module atom in the first tuple
+  element. Connection failures surface as raised database exceptions,
+  which the rescue clause above already handles. The catch now only
+  matches `:exit, {:timeout, _}`, the one shape that's actually reachable.
+
 ## v2.22.0 — 2026-04-27
 
 ### Enhancements
