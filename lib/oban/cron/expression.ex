@@ -364,22 +364,23 @@ defmodule Oban.Cron.Expression do
   end
 
   defp parse_range(part, max_range) do
-    case String.split(part, "-") do
-      [rall] ->
-        String.to_integer(rall)..Enum.max(max_range)
+    {min_allowed, max_allowed} = Enum.min_max(max_range)
 
-      [rmin, rmax] ->
-        rmin = String.to_integer(rmin)
-        rmax = String.to_integer(rmax)
+    {rmin, rmax} =
+      case String.split(part, "-") do
+        [rall] -> {String.to_integer(rall), max_allowed}
+        [rmin, rmax] -> {String.to_integer(rmin), String.to_integer(rmax)}
+      end
 
-        if rmin <= rmax do
-          rmin..rmax
-        else
-          throw(
-            {:error,
-             "left side (#{rmin}) of a range must be less than or equal to the right side (#{rmax})"}
-          )
-        end
+    cond do
+      rmin > rmax ->
+        throw({:error, "min (#{rmin}) of range must be less than or equal to the max (#{rmax})"})
+
+      rmin < min_allowed or rmax > max_allowed ->
+        throw({:error, "expression field #{part} is out of range: #{inspect(max_range)}"})
+
+      true ->
+        rmin..rmax
     end
   end
 end

@@ -52,6 +52,22 @@ defmodule Oban.Cron.ExpressionTest do
         assert_raise ArgumentError, fn -> Expr.parse!(expression) end
       end
     end
+
+    test "ranges with bounds outside the field are rejected before expansion" do
+      expressions = [
+        "0-99999999 * * * *",
+        "0-99999999/1 * * * *",
+        "99999999/1 * * * *",
+        "* 0-24 * * *",
+        "* * 0-31 * *",
+        "* * * 0-12 *",
+        "* * * * 0-7"
+      ]
+
+      for expression <- expressions do
+        assert_raise ArgumentError, fn -> Expr.parse!(expression) end
+      end
+    end
   end
 
   describe "now?/2" do
