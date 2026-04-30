@@ -30,14 +30,14 @@ defmodule Oban.Config do
         }
 
   defstruct dispatch_cooldown: 5,
-            engine: Oban.Engines.Basic,
+            engine: nil,
             get_dynamic_repo: nil,
             insert_trigger: true,
             log: false,
-            name: Oban,
+            name: nil,
             node: nil,
-            notifier: {Oban.Notifiers.Postgres, []},
-            peer: {Oban.Peers.Database, []},
+            notifier: nil,
+            peer: nil,
             plugins: [],
             prefix: "public",
             queues: [],
@@ -64,7 +64,11 @@ defmodule Oban.Config do
   """
   @spec new([Oban.option()]) :: t()
   def new(opts) when is_list(opts) do
-    opts = normalize(opts)
+    opts =
+      opts
+      |> normalize()
+      |> Keyword.put_new(:engine, Oban.Engines.Basic)
+      |> Keyword.put_new(:name, Oban)
 
     opts =
       case opts[:engine] do
@@ -82,6 +86,8 @@ defmodule Oban.Config do
 
         _ ->
           opts
+          |> Keyword.put_new(:notifier, {Oban.Notifiers.Postgres, []})
+          |> Keyword.put_new(:peer, {Oban.Peers.Database, []})
       end
 
     opts =
