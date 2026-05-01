@@ -13,19 +13,11 @@ defmodule Oban.Migrations.PostgresTest do
     use Ecto.Migration
 
     def up do
-      Oban.Migration.up(version: up_version(), prefix: "migrating")
+      Oban.Migration.up(version: :persistent_term.get({__MODULE__, :up}), prefix: "migrating")
     end
 
     def down do
-      Oban.Migration.down(version: down_version(), prefix: "migrating")
-    end
-
-    defp up_version do
-      Application.get_env(:oban, :up_version)
-    end
-
-    def down_version do
-      Application.get_env(:oban, :down_version)
+      Oban.Migration.down(version: :persistent_term.get({__MODULE__, :down}), prefix: "migrating")
     end
   end
 
@@ -62,7 +54,7 @@ defmodule Oban.Migrations.PostgresTest do
   end
 
   test "verifying the database is migrated to the required version" do
-    Application.put_env(:oban, :up_version, current_version() - 1)
+    :persistent_term.put({StepMigration, :up}, current_version() - 1)
 
     assert :ok = Ecto.Migrator.up(UnboxedRepo, @base_version, StepMigration)
 
@@ -75,7 +67,7 @@ defmodule Oban.Migrations.PostgresTest do
 
   test "migrating up and down between specific versions" do
     for up <- initial_version()..current_version() do
-      Application.put_env(:oban, :up_version, up)
+      :persistent_term.put({StepMigration, :up}, up)
 
       assert :ok = Ecto.Migrator.up(UnboxedRepo, @base_version + up, StepMigration)
       assert migrated_version() == up
@@ -85,13 +77,13 @@ defmodule Oban.Migrations.PostgresTest do
     assert table_exists?("oban_peers")
     assert migrated_version() == current_version()
 
-    Application.put_env(:oban, :down_version, 2)
+    :persistent_term.put({StepMigration, :down}, 2)
     assert :ok = Ecto.Migrator.down(UnboxedRepo, @base_version + 2, StepMigration)
 
     assert table_exists?("oban_jobs")
     assert migrated_version() == 1
 
-    Application.put_env(:oban, :down_version, 1)
+    :persistent_term.put({StepMigration, :down}, 1)
     assert :ok = Ecto.Migrator.down(UnboxedRepo, @base_version + 1, StepMigration)
 
     refute table_exists?("oban_jobs")
@@ -127,8 +119,8 @@ defmodule Oban.Migrations.PostgresTest do
     |> Enum.shuffle()
     |> Enum.take(@arbitrary_checks)
     |> Enum.each(fn {up, down} ->
-      Application.put_env(:oban, :up_version, up)
-      Application.put_env(:oban, :down_version, down)
+      :persistent_term.put({StepMigration, :up}, up)
+      :persistent_term.put({StepMigration, :down}, down)
 
       assert :ok = Ecto.Migrator.up(UnboxedRepo, @base_version, StepMigration)
       assert :ok = Ecto.Migrator.down(UnboxedRepo, @base_version, StepMigration)
