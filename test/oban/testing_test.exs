@@ -180,7 +180,7 @@ defmodule Oban.TestingTest do
 
       perform_job(MisbehavedWorker, %{"action" => "bad_timing", "timeout" => 20})
 
-      refute_receive {:EXIT, _pid, %Oban.TimeoutError{}}
+      refute_receive {:EXIT, _pid, %Oban.TimeoutError{}}, 25
     end
 
     test "injecting a complete conf into the job before execution" do

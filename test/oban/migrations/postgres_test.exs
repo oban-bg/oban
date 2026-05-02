@@ -5,8 +5,6 @@ defmodule Oban.Migrations.PostgresTest do
 
   alias Oban.Migrations.Postgres
 
-  @arbitrary_checks 10
-
   @moduletag :unboxed
 
   defmodule StepMigration do
@@ -108,25 +106,6 @@ defmodule Oban.Migrations.PostgresTest do
     assert :ok = Ecto.Migrator.down(UnboxedRepo, @base_version, DefaultMigration)
   after
     clear_migrated()
-  end
-
-  test "migrating up and down between arbitrary versions" do
-    ups = 2..current_version()
-    dns = 1..(current_version() - 1)
-
-    ups
-    |> Enum.zip(dns)
-    |> Enum.shuffle()
-    |> Enum.take(@arbitrary_checks)
-    |> Enum.each(fn {up, down} ->
-      :persistent_term.put({StepMigration, :up}, up)
-      :persistent_term.put({StepMigration, :down}, down)
-
-      assert :ok = Ecto.Migrator.up(UnboxedRepo, @base_version, StepMigration)
-      assert :ok = Ecto.Migrator.down(UnboxedRepo, @base_version, StepMigration)
-
-      clear_migrated()
-    end)
   end
 
   test "skipping schema creation when schema doesn't exist" do

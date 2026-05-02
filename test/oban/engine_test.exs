@@ -484,7 +484,7 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite, Oban.Engines.Dolphin] do
     describe "cancel_job/2" do
       setup :start_supervised_oban
 
-      @describetag oban_opts: [queues: [alpha: 5], stage_interval: 10, testing: :disabled]
+      @describetag oban_opts: [queues: [alpha: 5], stage_interval: 5, testing: :disabled]
 
       test "cancelling an executing job", %{name: name} do
         TelemetryHandler.attach_events(span_type: [:job, [:engine, :cancel_job]])
@@ -495,16 +495,18 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite, Oban.Engines.Dolphin] do
 
         Oban.cancel_job(name, job)
 
-        refute_receive {:ok, 1}
+        assert_receive {:event, :stop, _, %{job: _}}
+        assert_receive {:event, [:cancel_job, :stop], _, %{job: _}}
+
+        refute_received {:ok, 1}
 
         assert %Job{state: "cancelled", errors: [_], cancelled_at: %_{}} = reload(name, job)
         assert %{running: []} = Oban.check_queue(name, queue: :alpha)
-
-        assert_receive {:event, :stop, _, %{job: _}}
-        assert_receive {:event, [:cancel_job, :stop], _, %{job: _}}
       end
 
       test "cancelling jobs that may or may not be executing", %{name: name} do
+        TelemetryHandler.attach_events(span_type: [:job])
+
         job_1 = insert!(name, %{ref: 1}, schedule_in: 10)
         job_2 = insert!(name, %{ref: 2}, schedule_in: 10, state: "retryable")
         job_3 = insert!(name, %{ref: 3}, state: "completed")
@@ -517,7 +519,9 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite, Oban.Engines.Dolphin] do
         assert :ok = Oban.cancel_job(name, job_3.id)
         assert :ok = Oban.cancel_job(name, job_4.id)
 
-        refute_receive {:ok, 4}
+        assert_receive {:event, :stop, _, %{job: %{id: id}}} when id == job_4.id
+
+        refute_received {:ok, 4}
 
         assert %Job{state: "cancelled", errors: [], cancelled_at: %_{}} = reload(name, job_1)
         assert %Job{state: "cancelled", errors: [], cancelled_at: %_{}} = reload(name, job_2)
@@ -559,7 +563,7 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite, Oban.Engines.Dolphin] do
     describe "cancel_all_jobs/2" do
       setup :start_supervised_oban
 
-      @describetag oban_opts: [queues: [alpha: 5], stage_interval: 10, testing: :disabled]
+      @describetag oban_opts: [queues: [alpha: 5], stage_interval: 5, testing: :disabled]
 
       test "cancelling all jobs that may or may not be executing", %{name: name} do
         TelemetryHandler.attach_events(span_type: [:job, [:engine, :cancel_all_jobs]])
@@ -573,15 +577,15 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite, Oban.Engines.Dolphin] do
 
         assert {:ok, 3} = Oban.cancel_all_jobs(name, Job)
 
-        refute_receive {:ok, 4}
+        assert_receive {:event, :stop, _, %{job: _}}
+        assert_receive {:event, [:cancel_all_jobs, :stop], _, %{jobs: _jobs}}
+
+        refute_received {:ok, 4}
 
         assert %Job{state: "cancelled", errors: [], cancelled_at: %_{}} = reload(name, job_1)
         assert %Job{state: "cancelled", errors: [], cancelled_at: %_{}} = reload(name, job_2)
         assert %Job{state: "completed", errors: [], cancelled_at: nil} = reload(name, job_3)
         assert %Job{state: "cancelled", errors: [_], cancelled_at: %_{}} = reload(name, job_4)
-
-        assert_receive {:event, :stop, _, %{job: _}}
-        assert_receive {:event, [:cancel_all_jobs, :stop], _, %{jobs: _jobs}}
       end
     end
 
@@ -709,7 +713,7 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite, Oban.Engines.Dolphin] do
     describe "integration" do
       setup :start_supervised_oban
 
-      @describetag oban_opts: [queues: [alpha: 3], stage_interval: 10, testing: :disabled]
+      @describetag oban_opts: [queues: [alpha: 3], stage_interval: 5, testing: :disabled]
 
       test "inserting and executing jobs", %{name: name} do
         TelemetryHandler.attach_events()
@@ -773,7 +777,7 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite, Oban.Engines.Dolphin] do
 
         assert_receive {:ok, 1}
         assert_receive {:ok, 2}
-        refute_receive {:ok, 3}
+        refute_receive {:ok, 3}, 20
       end
 
       test "executing jobs in order of priority", %{name: name} do
