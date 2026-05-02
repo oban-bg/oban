@@ -155,6 +155,36 @@ defmodule Oban.JobTest do
     end
   end
 
+  describe "warn_unique/1" do
+    test "passing through non-list values" do
+      assert :ok = Job.warn_unique(true)
+      assert :ok = Job.warn_unique(false)
+      assert :ok = Job.warn_unique(nil)
+    end
+
+    test "ignoring options without an explicit :states list" do
+      assert :ok = Job.warn_unique(period: 60)
+      assert :ok = Job.warn_unique(states: :all)
+      assert :ok = Job.warn_unique(states: :incomplete)
+      assert :ok = Job.warn_unique(states: :scheduled)
+      assert :ok = Job.warn_unique(states: :successful)
+
+      assert :ok = Job.warn_unique(states: [:scheduled])
+    end
+
+    test "warning when no insertion-landing state is listed" do
+      assert {:warn, _} = Job.warn_unique(states: ~w(completed cancelled discarded)a)
+      assert {:warn, _} = Job.warn_unique(states: [:completed])
+      assert {:warn, _} = Job.warn_unique(states: [:executing])
+      assert {:warn, _} = Job.warn_unique(states: [:retryable])
+    end
+
+    test "warning when in-flight states are partially listed" do
+      assert {:warn, _} = Job.warn_unique(states: ~w(available executing scheduled)a)
+      assert {:warn, _} = Job.warn_unique(states: ~w(available executing scheduled completed)a)
+    end
+  end
+
   describe "replace options with new/2" do
     test "combining replace with legacy replace_args" do
       changes = fn opts ->

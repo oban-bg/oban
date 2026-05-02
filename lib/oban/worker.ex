@@ -498,8 +498,10 @@ defmodule Oban.Worker do
   end
 
   @doc false
-  defmacro __after_compile__(%{module: module}, _env) do
-    Validation.validate_schema!(module.__opts__(),
+  defmacro __after_compile__(%{module: module} = env, _bytecode) do
+    opts = module.__opts__()
+
+    Validation.validate_schema!(opts,
       max_attempts: :pos_integer,
       priority: {:range, 0..9},
       queue: {:or, [:atom, :string]},
@@ -508,6 +510,10 @@ defmodule Oban.Worker do
       unique: {:custom, &Job.validate_unique/1},
       worker: :string
     )
+
+    with {:warn, message} <- Job.warn_unique(opts[:unique]) do
+      IO.warn(message, Macro.Env.stacktrace(env))
+    end
   end
 
   @doc false

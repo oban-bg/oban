@@ -40,7 +40,7 @@ defmodule Oban.WorkerTest do
       priority: 1,
       replace: [available: [:scheduled_at], scheduled: [:scheduled_at]],
       tags: ["scheduled", "special"],
-      unique: [fields: [:queue, :worker], period: {1, :minute}, states: [:scheduled]]
+      unique: [fields: [:queue, :worker], period: {1, :minute}, states: :scheduled]
 
     @impl Worker
     def perform(%{attempt: attempt}) when attempt > 1, do: attempt
@@ -212,6 +212,19 @@ defmodule Oban.WorkerTest do
         def perform(_), do: :ok
       end
     end
+  end
+
+  test "warning on questionable unique :states at compile time" do
+    warning =
+      ExUnit.CaptureIO.capture_io(:stderr, fn ->
+        defmodule GappyUniqueStates do
+          use Oban.Worker, unique: [states: [:available, :executing, :scheduled]]
+
+          def perform(_), do: :ok
+        end
+      end)
+
+    assert warning =~ "warning:"
   end
 
   test "validating the unique options provided to __using__" do

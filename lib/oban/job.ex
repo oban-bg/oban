@@ -836,6 +836,44 @@ defmodule Oban.Job do
     end)
   end
 
+  @doc false
+  def warn_unique(unique) when is_list(unique) do
+    case Keyword.get(unique, :states) do
+      # Applications may have [:scheduled], which is effectively the same as `:scheduled`, and
+      # shouldn't cause a warning.
+      [:scheduled] ->
+        :ok
+
+      [_ | _] = states ->
+        insertion_states = ~w(scheduled available suspended)a
+        in_flight_states = unique_states(:incomplete)
+
+        present_insertion = for state <- insertion_states, state in states, do: state
+        missing_in_flight = for state <- in_flight_states, state not in states, do: state
+
+        cond do
+          present_insertion == [] ->
+            {:warn,
+             "unique :states #{inspect(states)} doesn't include any of " <>
+               "#{inspect(insertion_states)}, duplicates won't be detected"}
+
+          missing_in_flight != [] ->
+            {:warn,
+             "unique :states #{inspect(states)} is missing incomplete states " <>
+               "#{inspect(missing_in_flight)} which may break uniqueness, " <>
+               "use a unique group like :incomplete"}
+
+          true ->
+            :ok
+        end
+
+      _ ->
+        :ok
+    end
+  end
+
+  def warn_unique(_), do: :ok
+
   defp validate_keys(keys, unique) do
     fields = Keyword.get(unique, :fields, [])
 
