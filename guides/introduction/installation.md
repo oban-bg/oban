@@ -15,7 +15,7 @@ It's possible to use the `oban.install` task without the `igniter.install` escri
 First, add `oban` and `igniter` to your deps in `mix.exs`:
 
 ```elixir
-{:oban, "~> 2.19"},
+{:oban, "~> 2.21"},
 {:igniter, "~> 0.5", only: [:dev]},
 ```
 
@@ -51,7 +51,7 @@ mix igniter.install oban --repo MyApp.LiteRepo
 Add `:oban` to your list of deps in `mix.exs`:
 
 ```elixir
-{:oban, "~> 2.19"}
+{:oban, "~> 2.21"}
 ```
 
 Then run `mix deps.get` to install Oban and its dependencies. After the packages are installed you
@@ -69,7 +69,7 @@ defmodule MyApp.Repo.Migrations.AddObanJobsTable do
   use Ecto.Migration
 
   def up do
-    Oban.Migration.up(version: 12)
+    Oban.Migration.up(version: 14)
   end
 
   # We specify `version: 1` in `down`, ensuring that we'll roll all the way back down if
@@ -109,7 +109,7 @@ config :my_app, Oban,
 ### SQLite3
 
 Running with SQLite3 requires using the `Oban.Engines.Lite` engine:
- 
+
 ```elixir
 # config/config.exs
 config :my_app, Oban,
