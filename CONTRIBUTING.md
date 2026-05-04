@@ -31,7 +31,7 @@ For security issues, see [SECURITY.md](./SECURITY.md), do not open a public issu
 ## Contributor License Agreement
 
 By submitting a pull request, you agree that your contribution is licensed under the project's
-then-current LICENSE and that Sorentwo, LLC may relicense your contribution under different terms
+then-current LICENSE and that Soren, LLC may relicense your contribution under different terms
 in the future.
 
 ## Development
