@@ -72,12 +72,12 @@ defmodule Oban.Peer do
   @doc """
   Check whether the current peer instance leads the cluster.
   """
-  @callback leader?(GenServer.server()) :: boolean()
+  @callback leader?(GenServer.server(), timeout()) :: boolean()
 
   @doc """
   Check which node's peer instance currently leads the cluster.
   """
-  @callback get_leader(GenServer.server()) :: nil | String.t()
+  @callback get_leader(GenServer.server(), timeout()) :: nil | String.t()
 
   @doc false
   @spec child_spec(Keyword.t()) :: Supervisor.child_spec()
