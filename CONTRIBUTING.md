@@ -22,7 +22,7 @@ For security issues, see [SECURITY.md](./SECURITY.md), do not open a public issu
 ## Pull requests
 
 - Open an issue first for anything beyond a typo, formatting, or one-line fix.
-- Run `mix test.strict` to check formatting, lint, and run the test suite locally.
+- Run `mix test.ci` to check formatting, lint, and run the test suite locally.
 - New behavior needs tests; bug fixes need a regression test.
 - Keep PRs focused — one change per PR.
 - Documentation changes that rephrase existing prose without adding new information will generally
