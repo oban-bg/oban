@@ -143,7 +143,8 @@ defmodule Oban.Cron.Expression do
       not MapSet.member?(expr.months, time.month) ->
         match_at(expr, bump_month(expr, time, dir), dir)
 
-      not MapSet.member?(expr.days, time.day) ->
+      not MapSet.member?(expr.days, time.day) or
+          not MapSet.member?(expr.weekdays, day_of_week(time)) ->
         match_at(expr, bump_day(expr, time, dir), dir)
 
       not MapSet.member?(expr.hours, time.hour) ->
