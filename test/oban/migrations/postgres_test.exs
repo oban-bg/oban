@@ -119,6 +119,17 @@ defmodule Oban.Migrations.PostgresTest do
     clear_migrated()
   end
 
+  test "treating a non-numeric version comment as infinity" do
+    assert :ok = Ecto.Migrator.up(UnboxedRepo, @base_version, DefaultMigration)
+
+    UnboxedRepo.query!("COMMENT ON TABLE migrating.oban_jobs IS '∞'")
+
+    assert migrated_version() == :infinity
+    assert start_supervised_oban!(repo: UnboxedRepo, testing: :manual, prefix: "migrating")
+  after
+    clear_migrated()
+  end
+
   test "skipping schema creation when schema does exist" do
     UnboxedRepo.query!("CREATE SCHEMA IF NOT EXISTS migrating")
 

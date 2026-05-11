@@ -58,6 +58,7 @@ defmodule Oban.Migrations.Postgres do
     """
 
     case repo.query(query, [], log: false) do
+      {:ok, %{rows: [["∞"]]}} -> :infinity
       {:ok, %{rows: [[version]]}} when is_binary(version) -> String.to_integer(version)
       _ -> 0
     end
