@@ -75,7 +75,8 @@ defmodule Oban.Queue.Producer do
     {:noreply, state}
   end
 
-  def handle_info({:DOWN, ref, :process, pid, reason}, %State{} = state) do
+  def handle_info({:DOWN, ref, :process, pid, reason}, %State{running: running} = state)
+      when is_map_key(running, ref) do
     {^pid, exec} = Map.get(state.running, ref)
 
     # The worker module is resolved after storing the exec struct. We try to resolve it again in
@@ -119,6 +120,10 @@ defmodule Oban.Queue.Producer do
       |> release_ref(ref)
       |> schedule_dispatch()
 
+    {:noreply, state}
+  end
+
+  def handle_info({:DOWN, _ref, :process, _pid, _reason}, %State{} = state) do
     {:noreply, state}
   end
 
