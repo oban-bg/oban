@@ -39,6 +39,7 @@ defmodule Oban.Queue.Supervisor do
       conf: conf,
       name: watch_name,
       producer: prod_name,
+      queue: queue,
       shutdown: conf.shutdown_grace_period
     ]
 

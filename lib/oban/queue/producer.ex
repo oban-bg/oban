@@ -14,6 +14,7 @@ defmodule Oban.Queue.Producer do
     :foreman,
     :meta,
     :name,
+    :watchman,
     :dispatch_timer,
     :refresh_timer,
     dispatch_cooldown: 5,
@@ -207,10 +208,12 @@ defmodule Oban.Queue.Producer do
     {:reply, meta, %{state | meta: meta}}
   end
 
-  def handle_call(:shutdown, _from, %State{} = state) do
+  def handle_call(:shutdown, {from, _tag}, %State{} = state) do
     meta = Engine.shutdown(state.conf, state.meta)
 
-    {:reply, :ok, %{state | meta: meta}}
+    if map_size(state.running) == 0, do: send(from, {:drained, meta.queue})
+
+    {:reply, :ok, %{state | meta: meta, watchman: from}}
   end
 
   # Killing
@@ -274,6 +277,12 @@ defmodule Oban.Queue.Producer do
   defp release_ref(%State{} = state, ref) do
     Process.demonitor(ref, [:flush])
 
-    %{state | running: Map.delete(state.running, ref)}
+    running = Map.delete(state.running, ref)
+
+    if state.watchman && map_size(running) == 0 do
+      send(state.watchman, {:drained, state.meta.queue})
+    end
+
+    %{state | running: running}
   end
 end

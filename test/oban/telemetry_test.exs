@@ -111,7 +111,7 @@ defmodule Oban.TelemetryTest do
 
     stop_supervised(name)
 
-    assert_receive {_event, ^ref, %{elapsed: 10}, %{orphaned: [_, _], queue: "alpha"}}
+    assert_receive {_event, ^ref, %{elapsed: 5}, %{orphaned: [_, _], queue: "alpha"}}
   end
 
   describe "attach_default_logger/1" do
