@@ -22,10 +22,12 @@ defmodule Oban.Nursery do
   @impl Supervisor
   def init(opts) do
     conf = Keyword.fetch!(opts, :conf)
+    fore_name = Registry.via(conf.name, Foreman)
+    wife_name = Registry.via(conf.name, Midwife)
 
     children = [
-      {DynamicSupervisor, name: Registry.via(conf.name, Foreman)},
-      {Midwife, conf: conf, name: Registry.via(conf.name, Midwife)}
+      {DynamicSupervisor, name: fore_name, max_restarts: 20, max_seconds: 60},
+      {Midwife, conf: conf, name: wife_name}
     ]
 
     Supervisor.init(children, max_restarts: 5, max_seconds: 30, strategy: :rest_for_one)
