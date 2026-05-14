@@ -230,6 +230,7 @@ defmodule Oban.Repo do
   defp expected_error?(%_{postgres: %{code: :deadlock_detected}}), do: true
   defp expected_error?(%_{postgres: %{code: :lock_not_available}}), do: true
   defp expected_error?(%_{postgres: %{code: :serialization_failure}}), do: true
+  defp expected_error?(%_{mysql: %{code: code}}) when code in [1205, 1213], do: true
   defp expected_error?(_error), do: false
 
   defp jittery_sleep(delay), do: delay |> Backoff.jitter() |> Process.sleep()
