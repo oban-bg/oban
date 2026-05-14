@@ -1,5 +1,5 @@
 defmodule Oban.Peers.DatabaseTest do
-  use Oban.Case
+  use Oban.Case, async: true
 
   alias Oban.Peer
   alias Oban.Peers.Database
@@ -11,7 +11,7 @@ defmodule Oban.Peers.DatabaseTest do
     conf = Oban.config(name)
 
     assert [_leader] =
-             [A, B, C]
+             [Peer.DB.A, Peer.DB.B, Peer.DB.C]
              |> Enum.map(&start_supervised_peer!(conf, &1))
              |> Enum.filter(&Database.leader?/1)
   end
@@ -22,7 +22,7 @@ defmodule Oban.Peers.DatabaseTest do
     conf = Oban.config(name)
 
     assert [_leader] =
-             [A, B, C]
+             [Peer.DB.A, Peer.DB.B, Peer.DB.C]
              |> Enum.map(&start_supervised_peer!(conf, &1))
              |> Enum.filter(&Database.leader?/1)
   end

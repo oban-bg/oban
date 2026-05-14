@@ -1,5 +1,5 @@
 defmodule Oban.PeerTest do
-  use Oban.Case
+  use Oban.Case, async: true
 
   alias Oban.{Peer, Registry}
 

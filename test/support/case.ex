@@ -141,7 +141,11 @@ defmodule Oban.Case do
 
     :telemetry.attach_many(
       telemetry_name,
-      [[:oban, :engine, :init, :start], [:oban, :plugin, :init]],
+      [
+        [:oban, :engine, :init, :start],
+        [:oban, :peer, :election, :start],
+        [:oban, :plugin, :init]
+      ],
       auto_allow,
       {name, repo, self()}
     )
