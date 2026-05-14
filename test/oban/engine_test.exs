@@ -566,7 +566,10 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite, Oban.Engines.Dolphin] do
       @describetag oban_opts: [queues: [alpha: 5], stage_interval: 5, testing: :disabled]
 
       test "cancelling all jobs that may or may not be executing", %{name: name} do
-        TelemetryHandler.attach_events(span_type: [:job, [:engine, :cancel_all_jobs]], oban_name: name)
+        TelemetryHandler.attach_events(
+          span_type: [:job, [:engine, :cancel_all_jobs]],
+          oban_name: name
+        )
 
         job_1 = insert!(name, %{ref: 1}, schedule_in: 10)
         job_2 = insert!(name, %{ref: 2}, schedule_in: 10, state: "retryable")
@@ -612,7 +615,10 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite, Oban.Engines.Dolphin] do
       setup :start_supervised_oban
 
       test "deleting multiple jobs based on a query", %{name: name} do
-        TelemetryHandler.attach_events(span_type: [:job, [:engine, :delete_all_jobs]], oban_name: name)
+        TelemetryHandler.attach_events(
+          span_type: [:job, [:engine, :delete_all_jobs]],
+          oban_name: name
+        )
 
         job_1 = insert!(name, %{ref: 1}, state: "available")
         job_2 = insert!(name, %{ref: 2}, state: "scheduled")
