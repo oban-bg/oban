@@ -29,7 +29,7 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite, Oban.Engines.Dolphin] do
       setup :start_supervised_oban
 
       test "inserting a single job", %{name: name} do
-        TelemetryHandler.attach_events()
+        TelemetryHandler.attach_events(oban_name: name)
 
         assert {:ok, job} = Oban.insert(name, Worker.new(%{ref: 1}))
 
@@ -281,7 +281,7 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite, Oban.Engines.Dolphin] do
       setup :start_supervised_oban
 
       test "inserting multiple jobs within a multi", %{name: name} do
-        TelemetryHandler.attach_events()
+        TelemetryHandler.attach_events(oban_name: name)
 
         multi = Multi.new()
         multi = Oban.insert(name, multi, :job_1, Worker.new(%{ref: 1}))
@@ -332,7 +332,7 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite, Oban.Engines.Dolphin] do
       setup :start_supervised_oban
 
       test "inserting multiple jobs", %{name: name} do
-        TelemetryHandler.attach_events()
+        TelemetryHandler.attach_events(oban_name: name)
 
         changesets = Enum.map(0..2, &Worker.new(%{ref: &1}, queue: "special", schedule_in: 10))
         jobs = Oban.insert_all(name, changesets)
@@ -405,7 +405,7 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite, Oban.Engines.Dolphin] do
       setup :start_supervised_oban
 
       test "inserting multiple jobs within a multi", %{name: name} do
-        TelemetryHandler.attach_events()
+        TelemetryHandler.attach_events(oban_name: name)
 
         changesets_1 = Enum.map(1..2, &Worker.new(%{ref: &1}))
         changesets_2 = Enum.map(3..4, &Worker.new(%{ref: &1}))
@@ -449,7 +449,7 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite, Oban.Engines.Dolphin] do
       setup :start_supervised_oban
 
       test "deleting jobs in prunable states", %{name: name} do
-        TelemetryHandler.attach_events(span_type: [:job, [:engine, :prune_jobs]])
+        TelemetryHandler.attach_events(span_type: [:job, [:engine, :prune_jobs]], oban_name: name)
 
         for state <- Job.states(), seconds <- 59..61 do
           opts = [
@@ -487,7 +487,7 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite, Oban.Engines.Dolphin] do
       @describetag oban_opts: [queues: [alpha: 5], stage_interval: 5, testing: :disabled]
 
       test "cancelling an executing job", %{name: name} do
-        TelemetryHandler.attach_events(span_type: [:job, [:engine, :cancel_job]])
+        TelemetryHandler.attach_events(span_type: [:job, [:engine, :cancel_job]], oban_name: name)
 
         job = insert!(name, %{ref: 1, sleep: 100}, [])
 
@@ -505,7 +505,7 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite, Oban.Engines.Dolphin] do
       end
 
       test "cancelling jobs that may or may not be executing", %{name: name} do
-        TelemetryHandler.attach_events(span_type: [:job])
+        TelemetryHandler.attach_events(span_type: [:job], oban_name: name)
 
         job_1 = insert!(name, %{ref: 1}, schedule_in: 10)
         job_2 = insert!(name, %{ref: 2}, schedule_in: 10, state: "retryable")
@@ -566,7 +566,7 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite, Oban.Engines.Dolphin] do
       @describetag oban_opts: [queues: [alpha: 5], stage_interval: 5, testing: :disabled]
 
       test "cancelling all jobs that may or may not be executing", %{name: name} do
-        TelemetryHandler.attach_events(span_type: [:job, [:engine, :cancel_all_jobs]])
+        TelemetryHandler.attach_events(span_type: [:job, [:engine, :cancel_all_jobs]], oban_name: name)
 
         job_1 = insert!(name, %{ref: 1}, schedule_in: 10)
         job_2 = insert!(name, %{ref: 2}, schedule_in: 10, state: "retryable")
@@ -593,7 +593,7 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite, Oban.Engines.Dolphin] do
       setup :start_supervised_oban
 
       test "deleting a single job", %{name: name} do
-        TelemetryHandler.attach_events(span_type: [:job, [:engine, :delete_job]])
+        TelemetryHandler.attach_events(span_type: [:job, [:engine, :delete_job]], oban_name: name)
 
         job_1 = insert!(name, %{ref: 1}, [])
         job_2 = insert!(name, %{ref: 2}, [])
@@ -612,7 +612,7 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite, Oban.Engines.Dolphin] do
       setup :start_supervised_oban
 
       test "deleting multiple jobs based on a query", %{name: name} do
-        TelemetryHandler.attach_events(span_type: [:job, [:engine, :delete_all_jobs]])
+        TelemetryHandler.attach_events(span_type: [:job, [:engine, :delete_all_jobs]], oban_name: name)
 
         job_1 = insert!(name, %{ref: 1}, state: "available")
         job_2 = insert!(name, %{ref: 2}, state: "scheduled")
@@ -656,7 +656,7 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite, Oban.Engines.Dolphin] do
       setup :start_supervised_oban
 
       test "retrying all retryable jobs", %{name: name} do
-        TelemetryHandler.attach_events(span_type: [[:engine, :retry_all_jobs]])
+        TelemetryHandler.attach_events(span_type: [[:engine, :retry_all_jobs]], oban_name: name)
 
         job_1 = insert!(name, %{ref: 1}, state: "discarded", max_attempts: 20, attempt: 20)
         job_2 = insert!(name, %{ref: 2}, state: "completed", max_attempts: 20)
@@ -678,7 +678,7 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite, Oban.Engines.Dolphin] do
       setup :start_supervised_oban
 
       test "updating jobs with a map of changes or function", %{name: name} do
-        TelemetryHandler.attach_events(span_type: [[:engine, :update_job]])
+        TelemetryHandler.attach_events(span_type: [[:engine, :update_job]], oban_name: name)
 
         job_1 = insert!(name, %{}, priority: 1)
         job_2 = insert!(name, %{}, priority: 1)
@@ -716,7 +716,7 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite, Oban.Engines.Dolphin] do
       @describetag oban_opts: [queues: [alpha: 3], stage_interval: 5, testing: :disabled]
 
       test "inserting and executing jobs", %{name: name} do
-        TelemetryHandler.attach_events()
+        TelemetryHandler.attach_events(oban_name: name)
 
         [job_1, job_2, job_3, job_4, job_5] =
           ~w(OK CANCEL DISCARD ERROR SNOOZE)

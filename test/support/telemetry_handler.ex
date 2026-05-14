@@ -19,6 +19,7 @@ defmodule Oban.TelemetryHandler do
   def attach_events(opts \\ []) do
     span_tail = Keyword.get(opts, :span_tail, @span_tail)
     span_type = Keyword.get(opts, :span_type, @span_type)
+    oban_name = Keyword.get(opts, :oban_name, :all)
 
     name = name()
 
@@ -31,30 +32,36 @@ defmodule Oban.TelemetryHandler do
 
     on_exit(fn -> :telemetry.detach(name) end)
 
-    :telemetry.attach_many(name, events, &handle/4, self())
+    :telemetry.attach_many(name, events, &handle/4, {self(), oban_name})
   end
 
-  def handle([:oban, :job, :start], %{system_time: start_time}, meta, pid) do
+  def handle(event, measure, meta, {pid, oban_name}) do
+    if oban_name == :all or match?(%{conf: %{name: ^oban_name}}, meta) do
+      dispatch(event, measure, meta, pid)
+    end
+  end
+
+  defp dispatch([:oban, :job, :start], %{system_time: start_time}, meta, pid) do
     send(pid, {:event, :start, start_time, meta})
   end
 
-  def handle([:oban, :job, event], measure, meta, pid) do
+  defp dispatch([:oban, :job, event], measure, meta, pid) do
     send(pid, {:event, event, measure, meta})
   end
 
-  def handle([:oban, :engine | event], measure, meta, pid) do
+  defp dispatch([:oban, :engine | event], measure, meta, pid) do
     send(pid, {:event, event, measure, meta})
   end
 
-  def handle([:oban, :plugin, event], measure, meta, pid) do
+  defp dispatch([:oban, :plugin, event], measure, meta, pid) do
     send(pid, {:event, event, measure, meta})
   end
 
-  def handle([:oban, :peer | event], measure, meta, pid) do
+  defp dispatch([:oban, :peer | event], measure, meta, pid) do
     send(pid, {:event, event, measure, meta})
   end
 
-  def handle(event, measure, meta, pid) do
+  defp dispatch(event, measure, meta, pid) do
     send(pid, {:event, event, measure, meta})
   end
 
