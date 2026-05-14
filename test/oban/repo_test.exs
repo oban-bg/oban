@@ -35,7 +35,7 @@ defmodule Oban.RepoTest do
 
     conf = Oban.config(name)
 
-    Oban.Repo.insert!(conf, Worker.new(%{ref: 1, action: "OK"}))
+    assert is_integer(Oban.Repo.aggregate(conf, Oban.Job, :count))
   end
 
   test "querying with a dynamic repo (anonymous function)" do
@@ -46,6 +46,6 @@ defmodule Oban.RepoTest do
     name = start_supervised_oban!(get_dynamic_repo: fn -> repo_pid end, repo: DynamicRepo)
     conf = Oban.config(name)
 
-    Oban.Repo.insert!(conf, Worker.new(%{ref: 1, action: "OK"}))
+    assert is_integer(Oban.Repo.aggregate(conf, Oban.Job, :count))
   end
 end

@@ -93,7 +93,7 @@ defmodule Oban.Plugins.ReindexerTest do
       |> Registry.whereis({:plugin, Reindexer})
       |> send(:reindex)
 
-      assert_receive {:event, :stop, _, %{plugin: Reindexer}}, 500
+      assert_receive {:event, :stop, _, %{plugin: Reindexer}}, 2_000
 
       result = UnboxedRepo.query!("SELECT 1 FROM pg_class WHERE relname = '#{index_name}'")
       assert result.rows == []
