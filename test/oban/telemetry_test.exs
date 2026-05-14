@@ -1,5 +1,5 @@
 defmodule Oban.TelemetryTest do
-  use Oban.Case
+  use Oban.Case, async: true
 
   import ExUnit.CaptureLog
 
@@ -46,9 +46,11 @@ defmodule Oban.TelemetryTest do
     %Job{id: ok_id} = insert!([ref: 1, action: "OK"], tags: ["baz"])
     %Job{id: error_id} = insert!([ref: 2, action: "ERROR"], tags: ["foo"])
 
-    assert_receive {:event, :start, started_time, start_meta}
-    assert_receive {:event, :stop, stop_meas, stop_meta}
-    assert_receive {:event, :exception, error_meas, %{kind: :error} = error_meta}
+    assert_receive {:event, :start, started_time, %{conf: %Config{name: ^name}} = start_meta}
+    assert_receive {:event, :stop, stop_meas, %{conf: %Config{name: ^name}} = stop_meta}
+
+    assert_receive {:event, :exception, error_meas,
+                    %{conf: %Config{name: ^name}, kind: :error} = error_meta}
 
     assert %{duration: stop_duration, queue_time: queue_time} = stop_meas
     assert %{memory: stop_memory, reductions: stop_reductions} = stop_meas
@@ -116,18 +118,27 @@ defmodule Oban.TelemetryTest do
 
   describe "attach_default_logger/1" do
     setup context do
-      on_exit(fn -> Telemetry.detach_default_logger() end)
+      name = context.test
+
+      on_exit(fn -> Telemetry.detach_default_logger(oban_name: name) end)
 
       context
       |> Map.get(:logger_opts, [])
       |> Keyword.put_new(:level, :warning)
+      |> Keyword.put(:oban_name, name)
       |> Telemetry.attach_default_logger()
+
+      {:ok, name: name}
     end
 
-    test "logging job event details" do
+    test "logging job event details", %{name: name} do
       # Use the Postgres notifier to prevent a notifier switch event and test inline to force
       # immediate execution.
-      name = start_supervised_oban!(notifier: Oban.Notifiers.Postgres, testing: :inline)
+      start_supervised_oban!(
+        name: name,
+        notifier: Oban.Notifiers.Postgres,
+        testing: :inline
+      )
 
       logged =
         capture_log(fn ->
@@ -166,10 +177,13 @@ defmodule Oban.TelemetryTest do
       assert logged =~ ~s|"error":"** (Oban.PerformError)|
     end
 
-    test "logging notifier switch events" do
+    test "logging notifier switch events", %{name: name} do
       logged =
         capture_log(fn ->
-          :telemetry.execute([:oban, :notifier, :switch], %{}, %{status: :isolated})
+          :telemetry.execute([:oban, :notifier, :switch], %{}, %{
+            conf: %{name: name},
+            status: :isolated
+          })
         end)
 
       assert logged =~ ~s("source":"oban")
@@ -177,11 +191,11 @@ defmodule Oban.TelemetryTest do
       assert logged =~ ~s("message":"notifier can't receive messages)
     end
 
-    test "logging peer leadership events" do
+    test "logging peer leadership events", %{name: name} do
       logged =
         capture_log(fn ->
           :telemetry.execute([:oban, :peer, :election, :stop], %{}, %{
-            conf: %{node: "worker.1"},
+            conf: %{name: name, node: "worker.1"},
             leader: true,
             was_leader: false
           })
@@ -194,13 +208,13 @@ defmodule Oban.TelemetryTest do
       assert logged =~ ~s("message":"peer became leader")
     end
 
-    test "logging cron plugin events" do
+    test "logging cron plugin events", %{name: name} do
       Code.ensure_loaded(Oban.Plugins.Cron)
 
       logged =
         capture_log(fn ->
           :telemetry.execute([:oban, :plugin, :stop], %{duration: 1000}, %{
-            conf: %{},
+            conf: %{name: name},
             plugin: Oban.Plugins.Cron,
             jobs: [%{id: 1}, %{id: 2}]
           })
@@ -212,13 +226,13 @@ defmodule Oban.TelemetryTest do
       assert logged =~ ~r|"duration":\d{1,}|
     end
 
-    test "logging lifeline plugin events" do
+    test "logging lifeline plugin events", %{name: name} do
       Code.ensure_loaded(Oban.Plugins.Lifeline)
 
       logged =
         capture_log(fn ->
           :telemetry.execute([:oban, :plugin, :stop], %{duration: 1000}, %{
-            conf: %{},
+            conf: %{name: name},
             plugin: Oban.Plugins.Lifeline,
             discarded_jobs: [%{id: 1}, %{id: 2}],
             rescued_jobs: [%{id: 3}]
@@ -232,13 +246,13 @@ defmodule Oban.TelemetryTest do
       assert logged =~ ~r|"duration":\d{1,}|
     end
 
-    test "logging pruner plugin events" do
+    test "logging pruner plugin events", %{name: name} do
       Code.ensure_loaded(Oban.Plugins.Pruner)
 
       logged =
         capture_log(fn ->
           :telemetry.execute([:oban, :plugin, :stop], %{duration: 1000}, %{
-            conf: %{},
+            conf: %{name: name},
             plugin: Oban.Plugins.Pruner,
             pruned_count: 9
           })
@@ -250,11 +264,11 @@ defmodule Oban.TelemetryTest do
       assert logged =~ ~r|"duration":\d{1,}|
     end
 
-    test "logging plugin exception events" do
+    test "logging plugin exception events", %{name: name} do
       logged =
         capture_log(fn ->
           :telemetry.execute([:oban, :plugin, :exception], %{duration: 1000}, %{
-            conf: %{},
+            conf: %{name: name},
             plugin: Oban.Pruner,
             error: %RuntimeError{message: "something went wrong"}
           })
@@ -265,20 +279,24 @@ defmodule Oban.TelemetryTest do
       assert logged =~ ~s|"error":"** (RuntimeError)|
     end
 
-    test "logging stager switch events" do
+    test "logging stager switch events", %{name: name} do
       logged =
         capture_log(fn ->
-          :telemetry.execute([:oban, :stager, :switch], %{}, %{mode: :local})
+          :telemetry.execute([:oban, :stager, :switch], %{}, %{
+            conf: %{name: name},
+            mode: :local
+          })
         end)
 
       assert logged =~ ~s("event":"stager:switch")
       assert logged =~ ~s("message":"job staging switched to local mode)
     end
 
-    test "logging orphaned job information at queue shutdown" do
+    test "logging orphaned job information at queue shutdown", %{name: name} do
       logged =
         capture_log(fn ->
           :telemetry.execute([:oban, :queue, :shutdown], %{elapsed: 500}, %{
+            conf: %{name: name},
             queue: "alpha",
             orphaned: [100, 101, 102]
           })
@@ -290,22 +308,26 @@ defmodule Oban.TelemetryTest do
       assert logged =~ ~s|"message":"jobs were orphaned because|
     end
 
-    test "not logging anything on shutdown without orphans" do
+    test "not logging anything on shutdown without orphans", %{name: name} do
       logged =
         capture_log(fn ->
-          :telemetry.execute([:oban, :queue, :shutdown], %{}, %{queue: "alpha", orphaned: []})
+          :telemetry.execute([:oban, :queue, :shutdown], %{}, %{
+            conf: %{name: name},
+            queue: "alpha",
+            orphaned: []
+          })
         end)
 
       refute logged =~ ~s|"event":"queue:shutdown"|
     end
 
     @tag logger_opts: [encode: false]
-    test "disabling encoding on the default logger" do
+    test "disabling encoding on the default logger", %{name: name} do
       logged =
         capture_log(fn ->
-          name = start_supervised_oban!(stage_interval: 10, queues: [alpha: 3])
+          start_supervised_oban!(name: name, stage_interval: 10, queues: [alpha: 3])
 
-          insert!(ref: 1, action: "OK")
+          insert!(name, [ref: 1, action: "OK"], queue: :alpha)
 
           assert_receive {:ok, 1}
 
@@ -317,12 +339,24 @@ defmodule Oban.TelemetryTest do
     end
 
     @tag logger_opts: [encode: false, events: [:notifier, :stager]]
-    test "restricting events to the provided categories" do
+    test "restricting events to the provided categories", %{name: name} do
       logged =
         capture_log(fn ->
-          :telemetry.execute([:oban, :notifier, :switch], %{}, %{status: :isolated})
-          :telemetry.execute([:oban, :queue, :shutdown], %{}, %{queue: "alpha", orphaned: []})
-          :telemetry.execute([:oban, :stager, :switch], %{}, %{mode: :local})
+          :telemetry.execute([:oban, :notifier, :switch], %{}, %{
+            conf: %{name: name},
+            status: :isolated
+          })
+
+          :telemetry.execute([:oban, :queue, :shutdown], %{}, %{
+            conf: %{name: name},
+            queue: "alpha",
+            orphaned: []
+          })
+
+          :telemetry.execute([:oban, :stager, :switch], %{}, %{
+            conf: %{name: name},
+            mode: :local
+          })
         end)
 
       assert logged =~ ~s(event: "notifier:switch")
