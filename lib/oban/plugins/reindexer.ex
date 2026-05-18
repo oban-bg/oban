@@ -78,8 +78,8 @@ defmodule Oban.Plugins.Reindexer do
   @impl Plugin
   def validate(opts) do
     Validation.validate_schema(opts,
-      conf: :ok,
-      name: :ok,
+      conf: :any,
+      name: :any,
       indexes: {:list, :string},
       schedule: :schedule,
       timeout: :timeout,

@@ -7,17 +7,15 @@ defmodule Oban.Validation do
           ({atom(), term()} ->
              :ok
              | {:error, term()})
-          | {:unknown, atom() | {atom(), term()}, module()}
 
   def validate(parent_key \\ nil, opts, validator)
 
-  def validate(_parent_key, opts, validator) when is_list(opts) and is_function(validator, 1) do
+  def validate(_parent_key, opts, validator) when is_list(opts) do
     Enum.reduce_while(opts, :ok, fn opt, acc ->
       case validator.(opt) do
         nil -> {:cont, acc}
         :ok -> {:cont, acc}
         {:error, _reason} = error -> {:halt, error}
-        {:unknown, field, module} -> {:halt, unknown_error(field, module)}
       end
     end)
   end
@@ -256,18 +254,6 @@ defmodule Oban.Validation do
     |> module.__info__()
     |> Keyword.get_values(:behaviour)
     |> List.flatten()
-  end
-
-  defp unknown_error({name, _value}, known), do: unknown_error(name, known)
-
-  defp unknown_error(name, module) when is_atom(module) do
-    known =
-      module
-      |> struct([])
-      |> Map.from_struct()
-      |> Map.keys()
-
-    unknown_error(name, known)
   end
 
   defp unknown_error(name, known) do
