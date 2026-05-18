@@ -19,9 +19,9 @@ defmodule Oban.StagerTest do
   end
 
   test "emitting telemetry data for staged jobs" do
-    TelemetryHandler.attach_events()
+    name = start_supervised_oban!(stage_interval: 5, testing: :disabled)
 
-    start_supervised_oban!(stage_interval: 5, testing: :disabled)
+    TelemetryHandler.attach_events(oban_name: name)
 
     assert_receive {:event, :stop, %{duration: _}, %{plugin: Stager} = meta}
 
