@@ -42,7 +42,7 @@ defmodule Oban.Queue.Producer do
   def init(opts) do
     Process.flag(:trap_exit, true)
 
-    {base_opts, meta_opts} = Keyword.split(opts, [:conf, :foreman, :name, :dispatch_cooldown])
+    {base_opts, meta_opts} = Keyword.split(opts, ~w(conf foreman name dispatch_cooldown)a)
 
     state = struct!(State, base_opts)
 
@@ -220,11 +220,8 @@ defmodule Oban.Queue.Producer do
 
   defp pkill(ref, pid, %State{} = state) do
     case Task.Supervisor.terminate_child(state.foreman, pid) do
-      :ok ->
-        state
-
-      {:error, :not_found} ->
-        release_ref(state, ref)
+      :ok -> state
+      {:error, :not_found} -> release_ref(state, ref)
     end
   end
 
@@ -234,7 +231,8 @@ defmodule Oban.Queue.Producer do
     if is_reference(state.dispatch_timer) do
       state
     else
-      timer = Process.send_after(self(), :dispatch, state.dispatch_cooldown)
+      stime = Backoff.jitter(state.dispatch_cooldown, mode: :both, mult: 1)
+      timer = Process.send_after(self(), :dispatch, stime)
 
       %{state | dispatch_timer: timer}
     end
