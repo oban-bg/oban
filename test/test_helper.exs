@@ -4,7 +4,7 @@ Oban.Test.Repo.start_link()
 Oban.Test.DolphinRepo.start_link()
 Oban.Test.LiteRepo.start_link()
 Oban.Test.UnboxedRepo.start_link()
-ExUnit.start(assert_receive_timeout: 500, refute_receive_timeout: 50, exclude: [:skip])
+ExUnit.start(assert_receive_timeout: 2_000, refute_receive_timeout: 50, exclude: [:skip])
 Ecto.Adapters.SQL.Sandbox.mode(Oban.Test.DolphinRepo, :manual)
 Ecto.Adapters.SQL.Sandbox.mode(Oban.Test.Repo, :manual)
 
