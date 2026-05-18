@@ -27,9 +27,7 @@ defmodule Oban.Case do
         end)
 
       context[:lite] ->
-        on_exit(fn ->
-          LiteRepo.delete_all(Oban.Job)
-        end)
+        :ok
 
       context[:dolphin] ->
         pid = Sandbox.start_owner!(DolphinRepo, shared: not context[:async])

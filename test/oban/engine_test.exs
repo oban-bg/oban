@@ -18,6 +18,12 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite, Oban.Engines.Dolphin] do
     @moduletag lite: engine == Lite
     @moduletag dolphin: engine == Dolphin
 
+    if engine == Lite do
+      setup do
+        on_exit(fn -> LiteRepo.delete_all(Oban.Job) end)
+      end
+    end
+
     defmodule MiniUniq do
       use Oban.Worker, unique: [fields: [:args]]
 

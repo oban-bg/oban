@@ -1,6 +1,8 @@
 defmodule Oban.Migrations.SQLiteTest do
   use Oban.Case, async: true
 
+  @moduletag :lite
+
   defmodule MigrationRepo do
     @moduledoc false
 
@@ -12,8 +14,6 @@ defmodule Oban.Migrations.SQLiteTest do
       {:ok, Keyword.put(LiteRepo.config(), :database, "priv/migration.db")}
     end
   end
-
-  @moduletag :lite
 
   defmodule Migration do
     use Ecto.Migration
