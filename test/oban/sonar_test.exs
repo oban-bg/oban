@@ -43,6 +43,8 @@ defmodule Oban.SonarTest do
     test "reporting a clustered status with multiple nodes" do
       name = start_supervised_oban!(notifier: Oban.Notifiers.Isolated)
 
+      with_backoff(fn -> assert :solitary = Notifier.status(name) end)
+
       Notifier.notify(name, :sonar, %{node: "web.1"})
 
       with_backoff(fn ->
