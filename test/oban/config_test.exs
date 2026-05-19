@@ -6,6 +6,13 @@ defmodule Oban.ConfigTest do
 
   doctest Config
 
+  defmodule NotRepo do
+  end
+
+  defmodule SomeRepo do
+    def config, do: []
+  end
+
   describe "validate/1" do
     test "legacy :circuit_backoff option is ignored" do
       assert_valid(circuit_backoff: 10)
@@ -108,13 +115,6 @@ defmodule Oban.ConfigTest do
     end
 
     test ":repo is validated as a repo-like module" do
-      defmodule NotRepo do
-      end
-
-      defmodule SomeRepo do
-        def config, do: []
-      end
-
       refute_valid(repo: NotReal)
       refute_valid(repo: NotRepo)
 

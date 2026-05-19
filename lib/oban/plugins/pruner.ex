@@ -148,12 +148,14 @@ defmodule Oban.Plugins.Pruner do
 
   defp check_leadership_and_delete_jobs(state) do
     if Peer.leader?(state.conf) do
-      Repo.transaction(state.conf, fn ->
+      fun = fn ->
         {:ok, jobs} =
           Engine.prune_jobs(state.conf, Job, limit: state.limit, max_age: state.max_age)
 
         %{pruned_count: length(jobs), pruned_jobs: jobs}
-      end)
+      end
+
+      Repo.transaction(state.conf, fun, on_exhausted: :log)
     else
       {:ok, %{pruned_count: 0, pruned_jobs: []}}
     end

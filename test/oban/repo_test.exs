@@ -1,17 +1,30 @@
 defmodule Oban.RepoTest do
   use Oban.Case, async: true
 
+  import ExUnit.CaptureLog
+
   alias Oban.Config
   alias Oban.Test.DynamicRepo
 
   @moduletag :unboxed
 
-  test "retrying dispatch when the configured repo module is unavailable" do
-    defmodule RepoTest.GhostRepo do
-      def __adapter__, do: Ecto.Adapters.Postgres
-      def config, do: []
-    end
+  defmodule FailRepo do
+    def __adapter__, do: Ecto.Adapters.Postgres
 
+    def config, do: []
+
+    def transaction(_fun, _opts) do
+      raise DBConnection.ConnectionError, "boom"
+    end
+  end
+
+  defmodule RepoTest.GhostRepo do
+    def __adapter__, do: Ecto.Adapters.Postgres
+
+    def config, do: []
+  end
+
+  test "retrying dispatch when the configured repo module is unavailable" do
     conf = Config.new(repo: RepoTest.GhostRepo)
 
     :code.purge(RepoTest.GhostRepo)
@@ -19,6 +32,29 @@ defmodule Oban.RepoTest do
 
     assert_raise UndefinedFunctionError, fn ->
       Oban.Repo.all(conf, Oban.Job)
+    end
+  end
+
+  describe "transaction/3 retry exhaustion" do
+    test "reraises the underlying error by default" do
+      conf = Config.new(repo: FailRepo)
+
+      capture_log(fn ->
+        assert_raise DBConnection.ConnectionError, fn ->
+          Oban.Repo.transaction(conf, fn -> :ok end, retry: 0)
+        end
+      end)
+    end
+
+    test "returns {:error, exception} and logs when on_exhausted is :log" do
+      conf = Config.new(repo: FailRepo)
+
+      log =
+        capture_log(fn ->
+          Oban.Repo.transaction(conf, fn -> :ok end, retry: 0, on_exhausted: :log)
+        end)
+
+      assert log =~ "DBConnection.ConnectionError"
     end
   end
 

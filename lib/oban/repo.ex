@@ -42,7 +42,8 @@ defmodule Oban.Repo do
           delay: 500,
           retry: 5,
           expected_delay: 10,
-          expected_retry: 20
+          expected_retry: 20,
+          on_exhausted: :raise
         ]
 
   Changes require recompiling `:oban`. See `transaction/3` for the meaning of each option and for
@@ -53,6 +54,7 @@ defmodule Oban.Repo do
 
   alias Oban.{Backoff, Config}
 
+  require Logger
   require Oban.Errors
 
   @callbacks_without_opts [
@@ -93,12 +95,17 @@ defmodule Oban.Repo do
     update_all: 3
   ]
 
-  @retry_opts Application.compile_env(:oban, [__MODULE__, :retry_opts],
-                delay: 500,
-                retry: 5,
-                expected_delay: 10,
-                expected_retry: 20
-              )
+  @retry_defaults [
+    delay: 500,
+    retry: 5,
+    expected_delay: 10,
+    expected_retry: 20,
+    on_exhausted: :raise
+  ]
+
+  @retry_compiled Application.compile_env(:oban, [__MODULE__, :retry_opts], [])
+
+  @retry_opts Keyword.merge(@retry_defaults, @retry_compiled)
 
   for {fun, arity} <- @callbacks_without_opts do
     args = [Macro.var(:conf, __MODULE__) | Macro.generate_arguments(arity, __MODULE__)]
@@ -187,6 +194,10 @@ defmodule Oban.Repo do
   * `:expected_delay` — milliseconds to sleep between expected-conflict retries, jittered.
     Defaults to `10`.
   * `:expected_retry` — maximum attempts for expected conflicts. Defaults to `20`.
+  * `:on_exhausted` — what to do after the retry budget is spent. `:raise` (the default) reraises
+    the underlying error, matching the original behavior. `:log` writes a `Logger.error` and
+    returns `{:error, exception}`, allowing supervised periodic callers to keep running through a
+    database outage instead of crashing and restarting.
 
   Defaults are drawn from the compile-time `:retry_opts` configuration documented on the module.
   Any option passed here overrides the compile-time default for this call.
@@ -212,19 +223,21 @@ defmodule Oban.Repo do
 
       cond do
         opts[:retry] in [0, false] ->
-          reraise error, __STACKTRACE__
+          exhausted(error, opts, __STACKTRACE__)
 
         expected_error?(error) and attempt < opts[:expected_retry] ->
           jittery_sleep(opts[:expected_delay])
 
+          transaction(conf, fun_or_multi, opts, attempt + 1)
+
         attempt < opts[:retry] ->
           jittery_sleep(attempt * opts[:delay])
 
-        true ->
-          reraise error, __STACKTRACE__
-      end
+          transaction(conf, fun_or_multi, opts, attempt + 1)
 
-      transaction(conf, fun_or_multi, opts, attempt + 1)
+        true ->
+          exhausted(error, opts, __STACKTRACE__)
+      end
   end
 
   defp expected_error?(%_{postgres: %{code: :deadlock_detected}}), do: true
@@ -232,6 +245,25 @@ defmodule Oban.Repo do
   defp expected_error?(%_{postgres: %{code: :serialization_failure}}), do: true
   defp expected_error?(%_{mysql: %{code: code}}) when code in [1205, 1213], do: true
   defp expected_error?(_error), do: false
+
+  defp exhausted(error, opts, stacktrace) do
+    case opts[:on_exhausted] do
+      :raise ->
+        reraise error, stacktrace
+
+      :log ->
+        Logger.error(
+          [
+            message: "Oban.Repo exhausted transaction retries: #{inspect(error)}",
+            source: :oban,
+            module: __MODULE__
+          ],
+          domain: [:oban]
+        )
+
+        {:error, error}
+    end
+  end
 
   defp jittery_sleep(delay), do: delay |> Backoff.jitter() |> Process.sleep()
 

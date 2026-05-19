@@ -156,13 +156,15 @@ defmodule Oban.Plugins.Lifeline do
 
   defp check_leadership_and_rescue_jobs(state) do
     if Peer.leader?(state.conf) do
-      Repo.transaction(state.conf, fn ->
+      fun = fn ->
         {:ok, rescued} = Engine.rescue_jobs(state.conf, Job, rescue_after: state.rescue_after)
 
         {rescued, discarded} = Enum.split_with(rescued, &(&1.state == "available"))
 
         %{discarded_jobs: discarded, rescued_jobs: rescued}
-      end)
+      end
+
+      Repo.transaction(state.conf, fun, on_exhausted: :log)
     else
       {:ok, %{discarded_jobs: [], rescued_jobs: []}}
     end

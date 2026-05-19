@@ -295,7 +295,7 @@ defmodule Oban.Plugins.Cron do
     meta = %{conf: state.conf, plugin: __MODULE__}
 
     :telemetry.span([:oban, :plugin], meta, fn ->
-      case Repo.transaction(state.conf, fun) do
+      case Repo.transaction(state.conf, fun, on_exhausted: :log) do
         {:ok, inserted_jobs} ->
           {:ok, Map.put(meta, :jobs, inserted_jobs)}
 
