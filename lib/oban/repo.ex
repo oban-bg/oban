@@ -23,17 +23,19 @@ defmodule Oban.Repo do
 
   ## Retries
 
-  Every dispatch through `Oban.Repo` is wrapped in a bounded retry loop that tolerates transient
-  failures without surfacing them to callers:
+  `transaction/3` is wrapped in a bounded retry loop that tolerates transient failures without
+  surfacing them to callers:
 
   * `DBConnection.ConnectionError`, `Postgrex.Error`, and `MyXQL.Error` raised from inside a
     transaction are retried with backoff. Expected conflicts like serialization failures,
     deadlocks, and lock-not-available use a shorter delay and higher retry count than unexpected
     errors.
 
-  * `UndefinedFunctionError` raised by the configured repo module is retried for all operations.
+  * `UndefinedFunctionError` raised by the configured repo module is retried on the same loop.
     This absorbs the window during which the repo module is unavailable, e.g. mid-recompile in a
     slow dev environment, so periodic plugins and stagers don't crash on a compile blip.
+    Non-transaction operations do not retry; wrap them in `transaction/3` if you need the
+    protection.
 
   Defaults for both loops are set at compile time and keyed on `Oban.Repo`:
 
@@ -218,7 +220,7 @@ defmodule Oban.Repo do
   defp transaction(conf, fun_or_multi, opts, attempt) do
     __dispatch__(:transaction, [conf, fun_or_multi], opts)
   rescue
-    error in Oban.Errors.database_errors() ->
+    error in Oban.Errors.retryable_errors() ->
       opts = Keyword.merge(@retry_opts, opts)
 
       cond do
@@ -227,6 +229,11 @@ defmodule Oban.Repo do
 
         expected_error?(error) and attempt < opts[:expected_retry] ->
           jittery_sleep(opts[:expected_delay])
+
+          transaction(conf, fun_or_multi, opts, attempt + 1)
+
+        repo_unavailable?(conf, error) and attempt < opts[:retry] ->
+          jittery_sleep(attempt * opts[:delay])
 
           transaction(conf, fun_or_multi, opts, attempt + 1)
 
@@ -245,6 +252,9 @@ defmodule Oban.Repo do
   defp expected_error?(%_{postgres: %{code: :serialization_failure}}), do: true
   defp expected_error?(%_{mysql: %{code: code}}) when code in [1205, 1213], do: true
   defp expected_error?(_error), do: false
+
+  defp repo_unavailable?(%Config{repo: repo}, %UndefinedFunctionError{module: repo}), do: true
+  defp repo_unavailable?(_conf, _error), do: false
 
   defp exhausted(error, opts, stacktrace) do
     case opts[:on_exhausted] do
@@ -309,7 +319,7 @@ defmodule Oban.Repo do
   end
 
   defp __dispatch__(name, [%Config{} = conf | args]) do
-    dynamic_dispatch(conf, name, args)
+    with_dynamic_repo(conf, fn repo -> apply(repo, name, args) end)
   end
 
   defp __dispatch__(name, [%Config{} = conf | args], opts) when is_list(opts) do
@@ -318,32 +328,8 @@ defmodule Oban.Repo do
       |> default_options()
       |> Keyword.merge(opts)
 
-    dynamic_dispatch(conf, name, args ++ [opts])
+    with_dynamic_repo(conf, fn repo -> apply(repo, name, args ++ [opts]) end)
   end
-
-  defp dynamic_dispatch(conf, name, args) do
-    dynamic_dispatch(conf, name, args, 1)
-  end
-
-  defp dynamic_dispatch(conf, name, args, attempt) do
-    with_dynamic_repo(conf, fn repo -> apply(repo, name, args) end)
-  rescue
-    error in UndefinedFunctionError ->
-      cond do
-        not repo_unavailable?(conf, error) ->
-          reraise error, __STACKTRACE__
-
-        attempt < @retry_opts[:retry] ->
-          jittery_sleep(attempt * @retry_opts[:delay])
-          dynamic_dispatch(conf, name, args, attempt + 1)
-
-        true ->
-          reraise error, __STACKTRACE__
-      end
-  end
-
-  defp repo_unavailable?(%Config{repo: repo}, %UndefinedFunctionError{module: repo}), do: true
-  defp repo_unavailable?(_conf, _error), do: false
 
   defp in_transaction?(conf, instance) when is_pid(instance), do: conf.repo.in_transaction?()
 

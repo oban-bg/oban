@@ -7,7 +7,6 @@ defmodule Oban.Stager do
   alias __MODULE__, as: State
 
   require Logger
-  require Oban.Errors
 
   @type option :: Plugin.option() | {:interval, pos_integer()}
 
@@ -83,20 +82,25 @@ defmodule Oban.Stager do
   end
 
   defp stage_and_notify(true = _leader, state) do
-    Repo.transaction(state.conf, fn ->
+    fun = fn ->
       {:ok, staged} = Engine.stage_jobs(state.conf, Job, limit: state.limit)
 
       notify_queues(state)
 
       staged
-    end)
-  rescue
-    error in Oban.Errors.retryable_errors() ->
-      # Force notifying in local mode after an unrecovered database exception. This ensures jobs
-      # keep processing when staging or database driven notifications fail.
-      safe_notify(state)
+    end
 
-      {:error, error}
+    case Repo.transaction(state.conf, fun, on_exhausted: :log) do
+      {:ok, _staged} = result ->
+        result
+
+      {:error, _reason} = result ->
+        # Force notifying in local mode after an unrecovered database exception. This ensures jobs
+        # keep processing when staging or database driven notifications fail.
+        safe_notify(state)
+
+        result
+    end
   end
 
   defp stage_and_notify(_leader, state) do
