@@ -15,7 +15,7 @@ It's possible to use the `oban.install` task without the `igniter.install` escri
 First, add `oban` and `igniter` to your deps in `mix.exs`:
 
 ```elixir
-{:oban, "~> 2.21"},
+{:oban, "~> 2.23"},
 {:igniter, "~> 0.5", only: [:dev]},
 ```
 
@@ -51,7 +51,7 @@ mix igniter.install oban --repo MyApp.LiteRepo
 Add `:oban` to your list of deps in `mix.exs`:
 
 ```elixir
-{:oban, "~> 2.21"}
+{:oban, "~> 2.23"}
 ```
 
 Then run `mix deps.get` to install Oban and its dependencies. After the packages are installed you
