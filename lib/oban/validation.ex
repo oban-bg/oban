@@ -93,6 +93,14 @@ defmodule Oban.Validation do
     end
   end
 
+  defp validate_type(:module, key, val) do
+    if is_atom(val) do
+      :ok
+    else
+      {:error, "expected #{inspect(key)} to be an atom (module), got: #{inspect(val)}"}
+    end
+  end
+
   defp validate_type({:behaviour, module}, key, {val, opts}) do
     with :ok <- validate_type({:behaviour, module}, key, val) do
       if Keyword.keyword?(opts) do
@@ -167,6 +175,14 @@ defmodule Oban.Validation do
 
   defp validate_type({:list, _type}, key, val) do
     {:error, "expected #{inspect(key)} to be a list, got: #{inspect(val)}"}
+  end
+
+  defp validate_type(:list, key, val) do
+    if is_list(val) do
+      :ok
+    else
+      {:error, "expected #{inspect(key)} to be a list, got: #{inspect(val)}"}
+    end
   end
 
   defp validate_type(:mfa, key, {module, func, args})
