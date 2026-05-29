@@ -157,3 +157,6 @@ instances often run side by side and isolating the output of one of them is othe
   Each type clause now matches the success case positively and falls to an explicit error clause,
   so values that previously slipped past a negative guard and into the `:ok` catch-all are
   properly rejected.
+
+[pro]: https://oban.pro
+[opc]: https://oban.pro/docs/pro/changelog.html
