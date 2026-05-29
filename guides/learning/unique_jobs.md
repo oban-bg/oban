@@ -152,10 +152,10 @@ BusinessWorker.new(
 ```
 
 Another example is bumping the scheduled time on conflict. Either `:scheduled_at` or
-`:schedule_in` values will work, but the replace option is always `:scheduled_at`.
+`:scheduled_in` values will work, but the replace option is always `:scheduled_at`.
 
 ```elixir
-UrgentWorker.new(args, schedule_in: 1, replace: [scheduled: [:scheduled_at]])
+UrgentWorker.new(args, scheduled_in: 1, replace: [scheduled: [:scheduled_at]])
 ```
 
 > #### Jobs in the `:executing` State {: .warning}

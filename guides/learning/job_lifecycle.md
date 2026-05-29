@@ -24,14 +24,14 @@ Jobs exist in one of eight possible states:
 When you first insert a job into Oban, it enters one of two initial states:
 
 - `available` - The default state for new jobs that should be executed immediately
-- `scheduled` - When you provide a `scheduled_at` timestamp or `schedule_in` delay
+- `scheduled` - When you provide a `scheduled_at` timestamp or `scheduled_in` delay
 
 ```elixir
 # Job inserted as "available"
 %{id: 123} |> MyApp.Worker.new() |> Oban.insert()
 
 # Job inserted as "scheduled"
-%{id: 123} |> MyApp.Worker.new(schedule_in: 60) |> Oban.insert()
+%{id: 123} |> MyApp.Worker.new(scheduled_in: 60) |> Oban.insert()
 ```
 
 ## Executing State

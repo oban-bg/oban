@@ -82,6 +82,7 @@ defmodule Oban.Job do
           | {:replace_args, boolean()}
           | {:schedule_in, schedule_in_option()}
           | {:scheduled_at, DateTime.t()}
+          | {:scheduled_in, schedule_in_option()}
           | {:tags, tags()}
           | {:unique, true | false | nil | [unique_option()]}
           | {:worker, atom() | binary()}
@@ -191,7 +192,7 @@ defmodule Oban.Job do
 
   @required_params ~w(worker args)a
   @replace_options ~w(args max_attempts meta priority queue scheduled_at tags worker)a
-  @virtual_params ~w(replace replace_args schedule_in unique)a
+  @virtual_params ~w(replace replace_args schedule_in scheduled_in unique)a
 
   @time_units ~w(
     second
@@ -237,10 +238,6 @@ defmodule Oban.Job do
     timestamp: :inserted_at
   }
 
-  defguardp is_timestampable(value)
-            when is_integer(value) or
-                   (is_integer(elem(value, 0)) and elem(value, 1) in @time_units)
-
   @doc """
   Construct a new job changeset ready for insertion into the database.
 
@@ -261,7 +258,7 @@ defmodule Oban.Job do
 
     * `:scheduled_at` - a time in the future after which the job should be executed
 
-    * `:schedule_in` - the number of seconds until the job should be executed or a tuple containing
+    * `:scheduled_in` - the number of seconds until the job should be executed or a tuple containing
       a number and unit
 
     * `:tags` — a list of tags to group and organize related jobs, i.e. to identify scheduled jobs
@@ -286,11 +283,11 @@ defmodule Oban.Job do
 
   Schedule a job to run in 5 seconds:
 
-      MyApp.Worker.new(%{id: 1}, schedule_in: 5)
+      MyApp.Worker.new(%{id: 1}, scheduled_in: 5)
 
   Schedule a job to run in 5 minutes:
 
-      MyApp.Worker.new(%{id: 1}, schedule_in: {5, :minutes})
+      MyApp.Worker.new(%{id: 1}, scheduled_in: {5, :minutes})
 
   Insert a job, ensuring that it is unique within the past minute:
 
@@ -337,7 +334,7 @@ defmodule Oban.Job do
     |> validate_keys(params, @permitted_params ++ @virtual_params)
     |> validate_required(@required_params)
     |> put_replace(params[:replace], params[:replace_args])
-    |> put_scheduling(params[:schedule_in])
+    |> put_scheduling(params)
     |> put_unique(params[:unique])
     |> validate_length(:queue, min: 1, max: 128)
     |> validate_length(:worker, min: 1, max: 128)
@@ -642,18 +639,23 @@ defmodule Oban.Job do
     end
   end
 
-  defp put_scheduling(changeset, value) do
-    case value do
-      value when is_timestampable(value) ->
-        scheduled_at = to_timestamp(value)
+  defp put_scheduling(changeset, params) do
+    {key, value} =
+      if Map.has_key?(params, :scheduled_in) do
+        {:scheduled_in, params[:scheduled_in]}
+      else
+        {:schedule_in, params[:schedule_in]}
+      end
 
-        put_change(changeset, :scheduled_at, scheduled_at)
+    case value do
+      value when is_integer(value) or is_valid_period(value) ->
+        put_change(changeset, :scheduled_at, to_timestamp(value))
 
       nil ->
         changeset
 
       _ ->
-        add_error(changeset, :schedule_in, "invalid value")
+        add_error(changeset, key, "invalid value")
     end
   end
 

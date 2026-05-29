@@ -87,11 +87,20 @@ defmodule Oban.Testing do
       in_an_hour = DateTime.add(DateTime.utc_now(), 3600, :second)
       assert_enqueued worker: MyApp.Worker, scheduled_at: in_an_hour
 
+  Frequently it's more convenient to assert against a relative time rather than computing an
+  absolute timestamp. Use `scheduled_in` with the number of seconds from now, or a `{amount, unit}`
+  tuple, instead:
+
+      assert_enqueued worker: MyApp.Worker, scheduled_in: 3600
+      assert_enqueued worker: MyApp.Worker, scheduled_in: {1, :hour}
+
   By default, Oban will apply a 1 second delta to all timestamp fields of jobs, so that small
   deviations between the actual value and the expected one are ignored. You may configure this
-  delta by passing a tuple of value and a `delta` option (in seconds) to corresponding keyword:
+  delta by passing a `delta` option (in seconds) alongside the value:
 
       assert_enqueued worker: MyApp.Worker, scheduled_at: {in_an_hour, delta: 10}
+      assert_enqueued worker: MyApp.Worker, scheduled_in: {3600, delta: 10}
+      assert_enqueued worker: MyApp.Worker, scheduled_in: {1, :hour, delta: 10}
   """
 
   @moduledoc since: "0.3.0"
@@ -102,7 +111,7 @@ defmodule Oban.Testing do
 
   alias Ecto.Changeset
 
-  alias Oban.{Config, Job, JSON, Queue.Executor, Repo, Worker}
+  alias Oban.{Config, Job, JSON, Period, Queue.Executor, Repo, Worker}
 
   @type perform_opts :: Job.option() | Oban.option()
 
@@ -619,7 +628,26 @@ defmodule Oban.Testing do
   defp extract_conf(opts) do
     {conf_opts, opts} = Keyword.split(opts, @conf_keys)
 
-    {Config.new(conf_opts), opts}
+    {Config.new(conf_opts), normalize_scheduled(opts)}
+  end
+
+  defp normalize_scheduled(opts) do
+    case Keyword.pop(opts, :scheduled_in) do
+      {nil, opts} ->
+        opts
+
+      {value, opts} ->
+        {period, delta} =
+          case value do
+            {amount, unit, delta: delta} -> {{amount, unit}, delta}
+            {amount, delta: delta} -> {amount, delta}
+            period -> {period, 1}
+          end
+
+        scheduled_at = DateTime.add(DateTime.utc_now(), Period.to_seconds(period), :second)
+
+        Keyword.put(opts, :scheduled_at, {scheduled_at, delta: delta})
+    end
   end
 
   defp job_exists?(conf, opts) do

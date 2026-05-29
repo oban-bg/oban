@@ -52,7 +52,7 @@ defmodule MyApp.Workers.TimezoneWorker do
       case fetch_next(id) do
         next_id when is_integer(next_id) ->
           %{id: next_id, backfill: true}
-          |> new(schedule_in: @backfill_delay)
+          |> new(scheduled_in: @backfill_delay)
           |> Oban.insert()
 
         nil ->

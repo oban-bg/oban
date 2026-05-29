@@ -9,7 +9,7 @@ You can **schedule** jobs to run after a specific dalay (in seconds):
 
 ```elixir
 %{id: 1}
-|> MyApp.SomeWorker.new(schedule_in: _seconds = 5)
+|> MyApp.SomeWorker.new(scheduled_in: _seconds = 5)
 |> Oban.insert()
 ```
 

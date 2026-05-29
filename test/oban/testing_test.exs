@@ -310,6 +310,17 @@ defmodule Oban.TestingTest do
       assert_enqueued worker: Pong, scheduled_at: ~U[2000-10-20 05:10:30.557748Z]
     end
 
+    test "checking for jobs with a relative scheduled_in time" do
+      insert!(%{}, worker: Pong, scheduled_at: seconds_from_now(3600))
+
+      assert_enqueued worker: Pong, scheduled_in: 3600
+      assert_enqueued worker: Pong, scheduled_in: {1, :hour}
+      assert_enqueued worker: Pong, scheduled_in: {3609, delta: 10}
+      assert_enqueued worker: Pong, scheduled_in: {1, :hour, delta: 10}
+
+      refute_enqueued worker: Pong, scheduled_in: 60
+    end
+
     test "asserting that jobs are now or will eventually be enqueued" do
       insert!(%{id: 1}, worker: Ping, queue: :alpha)
 

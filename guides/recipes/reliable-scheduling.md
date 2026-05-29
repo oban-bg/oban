@@ -28,7 +28,7 @@ defmodule MyApp.Workers.ScheduledWorker do
   @impl true
   def perform(%{args: %{"email" => email} = args, attempt: 1}) do
     args
-    |> new(schedule_in: @one_day)
+    |> new(scheduled_in: @one_day)
     |> Oban.insert!()
 
     Mailer.deliver_email(email)
@@ -63,13 +63,13 @@ along with the underlying feature that made it possible._
 
 ## Considerations for Scheduling Jobs in the Very-Near-Future
 
-If you use the `schedule_in` or `scheduled_at` options with a value that will
+If you use the `scheduled_in` or `scheduled_at` options with a value that will
 resolve to the very-near-future, for example:
 
 ```elixir
 # 1 second from now
 %{}
-|> new(schedule_in: 1)
+|> new(scheduled_in: 1)
 |> Oban.insert()
 
 # 500 milliseconds from now

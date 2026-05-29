@@ -28,7 +28,14 @@ defmodule Oban.JobTest do
   end
 
   describe "scheduling with new/2" do
-    test "scheduling a job for the future using :schedule_in" do
+    test "scheduling a job for the future using :scheduled_in" do
+      changeset = Job.new(%{}, worker: Fake, scheduled_in: 10)
+
+      assert changeset.changes[:state] == "scheduled"
+      assert changeset.changes[:scheduled_at]
+    end
+
+    test "scheduling a job for the future using the legacy :schedule_in option" do
       changeset = Job.new(%{}, worker: Fake, schedule_in: 10)
 
       assert changeset.changes[:state] == "scheduled"
@@ -39,7 +46,7 @@ defmodule Oban.JobTest do
       now = DateTime.utc_now()
 
       for unit <- ~w(second seconds minute minutes hour hours day days week weeks)a do
-        %{changes: changes} = Job.new(%{}, schedule_in: {1, unit})
+        %{changes: changes} = Job.new(%{}, scheduled_in: {1, unit})
 
         assert changes[:state] == "scheduled"
         assert changes[:scheduled_at]
@@ -47,12 +54,12 @@ defmodule Oban.JobTest do
       end
     end
 
-    test ":schedule_in does not accept other types of values" do
-      assert Job.new(%{}, schedule_in: true).errors[:schedule_in]
-      assert Job.new(%{}, schedule_in: "10").errors[:schedule_in]
-      assert Job.new(%{}, schedule_in: 0.12).errors[:schedule_in]
-      assert Job.new(%{}, schedule_in: {6, :units}).errors[:schedule_in]
-      assert Job.new(%{}, schedule_in: {6.0, :hours}).errors[:schedule_in]
+    test ":scheduled_in does not accept other types of values" do
+      assert Job.new(%{}, scheduled_in: true).errors[:scheduled_in]
+      assert Job.new(%{}, scheduled_in: "10").errors[:scheduled_in]
+      assert Job.new(%{}, scheduled_in: 0.12).errors[:scheduled_in]
+      assert Job.new(%{}, scheduled_in: {6, :units}).errors[:scheduled_in]
+      assert Job.new(%{}, scheduled_in: {6.0, :hours}).errors[:scheduled_in]
     end
 
     test "automatically setting the state to scheduled" do
