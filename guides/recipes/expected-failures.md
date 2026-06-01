@@ -123,4 +123,4 @@ for filtering by any other `meta` value.
 
 [tele]: https://github.com/beam-telemetry/telemetry
 [hb]: https://www.honeybadger.io/
-[pro]: https://hexdocs.pm/elixir/Protocol.html
+[pro]: https://elixir.hexdocs.pm/Protocol.html

@@ -220,4 +220,4 @@ defmodule MyApp.Repo do
 end
 ```
 
-[dynamic]: https://hexdocs.pm/ecto/replicas-and-dynamic-repositories.html#dynamic-repositories
+[dynamic]: https://ecto.hexdocs.pm/replicas-and-dynamic-repositories.html#dynamic-repositories

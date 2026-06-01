@@ -16,7 +16,7 @@
     <img alt="Hex Version" src="https://img.shields.io/hexpm/v/oban.svg">
   </a>
 
-  <a href="https://hexdocs.pm/oban">
+  <a href="https://oban.hexdocs.pm">
     <img alt="Hex Docs" src="http://img.shields.io/badge/hex.pm-docs-green.svg?style=flat">
   </a>
 
@@ -48,7 +48,7 @@
 > This README is for the unreleased main branch, please reference the [official documentation on
 > hexdocs][hexdoc] for the latest stable release.
 
-[hexdoc]: https://hexdocs.pm/oban/Oban.html
+[hexdoc]: https://oban.hexdocs.pm/Oban.html
 
 ---
 
@@ -172,12 +172,12 @@ Oban requires:
 
 ## Installation
 
-See the [installation guide](https://hexdocs.pm/oban/installation.html) for details on installing
+See the [installation guide](https://oban.hexdocs.pm/installation.html) for details on installing
 and configuring Oban in your application.
 
 ## Quick Getting Started
 
-  1. [Configure queues](https://hexdocs.pm/oban/defining_queues.html) and an Ecto repo for Oban to
+  1. [Configure queues](https://oban.hexdocs.pm/defining_queues.html) and an Ecto repo for Oban to
      use:
 
      ```elixir
@@ -201,7 +201,7 @@ and configuring Oban in your application.
      end
      ```
 
-  3. Enqueue a job (see [the documentation](https://hexdocs.pm/oban/Oban.Job.html#enqueueing-jobs)):
+  3. Enqueue a job (see [the documentation](https://oban.hexdocs.pm/Oban.Job.html#enqueueing-jobs)):
 
      ```elixir
      %{email: %{to: "foo@example.com", body: "Hello from Oban!"}}

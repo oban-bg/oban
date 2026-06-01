@@ -57,7 +57,7 @@ defmodule Oban.Plugins.Cron do
 
   * `:jobs` — a list of jobs that were inserted into the database
 
-  [tz]: https://hexdocs.pm/tz
+  [tz]: https://tz.hexdocs.pm
   [perjob]: periodic_jobs.html
   """
 

@@ -36,7 +36,7 @@ defmodule Oban.Plugins.Reindexer do
       the default of "Etc/UTC" you *must* have a timezone database like [tz][tz] installed and
       configured.
 
-  [tz]: https://hexdocs.pm/tz
+  [tz]: https://tz.hexdocs.pm
   """
 
   @behaviour Oban.Plugin

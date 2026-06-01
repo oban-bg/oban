@@ -70,4 +70,4 @@ whatever path you specified above and that it contains all of your desired queue
 {"queues": {"special": 1, "default": 10, "events": 20}}
 ```
 
-[mcp]: https://hexdocs.pm/mix/Mix.Tasks.Release.html#module-config-providers
+[mcp]: https://mix.hexdocs.pm/Mix.Tasks.Release.html#module-config-providers
