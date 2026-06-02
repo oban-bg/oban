@@ -138,12 +138,18 @@ defmodule Oban.Plugins.Reindexer do
       with {:ok, deindex_queries} <- fetch_deindex_queries(state) do
         reindex_queries = Enum.map(state.indexes, &reindex_query(state, &1))
 
-        Enum.reduce_while(deindex_queries ++ reindex_queries, :ok, fn query, _ ->
-          case Repo.query(state.conf, query, [], timeout: state.timeout) do
-            {:ok, _} -> {:cont, :ok}
-            error -> {:halt, error}
-          end
-        end)
+        errors =
+          Enum.reduce(deindex_queries ++ reindex_queries, [], fn query, errors ->
+            case Repo.query(state.conf, query, [], timeout: state.timeout) do
+              {:ok, _} -> errors
+              {:error, error} -> [{query, error} | errors]
+            end
+          end)
+
+        case errors do
+          [] -> :ok
+          errors -> {:error, Enum.reverse(errors)}
+        end
       end
     end
   end

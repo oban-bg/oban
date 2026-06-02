@@ -100,5 +100,21 @@ defmodule Oban.Plugins.ReindexerTest do
 
       stop_supervised(name)
     end
+
+    test "reindexing every index despite individual failures" do
+      indexes = ~w(oban_jobs_missing_index_a oban_jobs_missing_index_b)
+
+      name = start_supervised_oban!(plugins: [{Reindexer, indexes: indexes}])
+
+      name
+      |> Registry.whereis({:plugin, Reindexer})
+      |> send(:reindex)
+
+      assert_receive {:event, :stop, _, %{plugin: Reindexer, error: error}}, 2_000
+
+      assert {:error, [_, _]} = error
+
+      stop_supervised(name)
+    end
   end
 end
