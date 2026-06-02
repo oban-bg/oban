@@ -54,10 +54,10 @@ defmodule Oban.Repo do
 
   @moduledoc since: "2.2.0"
 
-  alias Oban.{Backoff, Config}
+  alias Oban.{Backoff, Config, Errors}
 
   require Logger
-  require Oban.Errors
+  require Errors
 
   @callbacks_without_opts [
     config: 0,
@@ -220,14 +220,14 @@ defmodule Oban.Repo do
   defp transaction(conf, fun_or_multi, opts, attempt) do
     __dispatch__(:transaction, [conf, fun_or_multi], opts)
   rescue
-    error in Oban.Errors.retryable_errors() ->
+    error in Errors.retryable_errors() ->
       opts = Keyword.merge(@retry_opts, opts)
 
       cond do
         opts[:retry] in [0, false] ->
           exhausted(error, opts, __STACKTRACE__)
 
-        expected_error?(error) and attempt < opts[:expected_retry] ->
+        Errors.expected_error?(error) and attempt < opts[:expected_retry] ->
           jittery_sleep(opts[:expected_delay])
 
           transaction(conf, fun_or_multi, opts, attempt + 1)
@@ -246,12 +246,6 @@ defmodule Oban.Repo do
           exhausted(error, opts, __STACKTRACE__)
       end
   end
-
-  defp expected_error?(%_{postgres: %{code: :deadlock_detected}}), do: true
-  defp expected_error?(%_{postgres: %{code: :lock_not_available}}), do: true
-  defp expected_error?(%_{postgres: %{code: :serialization_failure}}), do: true
-  defp expected_error?(%_{mysql: %{code: code}}) when code in [1205, 1213], do: true
-  defp expected_error?(_error), do: false
 
   defp repo_unavailable?(%Config{repo: repo}, %UndefinedFunctionError{module: repo}), do: true
   defp repo_unavailable?(_conf, _error), do: false
