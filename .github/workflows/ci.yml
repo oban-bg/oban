@@ -34,8 +34,8 @@ jobs:
               postgres: '14.22-alpine'
             exclude_tags: 'lite'
           - pair:
-              elixir: '1.19'
-              otp: '28.1'
+              elixir: '1.20'
+              otp: '29.0'
               mysql: '9.1'
               postgres: '18.3-alpine'
             exclude_tags: 'gossip'
