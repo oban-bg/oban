@@ -142,7 +142,7 @@ defmodule Oban.Notifier do
 
       Oban.Notifier.listen(MyApp.MyOban, [:gossip, :signal])
   """
-  @spec listen(name_or_conf(), channel() | [channel()]) :: :ok
+  @spec listen(name_or_conf(), channel() | [channel()]) :: :ok | {:error, Exception.t()}
   def listen(name_or_conf \\ Oban, channels) when is_atom(channels) or is_list(channels) do
     apply_callback(name_or_conf, :listen, [normalize_channels(channels)])
   end
@@ -164,7 +164,7 @@ defmodule Oban.Notifier do
 
       Oban.Notifier.unlisten(MyApp.MyOban, [:gossip])
   """
-  @spec unlisten(name_or_conf(), channel() | [channel()]) :: :ok
+  @spec unlisten(name_or_conf(), channel() | [channel()]) :: :ok | {:error, Exception.t()}
   def unlisten(name_or_conf \\ Oban, channels) when is_atom(channels) or is_list(channels) do
     apply_callback(name_or_conf, :unlisten, [normalize_channels(channels)])
   end
