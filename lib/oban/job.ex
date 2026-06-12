@@ -234,7 +234,7 @@ defmodule Oban.Job do
     fields: ~w(args queue worker)a,
     keys: [],
     period: 60,
-    states: ~w(scheduled available executing retryable completed)a,
+    states: :successful,
     timestamp: :inserted_at
   }
 

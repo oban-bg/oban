@@ -101,7 +101,7 @@ defmodule Oban.JobTest do
                fields: [:args, :queue, :worker],
                keys: [],
                period: 60,
-               states: ~w(scheduled available executing retryable completed)a,
+               states: ~w(suspended scheduled available executing retryable completed)a,
                timestamp: :inserted_at
              }
     end
