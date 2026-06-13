@@ -190,7 +190,9 @@ defmodule Oban.MixProject do
       {:credo, "~> 1.7", only: [:test, :dev], runtime: false},
       {:dialyxir, "~> 1.4", only: [:test, :dev], runtime: false},
       {:ex_doc, "~> 0.38", only: [:test, :dev], runtime: false},
-      {:makeup_diff, "~> 0.1", only: [:test, :dev], runtime: false}
+      {:makeup_diff, "~> 0.1", only: [:test, :dev], runtime: false},
+      # Lock Finch version compatible with OTP 24, Req 0.5.18 allows it
+      {:finch, "~> 0.21.0", only: [:test], override: true}
     ]
   end
 
