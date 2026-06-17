@@ -38,3 +38,18 @@ in the future.
 
 See the README for setup. Tests assume a local Postgres; see `test/test_helper.exs` for
 configuration.
+
+### Running databases with Docker
+
+If you'd rather not install Postgres and MySQL on your machine, a `compose.yaml` is included to
+spin up both in containers:
+
+```bash
+docker compose up -d   # start postgres and mysql
+mix test.setup         # create and migrate the test databases
+mix test.ci            # format check, lint, and run the suite
+docker compose down    # stop the containers when you're done
+```
+
+The containers match the versions used in CI and expose the default ports, so the connection URLs
+in `test/test_helper.exs` work without any extra configuration.
