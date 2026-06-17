@@ -5,10 +5,10 @@ on:
     branches:
       - main
     paths-ignore:
-      - 'guides/**'
+      - "guides/**"
   pull_request:
     paths-ignore:
-      - 'guides/**'
+      - "guides/**"
 
 permissions:
   contents: read
@@ -28,17 +28,17 @@ jobs:
       matrix:
         include:
           - pair:
-              elixir: '1.15'
-              otp: '24.3'
-              mysql: '8.4'
-              postgres: '14.22-alpine'
-            exclude_tags: 'lite'
+              elixir: "1.16"
+              otp: "25.3"
+              mysql: "8.4"
+              postgres: "14.22-alpine"
+            exclude_tags: "lite"
           - pair:
-              elixir: '1.20'
-              otp: '29.0'
-              mysql: '9.1'
-              postgres: '18.3-alpine'
-            exclude_tags: 'gossip'
+              elixir: "1.20"
+              otp: "29.0"
+              mysql: "9.1"
+              postgres: "18.3-alpine"
+            exclude_tags: "gossip"
             lint: lint
 
     runs-on: ubuntu-24.04
