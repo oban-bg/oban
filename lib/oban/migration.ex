@@ -43,17 +43,17 @@ defmodule Oban.Migration do
   additional migrations. To do this, generate a new migration:
 
   ```bash
-  mix ecto.gen.migration upgrade_oban_to_v13
+  mix ecto.gen.migration upgrade_oban_to_v14
   ```
 
   Open the generated migration in your editor and call the `up` and `down` functions on
   `Oban.Migration`, passing a version number:
 
   ```elixir
-  defmodule MyApp.Repo.Migrations.UpgradeObanToV13 do
+  defmodule MyApp.Repo.Migrations.UpgradeObanToV14 do
     use Ecto.Migration
 
-    def up, do: Oban.Migrations.up(version: 13)
+    def up, do: Oban.Migrations.up(version: 14)
 
     def down, do: Oban.Migrations.down(version: 13)
   end
