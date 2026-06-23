@@ -69,7 +69,7 @@ defmodule MyApp.Repo.Migrations.AddObanJobsTable do
   use Ecto.Migration
 
   def up do
-    Oban.Migration.up(version: 14)
+    Oban.Migration.up(version: 15)
   end
 
   # We specify `version: 1` in `down`, ensuring that we'll roll all the way back down if
