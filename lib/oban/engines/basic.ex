@@ -69,9 +69,19 @@ defmodule Oban.Engines.Basic do
 
   @impl Engine
   def insert_job(%Config{} = conf, %Changeset{} = changeset, opts) do
-    fun = fn -> insert_unique(conf, changeset, opts) end
+    inst_opts = Keyword.take(opts, [:on_conflict, :timeout])
 
-    with {:ok, result} <- Repo.transaction(conf, fun), do: result
+    case unique_query(changeset) do
+      {:ok, query, lock_key} ->
+        repo_opts = Keyword.drop(opts, [:on_conflict, :timeout])
+
+        fun = fn -> insert_unique(conf, changeset, query, lock_key, inst_opts) end
+
+        with {:ok, result} <- Repo.transaction(conf, fun, repo_opts), do: result
+
+      nil ->
+        Repo.insert(conf, changeset, inst_opts)
+    end
   end
 
   @impl Engine
@@ -425,11 +435,10 @@ defmodule Oban.Engines.Basic do
 
   # Insertion
 
-  defp insert_unique(conf, changeset, opts) do
+  defp insert_unique(conf, changeset, query, lock_key, opts) do
     opts = Keyword.put(opts, :on_conflict, :nothing)
 
-    with {:ok, query, lock_key} <- unique_query(changeset),
-         :ok <- acquire_lock(conf, lock_key),
+    with :ok <- acquire_lock(conf, lock_key),
          {:ok, job} <- fetch_job(conf, query, opts),
          {:ok, job} <- resolve_conflict(conf, job, changeset, opts) do
       {:ok, %{job | conflict?: true}}
