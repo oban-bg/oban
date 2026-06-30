@@ -13,6 +13,10 @@ defmodule Oban.ConfigTest do
     def config, do: []
   end
 
+  defmodule FakePlugin do
+    def init(opts), do: {:ok, opts}
+  end
+
   describe "validate/1" do
     test "legacy :circuit_backoff option is ignored" do
       assert_valid(circuit_backoff: 10)
@@ -146,6 +150,16 @@ defmodule Oban.ConfigTest do
       assert {:error, "unknown option :nam, did you mean :name?"} = Config.validate(nam: :web)
     end
 
+    test "a plugin configured more than once is rejected" do
+      refute_valid(plugins: [Pruner, {Pruner, max_age: 60}])
+      refute_valid(pruner: [max_age: 60], plugins: [Pruner])
+      refute_valid(cron: [crontab: [{"* * * * *", Worker}]], plugins: [Cron])
+      refute_valid(cron: [crontab: []], crontab: [{"* * * * *", Worker}])
+
+      assert_valid(pruner: [max_age: 60], plugins: [Cron])
+      assert_valid(plugins: [Pruner, Cron])
+    end
+
     test "duplicated values are rejected" do
       assert {:error, "found duplicate options: [:peer]"} ==
                Config.validate(peer: false, peer: Oban.Peers.Postgres)
@@ -210,6 +224,34 @@ defmodule Oban.ConfigTest do
       assert %{stage_interval: 1_000} = conf(poll_interval: :infinity, stage_interval: 1_000)
       assert %{stage_interval: 1_000} = conf(plugins: [Oban.Stager])
       assert %{stage_interval: 2_000} = conf(plugins: [{Oban.Stager, interval: 2_000}])
+    end
+
+    test "translating top-level feature keys into plugin usage" do
+      assert has_plugin?(Cron, cron: [crontab: [{"* * * * *", Worker}]])
+      assert has_plugin?(Pruner, pruner: [max_age: 60])
+      assert has_plugin?(Oban.Plugins.Lifeline, lifeline: [rescue_after: 60_000])
+      assert has_plugin?(Oban.Plugins.Reindexer, reindexer: [])
+
+      refute has_plugin?(Pruner, pruner: false)
+      refute has_plugin?(Pruner, [])
+    end
+
+    test "pinning an explicit module through a feature key" do
+      assert %Config{plugins: plugins} = conf(pruner: {FakePlugin, max_age: 60})
+
+      assert {FakePlugin, [max_age: 60]} in plugins
+    end
+
+    test "passing feature key options through to the plugin" do
+      assert %Config{plugins: plugins} = conf(pruner: [max_age: 60])
+
+      assert {Pruner, [max_age: 60]} in plugins
+    end
+
+    test ":testing in :manual mode suppresses top-level feature keys" do
+      conf = conf(pruner: [max_age: 60], cron: [crontab: []], testing: :manual)
+
+      assert %{plugins: [], stage_interval: :infinity} = conf
     end
 
     test "translating :peer false to the disabled module" do

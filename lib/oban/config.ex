@@ -48,8 +48,16 @@ defmodule Oban.Config do
 
   @cron_keys ~w(crontab timezone)a
   @log_levels ~w(false emergency alert critical error warning warn notice info debug)a
-  @renamed [{:engine, Oban.Queue.BasicEngine}, {:notifier, {Oban.PostgresNotifier, []}}]
   @testing_modes ~w(manual inline disabled)a
+
+  @feature_plugins [
+    cron: Oban.Plugins.Cron,
+    pruner: Oban.Plugins.Pruner,
+    lifeline: Oban.Plugins.Lifeline,
+    reindexer: Oban.Plugins.Reindexer
+  ]
+
+  @renamed_modules [{:engine, Oban.Queue.BasicEngine}, {:notifier, {Oban.PostgresNotifier, []}}]
 
   @doc """
   Generate a Config struct after normalizing and verifying Oban options.
@@ -218,7 +226,9 @@ defmodule Oban.Config do
   # Validation
 
   defp validate_plugins(plugins) do
-    Validation.validate(:plugins, plugins, &validate_plugin/1)
+    with :ok <- validate_unique_plugins(plugins) do
+      Validation.validate(:plugins, plugins, &validate_plugin/1)
+    end
   end
 
   defp validate_plugin(plugin) when not is_tuple(plugin), do: validate_plugin({plugin, []})
@@ -302,11 +312,30 @@ defmodule Oban.Config do
     end
   end
 
+  defp validate_unique_plugins(plugins) when is_list(plugins) do
+    modules =
+      Enum.map(plugins, fn
+        {module, _opts} -> module
+        module -> module
+      end)
+
+    dupe = modules -- Enum.uniq(modules)
+
+    if Enum.empty?(dupe) do
+      :ok
+    else
+      {:error, "found duplicate plugins: #{inspect(dupe)}"}
+    end
+  end
+
+  defp validate_unique_plugins(_plugins), do: :ok
+
   # Normalization
 
   defp normalize(opts) do
     opts
     |> crontab_to_plugin()
+    |> features_to_plugins()
     |> normalize_notifier()
     |> normalize_peer()
     |> Keyword.put_new(:node, node_name())
@@ -314,7 +343,7 @@ defmodule Oban.Config do
     |> Keyword.update(:plugins, [], &normalize_plugins/1)
     |> Keyword.delete(:circuit_backoff)
     |> stager_to_interval()
-    |> Enum.reject(&(&1 in @renamed))
+    |> Enum.reject(&(&1 in @renamed_modules))
   end
 
   defp crontab_to_plugin(opts) do
@@ -330,6 +359,32 @@ defmodule Oban.Config do
         Keyword.drop(opts, @cron_keys)
     end
   end
+
+  defp features_to_plugins(opts) do
+    Enum.reduce(@feature_plugins, opts, fn {key, module}, opts ->
+      feature_to_plugin(opts, key, module)
+    end)
+  end
+
+  defp feature_to_plugin(opts, key, module) do
+    case Keyword.fetch(opts, key) do
+      :error ->
+        opts
+
+      {:ok, false} ->
+        Keyword.delete(opts, key)
+
+      {:ok, value} ->
+        plugin = normalize_feature(value, module)
+
+        opts
+        |> Keyword.delete(key)
+        |> Keyword.update(:plugins, [plugin], &[plugin | &1])
+    end
+  end
+
+  defp normalize_feature({module, opts}, _default) when is_atom(module), do: {module, opts}
+  defp normalize_feature(opts, module), do: {module, opts}
 
   defp stager_to_interval(opts) do
     cond do
