@@ -68,14 +68,24 @@ defmodule Oban do
         }
 
   @typedoc """
+  The value accepted by a feature key (`:cron`, `:pruner`, `:lifeline`, `:reindexer`).
+
+  Either `false` to disable, a keyword list of options for the default implementation, or a
+  `{module, options}` tuple to use an alternative implementation.
+  """
+  @type feature :: false | Keyword.t() | {module(), Keyword.t()}
+
+  @typedoc """
   Configuration options for starting an Oban instance.
 
   See `start_link1/` for more information on individual options.
   """
   @type option ::
-          {:dispatch_cooldown, pos_integer()}
+          {:cron, feature()}
+          | {:dispatch_cooldown, pos_integer()}
           | {:engine, module()}
           | {:get_dynamic_repo, nil | (-> pid() | atom()) | {module(), atom(), list()}}
+          | {:lifeline, feature()}
           | {:log, false | Logger.level()}
           | {:name, name()}
           | {:node, oban_node()}
@@ -83,7 +93,9 @@ defmodule Oban do
           | {:peer, false | module() | {module(), Keyword.t()}}
           | {:plugins, false | [module() | {module() | Keyword.t()}]}
           | {:prefix, false | String.t()}
+          | {:pruner, feature()}
           | {:queues, false | [{queue_name(), pos_integer() | Keyword.t()}]}
+          | {:reindexer, feature()}
           | {:repo, module()}
           | {:shutdown_grace_period, non_neg_integer()}
           | {:stage_interval, timeout()}
@@ -409,6 +421,10 @@ defmodule Oban do
     supervisor. Any supervisable module is a valid plugin, i.e. a `GenServer` or an `Agent`. May
     also be set to `false` to disable plugins _and_ disable leadership.
 
+    The most common plugins have dedicated top-level keys (see "Feature Options" below). Prefer
+    those over a raw `:plugins` entry. Configuring the same plugin through both a feature key and
+    `:plugins` raises during validation.
+
   * `:prefix` — the query prefix, or schema, to use for inserting and executing jobs. An
     `oban_jobs` table must exist within the prefix. See the "Prefix Support" section in the module
     documentation for more details.
@@ -426,6 +442,26 @@ defmodule Oban do
   * `:testing` — a mode that controls how an instance is configured for testing. When set to
     `:inline` or `:manual` queues, peers, and plugins are automatically disabled. Defaults to
     `:disabled`, no test mode.
+
+  ### Feature Options
+
+  These keys configure Oban's built-in maintenance plugins. Each accepts a keyword list of options
+  for the plugin, or `false` to disable it. See the linked module for the available options.
+
+  * `:cron` — schedule recurring jobs with a crontab, see `Oban.Plugins.Cron`
+  * `:lifeline` — rescue jobs orphaned when a node shuts down, see `Oban.Plugins.Lifeline`
+  * `:pruner` — delete completed, cancelled, and discarded jobs, see `Oban.Plugins.Pruner`
+  * `:reindexer` — periodically rebuild indexes to combat bloat, see `Oban.Plugins.Reindexer`
+
+  For example, to prune jobs after a week and run a nightly worker:
+
+      cron: [crontab: [{"0 2 * * *", MyApp.NightlyWorker}]],
+      pruner: [max_age: 60 * 60 * 24 * 7]
+
+  Each key also accepts a `{module, options}` tuple to use a specific implementation, such as an
+  Oban Pro plugin:
+
+      cron: {Oban.Pro.Plugins.DynamicCron, [crontab: ...]}
 
   ### Twiddly Options
 
