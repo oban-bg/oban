@@ -74,7 +74,18 @@ if Code.ensure_loaded?(Igniter) do
           engine = parse_engine(adapter, opts[:engine])
           notifier = parse_notifier(adapter, opts[:notifier])
 
-          conf_code = [engine: engine, notifier: notifier, queues: [default: 10], repo: repo]
+          conf_code =
+            quote do
+              [
+                engine: unquote(engine),
+                notifier: unquote(notifier),
+                queues: [default: 10],
+                lifeline: [rescue_after: :timer.hours(2)],
+                pruner: [max_age: 60 * 60 * 24 * 7],
+                repo: unquote(repo)
+              ]
+            end
+
           test_code = [testing: :manual]
 
           tree_code =
