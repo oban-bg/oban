@@ -50,6 +50,8 @@ defmodule Mix.Tasks.Oban.InstallTest do
         |   engine: Oban.Engines.Basic,
         |   notifier: Oban.Notifiers.Postgres,
         |   queues: [default: 10],
+        |   lifeline: [rescue_after: :timer.hours(2)],
+        |   pruner: [max_age: 60 * 60 * 24 * 7],
         |   repo: Oban.Test.Repo
       """)
       |> assert_has_patch("config/test.exs", """
@@ -96,6 +98,8 @@ defmodule Mix.Tasks.Oban.InstallTest do
         |   engine: Oban.Engines.Basic,
         |   notifier: Oban.Notifiers.Postgres,
         |   queues: [default: 10],
+        |   lifeline: [rescue_after: :timer.hours(2)],
+        |   pruner: [max_age: 60 * 60 * 24 * 7],
         |   repo: Oban.Test.Repo
       """)
       |> assert_has_patch("config/test.exs", """
@@ -146,6 +150,8 @@ defmodule Mix.Tasks.Oban.InstallTest do
         |   engine: Oban.Engines.Lite,
         |   notifier: Oban.Notifiers.PG,
         |   queues: [default: 10],
+        |   lifeline: [rescue_after: :timer.hours(2)],
+        |   pruner: [max_age: 60 * 60 * 24 * 7],
         |   repo: Oban.Test.LiteRepo
       """)
     end
@@ -209,6 +215,8 @@ defmodule Mix.Tasks.Oban.InstallTest do
         |   engine: Oban.Engines.Basic,
         |   notifier: Oban.Notifiers.Postgres,
         |   queues: [default: 10],
+        |   lifeline: [rescue_after: :timer.hours(2)],
+        |   pruner: [max_age: 60 * 60 * 24 * 7],
         |   repo: Oban.Test.Repo
       """)
     end
