@@ -19,13 +19,13 @@ defmodule Oban.Plugins.Pruner do
   jobs older than the default of 60 seconds:
 
       config :my_app, Oban,
-        plugins: [Oban.Plugins.Pruner],
+        pruner: [],
         ...
 
   Override the default options to prune jobs after 5 minutes:
 
       config :my_app, Oban,
-        plugins: [{Oban.Plugins.Pruner, max_age: 300}],
+        pruner: [max_age: 300],
         ...
 
   ## Options

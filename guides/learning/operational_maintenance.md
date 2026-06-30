@@ -28,7 +28,7 @@ configure a longer retention period by providing a `:max_age` in seconds to the 
 
 ```elixir
 config :my_app, Oban,
-  plugins: [{Oban.Plugins.Pruner, max_age: _5_minutes_in_seconds = 300}],
+  pruner: [max_age: 5 * 60],
   # ...
 ```
 
@@ -69,7 +69,8 @@ To enable automatic index maintenance, add the Reindexer to your Oban configurat
 
 ```elixir
 config :my_app, Oban,
-  plugins: [Oban.Plugins.Pruner, Oban.Plugins.Reindexer],
+  pruner: [],
+  reindexer: [],
   # ...
 ```
 

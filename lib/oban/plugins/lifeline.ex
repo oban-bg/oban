@@ -21,13 +21,13 @@ defmodule Oban.Plugins.Lifeline do
   Rescue orphaned jobs that are still `executing` after the default of 60 minutes:
 
       config :my_app, Oban,
-        plugins: [Oban.Plugins.Lifeline],
+        lifeline: [],
         ...
 
   Override the default period to rescue orphans after a more aggressive period of 5 minutes:
 
       config :my_app, Oban,
-        plugins: [{Oban.Plugins.Lifeline, rescue_after: :timer.minutes(5)}],
+        lifeline: [rescue_after: :timer.minutes(5)],
         ...
 
   ## Options

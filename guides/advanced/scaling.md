@@ -81,10 +81,8 @@ default, but it accepts a cron-style schedule and you can tweak it to run less f
 
 ```diff
 config :my_app, Oban,
-   plugins: [
-+   {Oban.Plugins.Reindexer, schedule: "@weekly"},
-    …
-   ]
++  reindexer: [schedule: "@weekly"],
+   …
 ```
 
 ## Pruning
@@ -98,10 +96,8 @@ For example, to limit historic jobs to 1 day:
 
 ```diff
  config :my_app, Oban,
-  plugins: [
-+    {Oban.Plugins.Pruner, max_age: 1_day_in_seconds}
-     …
-   ]
++  pruner: [max_age: 1_day_in_seconds],
+   …
 ```
 
 The default auto vacuum settings are conservative and may fall behind on active tables. Dead

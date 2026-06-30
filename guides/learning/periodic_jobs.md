@@ -19,15 +19,14 @@ Here's an example configuration:
 ```elixir
 config :my_app, Oban,
   repo: MyApp.Repo,
-  plugins: [
-    {Oban.Plugins.Cron,
-     crontab: [
-       {"* * * * *", MyApp.MinuteWorker},
-       {"0 * * * *", MyApp.HourlyWorker, args: %{custom: "arg"}},
-       {"0 0 * * *", MyApp.DailyWorker, max_attempts: 1},
-       {"0 12 * * MON", MyApp.MondayWorker, queue: :scheduled, tags: ["mondays"]},
-       {"@daily", MyApp.AnotherDailyWorker}
-     ]}
+  cron: [
+    crontab: [
+      {"* * * * *", MyApp.MinuteWorker},
+      {"0 * * * *", MyApp.HourlyWorker, args: %{custom: "arg"}},
+      {"0 0 * * *", MyApp.DailyWorker, max_attempts: 1},
+      {"0 12 * * MON", MyApp.MondayWorker, queue: :scheduled, tags: ["mondays"]},
+      {"@daily", MyApp.AnotherDailyWorker}
+    ]
   ]
 ```
 

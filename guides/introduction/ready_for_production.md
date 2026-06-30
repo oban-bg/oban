@@ -50,8 +50,7 @@ for 7 days, specified in seconds:
 
 ```elixir
 config :my_app, Oban,
-  plugins: [
-    {Oban.Plugins.Pruner, max_age: 60 * 60 * 24 * 7},
+  pruner: [max_age: 60 * 60 * 24 * 7],
   ...
 ```
 
@@ -76,8 +75,7 @@ like 30 minutes:
 
 ```elixir
 config :my_app, Oban,
-  plugins: [
-    {Oban.Plugins.Lifeline, rescue_after: :timer.minutes(30)},
+  lifeline: [rescue_after: :timer.minutes(30)],
   ...
 ```
 
