@@ -13,14 +13,14 @@ defmodule Oban.Plugins.Reindexer do
   By default, the plugin will reindex once a day, at midnight UTC:
 
       config :my_app, Oban,
-        plugins: [Oban.Plugins.Reindexer],
+        reindexer: [],
         ...
 
   To run on a different schedule you can provide a cron expression. For example, you could use the
   `"@weekly"` shorthand to run once a week on Sunday:
 
       config :my_app, Oban,
-        plugins: [{Oban.Plugins.Reindexer, schedule: "@weekly"}],
+        reindexer: [schedule: "@weekly"],
         ...
 
   ## Options
