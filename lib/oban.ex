@@ -453,10 +453,10 @@ defmodule Oban do
   * `:pruner` — delete completed, cancelled, and discarded jobs, see `Oban.Plugins.Pruner`
   * `:reindexer` — periodically rebuild indexes to combat bloat, see `Oban.Plugins.Reindexer`
 
-  For example, to prune jobs after a week and run a nightly worker:
+  For example, to prune jobs after a day and run a nightly worker:
 
       cron: [crontab: [{"0 2 * * *", MyApp.NightlyWorker}]],
-      pruner: [max_age: 60 * 60 * 24 * 7]
+      pruner: [max_age: {1, :day}]
 
   Each key also accepts a `{module, options}` tuple to use a specific implementation, such as an
   Oban Pro plugin:
