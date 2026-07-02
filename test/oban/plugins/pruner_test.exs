@@ -17,6 +17,14 @@ defmodule Oban.Plugins.PrunerTest do
       assert :ok = Pruner.validate(limit: 1_000)
     end
 
+    test "validating max_age as a period tuple" do
+      assert {:error, _} = Pruner.validate(max_age: {0, :days})
+      assert {:error, _} = Pruner.validate(max_age: {1, :eon})
+
+      assert :ok = Pruner.validate(max_age: {1, :day})
+      assert :ok = Pruner.validate(max_age: {2, :weeks})
+    end
+
     test "providing suggestions for unknown options" do
       assert {:error, "unknown option :inter, did you mean :interval?"} =
                Pruner.validate(inter: 1)
@@ -51,6 +59,20 @@ defmodule Oban.Plugins.PrunerTest do
                |> select([j], j.id)
                |> order_by(asc: :id)
                |> Repo.all()
+    end
+
+    test "a period tuple max_age is normalized to seconds" do
+      TelemetryHandler.attach_events()
+
+      %Job{id: _id_} = insert_historical("completed", :completed_at, 61, 61)
+      %Job{id: kept} = insert_historical("completed", :completed_at, 59, 59)
+
+      name = start_supervised_oban!(plugins: [{Pruner, interval: 10, max_age: {1, :minute}}])
+
+      assert_receive {:event, :stop, _, %{plugin: Pruner, conf: %{name: ^name}} = meta}
+      assert %{pruned_count: 1} = meta
+
+      assert [kept] == Job |> select([j], j.id) |> Repo.all()
     end
   end
 end

@@ -141,11 +141,11 @@ defmodule Oban.Config do
 
   Validating plugin options:
 
-      iex> Oban.Config.validate(plugins: [{Oban.Plugins.Pruner, max_age: 60}])
+      iex> Oban.Config.validate(plugins: [{Oban.Plugins.Pruner, max_age: {1, :day}}])
       :ok
 
       iex> Oban.Config.validate(plugins: [{Oban.Plugins.Pruner, max_age: 0}])
-      {:error, "invalid value for :plugins, expected :max_age to be a positive integer, got: 0"}
+      {:error, "invalid value for :plugins, expected :max_age to be a positive integer or {amount, unit} tuple, got: 0"}
   """
   @spec validate([Oban.option()]) :: :ok | {:error, String.t()}
   def validate(opts) when is_list(opts) do
