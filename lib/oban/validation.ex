@@ -2,6 +2,9 @@ defmodule Oban.Validation do
   @moduledoc false
 
   alias Oban.Cron.Expression
+  alias Oban.Period
+
+  require Period
 
   @type validator ::
           ({atom(), term()} ->
@@ -221,6 +224,16 @@ defmodule Oban.Validation do
 
       true ->
         :ok
+    end
+  end
+
+  defp validate_type(:period, key, val) do
+    if Period.is_valid_period(val) and Period.to_seconds(val) > 0 do
+      :ok
+    else
+      {:error,
+       "expected #{inspect(key)} to be a positive integer or {amount, unit} tuple, " <>
+         "got: #{inspect(val)}"}
     end
   end
 

@@ -22,10 +22,10 @@ defmodule Oban.Plugins.Pruner do
         pruner: [],
         ...
 
-  Override the default options to prune jobs after 5 minutes:
+  Override the default options to prune jobs after 1 day:
 
       config :my_app, Oban,
-        pruner: [max_age: 300],
+        pruner: [max_age: {1, :day}],
         ...
 
   ## Options
@@ -36,7 +36,8 @@ defmodule Oban.Plugins.Pruner do
     request timeouts. Applications that steadily generate more than 10k jobs a minute should
     increase this value.
 
-  * `:max_age` — the number of seconds after which a job may be pruned. Defaults to 60s.
+  * `:max_age` — how long to keep jobs before they may be pruned, as either an integer number of
+    seconds or an `Oban.Period` tuple like `{1, :day}`. Defaults to 60s.
 
   ## Instrumenting with Telemetry
 
@@ -51,7 +52,7 @@ defmodule Oban.Plugins.Pruner do
 
   use GenServer
 
-  alias Oban.{Engine, Job, Peer, Plugin, Repo, Validation}
+  alias Oban.{Engine, Job, Peer, Period, Plugin, Repo, Validation}
   alias __MODULE__, as: State
 
   require Logger
@@ -60,7 +61,7 @@ defmodule Oban.Plugins.Pruner do
           Plugin.option()
           | {:interval, pos_integer()}
           | {:limit, pos_integer()}
-          | {:max_age, pos_integer()}
+          | {:max_age, Period.t()}
 
   defstruct [
     :conf,
@@ -79,7 +80,11 @@ defmodule Oban.Plugins.Pruner do
   def start_link(opts) do
     {name, opts} = Keyword.pop(opts, :name)
 
-    GenServer.start_link(__MODULE__, struct!(State, opts), name: name)
+    state = struct!(State, opts)
+
+    GenServer.start_link(__MODULE__, %{state | max_age: Period.to_seconds(state.max_age)},
+      name: name
+    )
   end
 
   @impl Plugin
@@ -89,7 +94,7 @@ defmodule Oban.Plugins.Pruner do
       name: :any,
       interval: :pos_integer,
       limit: :pos_integer,
-      max_age: :pos_integer
+      max_age: :period
     )
   end
 
