@@ -44,13 +44,13 @@ Job introspection and uniqueness relies on keeping job rows in the database afte
 executed. To prevent the `oban_jobs` table from growing indefinitely, the `Oban.Plugins.Pruner`
 plugin provides out-of-band deletion of `completed`, `cancelled` and `discarded` jobs.
 
-Retaining jobs for 7 days is a good starting point, but depending on throughput, you may wish to
-keep jobs for even longer. Include `Pruner` in the list of plugins and configure it to retain jobs
-for 7 days, specified in seconds:
+Retaining jobs for 1 day is a conservative starting point. Depending on throughput and how long
+you need jobs for introspection or uniqueness, you may wish to keep them longer. Configure the
+`pruner` with a `max_age`, either as a count of seconds or an `Oban.Period` tuple:
 
 ```elixir
 config :my_app, Oban,
-  pruner: [max_age: 60 * 60 * 24 * 7],
+  pruner: [max_age: {1, :day}],
   ...
 ```
 

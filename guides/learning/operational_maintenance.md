@@ -28,7 +28,7 @@ configure a longer retention period by providing a `:max_age` in seconds to the 
 
 ```elixir
 config :my_app, Oban,
-  pruner: [max_age: 5 * 60],
+  pruner: [max_age: {1, :day}],
   # ...
 ```
 

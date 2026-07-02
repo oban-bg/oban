@@ -96,7 +96,7 @@ For example, to limit historic jobs to 1 day:
 
 ```diff
  config :my_app, Oban,
-+  pruner: [max_age: 1_day_in_seconds],
++  pruner: [max_age: {1, :day}],
    …
 ```
 

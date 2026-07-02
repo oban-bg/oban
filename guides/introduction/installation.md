@@ -104,7 +104,7 @@ config :my_app, Oban,
   engine: Oban.Engines.Basic,
   queues: [default: 10],
   lifeline: [rescue_after: :timer.hours(2)],
-  pruner: [max_age: 60 * 60 * 24 * 7],
+  pruner: [max_age: {1, :day}],
   repo: MyApp.Repo
 ```
 
@@ -118,7 +118,7 @@ config :my_app, Oban,
   engine: Oban.Engines.Lite,
   queues: [default: 10],
   lifeline: [rescue_after: :timer.hours(2)],
-  pruner: [max_age: 60 * 60 * 24 * 7],
+  pruner: [max_age: {1, :day}],
   repo: MyApp.Repo
 ```
 
@@ -132,7 +132,7 @@ config :my_app, Oban,
   engine: Oban.Engines.Dolphin,
   queues: [default: 10],
   lifeline: [rescue_after: :timer.hours(2)],
-  pruner: [max_age: 60 * 60 * 24 * 7],
+  pruner: [max_age: {1, :day}],
   repo: MyApp.Repo
 ```
 
