@@ -18,7 +18,7 @@ defmodule Oban.Plugins.Lifeline do
 
   ## Using the Plugin
 
-  Rescue orphaned jobs that are still `executing` after the default of 60 minutes:
+  Rescue orphaned jobs that are still `executing` after the default of 1 hour:
 
       config :my_app, Oban,
         lifeline: [],
@@ -27,15 +27,16 @@ defmodule Oban.Plugins.Lifeline do
   Override the default period to rescue orphans after a more aggressive period of 5 minutes:
 
       config :my_app, Oban,
-        lifeline: [rescue_after: :timer.minutes(5)],
+        lifeline: [rescue_after: {5, :minutes}],
         ...
 
   ## Options
 
   * `:interval` — the number of milliseconds between rescue attempts. The default is `60_000ms`.
 
-  * `:rescue_after` — the maximum amount of time, in milliseconds, that a job may execute before
-  being rescued. 60 minutes by default, and rescuing is performed once a minute.
+  * `:rescue_after` — the maximum amount of time a job may execute before being rescued, as either
+    an integer number of milliseconds or an `Oban.Period` tuple like `{1, :hour}`. 1 hour
+    by default, and rescuing is performed once a minute.
 
   ## Instrumenting with Telemetry
 
@@ -53,7 +54,7 @@ defmodule Oban.Plugins.Lifeline do
 
   use GenServer
 
-  alias Oban.{Engine, Job, Peer, Plugin, Repo, Validation}
+  alias Oban.{Engine, Job, Peer, Period, Plugin, Repo, Validation}
   alias __MODULE__, as: State
 
   require Logger
@@ -61,7 +62,7 @@ defmodule Oban.Plugins.Lifeline do
   @type option ::
           Plugin.option()
           | {:interval, timeout()}
-          | {:rescue_after, pos_integer()}
+          | {:rescue_after, Period.t()}
 
   defstruct [
     :conf,
@@ -79,7 +80,13 @@ defmodule Oban.Plugins.Lifeline do
   def start_link(opts) do
     {name, opts} = Keyword.pop(opts, :name)
 
-    GenServer.start_link(__MODULE__, struct!(State, opts), name: name)
+    state = struct!(State, opts)
+
+    GenServer.start_link(
+      __MODULE__,
+      %{state | rescue_after: Period.to_milliseconds(state.rescue_after)},
+      name: name
+    )
   end
 
   @impl Plugin
@@ -88,7 +95,7 @@ defmodule Oban.Plugins.Lifeline do
       conf: :any,
       name: :any,
       interval: :pos_integer,
-      rescue_after: :pos_integer
+      rescue_after: :period
     )
   end
 

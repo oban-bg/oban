@@ -103,7 +103,7 @@ Running with Postgres requires using the `Oban.Engines.Basic` engine:
 config :my_app, Oban,
   engine: Oban.Engines.Basic,
   queues: [default: 10],
-  lifeline: [rescue_after: :timer.hours(2)],
+  lifeline: [rescue_after: {2, :hours}],
   pruner: [max_age: {1, :day}],
   repo: MyApp.Repo
 ```
@@ -117,7 +117,7 @@ Running with SQLite3 requires using the `Oban.Engines.Lite` engine:
 config :my_app, Oban,
   engine: Oban.Engines.Lite,
   queues: [default: 10],
-  lifeline: [rescue_after: :timer.hours(2)],
+  lifeline: [rescue_after: {2, :hours}],
   pruner: [max_age: {1, :day}],
   repo: MyApp.Repo
 ```
@@ -131,7 +131,7 @@ Running with MySQL requires using the `Oban.Engines.Dolphin` engine:
 config :my_app, Oban,
   engine: Oban.Engines.Dolphin,
   queues: [default: 10],
-  lifeline: [rescue_after: :timer.hours(2)],
+  lifeline: [rescue_after: {2, :hours}],
   pruner: [max_age: {1, :day}],
   repo: MyApp.Repo
 ```
