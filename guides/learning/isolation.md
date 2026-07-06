@@ -168,15 +168,15 @@ isolated. That means that insert/update events will only dispatch new jobs for t
 
 ### Dynamic Repositories
 
-Oban supports [Ecto dynamic repositories][dynamic] through the `:get_dynamic_repo` option. To make
-this work, you need to run a separate Oban instance for each dynamic repo instance. Most often
+Oban supports [Ecto dynamic repositories][dynamic] through the repo's `:dynamic_repo` option. To
+make this work, you need to run a separate Oban instance for each dynamic repo instance. Most often
 it's worth bundling each Oban and repo instance under the same supervisor:
 
 ```elixir
 def start_repo_and_oban(instance_id) do
   children = [
     {MyDynamicRepo, name: nil, url: repo_url(instance_id)},
-    {Oban, name: instance_id, get_dynamic_repo: fn -> repo_pid(instance_id) end}
+    {Oban, name: instance_id, repo: {MyDynamicRepo, dynamic_repo: fn -> repo_pid(instance_id) end}}
   ]
 
   Supervisor.start_link(children, strategy: :one_for_one)

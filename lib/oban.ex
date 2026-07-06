@@ -84,19 +84,18 @@ defmodule Oban do
           {:cron, feature()}
           | {:dispatch_cooldown, pos_integer()}
           | {:engine, module()}
-          | {:get_dynamic_repo, nil | (-> pid() | atom()) | {module(), atom(), list()}}
+          | {:insert_trigger, boolean()}
           | {:lifeline, feature()}
-          | {:log, false | Logger.level()}
           | {:name, name()}
           | {:node, oban_node()}
           | {:notifier, module() | {module(), Keyword.t()}}
           | {:peer, false | module() | {module(), Keyword.t()}}
-          | {:plugins, false | [module() | {module() | Keyword.t()}]}
+          | {:plugins, false | [module() | {module(), Keyword.t()}]}
           | {:prefix, false | String.t()}
           | {:pruner, feature()}
           | {:queues, false | [{queue_name(), pos_integer() | Keyword.t()}]}
           | {:reindexer, feature()}
-          | {:repo, module()}
+          | {:repo, module() | {module(), Keyword.t()}}
           | {:shutdown_grace_period, non_neg_integer()}
           | {:stage_interval, timeout()}
           | {:testing, :disabled | :inline | :manual}
@@ -370,7 +369,20 @@ defmodule Oban do
 
   These options are required; without them the supervisor won't start:
 
-  * `:repo` — specifies the Ecto repo used to insert and retrieve jobs
+  * `:repo` — specifies the Ecto repo used to insert and retrieve jobs.
+
+    Repo-specific options may be provided as a `{repo, opts}` tuple:
+
+    * `:log` — either `false` to disable logging or a standard log level (`:error`, `:warning`,
+      `:info`, `:debug`, etc.). This determines whether queries are logged, overriding the repo's
+      configured log level. Defaults to `false`, where no queries are logged.
+
+    * `:dynamic_repo` — a zero-arity function or MFA tuple that returns the pid or name of the repo
+      to use for queries, for applications that run with a dynamically configured repo.
+
+    For example, to insert and retrieve jobs without logging queries:
+
+        repo: {MyApp.Repo, log: false}
 
   ### Primary Options
 
@@ -389,10 +401,6 @@ defmodule Oban do
     are also available as an add-on.
 
     Defaults to the `Basic` engine for Postgres.
-
-  * `:log` — either `false` to disable logging or a standard log level (`:error`, `:warning`,
-    `:info`, `:debug`, etc.). This determines whether queries are logged or not; overriding the
-    repo's configured log level. Defaults to `false`, where no queries are logged.
 
   * `:name` — used for supervisor registration, it must be unique across an entire VM instance.
     Defaults to `Oban` when no name is provided.

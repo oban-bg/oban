@@ -39,17 +39,24 @@ defmodule Oban.ConfigTest do
       assert_valid(insert_trigger: false)
     end
 
-    test ":log is validated as `false` or a valid log level" do
-      refute_valid(log: 1)
-      refute_valid(log: "false")
-      refute_valid(log: nil)
+    test ":repo accepts log and dynamic_repo options in the tuple form" do
+      refute_valid(repo: {SomeRepo, log: 1})
+      refute_valid(repo: {SomeRepo, log: :nothing})
+      refute_valid(repo: {SomeRepo, log: true})
+      refute_valid(repo: {SomeRepo, dynamic_repo: :nope})
+
+      assert_valid(repo: {SomeRepo, log: false})
+      assert_valid(repo: {SomeRepo, log: :alert})
+      assert_valid(repo: {SomeRepo, log: :debug})
+      assert_valid(repo: {SomeRepo, dynamic_repo: fn -> SomeRepo end})
+    end
+
+    test "top-level :log and :get_dynamic_repo remain valid for backward compatibility" do
       refute_valid(log: :nothing)
-      refute_valid(log: true)
 
       assert_valid(log: false)
-      assert_valid(log: :warning)
-      assert_valid(log: :alert)
       assert_valid(log: :debug)
+      assert_valid(get_dynamic_repo: fn -> SomeRepo end)
     end
 
     test ":notifier is validated as a notifier module" do
@@ -144,10 +151,8 @@ defmodule Oban.ConfigTest do
     end
 
     test "alternatives are suggested for unknown options when they match" do
-      assert {:error, "unknown option :queue, did you mean :queues?"} =
-               Config.validate(queue: false)
-
-      assert {:error, "unknown option :nam, did you mean :name?"} = Config.validate(nam: :web)
+      assert {:error, "unknown option :queue, did you mean :queues?"} = validate(queue: false)
+      assert {:error, "unknown option :nam, did you mean :name?"} = validate(nam: :web)
     end
 
     test "a plugin configured more than once is rejected" do
@@ -162,10 +167,10 @@ defmodule Oban.ConfigTest do
 
     test "duplicated values are rejected" do
       assert {:error, "found duplicate options: [:peer]"} ==
-               Config.validate(peer: false, peer: Oban.Peers.Postgres)
+               validate(peer: false, peer: Oban.Peers.Postgres)
 
       assert {:error, "found duplicate options: [:peer, :plugins]"} ==
-               Config.validate(
+               validate(
                  peer: false,
                  peer: Oban.Peers.Postgres,
                  plugins: [Pruner],
@@ -292,17 +297,23 @@ defmodule Oban.ConfigTest do
   end
 
   defp refute_valid(opts) do
-    assert {:error, _reason} = Config.validate(opts)
+    assert {:error, _reason} = validate(opts)
   end
 
   defp assert_valid(opts) do
-    assert :ok = Config.validate(opts)
+    assert :ok = validate(opts)
   end
 
   defp conf(opts) do
     opts
-    |> Keyword.put(:repo, Repo)
+    |> Keyword.put_new(:repo, Repo)
     |> Config.new()
+  end
+
+  defp validate(opts) do
+    opts
+    |> Keyword.put_new(:repo, Repo)
+    |> Config.validate()
   end
 
   def has_plugin?(plugin, opts) do
