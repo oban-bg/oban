@@ -50,7 +50,7 @@ defmodule Mix.Tasks.Oban.InstallTest do
         |   engine: Oban.Engines.Basic,
         |   notifier: Oban.Notifiers.Postgres,
         |   queues: [default: 10],
-        |   lifeline: [rescue_after: :timer.hours(2)],
+        |   lifeline: [rescue_after: {2, :hours}],
         |   pruner: [max_age: {1, :day}],
         |   repo: Oban.Test.Repo
       """)
@@ -98,7 +98,7 @@ defmodule Mix.Tasks.Oban.InstallTest do
         |   engine: Oban.Engines.Basic,
         |   notifier: Oban.Notifiers.Postgres,
         |   queues: [default: 10],
-        |   lifeline: [rescue_after: :timer.hours(2)],
+        |   lifeline: [rescue_after: {2, :hours}],
         |   pruner: [max_age: {1, :day}],
         |   repo: Oban.Test.Repo
       """)
@@ -150,7 +150,7 @@ defmodule Mix.Tasks.Oban.InstallTest do
         |   engine: Oban.Engines.Lite,
         |   notifier: Oban.Notifiers.PG,
         |   queues: [default: 10],
-        |   lifeline: [rescue_after: :timer.hours(2)],
+        |   lifeline: [rescue_after: {2, :hours}],
         |   pruner: [max_age: {1, :day}],
         |   repo: Oban.Test.LiteRepo
       """)
@@ -215,7 +215,7 @@ defmodule Mix.Tasks.Oban.InstallTest do
         |   engine: Oban.Engines.Basic,
         |   notifier: Oban.Notifiers.Postgres,
         |   queues: [default: 10],
-        |   lifeline: [rescue_after: :timer.hours(2)],
+        |   lifeline: [rescue_after: {2, :hours}],
         |   pruner: [max_age: {1, :day}],
         |   repo: Oban.Test.Repo
       """)

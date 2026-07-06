@@ -80,7 +80,7 @@ if Code.ensure_loaded?(Igniter) do
                 engine: unquote(engine),
                 notifier: unquote(notifier),
                 queues: [default: 10],
-                lifeline: [rescue_after: :timer.hours(2)],
+                lifeline: [rescue_after: {2, :hours}],
                 pruner: [max_age: {1, :day}],
                 repo: unquote(repo)
               ]

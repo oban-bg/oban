@@ -88,4 +88,25 @@ defmodule Oban.Period do
   def to_seconds({value, unit}) when unit in ~w(day days)a, do: value * 24 * 60 * 60
   def to_seconds({value, unit}) when unit in ~w(week weeks)a, do: value * 24 * 60 * 60 * 7
   def to_seconds(seconds) when is_seconds(seconds), do: seconds
+
+  @doc """
+  Convert a period to milliseconds.
+
+  Unlike `to_seconds/1`, a bare integer is considered milliseconds and returned unchanged; only
+  unit tuples are expanded.
+
+  ## Examples
+
+      iex> Oban.Period.to_milliseconds(1000)
+      1000
+
+      iex> Oban.Period.to_milliseconds({1, :second})
+      1000
+
+      iex> Oban.Period.to_milliseconds({2, :minutes})
+      120_000
+  """
+  @spec to_milliseconds(t()) :: pos_integer()
+  def to_milliseconds({_value, _unit} = period), do: to_seconds(period) * 1000
+  def to_milliseconds(milliseconds) when is_seconds(milliseconds), do: milliseconds
 end

@@ -71,11 +71,11 @@ Even with a higher `shutdown_grace_period` it's possible to have orphans if ther
 crash or extra long running jobs.
 
 Consider adding the `Lifeline` plugin and configure it to rescue after a generous period of time,
-like 30 minutes:
+like 1 hour:
 
 ```elixir
 config :my_app, Oban,
-  lifeline: [rescue_after: :timer.minutes(30)],
+  lifeline: [rescue_after: {1, :hour}],
   ...
 ```
 
