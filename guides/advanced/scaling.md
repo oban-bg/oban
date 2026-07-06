@@ -162,14 +162,13 @@ defmodule MyApp.Repo do
 end
 ```
 
-Then switch the configured `repo`, and use `get_dynamic_repo` to ensure the same repo is used
-within a transaction:
+Then switch the configured `repo`, and use the repo's `dynamic_repo` option to ensure the same
+repo is used within a transaction:
 
 ```diff
  config :my_app, Oban,
 -  repo: MyApp.Repo,
-+  repo: MyApp.ObanRepo,
-+  get_dynamic_repo: {MyApp.Repo, :oban_repo, []}
++  repo: {MyApp.ObanRepo, dynamic_repo: {MyApp.Repo, :oban_repo, []}},
    ...
 ```
 

@@ -13,14 +13,12 @@ defmodule Oban.Config do
   @type t :: %__MODULE__{
           dispatch_cooldown: pos_integer(),
           engine: module(),
-          get_dynamic_repo: nil | (-> pid() | atom()) | {module(), atom(), list()},
           insert_trigger: boolean(),
-          log: false | Logger.level(),
           name: Oban.name(),
           node: String.t(),
           notifier: {module(), Keyword.t()},
           peer: {module(), Keyword.t()},
-          plugins: [module() | {module() | Keyword.t()}],
+          plugins: [module() | {module(), Keyword.t()}],
           prefix: false | String.t(),
           queues: Keyword.t(Keyword.t()),
           repo: module(),
@@ -48,6 +46,7 @@ defmodule Oban.Config do
 
   @cron_keys ~w(crontab timezone)a
   @log_levels ~w(false emergency alert critical error warning warn notice info debug)a
+  @repo_opts [log: :log, dynamic_repo: :get_dynamic_repo]
   @testing_modes ~w(manual inline disabled)a
 
   @feature_plugins [
@@ -130,7 +129,7 @@ defmodule Oban.Config do
       iex> Oban.Config.validate(name: Oban)
       :ok
 
-      iex> Oban.Config.validate(name: Oban, log: false)
+      iex> Oban.Config.validate(name: Oban, prefix: "private")
       :ok
 
       iex> Oban.Config.validate(node: {:not, :binary})
@@ -334,77 +333,33 @@ defmodule Oban.Config do
 
   defp normalize(opts) do
     opts
-    |> crontab_to_plugin()
-    |> features_to_plugins()
+    |> normalize_repo()
     |> normalize_notifier()
     |> normalize_peer()
-    |> Keyword.put_new(:node, node_name())
-    |> Keyword.update(:queues, [], &normalize_queues/1)
-    |> Keyword.update(:plugins, [], &normalize_plugins/1)
+    |> normalize_stager()
+    |> normalize_queues()
+    |> normalize_plugins()
     |> Keyword.delete(:circuit_backoff)
-    |> stager_to_interval()
+    |> Keyword.put_new(:node, node_name())
     |> Enum.reject(&(&1 in @renamed_modules))
   end
 
-  defp crontab_to_plugin(opts) do
-    case {opts[:plugins], opts[:crontab]} do
-      {plugins, [_ | _]} when is_list(plugins) or is_nil(plugins) ->
-        {cron_opts, base_opts} = Keyword.split(opts, @cron_keys)
-
-        plugin = {Oban.Plugins.Cron, cron_opts}
-
-        Keyword.update(base_opts, :plugins, [plugin], &[plugin | &1])
+  defp normalize_repo(opts) do
+    case Keyword.get(opts, :repo) do
+      {repo, repo_opts} when is_atom(repo) and is_list(repo_opts) ->
+        opts
+        |> Keyword.put(:repo, repo)
+        |> merge_repo_opts(repo_opts)
 
       _ ->
-        Keyword.drop(opts, @cron_keys)
+        opts
     end
   end
 
-  defp features_to_plugins(opts) do
-    Enum.reduce(@feature_plugins, opts, fn {key, module}, opts ->
-      feature_to_plugin(opts, key, module)
+  defp merge_repo_opts(opts, repo_opts) do
+    Enum.reduce(repo_opts, opts, fn {key, value}, opts ->
+      Keyword.put(opts, Keyword.get(@repo_opts, key, key), value)
     end)
-  end
-
-  defp feature_to_plugin(opts, key, module) do
-    case Keyword.fetch(opts, key) do
-      :error ->
-        opts
-
-      {:ok, false} ->
-        Keyword.delete(opts, key)
-
-      {:ok, value} ->
-        plugin = normalize_feature(value, module)
-
-        opts
-        |> Keyword.delete(key)
-        |> Keyword.update(:plugins, [plugin], &[plugin | &1])
-    end
-  end
-
-  defp normalize_feature({module, opts}, _default) when is_atom(module), do: {module, opts}
-  defp normalize_feature(opts, module), do: {module, opts}
-
-  defp stager_to_interval(opts) do
-    cond do
-      Keyword.has_key?(opts, :poll_interval) ->
-        opts
-        |> Keyword.put_new(:stage_interval, opts[:poll_interval])
-        |> Keyword.delete(:poll_interval)
-
-      Keyword.keyword?(opts[:plugins]) ->
-        {stager_opts, opts} = pop_in(opts, [:plugins, Oban.Stager])
-
-        if is_list(stager_opts) and Keyword.has_key?(stager_opts, :interval) do
-          Keyword.put_new(opts, :stage_interval, stager_opts[:interval])
-        else
-          opts
-        end
-
-      true ->
-        opts
-    end
   end
 
   defp normalize_notifier(opts) do
@@ -438,24 +393,92 @@ defmodule Oban.Config do
     end
   end
 
-  defp normalize_queues(queues) when is_list(queues) do
-    for {name, value} <- queues do
-      opts = if is_integer(value), do: [limit: value], else: value
+  defp normalize_stager(opts) do
+    cond do
+      Keyword.has_key?(opts, :poll_interval) ->
+        opts
+        |> Keyword.put_new(:stage_interval, opts[:poll_interval])
+        |> Keyword.delete(:poll_interval)
 
-      {name, opts}
+      Keyword.keyword?(opts[:plugins]) ->
+        {stager_opts, opts} = pop_in(opts, [:plugins, Oban.Stager])
+
+        if is_list(stager_opts) and Keyword.has_key?(stager_opts, :interval) do
+          Keyword.put_new(opts, :stage_interval, stager_opts[:interval])
+        else
+          opts
+        end
+
+      true ->
+        opts
     end
   end
 
-  defp normalize_queues(queues), do: queues || []
+  defp normalize_queues(opts) do
+    Keyword.update(opts, :queues, [], fn
+      queues when is_list(queues) ->
+        for {name, value} <- queues do
+          opts = if is_integer(value), do: [limit: value], else: value
+
+          {name, opts}
+        end
+
+      queues ->
+        queues || []
+    end)
+  end
 
   # Manually specified plugins will be overwritten by auto-specified plugins unless we reverse the
   # plugin list. The order doesn't matter as they are supervised one-for-one.
-  defp normalize_plugins(plugins) when is_list(plugins) do
-    plugins
-    |> Enum.map(&if is_atom(&1), do: {&1, []}, else: &1)
-    |> Enum.reverse()
-    |> Enum.uniq()
+  defp normalize_plugins(opts) do
+    opts
+    |> normalize_crontab()
+    |> normalize_features()
+    |> Keyword.update(:plugins, [], fn
+      plugins when is_list(plugins) ->
+        plugins
+        |> Enum.map(&if is_atom(&1), do: {&1, []}, else: &1)
+        |> Enum.reverse()
+        |> Enum.uniq()
+
+      plugins ->
+        plugins || []
+    end)
   end
 
-  defp normalize_plugins(plugins), do: plugins || []
+  defp normalize_crontab(opts) do
+    case {opts[:plugins], opts[:crontab]} do
+      {plugins, [_ | _]} when is_list(plugins) or is_nil(plugins) ->
+        {cron_opts, base_opts} = Keyword.split(opts, @cron_keys)
+
+        plugin = {Oban.Plugins.Cron, cron_opts}
+
+        Keyword.update(base_opts, :plugins, [plugin], &[plugin | &1])
+
+      _ ->
+        Keyword.drop(opts, @cron_keys)
+    end
+  end
+
+  defp normalize_features(opts) do
+    Enum.reduce(@feature_plugins, opts, fn {key, module}, opts ->
+      case Keyword.fetch(opts, key) do
+        :error ->
+          opts
+
+        {:ok, false} ->
+          Keyword.delete(opts, key)
+
+        {:ok, value} ->
+          plugin = normalize_feature(value, module)
+
+          opts
+          |> Keyword.delete(key)
+          |> Keyword.update(:plugins, [plugin], &[plugin | &1])
+      end
+    end)
+  end
+
+  defp normalize_feature({module, opts}, _default) when is_atom(module), do: {module, opts}
+  defp normalize_feature(opts, module), do: {module, opts}
 end
