@@ -30,7 +30,8 @@ defmodule Oban.Plugins.Pruner do
 
   ## Options
 
-  * `:interval` — the number of milliseconds between pruning attempts. The default is `30_000ms`.
+  * `:interval` — the time between pruning attempts, as either an integer number of milliseconds
+    or an `Oban.Period` tuple like `{30, :seconds}`. The default is `30_000ms`.
 
   * `:limit` — the maximum number of jobs to prune at one time. The default is 10,000 to prevent
     request timeouts. Applications that steadily generate more than 10k jobs a minute should
@@ -59,7 +60,7 @@ defmodule Oban.Plugins.Pruner do
 
   @type option ::
           Plugin.option()
-          | {:interval, pos_integer()}
+          | {:interval, Period.t()}
           | {:limit, pos_integer()}
           | {:max_age, Period.t()}
 
@@ -82,9 +83,13 @@ defmodule Oban.Plugins.Pruner do
 
     state = struct!(State, opts)
 
-    GenServer.start_link(__MODULE__, %{state | max_age: Period.to_seconds(state.max_age)},
-      name: name
-    )
+    state = %{
+      state
+      | interval: Period.to_milliseconds(state.interval),
+        max_age: Period.to_seconds(state.max_age)
+    }
+
+    GenServer.start_link(__MODULE__, state, name: name)
   end
 
   @impl Plugin
@@ -92,7 +97,7 @@ defmodule Oban.Plugins.Pruner do
     Validation.validate_schema(opts,
       conf: :any,
       name: :any,
-      interval: :pos_integer,
+      interval: :period,
       limit: :pos_integer,
       max_age: :period
     )

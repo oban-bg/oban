@@ -17,6 +17,14 @@ defmodule Oban.Plugins.PrunerTest do
       assert :ok = Pruner.validate(limit: 1_000)
     end
 
+    test "validating interval as a period tuple" do
+      assert {:error, _} = Pruner.validate(interval: {0, :seconds})
+      assert {:error, _} = Pruner.validate(interval: {1, :eon})
+
+      assert :ok = Pruner.validate(interval: {30, :seconds})
+      assert :ok = Pruner.validate(interval: {1, :minute})
+    end
+
     test "validating max_age as a period tuple" do
       assert {:error, _} = Pruner.validate(max_age: {0, :days})
       assert {:error, _} = Pruner.validate(max_age: {1, :eon})
