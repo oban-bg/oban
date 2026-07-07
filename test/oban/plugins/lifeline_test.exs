@@ -14,6 +14,14 @@ defmodule Oban.Plugins.LifelineTest do
       assert :ok = Lifeline.validate(rescue_after: :timer.minutes(30))
     end
 
+    test "validating interval and rescue_after as period tuples" do
+      assert {:error, _} = Lifeline.validate(interval: {0, :seconds})
+      assert {:error, _} = Lifeline.validate(rescue_after: {1, :eon})
+
+      assert :ok = Lifeline.validate(interval: {1, :minute})
+      assert :ok = Lifeline.validate(rescue_after: {30, :minutes})
+    end
+
     test "providing suggestions for unknown options" do
       assert {:error, "unknown option :inter, did you mean :interval?"} =
                Lifeline.validate(inter: 1)
