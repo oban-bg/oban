@@ -32,7 +32,8 @@ defmodule Oban.Plugins.Lifeline do
 
   ## Options
 
-  * `:interval` — the number of milliseconds between rescue attempts. The default is `60_000ms`.
+  * `:interval` — the time between rescue attempts, as either an integer number of milliseconds
+    or an `Oban.Period` tuple like `{1, :minute}`. The default is `60_000ms`.
 
   * `:rescue_after` — the maximum amount of time a job may execute before being rescued, as either
     an integer number of milliseconds or an `Oban.Period` tuple like `{1, :hour}`. 1 hour
@@ -61,7 +62,7 @@ defmodule Oban.Plugins.Lifeline do
 
   @type option ::
           Plugin.option()
-          | {:interval, timeout()}
+          | {:interval, Period.t()}
           | {:rescue_after, Period.t()}
 
   defstruct [
@@ -82,11 +83,13 @@ defmodule Oban.Plugins.Lifeline do
 
     state = struct!(State, opts)
 
-    GenServer.start_link(
-      __MODULE__,
-      %{state | rescue_after: Period.to_milliseconds(state.rescue_after)},
-      name: name
-    )
+    state = %{
+      state
+      | interval: Period.to_milliseconds(state.interval),
+        rescue_after: Period.to_milliseconds(state.rescue_after)
+    }
+
+    GenServer.start_link(__MODULE__, state, name: name)
   end
 
   @impl Plugin
@@ -94,7 +97,7 @@ defmodule Oban.Plugins.Lifeline do
     Validation.validate_schema(opts,
       conf: :any,
       name: :any,
-      interval: :pos_integer,
+      interval: :period,
       rescue_after: :period
     )
   end
