@@ -30,7 +30,9 @@ defmodule Oban.Plugins.Reindexer do
 
     * `:schedule` — a cron expression that controls when to reindex. Defaults to `"@midnight"`.
 
-    * `:timeout` - time in milliseconds to wait for each query call to finish. Defaults to 15 seconds.
+    * `:timeout` - the time to wait for each query call to finish, as either an integer number of
+      milliseconds, `:infinity`, or an `Oban.Period` tuple like `{15, :seconds}`. Defaults to 15
+      seconds.
 
     * `:timezone` — which timezone to use when evaluating the schedule. To use a timezone other than
       the default of "Etc/UTC" you *must* have a timezone database like [tz][tz] installed and
@@ -43,7 +45,7 @@ defmodule Oban.Plugins.Reindexer do
 
   use GenServer
 
-  alias Oban.{Cron, Peer, Plugin, Repo, Validation}
+  alias Oban.{Cron, Peer, Period, Plugin, Repo, Validation}
   alias __MODULE__, as: State
 
   require Logger
@@ -53,7 +55,7 @@ defmodule Oban.Plugins.Reindexer do
           | {:indexes, [String.t()]}
           | {:schedule, String.t()}
           | {:timezone, Calendar.time_zone()}
-          | {:timeout, timeout()}
+          | {:timeout, timeout() | Period.t()}
 
   defstruct [
     :conf,
@@ -72,8 +74,15 @@ defmodule Oban.Plugins.Reindexer do
   def start_link(opts) do
     {name, opts} = Keyword.pop(opts, :name)
 
-    GenServer.start_link(__MODULE__, struct!(State, opts), name: name)
+    state = struct!(State, opts)
+
+    GenServer.start_link(__MODULE__, %{state | timeout: normalize_timeout(state.timeout)},
+      name: name
+    )
   end
+
+  defp normalize_timeout(:infinity), do: :infinity
+  defp normalize_timeout(timeout), do: Period.to_milliseconds(timeout)
 
   @impl Plugin
   def validate(opts) do
@@ -82,7 +91,7 @@ defmodule Oban.Plugins.Reindexer do
       name: :any,
       indexes: {:list, :string},
       schedule: :schedule,
-      timeout: :timeout,
+      timeout: {:or, [:timeout, :period]},
       timezone: :timezone
     )
   end

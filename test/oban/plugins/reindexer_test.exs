@@ -30,11 +30,15 @@ defmodule Oban.Plugins.ReindexerTest do
       assert :ok = Reindexer.validate(timezone: "America/Chicago")
     end
 
-    test "validating that :timeout is a non negative integer" do
+    test "validating that :timeout is a non negative integer, :infinity, or a period tuple" do
       assert {:error, _} = Reindexer.validate(timeout: "")
       assert {:error, _} = Reindexer.validate(timeout: -1)
+      assert {:error, _} = Reindexer.validate(timeout: {0, :seconds})
+      assert {:error, _} = Reindexer.validate(timeout: {1, :eon})
 
       assert :ok = Reindexer.validate(timeout: :timer.minutes(1))
+      assert :ok = Reindexer.validate(timeout: :infinity)
+      assert :ok = Reindexer.validate(timeout: {15, :seconds})
     end
 
     test "providing suggestions for unknown options" do
