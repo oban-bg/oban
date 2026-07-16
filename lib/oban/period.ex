@@ -13,8 +13,8 @@ defmodule Oban.Period do
       {5, :minutes}
       {2, :hours}
 
-  Supported time units are `:second`, `:seconds`, `:minute`, `:minutes`, `:hour`, `:hours`,
-  `:day`, `:days`, `:week`, and `:weeks`.
+  Supported time units are `:second`, `:minute`, `:hour`, `:day`, `:week`, `:month`, and a plural
+  variant of each.
   """
   @moduledoc since: "2.20.0"
 
@@ -34,6 +34,8 @@ defmodule Oban.Period do
           | :days
           | :week
           | :weeks
+          | :month
+          | :months
 
   @typedoc """
   A time duration as seconds or a unit tuple.
@@ -51,6 +53,8 @@ defmodule Oban.Period do
     days
     week
     weeks
+    month
+    months
   )a
 
   @doc """
@@ -87,6 +91,7 @@ defmodule Oban.Period do
   def to_seconds({value, unit}) when unit in ~w(hour hours)a, do: value * 60 * 60
   def to_seconds({value, unit}) when unit in ~w(day days)a, do: value * 24 * 60 * 60
   def to_seconds({value, unit}) when unit in ~w(week weeks)a, do: value * 24 * 60 * 60 * 7
+  def to_seconds({value, unit}) when unit in ~w(month months)a, do: value * 24 * 60 * 60 * 30
   def to_seconds(seconds) when is_seconds(seconds), do: seconds
 
   @doc """
