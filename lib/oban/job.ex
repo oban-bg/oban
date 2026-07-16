@@ -671,7 +671,12 @@ defmodule Oban.Job do
         put_change(changeset, :unique, unique)
 
       true ->
-        put_change(changeset, :unique, Map.put(@unique_defaults, :period, :infinity))
+        unique =
+          @unique_defaults
+          |> Map.put(:period, :infinity)
+          |> Map.update!(:states, &cast_unique_group/1)
+
+        put_change(changeset, :unique, unique)
 
       value when value in [nil, false] ->
         changeset
