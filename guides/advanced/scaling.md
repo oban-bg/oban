@@ -85,6 +85,33 @@ config :my_app, Oban,
    …
 ```
 
+## Optimizing Staging
+
+Applications with a large number of scheduled or retryable jobs may benefit from an index tailored
+to staging. The index isn't necessary for most applications, and maintaining it adds overhead to
+inserts and updates, so verify that staging queries are a bottleneck before adding it.
+
+Create the index concurrently to avoid locking the `oban_jobs` table. Concurrent index operations
+must run outside of a transaction and without Ecto's migration lock:
+
+```elixir
+defmodule MyApp.Repo.Migrations.AddObanJobsStagingIndex do
+  use Ecto.Migration
+
+  @disable_ddl_transaction true
+  @disable_migration_lock true
+
+  def change do
+    create_if_not_exists index(
+      :oban_jobs,
+      [:scheduled_at],
+      concurrently: true,
+      where: "state IN ('scheduled', 'retryable')"
+    )
+  end
+end
+```
+
 ## Pruning
 
 Ensuring you are using the `Pruner` plugin, and that you prune _aggressively_. Pruning
