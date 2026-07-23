@@ -33,7 +33,7 @@ defmodule Oban.Engines.Basic do
           opts
           |> Map.new()
           |> Map.put_new(:paused, false)
-          |> Map.put_new(:refresh_interval, :timer.seconds(30))
+          |> Map.put_new(:refresh_interval, :timer.seconds(60))
           |> Map.put_new(:uuid, Ecto.UUID.generate())
           |> Map.merge(%{name: conf.name, node: conf.node})
           |> Map.merge(%{started_at: utc_now(), updated_at: utc_now(), shutdown_started_at: nil})
