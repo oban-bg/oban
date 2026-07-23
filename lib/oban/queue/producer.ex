@@ -179,7 +179,12 @@ defmodule Oban.Queue.Producer do
   def handle_info(:refresh, %State{} = state) do
     meta = Engine.refresh(state.conf, state.meta)
 
-    {:noreply, schedule_refresh(%{state | meta: meta})}
+    state =
+      %{state | meta: meta}
+      |> schedule_dispatch()
+      |> schedule_refresh()
+
+    {:noreply, state}
   end
 
   def handle_info(message, state) do
@@ -239,8 +244,8 @@ defmodule Oban.Queue.Producer do
   end
 
   defp schedule_refresh(%State{} = state) do
-    cooldown = Backoff.jitter(state.meta.refresh_interval, mode: :dec, mult: 0.5)
-    timer = Process.send_after(self(), :refresh, cooldown)
+    interval = Backoff.jitter(state.meta.refresh_interval, mode: :both, mult: 0.25)
+    timer = Process.send_after(self(), :refresh, interval)
 
     %{state | refresh_timer: timer}
   end
