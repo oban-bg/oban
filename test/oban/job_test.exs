@@ -175,11 +175,16 @@ defmodule Oban.JobTest do
       assert :ok = Job.warn_unique(states: :incomplete)
       assert :ok = Job.warn_unique(states: :scheduled)
       assert :ok = Job.warn_unique(states: :successful)
-
-      assert :ok = Job.warn_unique(states: [:scheduled])
     end
 
-    test "warning when no insertion-landing state is listed" do
+    test "allowing combinations of safe insertion states" do
+      assert :ok = Job.warn_unique(states: [:available])
+      assert :ok = Job.warn_unique(states: [:scheduled])
+      assert :ok = Job.warn_unique(states: [:available, :scheduled])
+      assert :ok = Job.warn_unique(states: [:available, :scheduled, :suspended])
+    end
+
+    test "warning when no insertion state is listed" do
       assert {:warn, _} = Job.warn_unique(states: ~w(completed cancelled discarded)a)
       assert {:warn, _} = Job.warn_unique(states: [:completed])
       assert {:warn, _} = Job.warn_unique(states: [:executing])

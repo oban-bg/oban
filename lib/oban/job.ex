@@ -159,6 +159,8 @@ defmodule Oban.Job do
     field :unsaved_error, :map, virtual: true
   end
 
+  # Param Attributes
+
   @permitted_params ~w(
     args
     attempt
@@ -194,18 +196,7 @@ defmodule Oban.Job do
   @replace_options ~w(args max_attempts meta priority queue scheduled_at tags worker)a
   @virtual_params ~w(replace replace_args schedule_in scheduled_in unique)a
 
-  @time_units ~w(
-    second
-    seconds
-    minute
-    minutes
-    hour
-    hours
-    day
-    days
-    week
-    weeks
-  )a
+  # Query Attributes
 
   @query_fields ~w(
     id
@@ -226,9 +217,13 @@ defmodule Oban.Job do
     scheduled_at
   )a
 
+  # Unique Attributes
+
+  @insertion_states ~w(scheduled available suspended)a
+  @keyable_fields ~w(args meta)a
+
   @unique_fields ~w(args meta queue worker)a
   @unique_timestamps ~w(inserted_at scheduled_at)a
-  @keyable_fields ~w(args meta)a
 
   @unique_defaults %{
     fields: ~w(args queue worker)a,
@@ -811,14 +806,9 @@ defmodule Oban.Job do
       {:period, :infinity} ->
         :ok
 
-      {:period, {period, unit}} ->
-        if not (is_integer(period) and period > 0 and unit in @time_units) do
-          {:error, "expected :period to be positive and unit to be in #{inspect(@time_units)}"}
-        end
-
       {:period, period} ->
-        if not (is_integer(period) and period > 0) do
-          {:error, "expected :period to be a positive integer"}
+        if not (is_valid_period(period) and Period.to_seconds(period) > 0) do
+          {:error, "expected :period to be a positive integer or {amount, unit} tuple"}
         end
 
       {:states, group} when is_atom(group) ->
@@ -846,23 +836,20 @@ defmodule Oban.Job do
   @doc false
   def warn_unique(unique) when is_list(unique) do
     case Keyword.get(unique, :states) do
-      # Applications may have [:scheduled], which is effectively the same as `:scheduled`, and
-      # shouldn't cause a warning.
-      [:scheduled] ->
-        :ok
-
       [_ | _] = states ->
-        insertion_states = ~w(scheduled available suspended)a
-        in_flight_states = unique_states(:incomplete)
+        incomplete_states = unique_states(:incomplete)
 
-        present_insertion = for state <- insertion_states, state in states, do: state
-        missing_in_flight = for state <- in_flight_states, state not in states, do: state
+        present_insertion = for state <- @insertion_states, state in states, do: state
+        missing_in_flight = for state <- incomplete_states, state not in states, do: state
 
         cond do
+          Enum.all?(states, fn state -> state in @insertion_states end) ->
+            :ok
+
           present_insertion == [] ->
             {:warn,
              "unique :states #{inspect(states)} doesn't include any of " <>
-               "#{inspect(insertion_states)}, duplicates won't be detected"}
+               "#{inspect(@insertion_states)}, duplicates won't be detected"}
 
           missing_in_flight != [] ->
             {:warn,
