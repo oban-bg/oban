@@ -160,6 +160,14 @@ defmodule Oban.Validation do
     end
   end
 
+  defp validate_type({:keyword, schema}, key, val) when is_list(schema) do
+    if Keyword.keyword?(val) do
+      validate_schema(val, schema)
+    else
+      {:error, "expected #{inspect(key)} to be a keyword list, got: #{inspect(val)}"}
+    end
+  end
+
   defp validate_type({:list, type}, key, val) when is_list(val) do
     if Enum.all?(val, &(:ok == validate_type(type, key, &1))) do
       :ok
