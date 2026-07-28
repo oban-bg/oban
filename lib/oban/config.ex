@@ -489,6 +489,7 @@ defmodule Oban.Config do
   end
 
   defp normalize_feature({module, opts}, _default) when is_atom(module), do: {module, opts}
+  defp normalize_feature(module, _default) when is_atom(module), do: {module, []}
   defp normalize_feature(opts, module), do: {module, opts}
 
   defp put_plugin(opts, plugin) do

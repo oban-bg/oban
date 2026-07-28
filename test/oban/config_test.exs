@@ -174,6 +174,16 @@ defmodule Oban.ConfigTest do
       assert_valid(plugins: [Pruner, Cron])
     end
 
+    test "features are validated as plugins" do
+      refute_valid(pruner: NotReal)
+      refute_valid(pruner: {NotReal, []})
+      refute_valid(lifeline: [rescue_after: 0])
+
+      assert_valid(pruner: Pruner)
+      assert_valid(pruner: {Pruner, max_age: 60})
+      assert_valid(pruner: false)
+    end
+
     test "features are accepted while plugins are disabled" do
       assert_valid(plugins: false, cron: [crontab: []])
       assert_valid(plugins: false, pruner: [max_age: 60])
@@ -252,6 +262,7 @@ defmodule Oban.ConfigTest do
       assert has_plugin?(Pruner, pruner: [max_age: 60])
       assert has_plugin?(Oban.Plugins.Lifeline, lifeline: [rescue_after: 60_000])
       assert has_plugin?(Oban.Plugins.Reindexer, reindexer: [])
+      assert has_plugin?(Oban.Plugins.Reindexer, reindexer: Oban.Plugins.Reindexer)
 
       refute has_plugin?(Pruner, pruner: false)
       refute has_plugin?(Pruner, [])
@@ -261,6 +272,10 @@ defmodule Oban.ConfigTest do
       assert %Config{plugins: plugins} = conf(pruner: {FakePlugin, max_age: 60})
 
       assert {FakePlugin, [max_age: 60]} in plugins
+
+      assert %Config{plugins: plugins} = conf(pruner: FakePlugin)
+
+      assert {FakePlugin, []} in plugins
     end
 
     test "passing feature key options through to the plugin" do

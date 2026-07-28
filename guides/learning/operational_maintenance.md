@@ -69,8 +69,8 @@ To enable automatic index maintenance, add the Reindexer to your Oban configurat
 
 ```elixir
 config :my_app, Oban,
-  pruner: [],
-  reindexer: [],
+  pruner: Oban.Plugins.Pruner,
+  reindexer: Oban.Plugins.Reindexer,
   # ...
 ```
 

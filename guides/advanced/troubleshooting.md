@@ -18,7 +18,7 @@ There are two mechanisms to mitigate orphans:
 
 ```elixir
 config :my_app, Oban,
-    lifeline: [],
+    lifeline: Oban.Plugins.Lifeline,
     shutdown_grace_period: :timer.seconds(60),
     ...
 ```

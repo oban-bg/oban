@@ -70,10 +70,11 @@ defmodule Oban do
   @typedoc """
   The value accepted by a feature key (`:cron`, `:pruner`, `:lifeline`, `:reindexer`).
 
-  Either `false` to disable, a keyword list of options for the default implementation, or a
-  `{module, options}` tuple to use an alternative implementation.
+  Either `false` to disable, a keyword list of options for the default implementation, a module to
+  use an alternative implementation with default options, or a `{module, options}` tuple to use an
+  alternative implementation with options.
   """
-  @type feature :: false | Keyword.t() | {module(), Keyword.t()}
+  @type feature :: false | module() | Keyword.t() | {module(), Keyword.t()}
 
   @typedoc """
   Configuration options for starting an Oban instance.
@@ -464,7 +465,8 @@ defmodule Oban do
   ### Feature Options
 
   These keys configure Oban's built-in maintenance plugins. Each accepts a keyword list of options
-  for the plugin, or `false` to disable it. See the linked module for the available options.
+  for the plugin, a module for an implementation, or `false` to disable it. See the linked module
+  for the available options.
 
   * `:cron` — schedule recurring jobs with a crontab, see `Oban.Plugins.Cron`
   * `:lifeline` — rescue jobs orphaned when a node shuts down, see `Oban.Plugins.Lifeline`
@@ -476,9 +478,11 @@ defmodule Oban do
       cron: [crontab: [{"0 2 * * *", MyApp.NightlyWorker}]],
       pruner: [max_age: {1, :day}]
 
-  Each key also accepts a `{module, options}` tuple to use a specific implementation, such as an
-  Oban Pro plugin:
+  Each key also accepts a module to use a specific implementation with default options, or a
+  `{module, options}` tuple to pass it options. For example, to run the default reindexer, or an
+  Oban Pro plugin instead:
 
+      reindexer: Oban.Plugins.Reindexer,
       cron: {Oban.Pro.Plugins.DynamicCron, [crontab: ...]}
 
   Setting `plugins: false` disables plugins configured through feature keys as well, without any
