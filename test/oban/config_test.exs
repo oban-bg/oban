@@ -125,6 +125,15 @@ defmodule Oban.ConfigTest do
       assert_valid(queues: [default: [limit: 1, dispatch_cooldown: 10]])
     end
 
+    test ":queues are validated as a plugin when set to a module" do
+      refute_valid(queues: {NotReal, queues: [default: 1]})
+      refute_valid(queues: {SomeRepo, queues: [default: 1]})
+      refute_valid(queues: {FakePlugin, %{default: 1}})
+
+      assert_valid(queues: {FakePlugin, queues: [default: 1]})
+      assert_valid(queues: {FakePlugin, []})
+    end
+
     test ":repo is validated as a repo-like module" do
       refute_valid(repo: NotReal)
       refute_valid(repo: NotRepo)
@@ -163,6 +172,13 @@ defmodule Oban.ConfigTest do
 
       assert_valid(pruner: [max_age: 60], plugins: [Cron])
       assert_valid(plugins: [Pruner, Cron])
+    end
+
+    test "features are accepted while plugins are disabled" do
+      assert_valid(plugins: false, cron: [crontab: []])
+      assert_valid(plugins: false, pruner: [max_age: 60])
+      assert_valid(plugins: false, queues: [default: 1])
+      assert_valid(plugins: false, queues: {FakePlugin, queues: [default: 1]})
     end
 
     test "duplicated values are rejected" do
@@ -253,10 +269,28 @@ defmodule Oban.ConfigTest do
       assert {Pruner, [max_age: 60]} in plugins
     end
 
-    test ":testing in :manual mode suppresses top-level feature keys" do
-      conf = conf(pruner: [max_age: 60], cron: [crontab: []], testing: :manual)
+    test "translating a :queues module into plugin usage" do
+      assert %Config{queues: [], plugins: plugins} =
+               conf(queues: {FakePlugin, queues: [default: 1]})
 
+      assert {FakePlugin, [queues: [default: 1]]} in plugins
+    end
+
+    test "disabling plugins also disables top-level services" do
+      refute has_plugin?(Pruner, plugins: false, pruner: [max_age: 60])
+      refute has_plugin?(Cron, plugins: false, cron: [crontab: []])
+    end
+
+    test "disabling plugins doesn't disable queues" do
+      assert %Config{queues: [alpha: [limit: 1]]} = conf(plugins: false, queues: [alpha: 1])
+    end
+
+    test ":testing in :manual mode suppresses top-level services" do
+      conf = conf(pruner: [max_age: 60], cron: [crontab: []], testing: :manual)
       assert %{plugins: [], stage_interval: :infinity} = conf
+
+      conf = conf(queues: [default: 1], testing: :manual)
+      assert %{plugins: [], queues: []} = conf
     end
 
     test "translating :peer false to the disabled module" do

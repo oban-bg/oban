@@ -415,17 +415,28 @@ defmodule Oban.Config do
   end
 
   defp normalize_queues(opts) do
-    Keyword.update(opts, :queues, [], fn
+    case Keyword.get(opts, :queues) do
+      {module, queue_opts} when is_atom(module) and is_list(queue_opts) ->
+        opts
+        |> Keyword.put(:queues, [])
+        |> put_plugin({module, queue_opts})
+
       queues when is_list(queues) ->
-        for {name, value} <- queues do
-          opts = if is_integer(value), do: [limit: value], else: value
+        normalized =
+          for {name, value} <- queues do
+            opts = if is_integer(value), do: [limit: value], else: value
 
-          {name, opts}
-        end
+            {name, opts}
+          end
 
-      queues ->
-        queues || []
-    end)
+        Keyword.put(opts, :queues, normalized)
+
+      queues when queues in [nil, false] ->
+        Keyword.put(opts, :queues, [])
+
+      _other ->
+        opts
+    end
   end
 
   # Manually specified plugins will be overwritten by auto-specified plugins unless we reverse the
@@ -470,15 +481,27 @@ defmodule Oban.Config do
           Keyword.delete(opts, key)
 
         {:ok, value} ->
-          plugin = normalize_feature(value, module)
-
           opts
           |> Keyword.delete(key)
-          |> Keyword.update(:plugins, [plugin], &[plugin | &1])
+          |> put_feature_plugin(normalize_feature(value, module))
       end
     end)
   end
 
   defp normalize_feature({module, opts}, _default) when is_atom(module), do: {module, opts}
   defp normalize_feature(opts, module), do: {module, opts}
+
+  defp put_plugin(opts, plugin) do
+    case Keyword.get(opts, :plugins) do
+      plugins when is_list(plugins) -> Keyword.put(opts, :plugins, [plugin | plugins])
+      _falsy -> Keyword.put(opts, :plugins, [plugin])
+    end
+  end
+
+  defp put_feature_plugin(opts, plugin) do
+    case Keyword.get(opts, :plugins) do
+      false -> opts
+      _plugins -> put_plugin(opts, plugin)
+    end
+  end
 end

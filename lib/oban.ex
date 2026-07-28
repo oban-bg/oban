@@ -93,7 +93,8 @@ defmodule Oban do
           | {:plugins, false | [module() | {module(), Keyword.t()}]}
           | {:prefix, false | String.t()}
           | {:pruner, feature()}
-          | {:queues, false | [{queue_name(), pos_integer() | Keyword.t()}]}
+          | {:queues,
+             false | [{queue_name(), pos_integer() | Keyword.t()}] | {module(), Keyword.t()}}
           | {:reindexer, feature()}
           | {:repo, module() | {module(), Keyword.t()}}
           | {:shutdown_grace_period, non_neg_integer()}
@@ -431,7 +432,7 @@ defmodule Oban do
 
     The most common plugins have dedicated top-level keys (see "Feature Options" below). Prefer
     those over a raw `:plugins` entry. Configuring the same plugin through both a feature key and
-    `:plugins` raises during validation.
+    `:plugins` raises during validation, while `false` disables plugins from both.
 
   * `:prefix` — the query prefix, or schema, to use for inserting and executing jobs. An
     `oban_jobs` table must exist within the prefix. See the "Prefix Support" section in the module
@@ -446,6 +447,15 @@ defmodule Oban do
     `paused` or `dispatch_cooldown` for a specific queue.
 
     Using an empty list or `false` prevents any queues from starting on init.
+
+    A `{module, options}` tuple hands queue management to an alternative implementation, such as an
+    Oban Pro plugin, which is started as a plugin and controls which queues run:
+
+        queues: {Oban.Pro.Plugins.DynamicQueues, queues: [default: 10]}
+
+    A static keyword list is equivalent to the built-in implementation, which starts the listed
+    queues on init and leaves them running. Either form runs regardless of the `:plugins` setting,
+    which only applies to maintenance plugins.
 
   * `:testing` — a mode that controls how an instance is configured for testing. When set to
     `:inline` or `:manual` queues, peers, and plugins are automatically disabled. Defaults to
@@ -470,6 +480,10 @@ defmodule Oban do
   Oban Pro plugin:
 
       cron: {Oban.Pro.Plugins.DynamicCron, [crontab: ...]}
+
+  Setting `plugins: false` disables plugins configured through feature keys as well, without any
+  need to disable them individually. The `:queues` option accepts the same tuple form, but it isn't
+  a feature key and always runs, see "Primary Options" above.
 
   ### Twiddly Options
 
