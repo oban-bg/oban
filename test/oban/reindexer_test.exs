@@ -1,7 +1,7 @@
-defmodule Oban.Plugins.ReindexerTest do
+defmodule Oban.ReindexerTest do
   use Oban.Case, async: true
 
-  alias Oban.Plugins.Reindexer
+  alias Oban.Reindexer
   alias Oban.{Registry, TelemetryHandler}
 
   describe "validate/1" do

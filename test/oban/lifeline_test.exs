@@ -1,7 +1,7 @@
-defmodule Oban.Plugins.LifelineTest do
+defmodule Oban.LifelineTest do
   use Oban.Case, async: true
 
-  alias Oban.Plugins.Lifeline
+  alias Oban.Lifeline
   alias Oban.TelemetryHandler
   alias Oban.Test.DolphinRepo
 

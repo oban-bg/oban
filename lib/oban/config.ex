@@ -50,13 +50,20 @@ defmodule Oban.Config do
   @testing_modes ~w(manual inline disabled)a
 
   @feature_plugins [
-    cron: Oban.Plugins.Cron,
-    pruner: Oban.Plugins.Pruner,
-    lifeline: Oban.Plugins.Lifeline,
-    reindexer: Oban.Plugins.Reindexer
+    cron: Oban.Cron,
+    pruner: Oban.Pruner,
+    lifeline: Oban.Lifeline,
+    reindexer: Oban.Reindexer
   ]
 
-  @renamed_modules [{:engine, Oban.Queue.BasicEngine}, {:notifier, {Oban.PostgresNotifier, []}}]
+  @renamed_modules [engine: Oban.Queue.BasicEngine, notifier: {Oban.PostgresNotifier, []}]
+
+  @renamed_plugins [
+    {Oban.Plugins.Cron, Oban.Cron},
+    {Oban.Plugins.Lifeline, Oban.Lifeline},
+    {Oban.Plugins.Pruner, Oban.Pruner},
+    {Oban.Plugins.Reindexer, Oban.Reindexer}
+  ]
 
   @doc """
   Generate a Config struct after normalizing and verifying Oban options.
@@ -140,10 +147,10 @@ defmodule Oban.Config do
 
   Validating plugin options:
 
-      iex> Oban.Config.validate(plugins: [{Oban.Plugins.Pruner, max_age: {1, :day}}])
+      iex> Oban.Config.validate(plugins: [{Oban.Pruner, max_age: {1, :day}}])
       :ok
 
-      iex> Oban.Config.validate(plugins: [{Oban.Plugins.Pruner, max_age: 0}])
+      iex> Oban.Config.validate(plugins: [{Oban.Pruner, max_age: 0}])
       {:error, "invalid value for :plugins, expected :max_age to be a positive integer or {amount, unit} tuple, got: 0"}
   """
   @spec validate([Oban.option()]) :: :ok | {:error, String.t()}
@@ -447,8 +454,14 @@ defmodule Oban.Config do
     |> normalize_features()
     |> Keyword.update(:plugins, [], fn
       plugins when is_list(plugins) ->
+        renamer = fn
+          {module, opts} -> {rename_plugin(module), opts}
+          module when is_atom(module) -> {rename_plugin(module), []}
+          other -> other
+        end
+
         plugins
-        |> Enum.map(&if is_atom(&1), do: {&1, []}, else: &1)
+        |> Enum.map(renamer)
         |> Enum.reverse()
         |> Enum.uniq()
 
@@ -457,12 +470,14 @@ defmodule Oban.Config do
     end)
   end
 
+  defp rename_plugin(module), do: Keyword.get(@renamed_plugins, module, module)
+
   defp normalize_crontab(opts) do
     case {opts[:plugins], opts[:crontab]} do
       {plugins, [_ | _]} when is_list(plugins) or is_nil(plugins) ->
         {cron_opts, base_opts} = Keyword.split(opts, @cron_keys)
 
-        plugin = {Oban.Plugins.Cron, cron_opts}
+        plugin = {Oban.Cron, cron_opts}
 
         Keyword.update(base_opts, :plugins, [plugin], &[plugin | &1])
 
@@ -502,7 +517,7 @@ defmodule Oban.Config do
   defp put_feature_plugin(opts, plugin) do
     case Keyword.get(opts, :plugins) do
       false -> opts
-      _plugins -> put_plugin(opts, plugin)
+      _plug -> put_plugin(opts, plugin)
     end
   end
 end

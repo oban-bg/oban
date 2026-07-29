@@ -117,7 +117,7 @@ defmodule Oban.Registry do
 
   For a plugin:
 
-      Oban.Registry.via(Oban, {:plugin, Oban.Plugins.Cron})
+      Oban.Registry.via(Oban, {:plugin, Oban.Cron})
   """
   @spec via(Oban.name(), role(), value()) :: {:via, Registry, {__MODULE__, key()}}
   def via(oban_name, role \\ nil, value \\ nil)

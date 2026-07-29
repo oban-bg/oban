@@ -41,7 +41,7 @@ Oban.Telemetry.attach_default_logger(encode: false, level: :debug)
 ## Pruning Jobs
 
 Job introspection and uniqueness relies on keeping job rows in the database after they have
-executed. To prevent the `oban_jobs` table from growing indefinitely, the `Oban.Plugins.Pruner`
+executed. To prevent the `oban_jobs` table from growing indefinitely, the `Oban.Pruner`
 plugin provides out-of-band deletion of `completed`, `cancelled` and `discarded` jobs.
 
 Retaining jobs for 1 day is a conservative starting point. Depending on throughput and how long
@@ -62,16 +62,16 @@ and it may be retried again when the system comes back online.
 
 There are two mechanisms to mitigate orphans:
 
-1. Use the `Oban.Plugins.Lifeline` plugin to automatically move those jobs back to available so
-   they can run again.
+1. Use the `Oban.Lifeline` to automatically move those jobs back to available so they can run
+   again.
 2. Increase the `shutdown_grace_period` to allow the system more time to finish executing before
    shutdown.
 
 Even with a higher `shutdown_grace_period` it's possible to have orphans if there is an unexpected
 crash or extra long running jobs.
 
-Consider adding the `Lifeline` plugin and configure it to rescue after a generous period of time,
-like 1 hour:
+Consider adding `Lifeline` and configure it to rescue after a generous period of time, like 1
+hour:
 
 ```elixir
 config :my_app, Oban,

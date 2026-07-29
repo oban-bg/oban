@@ -464,14 +464,14 @@ defmodule Oban do
 
   ### Feature Options
 
-  These keys configure Oban's built-in maintenance plugins. Each accepts a keyword list of options
-  for the plugin, a module for an implementation, or `false` to disable it. See the linked module
-  for the available options.
+  These keys configure Oban's built-in maintenance modules. Each accepts a keyword list of options
+  , a module for an implementation, or `false` to disable it. See the linked module for the
+  available options.
 
-  * `:cron` — schedule recurring jobs with a crontab, see `Oban.Plugins.Cron`
-  * `:lifeline` — rescue jobs orphaned when a node shuts down, see `Oban.Plugins.Lifeline`
-  * `:pruner` — delete completed, cancelled, and discarded jobs, see `Oban.Plugins.Pruner`
-  * `:reindexer` — periodically rebuild indexes to combat bloat, see `Oban.Plugins.Reindexer`
+  * `:cron` — schedule recurring jobs with a crontab, see `Oban.Cron`
+  * `:lifeline` — rescue jobs orphaned when a node shuts down, see `Oban.Lifeline`
+  * `:pruner` — delete completed, cancelled, and discarded jobs, see `Oban.Pruner`
+  * `:reindexer` — periodically rebuild indexes to combat bloat, see `Oban.Reindexer`
 
   For example, to prune jobs after a day and run a nightly worker:
 
@@ -480,9 +480,9 @@ defmodule Oban do
 
   Each key also accepts a module to use a specific implementation with default options, or a
   `{module, options}` tuple to pass it options. For example, to run the default reindexer, or an
-  Oban Pro plugin instead:
+  Oban Pro Cron module instead:
 
-      reindexer: Oban.Plugins.Reindexer,
+      reindexer: Oban.Reindexer,
       cron: {Oban.Pro.Plugins.DynamicCron, [crontab: ...]}
 
   Setting `plugins: false` disables plugins configured through feature keys as well, without any

@@ -60,7 +60,7 @@ You can call that function within a test and then assert that it is valid with
 test "testing cron plugin configuration" do
   config = MyApp.Oban.cron_config()
 
-  assert :ok = Oban.Plugins.Cron.validate(config)
+  assert :ok = Oban.Cron.validate(config)
 end
 ```
 

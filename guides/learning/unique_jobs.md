@@ -10,7 +10,7 @@ Uniqueness is based on a combination of job attributes based on the following op
   * `:period` — The number of seconds until a job is no longer considered duplicate. You should
     always specify a period, otherwise Oban will default to 60 seconds. `:infinity` can be used to
     indicate the job be considered a duplicate as long as jobs are retained (see
-    `Oban.Plugins.Pruner`).
+    `Oban.Pruner`).
 
   * `:fields` — The fields to compare when evaluating uniqueness. The available fields are
     `:args`, `:queue`, `:worker`, and `:meta`. `:fields` defaults to `[:worker, :queue, :args]`.

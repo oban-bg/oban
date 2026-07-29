@@ -23,8 +23,8 @@ completed. This allows administrators to review completed jobs and build informa
 at the expense of storage and an unbounded table size. To prevent the `oban_jobs` table from
 growing indefinitely, Oban actively prunes `completed`, `cancelled`, and `discarded` jobs.
 
-By default, the [pruner plugin](`Oban.Plugins.Pruner`) retains jobs for 60 seconds. You can
-configure a longer retention period by providing a `:max_age` in seconds to the pruner plugin.
+By default, the [Pruner](`Oban.Pruner`) retains jobs for 60 seconds. You can configure a longer
+retention period by providing a `:max_age` in seconds to the pruner plugin.
 
 ```elixir
 config :my_app, Oban,
@@ -62,15 +62,15 @@ With heavy usage, these indexes can become less efficient due to:
 
 #### Using the Reindexer Plugin
 
-Oban provides a dedicated plugin for maintaining index health: `Oban.Plugins.Reindexer`. This
+Oban provides a dedicated plugin for maintaining index health: `Oban.Reindexer`. This
 plugin periodically rebuilds indexes concurrently to ensure optimal performance.
 
 To enable automatic index maintenance, add the Reindexer to your Oban configuration:
 
 ```elixir
 config :my_app, Oban,
-  pruner: Oban.Plugins.Pruner,
-  reindexer: Oban.Plugins.Reindexer,
+  pruner: Oban.Pruner,
+  reindexer: Oban.Reindexer,
   # ...
 ```
 

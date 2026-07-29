@@ -2,7 +2,7 @@ defmodule Oban.ConfigTest do
   use Oban.Case, async: true
 
   alias Oban.Config
-  alias Oban.Plugins.{Cron, Pruner}
+  alias Oban.{Cron, Pruner}
 
   doctest Config
 
@@ -260,9 +260,9 @@ defmodule Oban.ConfigTest do
     test "translating top-level feature keys into plugin usage" do
       assert has_plugin?(Cron, cron: [crontab: [{"* * * * *", Worker}]])
       assert has_plugin?(Pruner, pruner: [max_age: 60])
-      assert has_plugin?(Oban.Plugins.Lifeline, lifeline: [rescue_after: 60_000])
-      assert has_plugin?(Oban.Plugins.Reindexer, reindexer: [])
-      assert has_plugin?(Oban.Plugins.Reindexer, reindexer: Oban.Plugins.Reindexer)
+      assert has_plugin?(Oban.Lifeline, lifeline: [])
+      assert has_plugin?(Oban.Lifeline, lifeline: [rescue_after: 60_000])
+      assert has_plugin?(Oban.Lifeline, lifeline: Oban.Lifeline)
 
       refute has_plugin?(Pruner, pruner: false)
       refute has_plugin?(Pruner, [])
@@ -289,6 +289,16 @@ defmodule Oban.ConfigTest do
                conf(queues: {FakePlugin, queues: [default: 1]})
 
       assert {FakePlugin, [queues: [default: 1]]} in plugins
+    end
+
+    test "translating legacy plugin modules into their renamed version" do
+      assert %Config{plugins: [{Oban.Pruner, []}]} = conf(plugins: [Oban.Plugins.Pruner])
+
+      assert %Config{plugins: [{Oban.Cron, [crontab: []]}]} =
+               conf(plugins: [{Oban.Plugins.Cron, crontab: []}])
+
+      assert has_plugin?(Oban.Lifeline, plugins: [Oban.Plugins.Lifeline])
+      assert has_plugin?(Oban.Reindexer, plugins: [Oban.Plugins.Reindexer])
     end
 
     test "disabling plugins also disables top-level services" do

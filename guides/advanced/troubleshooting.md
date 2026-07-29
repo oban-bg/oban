@@ -13,19 +13,19 @@ There are two mechanisms to mitigate orphans:
    fetching more jobs, but executing jobs have up to the grace period to complete. The default
    value is `15000ms`, or 15 seconds.
 
-2. Use the [Lifeline plugin](Oban.Plugins.Lifeline.html) to automatically move those jobs back to
-   available so they can run again.
+2. Use the [Lifeline](Oban.Lifeline.html) to automatically move those jobs back to available so
+   they can run again.
 
 ```elixir
 config :my_app, Oban,
-    lifeline: Oban.Plugins.Lifeline,
+    lifeline: Oban.Lifeline,
     shutdown_grace_period: :timer.seconds(60),
     ...
 ```
 
 ## Jobs or Plugins aren't Running
 
-Sometimes `Cron` or `Pruner` plugins appear to stop working unexpectedly. Typically, this happens in
+Sometimes `Cron` or `Pruner` appear to stop working unexpectedly. Typically, this happens in
 systems with multi-node setups where "web" nodes only enqueue jobs while "worker" nodes are
 configured to run queues and plugins. Most plugins require leadership to function, so when a "web"
 node becomes leader the plugins go dormant.

@@ -209,57 +209,57 @@ defmodule Oban.TelemetryTest do
     end
 
     test "logging cron plugin events", %{name: name} do
-      Code.ensure_loaded(Oban.Plugins.Cron)
+      Code.ensure_loaded(Oban.Cron)
 
       logged =
         capture_log(fn ->
           :telemetry.execute([:oban, :plugin, :stop], %{duration: 1000}, %{
             conf: %{name: name},
-            plugin: Oban.Plugins.Cron,
+            plugin: Oban.Cron,
             jobs: [%{id: 1}, %{id: 2}]
           })
         end)
 
       assert logged =~ ~s("event":"plugin:stop")
-      assert logged =~ ~s("plugin":"Oban.Plugins.Cron")
+      assert logged =~ ~s("plugin":"Oban.Cron")
       assert logged =~ ~s("jobs":[1,2])
       assert logged =~ ~r|"duration":\d{1,}|
     end
 
     test "logging lifeline plugin events", %{name: name} do
-      Code.ensure_loaded(Oban.Plugins.Lifeline)
+      Code.ensure_loaded(Oban.Lifeline)
 
       logged =
         capture_log(fn ->
           :telemetry.execute([:oban, :plugin, :stop], %{duration: 1000}, %{
             conf: %{name: name},
-            plugin: Oban.Plugins.Lifeline,
+            plugin: Oban.Lifeline,
             discarded_jobs: [%{id: 1}, %{id: 2}],
             rescued_jobs: [%{id: 3}]
           })
         end)
 
       assert logged =~ ~s("event":"plugin:stop")
-      assert logged =~ ~s("plugin":"Oban.Plugins.Lifeline")
+      assert logged =~ ~s("plugin":"Oban.Lifeline")
       assert logged =~ ~s("discarded_jobs":[1,2])
       assert logged =~ ~s("rescued_jobs":[3])
       assert logged =~ ~r|"duration":\d{1,}|
     end
 
     test "logging pruner plugin events", %{name: name} do
-      Code.ensure_loaded(Oban.Plugins.Pruner)
+      Code.ensure_loaded(Oban.Pruner)
 
       logged =
         capture_log(fn ->
           :telemetry.execute([:oban, :plugin, :stop], %{duration: 1000}, %{
             conf: %{name: name},
-            plugin: Oban.Plugins.Pruner,
+            plugin: Oban.Pruner,
             pruned_count: 9
           })
         end)
 
       assert logged =~ ~s("event":"plugin:stop")
-      assert logged =~ ~s("plugin":"Oban.Plugins.Pruner")
+      assert logged =~ ~s("plugin":"Oban.Pruner")
       assert logged =~ ~s("pruned_count":9)
       assert logged =~ ~r|"duration":\d{1,}|
     end

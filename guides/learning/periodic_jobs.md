@@ -4,8 +4,8 @@ Periodic jobs allow you to schedule recurring tasks that execute on a predictabl
 one-time scheduled jobs, periodic jobs repeat automatically without requiring you to insert new
 jobs after each execution.
 
-Oban uses a [cron plugin](`Oban.Plugins.Cron`) to manage these recurring jobs, allowing you to
-define schedules using familiar cron syntax.
+Oban uses the [Cron](`Oban.Cron`) module to manage these recurring jobs, allowing you to define
+schedules using familiar cron syntax.
 
 ## Setting Up Periodic Jobs
 
@@ -143,7 +143,7 @@ For more in depth information, see the man documentation for `cron` and `crontab
 ## Caveats & Guidelines
 
 * **Timezone Considerations**: All schedules are evaluated as UTC unless a different timezone is
-  provided. See `Oban.Plugins.Cron` documentation for information about configuring a timezone to
+  provided. See `Oban.Cron` documentation for information about configuring a timezone to
   ensure jobs run at the expected local time.
 
 * **Dual-Purpose Workers**: Workers can be used for both regular one-time jobs _and_ scheduled

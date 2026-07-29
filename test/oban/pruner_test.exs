@@ -1,9 +1,9 @@
-defmodule Oban.Plugins.PrunerTest do
+defmodule Oban.PrunerTest do
   use Oban.Case, async: true
 
   import Ecto.Query
 
-  alias Oban.Plugins.Pruner
+  alias Oban.Pruner
   alias Oban.TelemetryHandler
 
   describe "validate/1" do

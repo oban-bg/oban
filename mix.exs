@@ -125,15 +125,15 @@ defmodule Oban.MixProject do
 
   defp groups_for_modules do
     [
-      Plugins: [
-        Oban.Plugin,
-        Oban.Plugins.Cron,
-        Oban.Plugins.Lifeline,
-        Oban.Plugins.Pruner,
-        Oban.Plugins.Reindexer
+      Features: [
+        Oban.Cron,
+        Oban.Lifeline,
+        Oban.Pruner,
+        Oban.Reindexer
       ],
       Extending: [
         Oban.Config,
+        Oban.Plugin,
         Oban.Registry,
         Oban.Repo,
         Oban.Telemetry
