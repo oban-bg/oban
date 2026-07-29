@@ -129,6 +129,7 @@ defmodule Oban.MixProject do
         Oban.Cron,
         Oban.Lifeline,
         Oban.Pruner,
+        Oban.Queues,
         Oban.Reindexer
       ],
       Engines: [

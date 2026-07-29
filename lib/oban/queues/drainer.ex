@@ -1,10 +1,10 @@
-defmodule Oban.Queue.Drainer do
+defmodule Oban.Queues.Drainer do
   @moduledoc false
 
   import Ecto.Query, only: [where: 3]
 
   alias Oban.{Config, Job, Repo}
-  alias Oban.Queue.Executor
+  alias Oban.Queues.Executor
 
   @infinite 100_000_000
 

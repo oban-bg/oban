@@ -15,7 +15,7 @@ defmodule Oban.Engines.Inline do
 
   alias Ecto.Changeset
   alias Oban.{Config, Engine, Job, JSON}
-  alias Oban.Queue.Executor
+  alias Oban.Queues.Executor
 
   @impl Engine
   def init(_conf, opts), do: {:ok, Map.new(opts)}

@@ -111,11 +111,16 @@ defmodule Oban.Testing do
 
   alias Ecto.Changeset
 
-  alias Oban.{Config, Job, JSON, Period, Queue.Executor, Repo, Worker}
+  alias Oban.{Config, Job, JSON, Period, Repo, Worker}
+  alias Oban.Queues.Executor
 
   @type perform_opts :: Job.option() | Oban.option()
 
-  @conf_keys %Config{} |> Map.from_struct() |> Map.keys()
+  @conf_keys []
+             |> Config.new()
+             |> Map.from_struct()
+             |> Map.keys()
+             |> Enum.concat(~w(cron lifeline pruner reindexer)a)
 
   @json_fields ~w(args meta)a
   @timestamp_fields ~w(attempted_at cancelled_at completed_at discarded_at inserted_at scheduled_at)a

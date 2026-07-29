@@ -1,10 +1,10 @@
-defmodule Oban.Queue.Supervisor do
+defmodule Oban.Queues.Supervisor do
   @moduledoc false
 
   use Supervisor
 
   alias Oban.Registry
-  alias Oban.Queue.{Producer, Watchman}
+  alias Oban.Queues.{Producer, Watchman}
 
   @spec start_link(Keyword.t()) :: Supervisor.on_start()
   def start_link(opts) when is_list(opts) do

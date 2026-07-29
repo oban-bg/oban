@@ -1,4 +1,4 @@
-defmodule Oban.Queue.Executor do
+defmodule Oban.Queues.Executor do
   @moduledoc false
 
   import Oban.Period, only: [is_valid_period: 1]

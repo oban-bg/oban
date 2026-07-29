@@ -1,15 +1,36 @@
-defmodule Oban.Midwife do
-  @moduledoc false
+defmodule Oban.Queues do
+  @moduledoc """
+  Starts and stops the queues listed in the `:queues` option.
+
+  This is the default queue implementation. It starts each configured queue when an instance
+  starts, leaves them running until the instance stops, and manages queues on demand in response
+  to `Oban.start_queue/2` and `Oban.stop_queue/2`.
+
+  There's nothing to configure here directly. Queues are declared with the top level `:queues`
+  option:
+
+      config :my_app, Oban,
+        queues: [default: 10, exports: 5],
+        ...
+
+  > #### 🌟 DynamicQueues {: .info}
+  >
+  > Queues listed in the `:queues` option are static, and changes to concurrency at runtime are
+  > lost on restart. To configure queues at runtime and persist those changes across restarts, see
+  > Oban Pro's [DynamicQueues](https://oban.pro/docs/pro/Oban.Pro.Plugins.DynamicQueues.html).
+  """
 
   use GenServer
 
-  alias Oban.{Config, Notifier, Queue, Registry}
+  alias Oban.{Config, Notifier, Registry}
+  alias Oban.Queues.Supervisor, as: QueueSupervisor
   alias __MODULE__, as: State
 
   require Logger
 
-  defstruct [:conf, :notifier_ref]
+  defstruct [:conf, :notifier_ref, queues: []]
 
+  @doc false
   @spec start_link(Keyword.t()) :: GenServer.on_start()
   def start_link(opts) do
     {name, opts} = Keyword.pop(opts, :name)
@@ -17,6 +38,7 @@ defmodule Oban.Midwife do
     GenServer.start_link(__MODULE__, struct!(State, opts), name: name)
   end
 
+  @doc false
   @spec start_queue(Config.t(), Keyword.t() | {String.t(), Keyword.t()}) ::
           DynamicSupervisor.on_start_child()
   def start_queue(conf, opts) when is_list(opts) do
@@ -33,7 +55,7 @@ defmodule Oban.Midwife do
 
     conf
     |> foreman()
-    |> DynamicSupervisor.start_child({Queue.Supervisor, opts})
+    |> DynamicSupervisor.start_child({QueueSupervisor, opts})
   end
 
   def start_queue(conf, {queue, opts}) do
@@ -42,6 +64,7 @@ defmodule Oban.Midwife do
     |> then(&start_queue(conf, &1))
   end
 
+  @doc false
   @spec stop_queue(Config.t(), atom() | String.t()) :: :ok | {:error, :not_found}
   def stop_queue(conf, queue) do
     case Registry.whereis(conf.name, {:queue, queue}) do
@@ -57,7 +80,7 @@ defmodule Oban.Midwife do
 
   @impl GenServer
   def init(state) do
-    state.conf.queues
+    state.queues
     |> Task.async_stream(fn opts -> {:ok, _} = start_queue(state.conf, opts) end)
     |> Stream.run()
 

@@ -1,10 +1,10 @@
-defmodule Oban.Queue.Producer do
+defmodule Oban.Queues.Producer do
   @moduledoc false
 
   use GenServer
 
   alias Oban.{Backoff, Engine, Notifier, PerformError, TimeoutError, Worker}
-  alias Oban.Queue.Executor
+  alias Oban.Queues.Executor
   alias __MODULE__, as: State
 
   require Logger

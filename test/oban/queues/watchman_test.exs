@@ -1,7 +1,7 @@
-defmodule Oban.Queue.WatchmanTest do
+defmodule Oban.Queues.WatchmanTest do
   use Oban.Case, async: true
 
-  alias Oban.Queue.Watchman
+  alias Oban.Queues.Watchman
 
   describe "terminate/2" do
     test "safely shutting down with missing processes" do

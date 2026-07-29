@@ -1,10 +1,10 @@
-defmodule Oban.Queue.ExecutorTest do
+defmodule Oban.Queues.ExecutorTest do
   use Oban.Case, async: true
 
   import ExUnit.CaptureLog
 
   alias Oban.{CrashError, PerformError, TimeoutError}
-  alias Oban.Queue.Executor
+  alias Oban.Queues.Executor
 
   defmodule Worker do
     use Oban.Worker

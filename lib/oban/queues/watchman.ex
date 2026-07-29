@@ -1,9 +1,9 @@
-defmodule Oban.Queue.Watchman do
+defmodule Oban.Queues.Watchman do
   @moduledoc false
 
   use GenServer
 
-  alias Oban.Queue.Producer
+  alias Oban.Queues.Producer
   alias __MODULE__, as: State
 
   defstruct [:conf, :producer, :queue, :shutdown, interval: 10]

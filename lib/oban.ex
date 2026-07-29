@@ -17,7 +17,7 @@ defmodule Oban do
 
   alias Ecto.{Changeset, Multi}
   alias Oban.{Config, Engine, Harbor, Job, Notifier, Nursery, Peer, Registry, Repo, Sonar}
-  alias Oban.Queue.{Drainer, Producer}
+  alias Oban.Queues.{Drainer, Producer}
 
   @typedoc """
   The name of an Oban instance. This is used to identify instances in the internal registry for
@@ -454,7 +454,7 @@ defmodule Oban do
 
         queues: {Oban.Pro.Plugins.DynamicQueues, queues: [default: 10]}
 
-    A static keyword list is equivalent to the built-in implementation, which starts the listed
+    A static keyword list is equivalent to the built-in `Oban.Queues`, which starts the listed
     queues on init and leaves them running. Either form runs regardless of the `:plugins` setting,
     which only applies to maintenance plugins.
 
