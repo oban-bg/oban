@@ -452,7 +452,7 @@ defmodule Oban do
     A `{module, options}` tuple hands queue management to an alternative implementation, such as an
     Oban Pro plugin, which is started as a plugin and controls which queues run:
 
-        queues: {Oban.Pro.Plugins.DynamicQueues, queues: [default: 10]}
+        queues: {Oban.Pro.Queues, queues: [default: 10]}
 
     A static keyword list is equivalent to the built-in `Oban.Queues`, which starts the listed
     queues on init and leaves them running. Either form runs regardless of the `:plugins` setting,
@@ -483,7 +483,7 @@ defmodule Oban do
   Oban Pro Cron module instead:
 
       reindexer: Oban.Reindexer,
-      cron: {Oban.Pro.Plugins.DynamicCron, [crontab: ...]}
+      cron: {Oban.Pro.Cron, [crontab: ...]}
 
   Setting `plugins: false` disables plugins configured through service keys as well, without any
   need to disable them individually. The `:queues` option accepts the same tuple form, but it isn't

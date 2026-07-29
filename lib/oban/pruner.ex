@@ -6,12 +6,12 @@ defmodule Oban.Pruner do
   is recommended for all production applications. See also the
   [*Operational Maintenance* guide](operational_maintenance.html).
 
-  > #### 🌟 DynamicPruner {: .info}
+  > #### 🌟 Oban Pro's Pruner {: .info}
   >
   > This plugin is limited to a fixed interval and a single `max_age` check for all jobs. To prune
-  > on a cron-style schedule, retain jobs by a limit or age, or provide overrides for specific
-  > queues, workers, and job states; see Oban Pro's
-  > [DynamicPruner](https://oban.pro/docs/pro/Oban.Pro.Plugins.DynamicPruner.html).
+  > on a cron-style schedule, retain jobs by a limit or age, provide override rules for select
+  > queues/workers/states, and automatically archive select jobs, see
+  > [`Oban.Pro.Pruner`](https://oban.pro/docs/pro/Oban.Pro.Pruner.html).
 
   ## Using the Plugin
 

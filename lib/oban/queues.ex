@@ -6,18 +6,18 @@ defmodule Oban.Queues do
   starts, leaves them running until the instance stops, and manages queues on demand in response
   to `Oban.start_queue/2` and `Oban.stop_queue/2`.
 
+  > #### 🌟 Oban Pro's Queues {: .info}
+  >
+  > Queues listed in the `:queues` option are static, and changes to concurrency at runtime are
+  > lost on restart. To configure queues at runtime and persist those changes across restarts, see
+  > [`Oban.Pro.Queues`](https://oban.pro/docs/pro/Oban.Pro.Queues.html).
+
   There's nothing to configure here directly. Queues are declared with the top level `:queues`
   option:
 
       config :my_app, Oban,
         queues: [default: 10, exports: 5],
         ...
-
-  > #### 🌟 DynamicQueues {: .info}
-  >
-  > Queues listed in the `:queues` option are static, and changes to concurrency at runtime are
-  > lost on restart. To configure queues at runtime and persist those changes across restarts, see
-  > Oban Pro's [DynamicQueues](https://oban.pro/docs/pro/Oban.Pro.Plugins.DynamicQueues.html).
   """
 
   use GenServer
