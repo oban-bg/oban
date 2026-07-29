@@ -68,13 +68,13 @@ defmodule Oban do
         }
 
   @typedoc """
-  The value accepted by a feature key (`:cron`, `:pruner`, `:lifeline`, `:reindexer`).
+  The value accepted by a service key (`:cron`, `:pruner`, `:lifeline`, `:reindexer`).
 
   Either `false` to disable, a keyword list of options for the default implementation, a module to
   use an alternative implementation with default options, or a `{module, options}` tuple to use an
   alternative implementation with options.
   """
-  @type feature :: false | module() | Keyword.t() | {module(), Keyword.t()}
+  @type service :: false | module() | Keyword.t() | {module(), Keyword.t()}
 
   @typedoc """
   Configuration options for starting an Oban instance.
@@ -82,21 +82,21 @@ defmodule Oban do
   See `start_link1/` for more information on individual options.
   """
   @type option ::
-          {:cron, feature()}
+          {:cron, service()}
           | {:dispatch_cooldown, pos_integer()}
           | {:engine, module()}
           | {:insert_trigger, boolean()}
-          | {:lifeline, feature()}
+          | {:lifeline, service()}
           | {:name, name()}
           | {:node, oban_node()}
           | {:notifier, module() | {module(), Keyword.t()}}
           | {:peer, false | module() | {module(), Keyword.t()}}
           | {:plugins, false | [module() | {module(), Keyword.t()}]}
           | {:prefix, false | String.t()}
-          | {:pruner, feature()}
+          | {:pruner, service()}
           | {:queues,
              false | [{queue_name(), pos_integer() | Keyword.t()}] | {module(), Keyword.t()}}
-          | {:reindexer, feature()}
+          | {:reindexer, service()}
           | {:repo, module() | {module(), Keyword.t()}}
           | {:shutdown_grace_period, non_neg_integer()}
           | {:stage_interval, timeout()}
@@ -431,8 +431,8 @@ defmodule Oban do
     supervisor. Any supervisable module is a valid plugin, i.e. a `GenServer` or an `Agent`. May
     also be set to `false` to disable plugins _and_ disable leadership.
 
-    The most common plugins have dedicated top-level keys (see "Feature Options" below). Prefer
-    those over a raw `:plugins` entry. Configuring the same plugin through both a feature key and
+    The most common plugins have dedicated top-level keys (see "Service Options" below). Prefer
+    those over a raw `:plugins` entry. Configuring the same plugin through both a service key and
     `:plugins` raises during validation, while `false` disables plugins from both.
 
   * `:prefix` — the query prefix, or schema, to use for inserting and executing jobs. An
@@ -462,10 +462,10 @@ defmodule Oban do
     `:inline` or `:manual` queues, peers, and plugins are automatically disabled. Defaults to
     `:disabled`, no test mode.
 
-  ### Feature Options
+  ### Service Options
 
-  These keys configure Oban's built-in maintenance modules. Each accepts a keyword list of options
-  , a module for an implementation, or `false` to disable it. See the linked module for the
+  These keys configure Oban's built-in maintenance modules. Each accepts a keyword list of
+  options, a module for an implementation, or `false` to disable it. See the linked module for the
   available options.
 
   * `:cron` — schedule recurring jobs with a crontab, see `Oban.Cron`
@@ -485,9 +485,9 @@ defmodule Oban do
       reindexer: Oban.Reindexer,
       cron: {Oban.Pro.Plugins.DynamicCron, [crontab: ...]}
 
-  Setting `plugins: false` disables plugins configured through feature keys as well, without any
+  Setting `plugins: false` disables plugins configured through service keys as well, without any
   need to disable them individually. The `:queues` option accepts the same tuple form, but it isn't
-  a feature key and always runs, see "Primary Options" above.
+  a service key and always runs, see "Primary Options" above.
 
   ### Twiddly Options
 

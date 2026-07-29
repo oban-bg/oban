@@ -33,7 +33,7 @@ When the configuration contains **any** invalid options, like an invalid engine,
 you'll see the test fail with an error like this:
 
 ```elixir
-{:error, "expected :engine to be an Oban.Queue.Engine, got: MyApp.Repo"}
+{:error, "expected :engine to implement Oban.Engine, got: MyApp.Repo"}
 ```
 
 ## Testing Dynamic Plugin Config

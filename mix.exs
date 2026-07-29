@@ -125,35 +125,44 @@ defmodule Oban.MixProject do
 
   defp groups_for_modules do
     [
-      Features: [
+      Services: [
         Oban.Cron,
         Oban.Lifeline,
         Oban.Pruner,
         Oban.Reindexer
       ],
+      Engines: [
+        Oban.Engines.Basic,
+        Oban.Engines.Dolphin,
+        Oban.Engines.Inline,
+        Oban.Engines.Lite
+      ],
+      Notifiers: [
+        Oban.Notifiers.Postgres,
+        Oban.Notifiers.PG
+      ],
+      Peers: [
+        Oban.Peers.Database,
+        Oban.Peers.Global
+      ],
       Extending: [
         Oban.Config,
+        Oban.Engine,
         Oban.Plugin,
         Oban.Registry,
         Oban.Repo,
         Oban.Telemetry
       ],
-      Notifiers: [
-        Oban.Notifier,
-        Oban.Notifiers.Postgres,
-        Oban.Notifiers.PG
+      Exceptions: [
+        Oban.CrashError,
+        Oban.PerformError,
+        Oban.TimeoutError
       ],
-      Peers: [
-        Oban.Peer,
-        Oban.Peers.Database,
-        Oban.Peers.Global
-      ],
-      Engines: [
-        Oban.Engine,
-        Oban.Engines.Basic,
-        Oban.Engines.Dolphin,
-        Oban.Engines.Inline,
-        Oban.Engines.Lite
+      Deprecated: [
+        Oban.Plugins.Cron,
+        Oban.Plugins.Lifeline,
+        Oban.Plugins.Pruner,
+        Oban.Plugins.Reindexer
       ]
     ]
   end

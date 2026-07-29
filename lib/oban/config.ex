@@ -49,7 +49,7 @@ defmodule Oban.Config do
   @repo_opts [log: :log, dynamic_repo: :get_dynamic_repo]
   @testing_modes ~w(manual inline disabled)a
 
-  @feature_plugins [
+  @service_plugins [
     cron: Oban.Cron,
     pruner: Oban.Pruner,
     lifeline: Oban.Lifeline,
@@ -451,7 +451,7 @@ defmodule Oban.Config do
   defp normalize_plugins(opts) do
     opts
     |> normalize_crontab()
-    |> normalize_features()
+    |> normalize_services()
     |> Keyword.update(:plugins, [], fn
       plugins when is_list(plugins) ->
         renamer = fn
@@ -486,8 +486,8 @@ defmodule Oban.Config do
     end
   end
 
-  defp normalize_features(opts) do
-    Enum.reduce(@feature_plugins, opts, fn {key, module}, opts ->
+  defp normalize_services(opts) do
+    Enum.reduce(@service_plugins, opts, fn {key, module}, opts ->
       case Keyword.fetch(opts, key) do
         :error ->
           opts
@@ -498,14 +498,14 @@ defmodule Oban.Config do
         {:ok, value} ->
           opts
           |> Keyword.delete(key)
-          |> put_feature_plugin(normalize_feature(value, module))
+          |> put_service_plugin(normalize_service(value, module))
       end
     end)
   end
 
-  defp normalize_feature({module, opts}, _default) when is_atom(module), do: {module, opts}
-  defp normalize_feature(module, _default) when is_atom(module), do: {module, []}
-  defp normalize_feature(opts, module), do: {module, opts}
+  defp normalize_service({module, opts}, _default) when is_atom(module), do: {module, opts}
+  defp normalize_service(module, _default) when is_atom(module), do: {module, []}
+  defp normalize_service(opts, module), do: {module, opts}
 
   defp put_plugin(opts, plugin) do
     case Keyword.get(opts, :plugins) do
@@ -514,7 +514,7 @@ defmodule Oban.Config do
     end
   end
 
-  defp put_feature_plugin(opts, plugin) do
+  defp put_service_plugin(opts, plugin) do
     case Keyword.get(opts, :plugins) do
       false -> opts
       _plug -> put_plugin(opts, plugin)
