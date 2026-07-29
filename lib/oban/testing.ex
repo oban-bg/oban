@@ -116,8 +116,7 @@ defmodule Oban.Testing do
 
   @type perform_opts :: Job.option() | Oban.option()
 
-  @conf_keys []
-             |> Config.new()
+  @conf_keys Config.__struct__()
              |> Map.from_struct()
              |> Map.keys()
              |> Enum.concat(~w(cron lifeline pruner reindexer)a)
