@@ -64,7 +64,8 @@ Keep the default peer in production for better reliability and persistence acros
 
 Using PgBouncer's "Transaction Pooling" setup disables all of PostgreSQL's `LISTEN` and `NOTIFY`
 activity. Some functionality, such as triggering job execution, scaling queues, canceling jobs,
-etc. rely on those notifications.
+etc. rely on those notifications. The same applies to other transaction mode poolers, such as
+Supavisor.
 
 There are several options available to ensure functional notifications:
 
@@ -78,7 +79,10 @@ There are several options available to ensure functional notifications:
 3. Use a dedicated Repo that connects directly to the database, bypassing `PgBouncer`.
 
 If none of those options work, Oban's job staging will switch to `local` polling mode to ensure
-that queues keep processing jobs.
+that queues keep processing jobs. Leadership also degrades gracefully, though handover is slower
+without notifications-see [Leadership Without Notifications][lwn] in the clustering guide.
+
+[lwn]: clustering.html#leadership-without-notifications
 
 ## Unexpectedly Re-running All Migrations
 
