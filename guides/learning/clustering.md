@@ -32,6 +32,17 @@ is essential for preventing duplicate work—only the leader node runs global pl
 * Only one node per Oban instance name can be the leader at any time
 * Without leadership, global plugins won't run on any node
 
+### Leadership Without Notifications
+
+When a leader exits it broadcasts a message so another node can assume leadership immediately.
+That message travels over pubsub, which isn't available when `Oban.Notifiers.Postgres` runs behind
+a connection pooler in transaction mode, like [pg_bouncer] or [Supavisor]. Leadership still
+transfers correctly in that situation, but only after the current leader's lease expires, which
+takes up to 30 seconds.
+
+Switching to `Oban.Notifiers.PG` restores immediate handover for clustered applications, and
+`Oban.Peers.Global` avoids the lease entirely.
+
 ### Available Peer Implementations
 
 Oban provides two peer implementations:
@@ -62,3 +73,4 @@ config :my_app, Oban,
 ```
 
 [pg_bouncer]: http://www.pgbouncer.org
+[Supavisor]: https://github.com/supabase/supavisor

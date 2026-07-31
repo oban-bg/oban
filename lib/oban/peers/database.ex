@@ -24,7 +24,7 @@ defmodule Oban.Peers.Database do
 
   use GenServer
 
-  import Ecto.Query, only: [select: 3, where: 2, where: 3]
+  import Ecto.Query, only: [select: 3, update: 3, where: 2, where: 3]
 
   alias Oban.{Backoff, Notifier, Repo}
   alias __MODULE__, as: State
@@ -103,16 +103,15 @@ defmodule Oban.Peers.Database do
           |> attempt_leadership()
         end
 
-        case Repo.transaction(state.conf, fun, retry: 1) do
+        case Repo.transaction(state.conf, fun, retry: 1, on_exhausted: :log) do
           {:ok, state} ->
             {state, %{meta | leader: state.leader?, was_leader: meta.leader}}
 
-          {:error, :rollback} ->
-            # The peer maintains its current `leader?` status on rollback—this may cause
-            # inconsistency if the leader encounters an error and multiple rollbacks happen in
-            # sequence. That tradeoff is acceptable because the situation is unlikely and less of
-            # an issue than crashing the peer.
-            {state, %{meta | was_leader: meta.leader}}
+          {:error, _reason} ->
+            # The peer gives up leadership when an election fails because it can't know whether
+            # the lease is still held. Leadership is reclaimed on the next election, as the
+            # renewal query matches the node's own row while the lease is valid.
+            {%{state | leader?: false}, %{meta | leader: false, was_leader: meta.leader}}
         end
       end)
 
@@ -202,13 +201,13 @@ defmodule Oban.Peers.Database do
     %{state | leader?: leader?}
   end
 
-  defp regular_upsert(peer_data, state) do
-    repo_opts =
-      if state.leader? do
-        [conflict_target: :name, on_conflict: [set: [expires_at: peer_data.expires_at]]]
-      else
-        [conflict_target: :name, on_conflict: :nothing]
-      end
+  defp regular_upsert(%{node: node, expires_at: expires_at} = peer_data, state) do
+    on_conflict =
+      "oban_peers"
+      |> where([p], p.node == ^node)
+      |> update([p], set: [expires_at: ^expires_at])
+
+    repo_opts = [conflict_target: :name, on_conflict: on_conflict]
 
     case Repo.insert_all(state.conf, "oban_peers", [peer_data], repo_opts) do
       {0, nil} -> false
