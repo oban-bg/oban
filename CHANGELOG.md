@@ -48,7 +48,42 @@ When set, multiple loggers can coexist without interleaving, and events from oth
 dropped before they reach the log. This is primarily useful in testing, where multiple Oban
 instances often run side by side and isolating the output of one of them is otherwise awkward.
 
-## v2.23.0
+## v2.23.1 - 2026-08-02
+
+### Bug Fixes
+
+- [Peer] Scope lease renewal to the owning node
+
+  Leadership renewal matched the peers row by name alone, so a node that lost its lease renewed
+  whichever row it found and concluded it was still the leader. The belief never corrected,
+  letting a second node run Cron and insert duplicate jobs until restart.
+
+  Renewal is now scoped to the row's owner, so a peer that lost the lease demotes at the next
+  election. Failed elections concede leadership rather than retaining it, and no longer crash the
+  peer.
+
+- [Producer] Dispatch on refresh for missed notifications
+
+  When an `insert` notification is dropped a queue could sit idle until it was manually paused and
+  resumed. Producers now attempt a dispatch on each refresh, so a stuck queue self-heals on the
+  next cycle. The default `refresh_interval` is now 60s (was 30s), since it purely controls
+  recovery time.
+
+- [Job] Set `successful` state as default unique options
+
+  Use the complete `successful` group as the unique default so it includes the `suspended` state.
+
+- [Reindexer] Reindex every configured index even when one fails
+
+  A single missing or invalid index previously halted the entire reindex run, silently skipping
+  every index after it. Each reindex is now independent, and failures are aggregated into the
+  run's telemetry error metadata, identifying exactly which queries failed.
+
+- [Migration] Fix custom migrator resolution
+
+  Use the repo selected from `opts[:repo]` when resolving a configured custom migrator.
+
+## v2.23.0 - 2026-05-27
 
 ### Enhancements
 
