@@ -39,7 +39,7 @@
   "sourceror": {:hex, :sourceror, "1.12.2", "85bfd48159f020c0cbfc72f289f11456fdc05dc43719b6f2589fb969faefa113", [:mix], [], "hexpm", "da37d3da09c5b890528802c7056a8f585a061973820d7656b6e3649c14f0e9cb"},
   "spitfire": {:hex, :spitfire, "0.3.13", "edd207b065eaec57acc5484097d0aa3e97fe4246168c54e67a9af040b8dee4c1", [:mix], [], "hexpm", "3601be88ceed4967b584e96444de3e1d12d6555ae0864a7390b9cd5332d134b4"},
   "statistex": {:hex, :statistex, "1.1.1", "73612aa7f79e53c30569be065fd121e380f1cf57bc4c2da5b41be9246da18df9", [:mix], [], "hexpm", "310c4b49b34adf683de3103639006bed233ab54c08a4add65a531448e653857c"},
-  "stream_data": {:hex, :stream_data, "1.3.0", "bde37905530aff386dea1ddd86ecbf00e6642dc074ceffc10b7d4e41dfd6aac9", [:mix], [], "hexpm", "3cc552e286e817dca43c98044c706eec9318083a1480c52ae2688b08e2936e3c"},
+  "stream_data": {:hex, :stream_data, "1.4.0", "026f929db613aabea6208012ae9b8970d3fd5f88b3bdf26831bc536f98c42036", [:mix], [], "hexpm", "2b0ee3a340dcce1c8cf6302a763ee757d1e01c54d6e16d9069062509d68b1dc9"},
   "telemetry": {:hex, :telemetry, "1.4.2", "a0cb522801dffb1c49fe6e30561badffc7b6d0e180db1300df759faa22062855", [:rebar3], [], "hexpm", "928f6495066506077862c0d1646609eed891a4326bee3126ba54b60af61febb1"},
   "text_diff": {:hex, :text_diff, "0.1.0", "1caf3175e11a53a9a139bc9339bd607c47b9e376b073d4571c031913317fecaa", [:mix], [], "hexpm", "d1ffaaecab338e49357b6daa82e435f877e0649041ace7755583a0ea3362dbd7"},
   "tz": {:hex, :tz, "0.28.2", "6c47f3d1a8ee5c33a1d8f0ba49e5a851b0a30c408a587d907aff6e71228b3b32", [:mix], [{:castore, "~> 0.1 or ~> 1.0", [hex: :castore, repo: "hexpm", optional: true]}, {:mint, "~> 1.6", [hex: :mint, repo: "hexpm", optional: true]}], "hexpm", "a6bf7355a33f0a7511602ab4566432ac0901d8abff81e94e455bca19708a0c87"},
