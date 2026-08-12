@@ -78,7 +78,7 @@ defmodule Oban.ReindexerTest do
     end
 
     @tag :unboxed
-    test "dropping invalid indexes before reindexing" do
+    test "dropping all invalid indexes" do
       index_name = "oban_jobs_test_invalid_idx"
 
       on_exit(fn ->

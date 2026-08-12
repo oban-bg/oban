@@ -141,21 +141,24 @@ defmodule Oban.Reindexer do
   defp check_leadership_and_reindex(state) do
     if Peer.leader?(state.conf) do
       with {:ok, deindex_queries} <- fetch_deindex_queries(state) do
-        reindex_queries = Enum.map(state.indexes, &reindex_query(state, &1))
-
         errors =
-          Enum.reduce(deindex_queries ++ reindex_queries, [], fn query, errors ->
+          state.indexes
+          |> Enum.map(&reindex_query(state, &1))
+          |> Enum.concat(deindex_queries)
+          |> Enum.flat_map(fn query ->
             case Repo.query(state.conf, query, [], timeout: state.timeout) do
-              {:ok, _} -> errors
-              {:error, error} -> [{query, error} | errors]
+              {:ok, _} -> []
+              {:error, error} -> [{query, error}]
             end
           end)
 
         case errors do
           [] -> :ok
-          errors -> {:error, Enum.reverse(errors)}
+          _e -> {:error, errors}
         end
       end
+    else
+      :ok
     end
   end
 
