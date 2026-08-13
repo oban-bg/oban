@@ -3,12 +3,12 @@ defmodule Oban.Stager do
 
   use GenServer
 
-  alias Oban.{Engine, Job, Notifier, Peer, Plugin, Registry, Repo}
+  alias Oban.{Engine, Job, Notifier, Peer, Plugin, Registry, Repo, Validation}
   alias __MODULE__, as: State
 
   require Logger
 
-  @type option :: Plugin.option() | {:interval, pos_integer()}
+  @type option :: Plugin.option() | {:interval, timeout()} | {:limit, pos_integer()}
 
   defstruct [
     :conf,
@@ -22,15 +22,23 @@ defmodule Oban.Stager do
   def start_link(opts) do
     {name, opts} = Keyword.pop(opts, :name)
 
-    conf = Keyword.fetch!(opts, :conf)
+    state = struct!(State, opts)
 
-    if conf.stage_interval == :infinity do
+    if state.interval == :infinity do
       :ignore
     else
-      state = %State{conf: conf, interval: conf.stage_interval}
-
       GenServer.start_link(__MODULE__, state, name: name)
     end
+  end
+
+  @spec validate([option()]) :: :ok | {:error, String.t()}
+  def validate(opts) do
+    Validation.validate_schema(opts,
+      conf: :any,
+      name: :any,
+      interval: :timeout,
+      limit: :pos_integer
+    )
   end
 
   @impl GenServer

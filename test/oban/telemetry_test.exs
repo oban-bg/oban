@@ -41,7 +41,7 @@ defmodule Oban.TelemetryTest do
   test "telemetry events are emitted for executed jobs" do
     TelemetryHandler.attach_events(span_type: [:job])
 
-    name = start_supervised_oban!(stage_interval: 10, queues: [alpha: 2])
+    name = start_supervised_oban!(stager: [interval: 5], queues: [alpha: 2])
 
     %Job{id: ok_id} = insert!([ref: 1, action: "OK"], tags: ["baz"])
     %Job{id: error_id} = insert!([ref: 2, action: "ERROR"], tags: ["foo"])
@@ -325,7 +325,7 @@ defmodule Oban.TelemetryTest do
     test "disabling encoding on the default logger", %{name: name} do
       logged =
         capture_log(fn ->
-          start_supervised_oban!(name: name, stage_interval: 10, queues: [alpha: 3])
+          start_supervised_oban!(name: name, stager: [interval: 5], queues: [alpha: 3])
 
           insert!(name, [ref: 1, action: "OK"], queue: :alpha)
 

@@ -490,7 +490,7 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite, Oban.Engines.Dolphin] do
     describe "cancel_job/2" do
       setup :start_supervised_oban
 
-      @describetag oban_opts: [queues: [alpha: 5], stage_interval: 5, testing: :disabled]
+      @describetag oban_opts: [queues: [alpha: 5], stager: [interval: 5], testing: :disabled]
 
       test "cancelling an executing job", %{name: name} do
         TelemetryHandler.attach_events(span_type: [:job, [:engine, :cancel_job]], oban_name: name)
@@ -569,7 +569,7 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite, Oban.Engines.Dolphin] do
     describe "cancel_all_jobs/2" do
       setup :start_supervised_oban
 
-      @describetag oban_opts: [queues: [alpha: 5], stage_interval: 5, testing: :disabled]
+      @describetag oban_opts: [queues: [alpha: 5], stager: [interval: 5], testing: :disabled]
 
       test "cancelling all jobs that may or may not be executing", %{name: name} do
         TelemetryHandler.attach_events(
@@ -725,7 +725,7 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite, Oban.Engines.Dolphin] do
     describe "integration" do
       setup :start_supervised_oban
 
-      @describetag oban_opts: [queues: [alpha: 3], stage_interval: 5, testing: :disabled]
+      @describetag oban_opts: [queues: [alpha: 3], stager: [interval: 5], testing: :disabled]
 
       test "inserting and executing jobs", %{name: name} do
         TelemetryHandler.attach_events(oban_name: name)

@@ -37,7 +37,7 @@ defmodule ObanTest do
         start_supervised_oban!(
           queues: [alpha: 1],
           shutdown_grace_period: 10,
-          stage_interval: 10
+          stager: [interval: 5]
         )
 
       assert_receive {:started, 1}
@@ -59,7 +59,7 @@ defmodule ObanTest do
         start_supervised_oban!(
           queues: [alpha: 1],
           shutdown_grace_period: 10,
-          stage_interval: 10
+          stager: [interval: 5]
         )
 
       assert_receive {:started, 1}
@@ -80,7 +80,7 @@ defmodule ObanTest do
         start_supervised_oban!(
           queues: [alpha: 1, omega: 1],
           shutdown_grace_period: 10,
-          stage_interval: 10
+          stager: [interval: 5]
         )
 
       assert_receive {:started, 1}
@@ -99,7 +99,7 @@ defmodule ObanTest do
       name =
         start_supervised_oban!(
           queues: [alpha: 1, gamma: 2, delta: [limit: 2, paused: true]],
-          stage_interval: 5
+          stager: [interval: 5]
         )
 
       insert!([ref: 1, sleep: 500], queue: :alpha)
@@ -263,8 +263,8 @@ defmodule ObanTest do
     end
 
     test "pausing queues only on the local node" do
-      name_1 = start_supervised_oban!(stage_interval: 10, queues: [alpha: 1])
-      name_2 = start_supervised_oban!(stage_interval: 10, queues: [alpha: 1])
+      name_1 = start_supervised_oban!(stager: [interval: 5], queues: [alpha: 1])
+      name_2 = start_supervised_oban!(stager: [interval: 5], queues: [alpha: 1])
 
       assert :ok = Oban.pause_queue(name_2, queue: :alpha, local_only: true)
 
@@ -291,7 +291,7 @@ defmodule ObanTest do
     end
 
     test "resuming queues only on the local node" do
-      opts = [notifier: Oban.Notifiers.PG, stage_interval: 10, queues: [alpha: 1]]
+      opts = [notifier: Oban.Notifiers.PG, stager: [interval: 5], queues: [alpha: 1]]
 
       name_1 = start_supervised_oban!(opts)
       name_2 = start_supervised_oban!(opts)

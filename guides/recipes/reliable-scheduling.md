@@ -81,9 +81,9 @@ very_soon = DateTime.utc_now() |> DateTime.add(500, :millisecond)
 ```
 
 your workers may not be aware of/attempt to perform the job until the next tick as specified by the
-`:stage_interval` configuration option. By default this is set to `1_000ms`.
+stager's `:interval` option, e.g. `stager: [interval: 1_000]`. By default this is set to `1_000ms`.
 
-**Be aware:** Configuring the `:stage_interval` option below the recommended default
+**Be aware:** Configuring the stager's `:interval` below the recommended default
 can have a considerable impact on database performance! It is not advised to
 lower this value and should only be done as a last resort after considering
 other ways to achieve your desired outcome.

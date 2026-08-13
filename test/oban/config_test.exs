@@ -150,6 +150,22 @@ defmodule Oban.ConfigTest do
       assert_valid(shutdown_grace_period: 10)
     end
 
+    test ":stager is validated as false or a module with options" do
+      refute_valid(stager: nil)
+      refute_valid(stager: NotReal)
+      refute_valid(stager: [interval: :none])
+      refute_valid(stager: [limit: 0])
+      refute_valid(stager: [unknown: true])
+      refute_valid(stage_interval: :none)
+
+      assert_valid(stager: false)
+      assert_valid(stager: [interval: 500])
+      assert_valid(stager: [interval: :infinity])
+      assert_valid(stager: [interval: 500, limit: 1_000])
+      assert_valid(stager: {FakePlugin, interval: 500})
+      assert_valid(stage_interval: 500)
+    end
+
     test ":testing is validated as a boolean" do
       refute_valid(testing: :ok)
       refute_valid(testing: true)
@@ -227,7 +243,7 @@ defmodule Oban.ConfigTest do
       assert conf = conf(queues: [alpha: 1], plugins: [Pruner], testing: :manual)
 
       assert %{queues: [], plugins: []} = conf
-      assert %{peer: {Oban.Peers.Isolated, [leader?: false]}, stage_interval: :infinity} = conf
+      assert %{peer: {Oban.Peers.Isolated, [leader?: false]}, stager: false} = conf
     end
 
     test "normalizing plugins as a module options tuple" do
@@ -249,12 +265,28 @@ defmodule Oban.ConfigTest do
       refute has_plugin?(Cron, plugins: false, crontab: [{"* * * * *", Worker}])
     end
 
-    test "translating poll_interval config into plugin usage" do
-      assert %{stage_interval: 1_000} = conf([])
-      assert %{stage_interval: 2_000} = conf(poll_interval: 2_000)
-      assert %{stage_interval: 1_000} = conf(poll_interval: :infinity, stage_interval: 1_000)
-      assert %{stage_interval: 1_000} = conf(plugins: [Oban.Stager])
-      assert %{stage_interval: 2_000} = conf(plugins: [{Oban.Stager, interval: 2_000}])
+    test "translating legacy interval config into stager options" do
+      assert %{stager: {Oban.Stager, []}} = conf([])
+      assert %{stager: {Oban.Stager, [interval: 2_000]}} = conf(poll_interval: 2_000)
+      assert %{stager: {Oban.Stager, [interval: 2_000]}} = conf(stage_interval: 2_000)
+      assert %{stager: {Oban.Stager, []}} = conf(plugins: [Oban.Stager])
+
+      assert %{stager: {Oban.Stager, [interval: 1_000]}} =
+               conf(poll_interval: :infinity, stage_interval: 1_000)
+
+      assert %{stager: {Oban.Stager, [interval: 2_000]}, plugins: []} =
+               conf(plugins: [{Oban.Stager, interval: 2_000}])
+
+      assert %{stager: {Oban.Stager, [interval: 500]}} =
+               conf(stage_interval: 2_000, stager: [interval: 500])
+    end
+
+    test "normalizing stager values into module and option tuples" do
+      assert %{stager: {Oban.Stager, [interval: 500]}} = conf(stager: [interval: 500])
+      assert %{stager: {Oban.Stager, [limit: 1_000]}} = conf(stager: [limit: 1_000])
+      assert %{stager: {FakePlugin, []}} = conf(stager: FakePlugin)
+      assert %{stager: {FakePlugin, [interval: 500]}} = conf(stager: {FakePlugin, interval: 500})
+      assert %{stager: false} = conf(stager: false)
     end
 
     test "translating top-level service keys into plugin usage" do
@@ -312,7 +344,7 @@ defmodule Oban.ConfigTest do
 
     test ":testing in :manual mode suppresses top-level services" do
       conf = conf(pruner: [max_age: 60], cron: [crontab: []], testing: :manual)
-      assert %{plugins: [], stage_interval: :infinity} = conf
+      assert %{plugins: [], stager: false} = conf
 
       conf = conf(queues: [default: 1], testing: :manual)
       assert %{plugins: [], queues: []} = conf

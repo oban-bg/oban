@@ -3,7 +3,7 @@ defmodule Oban.Harbor do
 
   use Supervisor
 
-  alias Oban.{Config, Registry, Stager}
+  alias Oban.{Config, Registry}
 
   @type opts :: [conf: Config.t(), name: GenServer.name()]
 
@@ -23,13 +23,18 @@ defmodule Oban.Harbor do
   def init(opts) do
     conf = Keyword.fetch!(opts, :conf)
 
-    children = [
-      {Stager, conf: conf, name: Registry.via(conf.name, Stager)}
-      | Enum.map(conf.plugins, &plugin_child_spec(&1, conf))
-    ]
+    children = stager_child_spec(conf) ++ Enum.map(conf.plugins, &plugin_child_spec(&1, conf))
 
     Supervisor.init(children, max_restarts: 5, max_seconds: 60, strategy: :one_for_one)
   end
+
+  defp stager_child_spec(%Config{stager: {module, opts}} = conf) do
+    opts = Keyword.merge(opts, conf: conf, name: Registry.via(conf.name, module))
+
+    [{module, opts}]
+  end
+
+  defp stager_child_spec(_conf), do: []
 
   defp plugin_child_spec({module, opts}, conf) do
     name = Registry.via(conf.name, {:plugin, module})

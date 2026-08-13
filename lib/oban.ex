@@ -68,7 +68,7 @@ defmodule Oban do
         }
 
   @typedoc """
-  The value accepted by a service key (`:cron`, `:pruner`, `:lifeline`, `:reindexer`).
+  The value accepted by a service key (`:cron`, `:pruner`, `:lifeline`, `:reindexer`, `:stager`).
 
   Either `false` to disable, a keyword list of options for the default implementation, a module to
   use an alternative implementation with default options, or a `{module, options}` tuple to use an
@@ -100,6 +100,7 @@ defmodule Oban do
           | {:repo, module() | {module(), Keyword.t()}}
           | {:shutdown_grace_period, non_neg_integer()}
           | {:stage_interval, timeout()}
+          | {:stager, service()}
           | {:testing, :disabled | :inline | :manual}
 
   @typedoc """
@@ -472,6 +473,8 @@ defmodule Oban do
   * `:lifeline` — rescue jobs orphaned when a node shuts down, see `Oban.Lifeline`
   * `:pruner` — delete completed, cancelled, and discarded jobs, see `Oban.Pruner`
   * `:reindexer` — periodically rebuild indexes to combat bloat, see `Oban.Reindexer`
+  * `:stager` — make scheduled or retryable jobs available and notify queues, see "Staging Jobs"
+    below
 
   For example, to prune jobs after a day and run a nightly worker:
 
@@ -488,6 +491,24 @@ defmodule Oban do
   Setting `plugins: false` disables plugins configured through service keys as well, without any
   need to disable them individually. The `:queues` option accepts the same tuple form, but it isn't
   a service key and always runs, see "Primary Options" above.
+
+  #### Staging Jobs
+
+  The stager periodically makes `scheduled` or `retryable` jobs available to run and notifies
+  relevant queues that they have jobs to run. Because staging is essential for job execution, the
+  stager always runs and isn't disabled by `plugins: false`. It accepts the following options:
+
+  * `:interval` — the number of milliseconds between staging jobs and notifying queues. This is
+    directly tied to the resolution of `scheduled` or `retryable` jobs and how frequently the
+    database is checked for jobs to run. Setting the interval to `:infinity` disables staging
+    entirely. The default is `1_000ms`.
+
+  * `:limit` — the maximum number of jobs staged at each interval, used to minimize database
+    load. The default is `5_000`.
+
+  Only the leader node stages jobs and notifies queues when the `:notifier`'s pubsub
+  notifications are functional. If pubsub messages can't get through then staging switches to a
+  less efficient "local" mode in which all nodes poll for jobs to run.
 
   ### Twiddly Options
 
@@ -512,24 +533,16 @@ defmodule Oban do
     may become a bottleneck.
 
     The trigger mechanism is designed to make jobs execute immediately after insert, rather than
-    up to `:stage_interval` (1 second) afterwards, and it can safely be disabled to improve insert
-    throughput.
+    up to the stager's `:interval` (1 second) afterwards, and it can safely be disabled to
+    improve insert throughput.
 
     Defaults to `true`, with triggering enabled.
 
   * `:shutdown_grace_period` — the amount of time a queue will wait for executing jobs to complete
     before hard shutdown, specified in milliseconds. The default is `15_000`, or 15 seconds.
 
-  * `:stage_interval` — the number of milliseconds between making scheduled jobs available and
-    notifying relevant queues that jobs are available. This is directly tied to the resolution of
-    `scheduled` or `retryable` jobs and how frequently the database is checked for jobs to run. To
-    minimize database load, only `5_000` jobs are staged at each interval.
-
-    Only the leader node stages jobs and notifies queues when the `:notifier's` pubsub
-    notifications are functional. If pubsub messages can't get through then staging switches to a
-    less efficient "local" mode in which all nodes poll for jobs to run.
-
-    Setting the interval to `:infinity` disables staging entirely. The default is `1_000ms`.
+  * `:stage_interval` — a deprecated alias for the stager's `:interval` option. Use
+    `stager: [interval: 1_000]` instead, see "Service Options" above.
 
   ## Example
 

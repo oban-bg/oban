@@ -23,7 +23,7 @@ defmodule Oban.Config do
           queues: Keyword.t(Keyword.t()),
           repo: module(),
           shutdown_grace_period: non_neg_integer(),
-          stage_interval: timeout(),
+          stager: false | {module(), Keyword.t()},
           testing: :disabled | :inline | :manual
         }
 
@@ -41,7 +41,7 @@ defmodule Oban.Config do
             queues: [],
             repo: nil,
             shutdown_grace_period: :timer.seconds(15),
-            stage_interval: :timer.seconds(1),
+            stager: {Oban.Stager, []},
             testing: :disabled
 
   @cron_keys ~w(crontab timezone)a
@@ -110,7 +110,7 @@ defmodule Oban.Config do
         |> Keyword.put(:peer, {Oban.Peers.Isolated, [leader?: false]})
         |> Keyword.put(:plugins, [])
         |> Keyword.put(:queues, [])
-        |> Keyword.put(:stage_interval, :infinity)
+        |> Keyword.put(:stager, false)
       else
         opts
       end
@@ -173,7 +173,7 @@ defmodule Oban.Config do
         queues: {:custom, &validate_queues(opts, &1)},
         repo: {:module, [config: 0]},
         shutdown_grace_period: :non_neg_integer,
-        stage_interval: :timeout,
+        stager: {:custom, &validate_stager/1},
         testing: {:enum, @testing_modes}
       )
     end
@@ -261,6 +261,30 @@ defmodule Oban.Config do
       true ->
         :ok
     end
+  end
+
+  defp validate_stager({module, opts}) when is_atom(module) do
+    name = inspect(module)
+
+    cond do
+      not Code.ensure_loaded?(module) ->
+        {:error, "stager #{name} could not be loaded"}
+
+      not Keyword.keyword?(opts) ->
+        {:error, "expected #{name} options to be a keyword list, got: #{inspect(opts)}"}
+
+      function_exported?(module, :validate, 1) ->
+        module.validate(opts)
+
+      true ->
+        :ok
+    end
+  end
+
+  defp validate_stager(false), do: :ok
+
+  defp validate_stager(stager) do
+    {:error, "expected :stager to be a module or {module, opts} tuple, got: #{inspect(stager)}"}
   end
 
   defp validate_queues(opts, queues) do
@@ -401,25 +425,50 @@ defmodule Oban.Config do
   end
 
   defp normalize_stager(opts) do
-    cond do
-      Keyword.has_key?(opts, :poll_interval) ->
-        opts
-        |> Keyword.put_new(:stage_interval, opts[:poll_interval])
-        |> Keyword.delete(:poll_interval)
+    {stag_interval, opts} = Keyword.pop(opts, :stage_interval)
+    {poll_interval, opts} = Keyword.pop(opts, :poll_interval)
+    {plugin_opts, opts} = pop_stager_plugin(opts)
 
-      Keyword.keyword?(opts[:plugins]) ->
-        {stager_opts, opts} = pop_in(opts, [:plugins, Oban.Stager])
+    legacy_interval = stag_interval || poll_interval || plugin_opts[:interval]
 
-        if is_list(stager_opts) and Keyword.has_key?(stager_opts, :interval) do
-          Keyword.put_new(opts, :stage_interval, stager_opts[:interval])
-        else
-          opts
-        end
+    stager =
+      case Keyword.get(opts, :stager, []) do
+        stager when stager in [false, nil] ->
+          stager
 
-      true ->
-        opts
+        stager ->
+          {module, stager_opts} = normalize_service(stager, Oban.Stager)
+
+          {module, put_legacy_interval(stager_opts, legacy_interval)}
+      end
+
+    Keyword.put(opts, :stager, stager)
+  end
+
+  defp pop_stager_plugin(opts) do
+    case Keyword.get(opts, :plugins) do
+      plugins when is_list(plugins) ->
+        {stagers, plugins} = Enum.split_with(plugins, &stager_plugin?/1)
+
+        {stager_plugin_opts(stagers), Keyword.put(opts, :plugins, plugins)}
+
+      _plugins ->
+        {[], opts}
     end
   end
+
+  defp stager_plugin?({Oban.Stager, _opts}), do: true
+  defp stager_plugin?(plugin), do: plugin == Oban.Stager
+
+  defp stager_plugin_opts([{_module, opts} | _rest]) when is_list(opts), do: opts
+  defp stager_plugin_opts(_stagers), do: []
+
+  defp put_legacy_interval(stager_opts, interval)
+       when is_list(stager_opts) and not is_nil(interval) do
+    Keyword.put_new(stager_opts, :interval, interval)
+  end
+
+  defp put_legacy_interval(stager_opts, _interval), do: stager_opts
 
   defp normalize_queues(opts) do
     case Keyword.get(opts, :queues) do

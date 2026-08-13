@@ -49,9 +49,9 @@ defmodule Oban.Case do
       |> Keyword.put_new(:name, make_ref())
       |> Keyword.put_new(:notifier, Oban.Notifiers.Isolated)
       |> Keyword.put_new(:peer, Oban.Peers.Isolated)
-      |> Keyword.put_new(:stage_interval, :infinity)
       |> Keyword.put_new(:repo, Repo)
       |> Keyword.put_new(:shutdown_grace_period, 250)
+      |> Keyword.put_new(:stager, false)
 
     name = Keyword.fetch!(opts, :name)
     repo = Keyword.fetch!(opts, :repo)
