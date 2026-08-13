@@ -686,6 +686,26 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite, Oban.Engines.Dolphin] do
       end
     end
 
+    describe "snooze_job/3" do
+      setup :start_supervised_oban
+
+      test "rolling back the attempt and counting snoozes", %{name: name} do
+        conf = Oban.config(name)
+
+        meta = %{"key" => "val", "snoozed" => 1}
+
+        job_1 = insert!(name, %{ref: 1}, state: "executing", attempt: 2, max_attempts: 5)
+        job_2 = insert!(name, %{ref: 2}, state: "executing", attempt: 2, meta: meta)
+
+        assert :ok = Oban.Engine.snooze_job(conf, job_1, 60)
+        assert :ok = Oban.Engine.snooze_job(conf, job_2, 60)
+
+        assert %Job{state: "scheduled", scheduled_at: %_{}} = job_1 = reload(name, job_1)
+        assert %Job{attempt: 1, max_attempts: 5, meta: %{"snoozed" => 1}} = job_1
+        assert %Job{attempt: 1, meta: %{"key" => "val", "snoozed" => 2}} = reload(name, job_2)
+      end
+    end
+
     describe "update_job/3" do
       setup :start_supervised_oban
 

@@ -270,10 +270,12 @@ defmodule Oban.Engines.Basic do
   end
 
   @impl Engine
-  def snooze_job(%Config{} = conf, %Job{id: id}, seconds) when is_integer(seconds) do
+  def snooze_job(%Config{} = conf, %Job{id: id, meta: meta}, seconds) when is_integer(seconds) do
+    meta = Map.update(meta, "snoozed", 1, &(&1 + 1))
+
     updates = [
-      set: [state: "scheduled", scheduled_at: seconds_from_now(seconds)],
-      inc: [max_attempts: 1]
+      set: [state: "scheduled", scheduled_at: seconds_from_now(seconds), meta: meta],
+      inc: [attempt: -1]
     ]
 
     Repo.update_all(conf, where(Job, id: ^id), updates)

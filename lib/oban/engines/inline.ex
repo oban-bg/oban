@@ -134,7 +134,13 @@ defmodule Oban.Engines.Inline do
     %{job | state: "completed", completed_at: utc_now()}
   end
 
-  defp complete_job(%{job: job, result: {:snooze, snooze}, state: :snoozed}) do
-    %{job | state: "scheduled", scheduled_at: DateTime.add(utc_now(), snooze, :second)}
+  defp complete_job(%{job: job, snooze: snooze, state: :snoozed}) do
+    %{
+      job
+      | attempt: job.attempt - 1,
+        meta: Map.update(job.meta, "snoozed", 1, &(&1 + 1)),
+        state: "scheduled",
+        scheduled_at: DateTime.add(utc_now(), snooze, :second)
+    }
   end
 end

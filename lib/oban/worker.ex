@@ -270,12 +270,12 @@ defmodule Oban.Worker do
   Supported time units are: `:second`, `:seconds`, `:minute`, `:minutes`, `:hour`, `:hours`,
   `:day`, `:days`, `:week`, `:weeks`.
 
-  Snoozing is done by incrementing the job's `max_attempts` field and scheduling execution for
-  the specified period in the future.
+  Snoozing schedules execution for the specified period in the future and rolls back the job's
+  `attempt`. The original `max_attempts` is preserved, so a snooze never consumes an attempt and
+  backoff calculation stays accurate no matter how many times a job snoozes.
 
-  Executing bumps a job's `attempt` count. Despite snooze incrementing the `max_attempts` to
-  preserve total retries, the change to `attempt` will affect the default backoff retry
-  algorithm.
+  Each snooze also increments a `snoozed` count in the job's `meta`, which makes it possible to
+  differentiate between "real" attempts and snoozes.
 
   ### Examples
 
@@ -294,34 +294,12 @@ defmodule Oban.Worker do
     def perform(job) do
       if rate_limited?(job), do: {:snooze, {1, :hour}}, else: :ok
     end
+
+    # Give up after snoozing too many times
+    def perform(%Job{meta: %{"snoozed" => snoozed}}) when snoozed > 5 do
+      {:cancel, :snoozed_too_many_times}
+    end
     ```
-
-  > #### 🌟 Snoozes and Attempts {: .info}
-  >
-  > Oban Pro's [Smart Engine](https://oban.pro/docs/pro/Oban.Pro.Engines.Smart.html) rolls back
-  > the `attempt` and preserves the original `max_attempts` in order to differentiate between
-  > "real" attempts and snoozes, which keeps backoff calculation accurate.
-  >
-  > Without attempt correction you may need a solution that compensates for snoozing, such as the
-  > example below:
-
-      defmodule MyApp.SnoozingWorker do
-        @max_attempts 20
-
-        use Oban.Worker, max_attempts: @max_attempts
-
-        @impl Worker
-        def backoff(%Job{} = job) do
-          corrected_attempt = @max_attempts - (job.max_attempts - job.attempt)
-
-          Worker.backoff(%{job | attempt: corrected_attempt})
-        end
-
-        @impl Worker
-        def perform(job) do
-          if MyApp.something?(job), do: :ok, else: {:snooze, 60}
-        end
-      end
 
   ## Workers in A Different Application
 
