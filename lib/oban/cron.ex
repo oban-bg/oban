@@ -8,7 +8,7 @@ defmodule Oban.Cron do
   > #### 🌟 Oban Pro's Cron {: .info}
   >
   > This plugin only loads the crontab statically, at boot time. To configure cron scheduling at
-  > runtime, globally, across an entire cluster with scheduling guarantees and timezone overrides,
+  > runtime, globally, across an entire cluster with scheduling guarantees and management tools,
   > see [`Oban.Pro.Cron`](https://oban.pro/docs/pro/Oban.Pro.Cron.html).
 
   ## Usage
@@ -22,6 +22,7 @@ defmodule Oban.Cron do
         {"* * * * *", MyApp.MinuteWorker},
         {"0 * * * *", MyApp.HourlyWorker, args: %{custom: "arg"}},
         {"0 0 * * *", MyApp.DailyWorker, max_attempts: 1},
+        {"0 9 * * *", MyApp.LocalWorker, timezone: "America/Chicago"},
         {"0 12 * * MON", MyApp.MondayWorker, queue: :scheduled, tags: ["mondays"]},
         {"@daily", MyApp.AnotherDailyWorker}
       ]
@@ -47,7 +48,8 @@ defmodule Oban.Cron do
 
   * `:timezone` — which timezone to use when scheduling cron jobs. To use a timezone other than
     the default of `Etc/UTC` you *must* have a timezone database like [tz][tz] installed and
-    configured.
+    configured. Individual crontab entries may override the default by specifying `:timezone` in
+    their options.
 
   ## Instrumenting with Telemetry
 
@@ -72,7 +74,8 @@ defmodule Oban.Cron do
 
   @opaque expression :: Expression.t()
 
-  @type cron_input :: {binary(), module()} | {binary(), module(), [Job.option()]}
+  @type cron_input :: {binary(), module()} | {binary(), module(), [cron_option()]}
+  @type cron_option :: Job.option() | {:timezone, Calendar.time_zone()}
 
   @type option ::
           Plugin.option()
@@ -257,8 +260,13 @@ defmodule Oban.Cron do
   defp parse_crontab(%State{crontab: crontab} = state) do
     parsed =
       Enum.map(crontab, fn
-        {expr, worker} -> {expr, Expression.parse!(expr), worker, []}
-        {expr, worker, opts} -> {expr, Expression.parse!(expr), worker, opts}
+        {expr, worker} ->
+          {expr, Expression.parse!(expr), worker, [], state.timezone}
+
+        {expr, worker, opts} ->
+          timezone = Keyword.get(opts, :timezone, state.timezone)
+
+          {expr, Expression.parse!(expr), worker, opts, timezone}
       end)
 
     %{state | crontab: parsed}
@@ -268,8 +276,11 @@ defmodule Oban.Cron do
     Validation.validate(:crontab, crontab, &validate_crontab/1)
   end
 
-  defp validate_crontab({expr, worker, opts}) do
-    with {:ok, _} <- parse(expr) do
+  defp validate_crontab({expr, worker, opts}) when is_list(opts) do
+    timezone = Keyword.get(opts, :timezone, "Etc/UTC")
+
+    with {:ok, _} <- parse(expr),
+         :ok <- Validation.validate_timezone(:timezone, timezone) do
       cond do
         not Code.ensure_loaded?(worker) ->
           {:error, "#{inspect(worker)} not found or can't be loaded"}
@@ -280,7 +291,7 @@ defmodule Oban.Cron do
         not Keyword.keyword?(opts) ->
           {:error, "options must be a keyword list, got: #{inspect(opts)}"}
 
-        not build_changeset(worker, opts, expr, "Etc/UTC").valid? ->
+        not build_changeset(worker, opts, expr, timezone).valid? ->
           {:error, "expected valid job options, got: #{inspect(opts)}"}
 
         true ->
@@ -291,6 +302,10 @@ defmodule Oban.Cron do
 
   defp validate_crontab({expr, worker}) do
     validate_crontab({expr, worker, []})
+  end
+
+  defp validate_crontab({_expr, _worker, opts}) do
+    {:error, "options must be a keyword list, got: #{inspect(opts)}"}
   end
 
   defp validate_crontab(invalid) do
@@ -310,17 +325,21 @@ defmodule Oban.Cron do
   # Inserting Helpers
 
   defp discard_reboots(state) do
-    crontab = Enum.reject(state.crontab, fn {_expr, parsed, _worker, _opts} -> parsed.reboot? end)
+    crontab =
+      Enum.reject(state.crontab, fn {_expr, parsed, _worker, _opts, _timezone} ->
+        parsed.reboot?
+      end)
 
     %{state | crontab: crontab}
   end
 
   defp insert_scheduled_jobs(state) do
     fun = fn ->
-      {:ok, datetime} = DateTime.now(state.timezone)
+      now = DateTime.utc_now()
 
-      for {expr, parsed, worker, opts} <- state.crontab, Expression.now?(parsed, datetime) do
-        Oban.insert!(state.conf.name, build_changeset(worker, opts, expr, state.timezone))
+      for {expr, parsed, worker, opts, timezone} <- state.crontab,
+          Expression.now?(parsed, DateTime.shift_zone!(now, timezone)) do
+        Oban.insert!(state.conf.name, build_changeset(worker, opts, expr, timezone))
       end
     end
 
@@ -340,7 +359,10 @@ defmodule Oban.Cron do
   defp build_changeset(worker, opts, expr, timezone) do
     name = entry_name({expr, worker, opts})
 
-    {args, opts} = Keyword.pop(opts, :args, %{})
+    {args, opts} =
+      opts
+      |> Keyword.delete(:timezone)
+      |> Keyword.pop(:args, %{})
 
     meta = %{cron: true, cron_expr: expr, cron_name: name, cron_tz: timezone}
 

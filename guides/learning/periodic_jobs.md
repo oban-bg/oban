@@ -143,8 +143,9 @@ For more in depth information, see the man documentation for `cron` and `crontab
 ## Caveats & Guidelines
 
 * **Timezone Considerations**: All schedules are evaluated as UTC unless a different timezone is
-  provided. See `Oban.Cron` documentation for information about configuring a timezone to
-  ensure jobs run at the expected local time.
+  provided, either for the whole crontab or for individual entries with a `:timezone` option. See
+  `Oban.Cron` documentation for information about configuring a timezone to ensure jobs run at the
+  expected local time.
 
 * **Dual-Purpose Workers**: Workers can be used for both regular one-time jobs _and_ scheduled
   periodic jobs, as long as they're designed to accept different arguments appropriately. This

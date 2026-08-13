@@ -63,6 +63,14 @@ defmodule Oban.CronTest do
       assert_valid(timezone: "America/Chicago")
     end
 
+    test "entry :timezone is validated as a known timezone" do
+      refute_valid("expected :timezone to be a known timezone",
+        crontab: [{"* * * * *", CronWork, timezone: "america/chicago"}]
+      )
+
+      assert_valid(crontab: [{"* * * * *", CronWork, timezone: "America/Chicago"}])
+    end
+
     test "providing suggestions for unknown options" do
       assert {:error, "unknown option :cronta, did you mean :crontab?"} =
                Cron.validate(cronta: [])
@@ -111,6 +119,26 @@ defmodule Oban.CronTest do
     )
 
     assert [1] == inserted_refs()
+  end
+
+  test "cron jobs are scheduled using per-entry timezones" do
+    {:ok, %DateTime{hour: chi_hour}} = DateTime.now("America/Chicago")
+    {:ok, %DateTime{hour: utc_hour}} = DateTime.now("Etc/UTC")
+
+    run_with_opts(
+      timezone: "Etc/UTC",
+      crontab: [
+        {"* #{chi_hour} * * *", CronWork, args: worker_args(1), timezone: "America/Chicago"},
+        {"* #{utc_hour} * * *", CronWork, args: worker_args(2), timezone: "America/Chicago"},
+        {"* #{utc_hour} * * *", CronWork, args: worker_args(3)}
+      ]
+    )
+
+    assert [1, 3] == inserted_refs()
+
+    cron_timezones = Job |> Repo.all() |> Enum.map(& &1.meta["cron_tz"]) |> Enum.sort()
+
+    assert cron_timezones == ["America/Chicago", "Etc/UTC"]
   end
 
   test "cron schedules are injected into the enqueued job's meta" do

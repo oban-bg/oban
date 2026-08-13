@@ -76,6 +76,15 @@ defmodule Oban.Validation do
     end
   end
 
+  @doc false
+  def validate_timezone(key, value) do
+    if is_binary(value) and match?({:ok, _}, DateTime.now(value)) do
+      :ok
+    else
+      {:error, "expected #{inspect(key)} to be a known timezone, got: #{inspect(value)}"}
+    end
+  end
+
   # Type Validators
 
   defp validate_type(:any, _key, _val), do: :ok
@@ -288,13 +297,7 @@ defmodule Oban.Validation do
     end
   end
 
-  defp validate_type(:timezone, key, val) do
-    if is_binary(val) and match?({:ok, _}, DateTime.now(val)) do
-      :ok
-    else
-      {:error, "expected #{inspect(key)} to be a known timezone, got: #{inspect(val)}"}
-    end
-  end
+  defp validate_type(:timezone, key, val), do: validate_timezone(key, val)
 
   defp validate_type({:tuple, list_of_type}, key, val) when is_tuple(val) do
     all_valid? =
