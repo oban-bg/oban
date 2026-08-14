@@ -124,3 +124,26 @@ Look for these log messages confirming the switch to local mode:
 - Wait for leadership restablishment after a restart in development
 - Use `Oban.Peers.Global` in development
 - Fix clustering and pubsub notifications in production
+
+## High Query Volume from Busy Queues
+
+Queues fetch available jobs after a brief [dispatch_cooldown][dc], which defaults to `5ms`. That
+favors low latency between insertion and execution, but every fetch is a database query and a busy
+queue may fetch up to 200 times per second.
+
+Increasing the cooldown will batche demand into fewer, larger fetches. For example, a cooldown of
+`50ms` reduces fetch queries by roughly 10x:
+
+```elixir
+config :my_app, Oban,
+  dispatch_cooldown: 50,
+  ...
+```
+
+There are two trade-offs to consider. First, jobs start roughly one cooldown period after
+insertion. Second, the cooldown caps a queue's maximum throughput at approximately `(1000 /
+cooldown) * limit` jobs per second. Neither of these trade-offs matter unless jobs must start
+within milliseconds of insertion, or a queue runs many jobs that each finish faster than the
+cooldown itself.
+
+[dc]: Oban.html#start_link/1-twiddly-options
