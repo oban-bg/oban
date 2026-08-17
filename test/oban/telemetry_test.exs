@@ -264,6 +264,24 @@ defmodule Oban.TelemetryTest do
       assert logged =~ ~r|"duration":\d{1,}|
     end
 
+    test "logging plugin stop events for a failed run", %{name: name} do
+      Code.ensure_loaded(Oban.Cron)
+
+      logged =
+        capture_log(fn ->
+          :telemetry.execute([:oban, :plugin, :stop], %{duration: 1000}, %{
+            conf: %{name: name},
+            plugin: Oban.Cron,
+            jobs: [],
+            error: %RuntimeError{message: "something went wrong"}
+          })
+        end)
+
+      assert logged =~ ~s("event":"plugin:stop")
+      assert logged =~ ~s("jobs":[])
+      assert logged =~ ~s|"error":"** (RuntimeError)|
+    end
+
     test "logging plugin exception events", %{name: name} do
       logged =
         capture_log(fn ->

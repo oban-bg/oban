@@ -115,7 +115,7 @@ defmodule Oban.Reindexer do
         :ok ->
           {:ok, meta}
 
-        error ->
+        {:error, error} ->
           {:error, Map.put(meta, :error, error)}
       end
     end)

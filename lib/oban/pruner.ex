@@ -46,6 +46,9 @@ defmodule Oban.Pruner do
 
   * `:pruned_jobs` - the jobs that were deleted from the database
 
+  When a run can't reach the database the list is empty, the count is zero, and an `:error` is
+  added to the metadata, as described in `Oban.Telemetry`.
+
   _Note: jobs only include `id`, `queue`, `state` fields._
   """
 
@@ -128,11 +131,11 @@ defmodule Oban.Pruner do
 
     :telemetry.span([:oban, :plugin], meta, fn ->
       case check_leadership_and_delete_jobs(state) do
-        {:ok, extra} when is_map(extra) ->
+        {:ok, extra} ->
           {:ok, Map.merge(meta, extra)}
 
-        error ->
-          {:error, Map.put(meta, :error, error)}
+        {:error, error} ->
+          {:error, Map.merge(meta, %{error: error, pruned_count: 0, pruned_jobs: []})}
       end
     end)
 

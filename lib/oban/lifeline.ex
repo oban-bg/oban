@@ -48,6 +48,9 @@ defmodule Oban.Lifeline do
 
   * `:discarded_jobs` — a list of jobs transitioned to `discarded`
 
+  When a run can't reach the database both lists are empty and an `:error` is added to the
+  metadata, as described in `Oban.Telemetry`.
+
   _Note: jobs only include `id`, `queue`, `state` fields._
   """
 
@@ -130,11 +133,11 @@ defmodule Oban.Lifeline do
 
     :telemetry.span([:oban, :plugin], meta, fn ->
       case check_leadership_and_rescue_jobs(state) do
-        {:ok, extra} when is_map(extra) ->
+        {:ok, extra} ->
           {:ok, Map.merge(meta, extra)}
 
-        error ->
-          {:error, Map.put(meta, :error, error)}
+        {:error, error} ->
+          {:error, Map.merge(meta, %{discarded_jobs: [], error: error, rescued_jobs: []})}
       end
     end)
 

@@ -58,6 +58,9 @@ defmodule Oban.Cron do
 
   * `:jobs` — a list of jobs that were inserted into the database
 
+  When a run can't reach the database the list is empty and an `:error` is added to the metadata,
+  as described in `Oban.Telemetry`.
+
   [tz]: https://tz.hexdocs.pm
   [perjob]: periodic_jobs.html
   """
@@ -350,8 +353,8 @@ defmodule Oban.Cron do
         {:ok, inserted_jobs} ->
           {:ok, Map.put(meta, :jobs, inserted_jobs)}
 
-        error ->
-          {:error, Map.put(meta, :error, error)}
+        {:error, error} ->
+          {:error, Map.merge(meta, %{error: error, jobs: []})}
       end
     end)
   end

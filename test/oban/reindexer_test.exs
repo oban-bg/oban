@@ -116,7 +116,7 @@ defmodule Oban.ReindexerTest do
 
       assert_receive {:event, :stop, _, %{plugin: Reindexer, error: error}}, 2_000
 
-      assert {:error, [_, _]} = error
+      assert [_, _] = error
 
       stop_supervised(name)
     end

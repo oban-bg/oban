@@ -69,7 +69,7 @@ defmodule Oban.Stager do
           {:ok, Map.merge(meta, %{staged_count: length(staged), staged_jobs: staged})}
 
         {:error, error} ->
-          {:error, Map.put(meta, :error, error)}
+          {:error, Map.merge(meta, %{error: error, staged_count: 0, staged_jobs: []})}
       end
     end)
 

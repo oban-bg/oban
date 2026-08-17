@@ -179,8 +179,19 @@ defmodule Oban.Telemetry do
   | ------------ | --------------- | ----------------------------------------------------- |
   | `:init`      |                 | `:conf`, `:plugin`                                    |
   | `:start`     | `:system_time`  | `:conf`, `:plugin`                                    |
-  | `:stop`      | `:duration`     | `:conf`, `:plugin`                                    |
+  | `:stop`      | `:duration`     | `:conf`, `:plugin`, `:error`                          |
   | `:exception` | `:duration`     | `:conf`, `:plugin`, `:kind`, `:reason`, `:stacktrace` |
+
+  #### Metadata
+
+  * `:conf`, `:kind`, `:reason`, `:stacktrace` — see the explanation in notifier metadata above
+  * `:plugin` — the plugin module that emitted the event
+  * `:error` — the error that prevented a run from finishing its work, only present when a run
+    fails
+
+  A run that fails, e.g. because the database is unavailable, still emits a `:stop` event. Plugin
+  specific metadata is always present in `:stop` metadata, with empty or zeroed values when the
+  run failed, so handlers may match on the documented keys without a fallback clause.
 
   ## Peer Events
 
@@ -378,6 +389,7 @@ defmodule Oban.Telemetry do
   * `event` — `plugin:stop` or `plugin:exception`
   * `plugin` — the plugin module
   * `duration` — the runtime duration in microseconds
+  * `error` — a formatted error, only included when a run failed
 
   Other values may be included depending on the plugin.
 
@@ -616,11 +628,10 @@ defmodule Oban.Telemetry do
 
     if function_exported?(plugin, :format_logger_output, 2) do
       log(opts, fn ->
-        formatted = plugin.format_logger_output(conf, meta)
-
         %{event: "plugin:stop", plugin: inspect(plugin)}
         |> Map.put(:duration, convert(measure.duration))
-        |> Map.merge(formatted)
+        |> Map.merge(plugin.format_logger_output(conf, meta))
+        |> Map.merge(error_output(meta))
       end)
     end
   end
@@ -660,6 +671,9 @@ defmodule Oban.Telemetry do
   end
 
   defp dispatch_event(_event, _measure, _meta, _opts), do: :ok
+
+  defp error_output(%{error: error}), do: %{error: Exception.format_banner(:error, error)}
+  defp error_output(_meta), do: %{}
 
   defp log(opts, fun) do
     level = Keyword.fetch!(opts, :level)
