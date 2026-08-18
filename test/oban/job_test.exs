@@ -1,6 +1,8 @@
 defmodule Oban.JobTest do
   use Oban.Case, async: true
 
+  import Ecto.Query, only: [order_by: 2, limit: 2]
+
   alias Ecto.Changeset
 
   doctest Oban.Job
@@ -361,8 +363,6 @@ defmodule Oban.JobTest do
     end
 
     test "composing with further Ecto.Query calls" do
-      import Ecto.Query, only: [order_by: 2, limit: 2]
-
       insert!(%{}, worker: Worker, priority: 9)
       insert!(%{}, worker: Worker, priority: 1)
       insert!(%{}, worker: Worker, priority: 5)

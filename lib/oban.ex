@@ -15,6 +15,8 @@ defmodule Oban do
 
   use Supervisor
 
+  import Ecto.Query, only: [where: 2]
+
   alias Ecto.{Changeset, Multi}
   alias Oban.{Config, Engine, Harbor, Job, Notifier, Nursery, Peer, Registry, Repo, Sonar}
   alias Oban.Queues.{Drainer, Producer}
@@ -1490,8 +1492,6 @@ defmodule Oban do
   def cancel_job(name, %Job{id: job_id}), do: cancel_job(name, job_id)
 
   def cancel_job(name, job_id) when is_integer(job_id) do
-    import Ecto.Query, only: [where: 2]
-
     with {:ok, _count} <- cancel_all_jobs(name, where(Job, id: ^job_id)), do: :ok
   end
 
