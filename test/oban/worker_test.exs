@@ -214,11 +214,11 @@ defmodule Oban.WorkerTest do
     end
   end
 
-  test "warning on questionable unique :states at compile time" do
+  test "warning on unique :states without an insert state at compile time" do
     warning =
       ExUnit.CaptureIO.capture_io(:stderr, fn ->
-        defmodule GappyUniqueStates do
-          use Oban.Worker, unique: [states: [:available, :executing, :scheduled]]
+        defmodule NoInsertUniqueStates do
+          use Oban.Worker, unique: [states: [:completed]]
 
           def perform(_), do: :ok
         end

@@ -34,6 +34,13 @@ Uniqueness is based on a combination of job attributes based on the following op
   * `:timestamp` — Which job timestamp to check the period against. The available timestamps are
     `:inserted_at` or `:scheduled_at`. Defaults to `:inserted_at` for legacy reasons.
 
+> #### Always Include an Insert State {: .tip}
+>
+> Newly inserted jobs land in `available`, `scheduled`, or `suspended`, and uniqueness is only
+> checked at insert time. A custom `:states` list that omits all three, e.g. `[:completed]`, won't
+> detect a duplicate until the original job leaves the state it was inserted into. Workers with
+> such a list emit a compile time warning.
+
 The simplest form of uniqueness will configure uniqueness for as long as a matching job exists in
 the database, regardless of state:
 

@@ -837,28 +837,12 @@ defmodule Oban.Job do
   def warn_unique(unique) when is_list(unique) do
     case Keyword.get(unique, :states) do
       [_ | _] = states ->
-        incomplete_states = unique_states(:incomplete)
-
-        present_insertion = for state <- @insertion_states, state in states, do: state
-        missing_in_flight = for state <- incomplete_states, state not in states, do: state
-
-        cond do
-          Enum.all?(states, fn state -> state in @insertion_states end) ->
-            :ok
-
-          present_insertion == [] ->
-            {:warn,
-             "unique :states #{inspect(states)} doesn't include any of " <>
-               "#{inspect(@insertion_states)}, duplicates won't be detected"}
-
-          missing_in_flight != [] ->
-            {:warn,
-             "unique :states #{inspect(states)} is missing incomplete states " <>
-               "#{inspect(missing_in_flight)} which may break uniqueness, " <>
-               "use a unique group like :incomplete"}
-
-          true ->
-            :ok
+        if Enum.any?(@insertion_states, &(&1 in states)) do
+          :ok
+        else
+          {:warn,
+           "unique :states #{inspect(states)} doesn't include any insert states " <>
+             "and duplicates won't be detected"}
         end
 
       _ ->
