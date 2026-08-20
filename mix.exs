@@ -2,7 +2,7 @@ defmodule Oban.MixProject do
   use Mix.Project
 
   @source_url "https://github.com/oban-bg/oban"
-  @version "2.23.0"
+  @version "2.24.0"
 
   def project do
     [
@@ -93,6 +93,7 @@ defmodule Oban.MixProject do
       "guides/upgrading/v2.17.md",
       "guides/upgrading/v2.20.md",
       "guides/upgrading/v2.21.md",
+      "guides/upgrading/v2.24.md",
 
       # Recipes
       "guides/recipes/recursive-jobs.md",
