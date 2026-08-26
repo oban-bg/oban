@@ -1019,6 +1019,7 @@ defmodule Oban do
   * `:local_only` - whether the queue will be started only on the local node, default: `false`
   * `:limit` - set the concurrency limit, required
   * `:paused` — set whether the queue starts in the "paused" state, optional
+  * `:dispatch_cooldown` — set the average time between fetching jobs, optional
 
   In addition, all engine-specific queue options are passed along after validation.
 
@@ -1049,8 +1050,11 @@ defmodule Oban do
   def start_queue(name \\ __MODULE__, [_ | _] = opts) do
     conf = config(name)
 
-    validate_queue_opts!(opts, ~w(local_only node queue)a)
-    validate_engine_meta!(conf, opts)
+    validate_queue_opts!(opts, ~w(dispatch_cooldown local_only node queue)a)
+
+    opts
+    |> Keyword.delete(:dispatch_cooldown)
+    |> then(&validate_engine_meta!(conf, &1))
 
     data =
       opts
@@ -1746,6 +1750,13 @@ defmodule Oban do
   defp validate_queue_opts!({:local_only, local_only}) do
     if not is_boolean(local_only) do
       raise ArgumentError, "expected :local_only to be a boolean, got: #{inspect(local_only)}"
+    end
+  end
+
+  defp validate_queue_opts!({:dispatch_cooldown, dispatch_cooldown}) do
+    if not (is_integer(dispatch_cooldown) and dispatch_cooldown > 0) do
+      raise ArgumentError,
+            "expected :dispatch_cooldown to be a positive integer, got: #{inspect(dispatch_cooldown)}"
     end
   end
 

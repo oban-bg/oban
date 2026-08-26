@@ -482,6 +482,7 @@ defmodule ObanTest do
       assert_invalid_opts(name, :start_queue, [])
       assert_invalid_opts(name, :start_queue, queue: nil)
       assert_invalid_opts(name, :start_queue, limit: -1)
+      assert_invalid_opts(name, :start_queue, limit: 1, dispatch_cooldown: 0)
       assert_invalid_opts(name, :start_queue, local_only: -1)
       assert_invalid_opts(name, :start_queue, wat: -1)
     end
@@ -491,13 +492,19 @@ defmodule ObanTest do
 
       assert :ok = Oban.start_queue(name, queue: :gamma, limit: 5, refresh_interval: 10)
       assert :ok = Oban.start_queue(name, queue: :delta, limit: 6, paused: true)
+      assert :ok = Oban.start_queue(name, queue: :epsilon, limit: 5, dispatch_cooldown: 50)
       assert :ok = Oban.start_queue(name, queue: :alpha, limit: 5)
 
       with_backoff(fn ->
         assert supervised_queue?(name, "alpha")
         assert supervised_queue?(name, "delta")
+        assert supervised_queue?(name, "epsilon")
         assert supervised_queue?(name, "gamma")
       end)
+
+      producer = Registry.whereis(name, {:producer, "epsilon"})
+
+      assert %{dispatch_cooldown: 50} = :sys.get_state(producer)
     end
 
     test "starting queues only on the local node" do
