@@ -47,7 +47,15 @@ defmodule Oban.MixProject do
   end
 
   def cli do
-    [preferred_envs: [bench: :test, "test.ci": :test, "test.reset": :test, "test.setup": :test]]
+    [
+      preferred_envs: [
+        bench: :test,
+        precommit: :test,
+        "test.ci": :test,
+        "test.reset": :test,
+        "test.setup": :test
+      ]
+    ]
   end
 
   def application do
@@ -208,6 +216,12 @@ defmodule Oban.MixProject do
   defp aliases do
     [
       bench: "run bench/bench_helper.exs",
+      precommit: [
+        "format --check-formatted",
+        "deps.unlock --check-unused",
+        "credo --strict",
+        "test --raise"
+      ],
       release: [
         "cmd git tag v#{@version}",
         "cmd git push",
