@@ -7,22 +7,27 @@ assignees: ''
 
 ---
 
-### Precheck
+### Before Submitting
 
-- Do a quick search and make sure the bug has not yet been reported
+- If you used an AI assistant, review and revise the output before submitting
+- Search existing issues to make sure the bug has not already been reported
 - For support, favor using the Elixir Forum, Slack, IRC, etc.
 - Be friendly and polite!
 
 ### Environment
 
-- Oban Version
-- PostgreSQL Version
-- Elixir & Erlang/OTP Versions (`elixir --version`)
+- Oban version:
+- PostgreSQL version:
+- Elixir and Erlang/OTP versions (`elixir --version`):
+
+### Steps to Reproduce
+
+<!-- Provide a minimal code sample or a sequence of steps that reliably reproduces the problem. -->
 
 ### Current Behavior
 
-Include code samples, errors and stacktraces if appropriate.
+<!-- Describe what happens, including any relevant errors or stacktraces. -->
 
 ### Expected Behavior
 
-A short description on how you expect the code to behave.
+<!-- Describe what you expected to happen. -->

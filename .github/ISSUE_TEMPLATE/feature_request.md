@@ -7,18 +7,24 @@ assignees: ''
 
 ---
 
-### Is your feature request related to a problem? Please describe.
+### Before Submitting
 
-A clear and concise description of what the problem is. Ex. I'm always frustrated when [...]
+- If you used an AI assistant, review and revise the output before submitting
+- Search existing issues to make sure the feature has not already been requested
+- Be friendly and polite!
 
-### Describe the Solution You'd Like
+### Problem
 
-A clear and concise description of what you want to happen.
+<!-- Clearly and concisely describe the problem you've encountered and why it matters. -->
 
-### Describe Alternatives You've Considered
+### Proposed Solution
 
-A clear and concise description of any alternative solutions or features you've considered.
+<!-- Clearly and concisely describe what you want to happen. -->
+
+### Alternatives Considered
+
+<!-- Describe any alternative solutions or features you've considered. -->
 
 ### Additional Context
 
-Add any other context or screenshots about the feature request here.
+<!-- Add any other context or screenshots about the feature request here. -->
