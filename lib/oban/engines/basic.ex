@@ -11,6 +11,9 @@ defmodule Oban.Engines.Basic do
 
   @behaviour Oban.Engine
 
+  @acking_states ["executing"]
+  @cancel_states ["executing", "cancelled"]
+
   import Ecto.Query
   import DateTime, only: [utc_now: 0]
 
@@ -224,11 +227,9 @@ defmodule Oban.Engines.Basic do
 
   @impl Engine
   def complete_job(%Config{} = conf, %Job{} = job) do
-    Repo.update_all(
-      conf,
-      where(Job, id: ^job.id),
-      set: [state: "completed", completed_at: utc_now()]
-    )
+    query = ack_query(job, @acking_states)
+
+    Repo.update_all(conf, query, set: [state: "completed", completed_at: utc_now()])
 
     :ok
   end
@@ -236,8 +237,8 @@ defmodule Oban.Engines.Basic do
   @impl Engine
   def discard_job(%Config{} = conf, %Job{} = job) do
     query =
-      Job
-      |> where(id: ^job.id)
+      job
+      |> ack_query(@acking_states)
       |> update([j],
         set: [
           state: "discarded",
@@ -254,8 +255,8 @@ defmodule Oban.Engines.Basic do
   @impl Engine
   def error_job(%Config{} = conf, %Job{} = job, seconds) when is_integer(seconds) do
     query =
-      Job
-      |> where(id: ^job.id)
+      job
+      |> ack_query(@acking_states)
       |> update([j],
         set: [
           state: "retryable",
@@ -270,7 +271,7 @@ defmodule Oban.Engines.Basic do
   end
 
   @impl Engine
-  def snooze_job(%Config{} = conf, %Job{id: id, meta: meta}, seconds) when is_integer(seconds) do
+  def snooze_job(%Config{} = conf, %Job{meta: meta} = job, seconds) when is_integer(seconds) do
     meta = Map.update(meta, "snoozed", 1, &(&1 + 1))
 
     updates = [
@@ -278,29 +279,35 @@ defmodule Oban.Engines.Basic do
       inc: [attempt: -1]
     ]
 
-    Repo.update_all(conf, where(Job, id: ^id), updates)
+    Repo.update_all(conf, ack_query(job, @acking_states), updates)
 
     :ok
   end
 
   @impl Engine
-  def cancel_job(%Config{} = conf, %Job{} = job) do
-    query = where(Job, id: ^job.id)
-
+  def cancel_job(%Config{} = conf, %Job{unsaved_error: unsaved} = job) when is_map(unsaved) do
     query =
-      if is_map(job.unsaved_error) do
-        update(query, [j],
-          set: [
-            state: "cancelled",
-            cancelled_at: ^utc_now(),
-            errors: concat_errors(j.errors, ^[Job.format_attempt(job)])
-          ]
-        )
-      else
-        query
-        |> where([j], j.state not in ["cancelled", "completed", "discarded"])
-        |> update(set: [state: "cancelled", cancelled_at: ^utc_now()])
-      end
+      job
+      |> ack_query(@cancel_states)
+      |> update([j],
+        set: [
+          state: "cancelled",
+          cancelled_at: ^utc_now(),
+          errors: concat_errors(j.errors, ^[Job.format_attempt(job)])
+        ]
+      )
+
+    Repo.update_all(conf, query, [])
+
+    :ok
+  end
+
+  def cancel_job(%Config{} = conf, %Job{} = job) do
+    query =
+      Job
+      |> where(id: ^job.id)
+      |> where([j], j.state not in ["cancelled", "completed", "discarded"])
+      |> update(set: [state: "cancelled", cancelled_at: ^utc_now()])
 
     Repo.update_all(conf, query, [])
 
@@ -558,6 +565,13 @@ defmodule Oban.Engines.Basic do
       nil -> nil
       job -> {:ok, job}
     end
+  end
+
+  defp ack_query(%Job{} = job, states) do
+    Job
+    |> where([j], j.id == ^job.id)
+    |> where([j], j.state in ^states)
+    |> where([j], j.attempted_at == ^job.attempted_at)
   end
 
   defp seconds_from_now(seconds), do: DateTime.add(utc_now(), seconds, :second)

@@ -5,7 +5,7 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite, Oban.Engines.Dolphin] do
     alias Ecto.Adapters.SQL.Sandbox
     alias Ecto.Multi
     alias Oban.Engines.{Basic, Dolphin, Lite}
-    alias Oban.{Notifier, TelemetryHandler}
+    alias Oban.{Engine, Notifier, TelemetryHandler}
 
     @engine engine
 
@@ -14,6 +14,8 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite, Oban.Engines.Dolphin] do
              Dolphin -> DolphinRepo
              Lite -> LiteRepo
            end)
+
+    @unsaved %{kind: :error, reason: %RuntimeError{message: "boom"}, stacktrace: []}
 
     @moduletag lite: engine == Lite
     @moduletag dolphin: engine == Dolphin
@@ -694,8 +696,23 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite, Oban.Engines.Dolphin] do
 
         meta = %{"key" => "val", "snoozed" => 1}
 
-        job_1 = insert!(name, %{ref: 1}, state: "executing", attempt: 2, max_attempts: 5)
-        job_2 = insert!(name, %{ref: 2}, state: "executing", attempt: 2, meta: meta)
+        attempted_at = DateTime.utc_now()
+
+        job_1 =
+          insert!(name, %{ref: 1},
+            state: "executing",
+            attempt: 2,
+            attempted_at: attempted_at,
+            max_attempts: 5
+          )
+
+        job_2 =
+          insert!(name, %{ref: 2},
+            state: "executing",
+            attempt: 2,
+            attempted_at: attempted_at,
+            meta: meta
+          )
 
         assert :ok = Oban.Engine.snooze_job(conf, job_1, 60)
         assert :ok = Oban.Engine.snooze_job(conf, job_2, 60)
@@ -703,6 +720,48 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite, Oban.Engines.Dolphin] do
         assert %Job{state: "scheduled", scheduled_at: %_{}} = job_1 = reload(name, job_1)
         assert %Job{attempt: 1, max_attempts: 5, meta: %{"snoozed" => 1}} = job_1
         assert %Job{attempt: 1, meta: %{"key" => "val", "snoozed" => 2}} = reload(name, job_2)
+      end
+    end
+
+    describe "acking" do
+      setup :start_supervised_oban
+
+      test "stale executions can't overwrite a newer execution's state", %{name: name} do
+        conf = Oban.config(name)
+
+        ackers = [
+          &Engine.complete_job/2,
+          &Engine.discard_job/2,
+          &Engine.error_job(&1, &2, 60),
+          &Engine.snooze_job(&1, &2, 60),
+          &Engine.cancel_job/2
+        ]
+
+        for ack <- ackers do
+          job = insert!(name, %{ref: 1}, state: "executing", attempted_at: seconds_ago(30))
+
+          # A newer execution takes over the row and completes it
+          now = DateTime.utc_now()
+
+          changes = [state: "completed", attempt: 2, attempted_at: now, completed_at: now]
+
+          {:ok, _} = Oban.Repo.update(conf, Ecto.Changeset.change(job, changes))
+
+          assert :ok = ack.(conf, %{job | unsaved_error: @unsaved})
+
+          assert %Job{state: "completed", attempt: 2, errors: []} = reload(name, job)
+        end
+      end
+
+      test "an execution cancelled while running records its error", %{name: name} do
+        conf = Oban.config(name)
+
+        job = insert!(name, %{ref: 1}, state: "executing", attempted_at: DateTime.utc_now())
+
+        assert :ok = Oban.cancel_job(name, job)
+        assert :ok = Engine.cancel_job(conf, %{job | unsaved_error: @unsaved})
+
+        assert %Job{state: "cancelled", errors: [_]} = reload(name, job)
       end
     end
 
