@@ -11,14 +11,14 @@ defmodule Oban.Engines.Basic do
 
   @behaviour Oban.Engine
 
-  @acking_states ["executing"]
-  @cancel_states ["executing", "cancelled"]
-
   import Ecto.Query
   import DateTime, only: [utc_now: 0]
 
   alias Ecto.Changeset
   alias Oban.{Config, Engine, Job, Repo}
+
+  @acking_states ["executing"]
+  @cancel_states ["executing", "cancelled"]
 
   # This is a replacement for `push`, which uses `array_append` and isn't compatible with jsonb
   # arrays. The `||` operator works with both arrays and jsonb.

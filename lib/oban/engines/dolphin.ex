@@ -15,15 +15,15 @@ defmodule Oban.Engines.Dolphin do
 
   @behaviour Oban.Engine
 
-  @acking_states ["executing"]
-  @cancel_states ["executing", "cancelled"]
-
   import DateTime, only: [utc_now: 0]
   import Ecto.Query
 
   alias Ecto.Changeset
   alias Oban.{Config, Engine, Job, Repo}
   alias Oban.Engines.Basic
+
+  @acking_states ["executing"]
+  @cancel_states ["executing", "cancelled"]
 
   defmacrop json_push(column, value) do
     quote do

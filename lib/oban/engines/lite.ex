@@ -15,15 +15,15 @@ defmodule Oban.Engines.Lite do
 
   @behaviour Oban.Engine
 
-  @acking_states ["executing"]
-  @cancel_states ["executing", "cancelled"]
-
   import DateTime, only: [utc_now: 0]
   import Ecto.Query
 
   alias Ecto.Changeset
   alias Oban.Engines.Basic
   alias Oban.{Config, Engine, Job, JSON, Repo}
+
+  @acking_states ["executing"]
+  @cancel_states ["executing", "cancelled"]
 
   @forever 60 * 60 * 24 * 365 * 99
 
