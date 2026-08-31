@@ -6,10 +6,7 @@ defmodule Oban.Validation do
 
   require Period
 
-  @type validator ::
-          ({atom(), term()} ->
-             :ok
-             | {:error, term()})
+  @type validator :: ({atom(), term()} -> :ok | {:error, term()})
 
   def validate(parent_key \\ nil, opts, validator)
 
