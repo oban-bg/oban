@@ -5,7 +5,7 @@ defmodule Oban.Application do
 
   def start(_type, _args) do
     Supervisor.start_link(
-      [Oban.Registry],
+      [Oban.Registry, Oban.Notifier.Registry],
       strategy: :one_for_one,
       name: __MODULE__
     )

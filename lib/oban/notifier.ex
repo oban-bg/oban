@@ -40,6 +40,14 @@ defmodule Oban.Notifier do
 
   * `sonar` — periodic notification checks to monitor pubsub health and determine connectivity
 
+  > #### Durable Listeners {: .info}
+  >
+  > Listeners are tracked in a registry that lives outside of the notifier process. Registration
+  > happens transparently through `listen/2` and `unlisten/2`, and entries are removed
+  > automatically when the listening process exits. Because registrations survive a notifier
+  > crash, listening processes are guaranteed to receive notifications after the notifier restarts
+  > without any monitoring or resubscribing on their part.
+
   ## Examples
 
   Broadcasting after a job is completed:
@@ -78,6 +86,7 @@ defmodule Oban.Notifier do
   """
 
   alias Oban.{Config, JSON, Registry, Sonar}
+  alias Oban.Notifier.Registry, as: Listeners
 
   require Logger
 
@@ -128,6 +137,10 @@ defmodule Oban.Notifier do
 
       {:notification, channel :: channel(), decoded :: map()}
 
+  Registration is durable across notifier restarts. If the notifier is unavailable when `listen/2`
+  is called, e.g. because it is restarting after a crash, the registration is still recorded and
+  the notifier picks it up when it reconnects.
+
   ## Example
 
   Register to listen for all `:gossip` channel messages:
@@ -142,9 +155,20 @@ defmodule Oban.Notifier do
 
       Oban.Notifier.listen(MyApp.MyOban, [:gossip, :signal])
   """
-  @spec listen(name_or_conf(), channel() | [channel()]) :: :ok | {:error, Exception.t()}
+  @spec listen(name_or_conf(), channel() | [channel()]) :: :ok
   def listen(name_or_conf \\ Oban, channels) when is_atom(channels) or is_list(channels) do
-    apply_callback(name_or_conf, :listen, [normalize_channels(channels)])
+    conf = to_conf(name_or_conf)
+    channels = normalize_channels(channels)
+
+    for channel <- channels, do: Listeners.register(conf, channel)
+
+    apply_callback(conf, :listen, [channels])
+
+    :ok
+  catch
+    # The registry is the source of truth. A notifier that's missing or crashing mid-call will
+    # pick registrations up when it restarts, so there's nothing for the caller to handle.
+    :exit, _reason -> :ok
   end
 
   @doc """
@@ -164,9 +188,18 @@ defmodule Oban.Notifier do
 
       Oban.Notifier.unlisten(MyApp.MyOban, [:gossip])
   """
-  @spec unlisten(name_or_conf(), channel() | [channel()]) :: :ok | {:error, Exception.t()}
+  @spec unlisten(name_or_conf(), channel() | [channel()]) :: :ok
   def unlisten(name_or_conf \\ Oban, channels) when is_atom(channels) or is_list(channels) do
-    apply_callback(name_or_conf, :unlisten, [normalize_channels(channels)])
+    conf = to_conf(name_or_conf)
+    channels = normalize_channels(channels)
+
+    for channel <- channels, do: Listeners.unregister(conf, channel)
+
+    apply_callback(conf, :unlisten, [channels])
+
+    :ok
+  catch
+    :exit, _reason -> :ok
   end
 
   @doc """
@@ -192,7 +225,7 @@ defmodule Oban.Notifier do
   """
   @spec notify(name_or_conf(), channel(), payload()) :: :ok | {:error, Exception.t()}
   def notify(name_or_conf \\ Oban, channel, payload) when is_atom(channel) do
-    conf = if is_struct(name_or_conf, Config), do: name_or_conf, else: Oban.config(name_or_conf)
+    conf = to_conf(name_or_conf)
     meta = %{conf: conf, channel: channel, payload: payload}
 
     :telemetry.span([:oban, :notifier, :notify], meta, fn ->
@@ -265,7 +298,14 @@ defmodule Oban.Notifier do
   end
 
   @doc false
-  @spec relay(Config.t(), [pid()], atom(), binary()) :: :ok
+  @spec relay(Config.t(), channel(), binary()) :: :ok
+  def relay(conf, channel, payload) when is_atom(channel) and is_binary(payload) do
+    relay(conf, Listeners.listeners(conf, channel), channel, payload)
+  end
+
+  # Retained for external notifiers that track listeners themselves.
+  @doc false
+  @spec relay(Config.t(), [pid()], channel(), binary()) :: :ok
   def relay(_conf, [], _channel, _payload), do: :ok
 
   def relay(conf, listeners, channel, payload) when is_atom(channel) and is_binary(payload) do
@@ -280,9 +320,10 @@ defmodule Oban.Notifier do
 
   # Helpers
 
-  defp apply_callback(name_or_conf, callback, args) do
-    conf = if is_struct(name_or_conf, Config), do: name_or_conf, else: Oban.config(name_or_conf)
+  defp to_conf(%Config{} = conf), do: conf
+  defp to_conf(name), do: Oban.config(name)
 
+  defp apply_callback(conf, callback, args) do
     %{name: name, notifier: {notifier, _}} = conf
 
     case Registry.whereis(name, __MODULE__) do

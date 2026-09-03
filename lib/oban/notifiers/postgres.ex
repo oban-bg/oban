@@ -40,16 +40,10 @@ if Code.ensure_loaded?(Postgrex) do
     @behaviour Oban.Notifier
 
     alias Oban.{Config, Notifier, Repo}
+    alias Oban.Notifier.Registry, as: Listeners
     alias Postgrex.SimpleConnection, as: Simple
 
-    defstruct [
-      :conf,
-      :from,
-      :key,
-      channels: %{},
-      connected?: false,
-      listeners: %{}
-    ]
+    defstruct [:conf, :from, channels: MapSet.new(), connected?: false]
 
     @impl Oban.Notifier
     def start_link(opts) do
@@ -70,12 +64,12 @@ if Code.ensure_loaded?(Postgrex) do
 
     @impl Oban.Notifier
     def listen(server, channels) do
-      Simple.call(server, {:listen, self(), channels})
+      Simple.call(server, {:listen, channels})
     end
 
     @impl Oban.Notifier
     def unlisten(server, channels) do
-      Simple.call(server, {:unlisten, self(), channels})
+      Simple.call(server, {:unlisten, channels})
     end
 
     ## Server Callbacks
@@ -88,9 +82,7 @@ if Code.ensure_loaded?(Postgrex) do
 
     @impl Oban.Notifier
     def notify(full_channel, payload, state) when is_binary(full_channel) do
-      listeners = Map.get(state.channels, full_channel, [])
-
-      Notifier.relay(state.conf, listeners, reverse_channel(full_channel), payload)
+      Notifier.relay(state.conf, reverse_channel(full_channel), payload)
     end
 
     # This is a Notifier callback, but it has the same name and arity as SimpleConnection
@@ -108,14 +100,19 @@ if Code.ensure_loaded?(Postgrex) do
       end
     end
 
-    def handle_connect(%{channels: channels} = state) do
-      state = %{state | connected?: true}
+    # Every connection, including a reconnect after a crash, listens on all channels that have
+    # registered listeners. The listener registry is the source of truth.
+    def handle_connect(state) do
+      channels =
+        state.conf
+        |> Listeners.channels()
+        |> Enum.map(&to_full_channel(&1, state.conf))
+        |> MapSet.new()
 
-      if map_size(channels) > 0 do
-        listens =
-          channels
-          |> Map.keys()
-          |> Enum.map_join("\n", &~s(LISTEN "#{&1}";))
+      state = %{state | channels: channels, connected?: true}
+
+      if MapSet.size(channels) > 0 do
+        listens = Enum.map_join(channels, "\n", &~s(LISTEN "#{&1}";))
 
         query(listens, state)
       else
@@ -127,17 +124,16 @@ if Code.ensure_loaded?(Postgrex) do
       {:noreply, %{state | connected?: false}}
     end
 
-    def handle_call({:listen, pid, channels}, from, state) do
-      channels = Enum.map(channels, &to_full_channel(&1, state.conf))
-      new_channels = channels -- Map.keys(state.channels)
+    def handle_call({:listen, channels}, from, state) do
+      new_channels =
+        channels
+        |> Enum.map(&to_full_channel(&1, state.conf))
+        |> Enum.reject(&MapSet.member?(state.channels, &1))
 
-      state =
-        state
-        |> put_listener(pid, channels)
-        |> put_channels(pid, channels)
+      state = %{state | channels: Enum.into(new_channels, state.channels)}
 
       if state.connected? and Enum.any?(new_channels) do
-        listens = Enum.map_join(new_channels, " \n", &~s(LISTEN "#{&1}";))
+        listens = Enum.map_join(new_channels, "\n", &~s(LISTEN "#{&1}";))
 
         query(listens, %{state | from: from})
       else
@@ -147,39 +143,24 @@ if Code.ensure_loaded?(Postgrex) do
       end
     end
 
-    def handle_call({:unlisten, pid, channels}, from, state) do
-      channels = Enum.map(channels, &to_full_channel(&1, state.conf))
+    def handle_call({:unlisten, channels}, from, state) do
+      # Only stop listening on channels that no longer have any registered listeners.
+      del_channels =
+        channels
+        |> Enum.filter(&(Listeners.listeners(state.conf, &1) == []))
+        |> Enum.map(&to_full_channel(&1, state.conf))
+        |> Enum.filter(&MapSet.member?(state.channels, &1))
 
-      state =
-        state
-        |> del_listener(pid, channels)
-        |> del_channels(pid, channels)
-
-      del_channels = channels -- Map.keys(state.channels)
+      state = %{state | channels: MapSet.difference(state.channels, MapSet.new(del_channels))}
 
       if state.connected? and Enum.any?(del_channels) do
-        unlistens = Enum.map_join(del_channels, " \n", &~s(UNLISTEN "#{&1}";))
+        unlistens = Enum.map_join(del_channels, "\n", &~s(UNLISTEN "#{&1}";))
 
         query(unlistens, %{state | from: from})
       else
         Simple.reply(from, :ok)
 
         {:noreply, state}
-      end
-    end
-
-    def handle_info({:DOWN, _ref, :process, pid, _reason}, state) do
-      case Map.pop(state.listeners, pid) do
-        {{_ref, channel_set}, listeners} ->
-          state =
-            state
-            |> Map.put(:listeners, listeners)
-            |> del_channels(pid, MapSet.to_list(channel_set))
-
-          {:noreply, state}
-
-        {nil, _listeners} ->
-          {:noreply, state}
       end
     end
 
@@ -220,67 +201,6 @@ if Code.ensure_loaded?(Postgrex) do
       [_prefix, "oban_" <> shortcut] = String.split(full_channel, ".", parts: 2)
 
       String.to_existing_atom(shortcut)
-    end
-
-    defp put_listener(%{listeners: listeners} = state, pid, channels) do
-      new_set = MapSet.new(channels)
-
-      listeners =
-        case Map.get(listeners, pid) do
-          {ref, old_set} ->
-            Map.replace!(listeners, pid, {ref, MapSet.union(old_set, new_set)})
-
-          nil ->
-            ref = Process.monitor(pid)
-
-            Map.put(listeners, pid, {ref, new_set})
-        end
-
-      %{state | listeners: listeners}
-    end
-
-    defp put_channels(state, pid, channels) do
-      listener_channels =
-        for channel <- channels, reduce: state.channels do
-          acc -> Map.update(acc, channel, [pid], &Enum.uniq([pid | &1]))
-        end
-
-      %{state | channels: listener_channels}
-    end
-
-    defp del_listener(%{listeners: listeners} = state, pid, channels) do
-      new_set = MapSet.new(channels)
-
-      listeners =
-        case Map.get(listeners, pid) do
-          {ref, old_set} ->
-            del_set = MapSet.difference(old_set, new_set)
-
-            if MapSet.size(del_set) == 0 do
-              Process.demonitor(ref)
-
-              Map.delete(listeners, pid)
-            else
-              Map.replace!(listeners, pid, {ref, del_set})
-            end
-
-          nil ->
-            listeners
-        end
-
-      %{state | listeners: listeners}
-    end
-
-    defp del_channels(state, pid, channels) do
-      listener_channels =
-        for channel <- channels, reduce: state.channels do
-          acc ->
-            acc = Map.update(acc, channel, [], &List.delete(&1, pid))
-
-            if Enum.empty?(acc[channel]), do: Map.delete(acc, channel), else: acc
-        end
-
-      %{state | channels: listener_channels}
     end
   end
 end

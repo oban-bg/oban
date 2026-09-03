@@ -42,7 +42,7 @@ defmodule Oban.Notifiers.PG do
 
   alias Oban.Notifier
 
-  defstruct [:conf, :namespace, listeners: %{}]
+  defstruct [:conf, :namespace]
 
   @impl Notifier
   def start_link(opts) do
@@ -55,14 +55,10 @@ defmodule Oban.Notifiers.PG do
   end
 
   @impl Notifier
-  def listen(server, channels) do
-    GenServer.call(server, {:listen, channels})
-  end
+  def listen(_server, _channels), do: :ok
 
   @impl Notifier
-  def unlisten(server, channels) do
-    GenServer.call(server, {:unlisten, channels})
-  end
+  def unlisten(_server, _channels), do: :ok
 
   @impl Notifier
   def notify(server, channel, payload) do
@@ -101,39 +97,10 @@ defmodule Oban.Notifiers.PG do
   end
 
   @impl GenServer
-  def handle_call({:listen, channels}, {pid, _}, %{listeners: listeners} = state) do
-    if Map.has_key?(listeners, pid) do
-      {:reply, :ok, state}
-    else
-      Process.monitor(pid)
-
-      {:reply, :ok, %{state | listeners: Map.put(listeners, pid, channels)}}
-    end
-  end
-
-  def handle_call({:unlisten, channels}, {pid, _}, %{listeners: listeners} = state) do
-    orig_channels = Map.get(listeners, pid, [])
-
-    listeners =
-      case orig_channels -- channels do
-        [] -> Map.delete(listeners, pid)
-        new_channels -> Map.put(listeners, pid, new_channels)
-      end
-
-    {:reply, :ok, %{state | listeners: listeners}}
-  end
-
-  @impl GenServer
   def handle_info({:notification, channel, payload}, state) do
-    listeners = for {pid, channels} <- state.listeners, channel in channels, do: pid
-
-    Notifier.relay(state.conf, listeners, channel, payload)
+    Notifier.relay(state.conf, channel, payload)
 
     {:noreply, state}
-  end
-
-  def handle_info({:DOWN, _ref, :process, pid, _reason}, state) do
-    {:noreply, %{state | listeners: Map.delete(state.listeners, pid)}}
   end
 
   def handle_info(_message, state) do
