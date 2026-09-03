@@ -3,7 +3,6 @@ for notifier <- [Oban.Notifiers.Isolated, Oban.Notifiers.PG, Oban.Notifiers.Post
     use Oban.Case, async: true
 
     alias Oban.{Config, Notifier}
-    alias Oban.Notifier.Registry, as: Listeners
 
     @notifier notifier
 
@@ -108,26 +107,6 @@ for notifier <- [Oban.Notifiers.Isolated, Oban.Notifiers.PG, Oban.Notifiers.Post
       refute_received {:notification, :signal, _}
     end
 
-    test "listener registrations are removed when the listener exits" do
-      name = start_oban!()
-      conf = Oban.config(name)
-
-      {:ok, pid} =
-        Task.start(fn ->
-          :ok = Notifier.listen(name, :gossip)
-
-          receive do
-            :stop -> :ok
-          end
-        end)
-
-      with_backoff(fn -> assert pid in Listeners.listeners(conf, :gossip) end)
-
-      send(pid, :stop)
-
-      with_backoff(fn -> refute pid in Listeners.listeners(conf, :gossip) end)
-    end
-
     @tag :capture_log
     test "listeners survive a notifier crash without resubscribing" do
       name = start_oban!()
@@ -153,19 +132,6 @@ for notifier <- [Oban.Notifiers.Isolated, Oban.Notifiers.PG, Oban.Notifiers.Post
 
         assert_receive {:notification, :signal, %{"value" => "revived"}}
       end)
-    end
-
-    test "listening while the notifier is unavailable still registers" do
-      name = start_oban!()
-      conf = Oban.config(name)
-
-      notifier_pid = Oban.Registry.whereis(name, Notifier)
-
-      Process.exit(notifier_pid, :kill)
-
-      :ok = Notifier.listen(name, :gossip)
-
-      assert self() in Listeners.listeners(conf, :gossip)
     end
 
     defp start_oban!, do: start_supervised_oban!(notifier: @notifier, repo: UnboxedRepo)

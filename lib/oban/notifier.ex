@@ -165,10 +165,6 @@ defmodule Oban.Notifier do
     apply_callback(conf, :listen, [channels])
 
     :ok
-  catch
-    # The registry is the source of truth. A notifier that's missing or crashing mid-call will
-    # pick registrations up when it restarts, so there's nothing for the caller to handle.
-    :exit, _reason -> :ok
   end
 
   @doc """
@@ -198,8 +194,6 @@ defmodule Oban.Notifier do
     apply_callback(conf, :unlisten, [channels])
 
     :ok
-  catch
-    :exit, _reason -> :ok
   end
 
   @doc """
@@ -323,6 +317,8 @@ defmodule Oban.Notifier do
   defp to_conf(%Config{} = conf), do: conf
   defp to_conf(name), do: Oban.config(name)
 
+  # Callbacks that reach the notifier process may exit if it crashes mid-call or times out.
+  # Callers can't do anything useful with an exit, so it's normalized into an error tuple here.
   defp apply_callback(conf, callback, args) do
     %{name: name, notifier: {notifier, _}} = conf
 
@@ -333,6 +329,9 @@ defmodule Oban.Notifier do
       _ ->
         {:error, RuntimeError.exception("no notifier running for instance #{inspect(name)}")}
     end
+  catch
+    :exit, reason ->
+      {:error, RuntimeError.exception("notifier exited with #{inspect(reason)}")}
   end
 
   defp normalize_channels(channels) do

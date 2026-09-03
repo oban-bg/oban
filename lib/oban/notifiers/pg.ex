@@ -88,11 +88,11 @@ defmodule Oban.Notifiers.PG do
   end
 
   defp get_state(server) do
-    [name] = Registry.keys(Oban.Registry, server)
-
-    case Oban.Registry.lookup(name) do
-      {_pid, state} -> state
-      nil -> {:error, RuntimeError.exception("no notifier running as #{inspect(name)}")}
+    with [name] <- Registry.keys(Oban.Registry, server),
+         {_pid, state} <- Oban.Registry.lookup(name) do
+      state
+    else
+      _ -> {:error, RuntimeError.exception("no notifier running as #{inspect(server)}")}
     end
   end
 

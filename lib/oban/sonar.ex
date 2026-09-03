@@ -50,7 +50,7 @@ defmodule Oban.Sonar do
   def handle_continue(:start, state) do
     Notifier.listen(state.conf, :sonar)
 
-    notify(state.conf)
+    Notifier.notify(state.conf, :sonar, %{node: state.conf.node, ping: true})
 
     {:noreply, schedule_ping(state)}
   end
@@ -81,7 +81,7 @@ defmodule Oban.Sonar do
     prev_status = state.status
     prev_nodes = Map.keys(state.nodes)
 
-    notify(state.conf)
+    Notifier.notify(state.conf, :sonar, %{node: state.conf.node, ping: true})
 
     state =
       state
@@ -123,12 +123,6 @@ defmodule Oban.Sonar do
   end
 
   # Helpers
-
-  defp notify(conf) do
-    Notifier.notify(conf, :sonar, %{node: conf.node, ping: true})
-  catch
-    :exit, _ -> :ok
-  end
 
   defp schedule_ping(state) do
     timer = Process.send_after(self(), :ping, Backoff.jitter(state.interval))

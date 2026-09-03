@@ -426,9 +426,6 @@ defmodule Oban.Engine do
     payload = for job <- jobs, job.state == "available", uniq: true, do: %{queue: job.queue}
 
     if payload != [], do: Notifier.notify(conf, :insert, payload)
-  catch
-    # Insert notification timeouts aren't worth failing inserts over.
-    :exit, {:timeout, _} -> :ok
   end
 
   defp notify_trigger(_conf, _queue), do: :skip

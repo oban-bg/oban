@@ -121,16 +121,17 @@ defmodule Oban.Stager do
     notify_queues(state)
   rescue
     _ -> notify_queues(%{state | mode: :local})
-  catch
-    :exit, _ -> notify_queues(%{state | mode: :local})
   end
 
-  defp notify_queues(%{conf: conf, mode: :global}) do
+  defp notify_queues(%{conf: conf, mode: :global} = state) do
     {:ok, queues} = Engine.check_available(conf)
 
     payload = Enum.map(queues, &%{queue: &1})
 
-    Notifier.notify(conf, :insert, payload)
+    case Notifier.notify(conf, :insert, payload) do
+      :ok -> :ok
+      {:error, _reason} -> notify_queues(%{state | mode: :local})
+    end
   end
 
   defp notify_queues(%{conf: conf, mode: :local}) do
