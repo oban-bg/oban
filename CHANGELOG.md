@@ -117,6 +117,38 @@ Oban.Period.to_milliseconds({5, :minutes})
 #=> 300_000
 ```
 
+## v2.24.1 - 2026-09-03
+
+### Bug Fixes
+
+- [Engine] Prevent newer execution from overwriting
+
+  Acking now verifies that the database hasn't been updated by another execution. Writes from a
+  new executor will no longer transition an acked job, e.g. erroring or snoozing a job back out of
+  `completed`.
+
+  This applies to ack operations in `Basic`, `Dolphin`, and `Lite` engines.
+
+- [Notifier] Track notify listeners in isolated registry
+
+  Listeners were tracked within each notifier process, which was lost if the notifier crashed.
+  Registration now lives in a dedicated registry, owne by the Oban application, which is immune to
+  process crashes.
+
+- [Notifier] Normalize notifier exits into error tuples
+
+  Notifier callbacks through the notifier process could exit if it crashed or timed out, leaving
+  callers to guard themselves with a try/catch.
+
+  Now, exits are caught in the Notifier itself, and returned as an error tuple. Postgres and PG
+  notifiers also no longer raise when their registered state is gone.
+
+- [Queues] Allow dispatch_cooldown when starting queues
+
+  The `dispatch_cooldown` option was silently ignored for static queues, and loudly failed
+  validation for dynamic queues. The option was always threaded through to the producer, and now
+  they pass validation.
+
 ## v2.24.0 - 2026-08-25
 
 ### Changes
