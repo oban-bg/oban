@@ -40,14 +40,6 @@ defmodule Oban.Notifier do
 
   * `sonar` — periodic notification checks to monitor pubsub health and determine connectivity
 
-  > #### Durable Listeners {: .info}
-  >
-  > Listeners are tracked in a registry that lives outside of the notifier process. Registration
-  > happens transparently through `listen/2` and `unlisten/2`, and entries are removed
-  > automatically when the listening process exits. Because registrations survive a notifier
-  > crash, listening processes are guaranteed to receive notifications after the notifier restarts
-  > without any monitoring or resubscribing on their part.
-
   ## Examples
 
   Broadcasting after a job is completed:
@@ -86,7 +78,7 @@ defmodule Oban.Notifier do
   """
 
   alias Oban.{Config, JSON, Registry, Sonar}
-  alias Oban.Notifier.Registry, as: Listeners
+  alias Oban.Notifiers.Listeners
 
   require Logger
 

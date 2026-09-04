@@ -1,8 +1,8 @@
-defmodule Oban.Notifier.RegistryTest do
+defmodule Oban.Notifiers.ListenersTest do
   use Oban.Case, async: true
 
   alias Oban.Notifier
-  alias Oban.Notifier.Registry, as: Listeners
+  alias Oban.Notifiers.Listeners
 
   @moduletag :capture_log
 

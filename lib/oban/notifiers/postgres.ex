@@ -40,7 +40,7 @@ if Code.ensure_loaded?(Postgrex) do
     @behaviour Oban.Notifier
 
     alias Oban.{Config, Notifier, Repo}
-    alias Oban.Notifier.Registry, as: Listeners
+    alias Oban.Notifiers.Listeners
     alias Postgrex.SimpleConnection, as: Simple
 
     defstruct [:conf, :from, channels: MapSet.new(), connected?: false]

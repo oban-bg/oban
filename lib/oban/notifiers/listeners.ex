@@ -1,4 +1,4 @@
-defmodule Oban.Notifier.Registry do
+defmodule Oban.Notifiers.Listeners do
   @moduledoc false
 
   alias Oban.Config
