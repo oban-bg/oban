@@ -1,6 +1,6 @@
 # Scaling Applications
 
-## Notifications
+## Change Notifiers
 
 Oban uses PubSub notifications for communication between nodes, like job inserts, pausing queues,
 resuming queues, and metrics for Web. The default notifier is `Oban.Notifiers.Postgres`, which
@@ -23,7 +23,7 @@ through an alternative service like Redis.
 
 [onp]: https://github.com/sorentwo/oban_notifiers_phoenix
 
-## Triggers
+## Disable Triggers
 
 Inserting jobs emits a trigger notification to let queues know there are jobs to process
 immediately, without waiting up to 1s for the next polling interval. Triggers may create many
@@ -39,7 +39,42 @@ Disable triggers in your Oban configuration:
 +  insert_trigger: false,
 ```
 
-## Uniqueness
+## Tuning Autovacuum
+
+Default autovacuum settings are sized for general purpose tables and may fall behind on
+`oban_jobs`, where state transitions update a row and pruning deletes in bulk. Dead tuples
+accumulate between vacuums and planner statistics go stale, which effects critical operations like
+job fetching.
+
+Tune autovacuum for the `oban_jobs` table alone rather than the whole database:
+
+```sql
+ALTER TABLE oban_jobs SET (
+  -- Vacuum earlier on large tables
+  autovacuum_vacuum_scale_factor = 0.02,
+  autovacuum_vacuum_threshold = 50,
+
+  -- Keep stats fresh for the planner
+  autovacuum_analyze_scale_factor = 0.02,
+  autovacuum_analyze_threshold = 100,
+
+  -- Handle insert-heavy spikes
+  autovacuum_vacuum_insert_scale_factor = 0.02,
+  autovacuum_vacuum_insert_threshold = 1000,
+
+  -- Make autovacuum push harder with little sleeping
+  autovacuum_vacuum_cost_limit = 2000,
+  autovacuum_vacuum_cost_delay = 1,
+
+  -- Leave headroom on pages for locality and fewer page splits
+  fillfactor = 85
+);
+```
+
+Check `n_dead_tup` and `last_autovacuum` in `pg_stat_user_tables` to confirm vacuum is keeping up,
+and adjust the scale factors to match table size and write load.
+
+## Limit Uniqueness
 
 Frequently, people set uniqueness for jobs that don’t really need it. Not you, of course.
 Before setting uniqueness, ensure the following, in a very checklist type fashion:
@@ -66,7 +101,7 @@ use Oban.Worker, unique: [
 
 [uniq]: https://oban.pro/docs/pro/1.5.0-rc.4/Oban.Pro.Engines.Smart.html#module-enhanced-unique
 
-## Reindexing
+## Apply Reindexing
 
 To stop oban_jobs indexes from taking up so much space on disk, use the
 `Oban.Reindexer` plugin to rebuild indexes periodically. The Postgres transactional
@@ -85,7 +120,7 @@ config :my_app, Oban,
    …
 ```
 
-## Optimizing Staging
+## Optimize Staging
 
 Applications with a large number of scheduled or retryable jobs may benefit from an index tailored
 to staging. The index isn't necessary for most applications, and maintaining it adds overhead to
@@ -112,7 +147,7 @@ defmodule MyApp.Repo.Migrations.AddObanJobsStagingIndex do
 end
 ```
 
-## Pruning
+## Increase Pruning
 
 Ensuring you are using the `Pruner` plugin, and that you prune _aggressively_. Pruning
 periodically deletes `completed`, `cancelled`, and `discarded` jobs. Your application
@@ -127,33 +162,7 @@ For example, to limit historic jobs to 1 day:
    …
 ```
 
-The default auto vacuum settings are conservative and may fall behind on active tables. Dead
-tuples accumulate until autovacuum proc comes to mark them as cleanable.
-
-Like indexes, the MVCC system only flags rows for deletion later. Then, those rows are deleted
-when the auto-vacuum runs. Autovacuum can be tweaked for the oban_jobs table alone.Tune autovacuum
-for the oban_jobs table.
-
-The exact scale factor tuning will vary based on total rows, table size, and database load.
-
-Below is an example of the possible scale factor and threshold:
-
-```diff
-ALTER TABLE oban_jobs SET (
-  autovacuum_vacuum_scale_factor = 0,
-  autovacuum_vacuum_threshold = 100
-)
-```
-
-> #### 🌟 Partitioning {: .tip}
->
-> For _extreme_ load (tens of millions of jobs a day), Oban Pro’s [DynamicPartitioner][dynp] may
-> help. It manages partitioned tables to drop older jobs without any bloat. Dropping tables
-> entirely is instantaneous and leaves zero bloat. Autovacuuming each partition is faster as well.
-
-[dynp]: https://oban.pro/docs/pro/1.5.0-rc.4/Oban.Pro.Plugins.DynamicPartitioner.html
-
-## Pooling
+## Consider Pooling
 
 Oban uses connections from your application Repo’s pool to talk to the database. When that pool
 is busy, it can starve Oban of connections and you’ll see timeout errors. Likewise, if Oban is
@@ -199,7 +208,7 @@ repo is used within a transaction:
    ...
 ```
 
-## High Concurrency
+## Scale Concurrency
 
 In a busy system with high concurrency all of the record keeping after jobs run causes pool
 contention, despite the individual queries being very quick. Fetching jobs uses a single query
