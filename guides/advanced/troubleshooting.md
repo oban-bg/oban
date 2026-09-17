@@ -95,7 +95,7 @@ migrations and find the last time you ran an Oban migration. Once you've found t
 e.g. `version: 10`, then you can set that as a comment on the `oban_jobs` table:
 
 ```sql
-COMMENT ON TABLE public.oban_jobs IS '10'"
+COMMENT ON TABLE public.oban_jobs IS '10'
 ```
 
 Once the comment is in place only the migrations from that version onward will
