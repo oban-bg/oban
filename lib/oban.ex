@@ -81,7 +81,7 @@ defmodule Oban do
   @typedoc """
   Configuration options for starting an Oban instance.
 
-  See `start_link1/` for more information on individual options.
+  See `start_link/1` for more information on individual options.
   """
   @type option ::
           {:cron, service()}
