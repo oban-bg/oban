@@ -5,7 +5,7 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite, Oban.Engines.Dolphin] do
     alias Ecto.Adapters.SQL.Sandbox
     alias Ecto.Multi
     alias Oban.Engines.{Basic, Dolphin, Lite}
-    alias Oban.{Engine, Notifier, TelemetryHandler}
+    alias Oban.{Engine, Notifier, Registry, TelemetryHandler}
 
     @engine engine
 
@@ -510,6 +510,23 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite, Oban.Engines.Dolphin] do
 
         assert %Job{state: "cancelled", errors: [_], cancelled_at: %_{}} = reload(name, job)
         assert %{running: []} = Oban.check_queue(name, queue: :alpha)
+      end
+
+      test "killing a job that exits before the kill is handled releases it", %{name: name} do
+        job = insert!(name, %{ref: 1, sleep: 5000}, [])
+
+        assert_receive {:started, 1}
+
+        producer = Registry.whereis(name, {:producer, "alpha"})
+        %{foreman: foreman, running: running} = :sys.get_state(producer)
+        [{pid, _exec}] = Map.values(running)
+
+        :sys.suspend(producer)
+        send(producer, {:notification, :signal, %{"action" => "pkill", "job_id" => job.id}})
+        :ok = Task.Supervisor.terminate_child(foreman, pid)
+        :sys.resume(producer)
+
+        with_backoff(fn -> assert %{running: []} = Oban.check_queue(name, queue: :alpha) end)
       end
 
       test "cancelling jobs that may or may not be executing", %{name: name} do
