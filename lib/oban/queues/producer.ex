@@ -159,8 +159,8 @@ defmodule Oban.Queues.Producer do
           end)
 
         %{"action" => "pkill", "job_id" => jid} ->
-          for {ref, {pid, exec}} <- state.running, exec.job.id == jid do
-            pkill(ref, pid, state)
+          for {_ref, {pid, exec}} <- state.running, exec.job.id == jid do
+            Task.Supervisor.terminate_child(state.foreman, pid)
           end
 
           state.meta
@@ -219,15 +219,6 @@ defmodule Oban.Queues.Producer do
     if map_size(state.running) == 0, do: send(from, {:drained, meta.queue})
 
     {:reply, :ok, %{state | meta: meta, watchman: from}}
-  end
-
-  # Killing
-
-  defp pkill(ref, pid, %State{} = state) do
-    case Task.Supervisor.terminate_child(state.foreman, pid) do
-      :ok -> state
-      {:error, :not_found} -> release_ref(state, ref)
-    end
   end
 
   # Dispatching
