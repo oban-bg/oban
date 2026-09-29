@@ -37,7 +37,7 @@ defmodule Oban.MixProject do
         source_ref: "v#{@version}",
         source_url: @source_url,
         extra_section: "GUIDES",
-        formatters: ["html"],
+        formatters: ["html", "markdown"],
         extras: extras(),
         groups_for_extras: groups_for_extras(),
         groups_for_modules: groups_for_modules(),
@@ -208,7 +208,7 @@ defmodule Oban.MixProject do
       {:benchee, "~> 1.4", only: [:test, :dev], runtime: false},
       {:credo, "~> 1.7", only: [:test, :dev], runtime: false},
       {:dialyxir, "~> 1.4", only: [:test, :dev], runtime: false},
-      {:ex_doc, "~> 0.38", only: [:test, :dev], runtime: false},
+      {:ex_doc, "~> 0.40.4", only: [:test, :dev], runtime: false},
       {:makeup_diff, "~> 0.1", only: [:test, :dev], runtime: false}
     ]
   end
