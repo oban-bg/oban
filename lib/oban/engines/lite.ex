@@ -38,10 +38,15 @@ defmodule Oban.Engines.Lite do
     quote do
       fragment(
         """
-        SELECT 0 NOT IN (SELECT json_extract(?, '$.' || t.key) = t.value FROM json_each(?) t)
+        NOT EXISTS (
+          SELECT 1 FROM json_each(?) t
+          WHERE json_type(?, '$."' || t.key || '"') IS NOT t.type
+             OR json_extract(?, '$."' || t.key || '"') IS NOT t.value
+        )
         """,
+        unquote(object),
         unquote(column),
-        unquote(object)
+        unquote(column)
       )
     end
   end

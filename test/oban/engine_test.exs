@@ -157,6 +157,19 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite, Oban.Engines.Dolphin] do
       end
 
       @tag :unique
+      test "considering nil arg values to establish uniqueness", %{name: name} do
+        changeset1 = MiniUniq.new(%{id: 1, tenant: nil})
+        changeset2 = MiniUniq.new(%{id: 1})
+
+        assert {:ok, %Job{id: id_1}} = Oban.insert(name, changeset1)
+        assert {:ok, %Job{id: id_2}} = Oban.insert(name, changeset1)
+        assert {:ok, %Job{id: id_3}} = Oban.insert(name, changeset2)
+
+        assert id_1 == id_2
+        assert id_1 != id_3
+      end
+
+      @tag :unique
       test "scoping uniqueness by specific meta keys", %{name: name} do
         unique = [fields: [:meta], keys: [:slug]]
 
