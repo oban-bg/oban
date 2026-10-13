@@ -116,9 +116,8 @@ defmodule Oban.Engines.Dolphin do
           # MySQL may scan the whole table when the ids cover most of it, which locks uncommitted
           # inserts and deadlocks. Ecto can't add index hints to updates, so this is literal SQL.
           update = """
-          UPDATE oban_jobs FORCE INDEX (PRIMARY)
-          JOIN JSON_TABLE(?, '$[*]' COLUMNS (id BIGINT PATH '$')) AS fetched
-          ON fetched.id = oban_jobs.id
+          UPDATE JSON_TABLE(?, '$[*]' COLUMNS (id BIGINT PATH '$')) AS fetched
+          STRAIGHT_JOIN oban_jobs FORCE INDEX (PRIMARY) ON fetched.id = oban_jobs.id
           SET state = 'executing', attempted_at = ?, attempted_by = ?, attempt = attempt + 1
           """
 
