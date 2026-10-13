@@ -727,12 +727,14 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite, Oban.Engines.Dolphin] do
             meta: meta
           )
 
+        {:ok, _} = Oban.update_job(name, job_2, %{meta: Map.put(meta, "new", "val")})
+
         assert :ok = Oban.Engine.snooze_job(conf, job_1, 60)
         assert :ok = Oban.Engine.snooze_job(conf, job_2, 60)
 
         assert %Job{state: "scheduled", scheduled_at: %_{}} = job_1 = reload(name, job_1)
         assert %Job{attempt: 1, max_attempts: 5, meta: %{"snoozed" => 1}} = job_1
-        assert %Job{attempt: 1, meta: %{"key" => "val", "snoozed" => 2}} = reload(name, job_2)
+        assert %Job{attempt: 1, meta: %{"new" => "val", "snoozed" => 2}} = reload(name, job_2)
       end
     end
 

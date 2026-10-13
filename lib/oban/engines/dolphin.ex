@@ -250,7 +250,28 @@ defmodule Oban.Engines.Dolphin do
   end
 
   @impl Engine
-  defdelegate snooze_job(conf, job, seconds), to: Basic
+  def snooze_job(%Config{} = conf, job, seconds) do
+    query =
+      job
+      |> ack_query(@acking_states)
+      |> update([j],
+        set: [
+          state: "scheduled",
+          scheduled_at: ^seconds_from_now(seconds),
+          meta:
+            fragment(
+              "json_set(?, '$.snoozed', coalesce(cast(json_extract(?, '$.snoozed') AS signed), 0) + 1)",
+              j.meta,
+              j.meta
+            )
+        ],
+        inc: [attempt: -1]
+      )
+
+    Repo.update_all(conf, query, [])
+
+    :ok
+  end
 
   @impl Engine
   def cancel_job(%Config{} = conf, %Job{unsaved_error: unsaved} = job) when is_map(unsaved) do

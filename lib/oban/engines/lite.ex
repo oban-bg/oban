@@ -172,7 +172,28 @@ defmodule Oban.Engines.Lite do
   defdelegate complete_job(conf, job), to: Basic
 
   @impl Engine
-  defdelegate snooze_job(conf, job, seconds), to: Basic
+  def snooze_job(%Config{} = conf, job, seconds) do
+    query =
+      job
+      |> ack_query(@acking_states)
+      |> update([j],
+        set: [
+          state: "scheduled",
+          scheduled_at: ^seconds_from_now(seconds),
+          meta:
+            fragment(
+              "json_set(?, '$.snoozed', coalesce(json_extract(?, '$.snoozed'), 0) + 1)",
+              j.meta,
+              j.meta
+            )
+        ],
+        inc: [attempt: -1]
+      )
+
+    Repo.update_all(conf, query, [])
+
+    :ok
+  end
 
   @impl Engine
   def discard_job(%Config{} = conf, job) do

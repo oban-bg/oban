@@ -271,15 +271,25 @@ defmodule Oban.Engines.Basic do
   end
 
   @impl Engine
-  def snooze_job(%Config{} = conf, %Job{meta: meta} = job, seconds) when is_integer(seconds) do
-    meta = Map.update(meta, "snoozed", 1, &(&1 + 1))
+  def snooze_job(%Config{} = conf, %Job{} = job, seconds) when is_integer(seconds) do
+    query =
+      job
+      |> ack_query(@acking_states)
+      |> update([j],
+        set: [
+          state: "scheduled",
+          scheduled_at: ^seconds_from_now(seconds),
+          meta:
+            fragment(
+              "jsonb_set(?, '{snoozed}', to_jsonb(coalesce((?->>'snoozed')::int, 0) + 1))",
+              j.meta,
+              j.meta
+            )
+        ],
+        inc: [attempt: -1]
+      )
 
-    updates = [
-      set: [state: "scheduled", scheduled_at: seconds_from_now(seconds), meta: meta],
-      inc: [attempt: -1]
-    ]
-
-    Repo.update_all(conf, ack_query(job, @acking_states), updates)
+    Repo.update_all(conf, query, [])
 
     :ok
   end
