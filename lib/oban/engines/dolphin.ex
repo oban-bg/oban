@@ -113,8 +113,10 @@ defmodule Oban.Engines.Dolphin do
         if Enum.any?(jobs) do
           ids = Enum.map(jobs, & &1.id)
 
-          # MySQL may scan the whole table when the ids cover most of it, which locks uncommitted
-          # inserts and deadlocks. Ecto can't add index hints to updates, so this is literal SQL.
+          # MySQL may scan the whole table when the ids cover most of it or statistics
+          # underestimate the table, which locks rows held by other producers and deadlocks.
+          # Reading the fetched ids first and forcing the primary key makes it look up each job.
+          # Ecto can't express this, so it's literal SQL.
           update = """
           UPDATE JSON_TABLE(?, '$[*]' COLUMNS (id BIGINT PATH '$')) AS fetched
           STRAIGHT_JOIN oban_jobs FORCE INDEX (PRIMARY) ON fetched.id = oban_jobs.id
