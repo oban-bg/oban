@@ -117,6 +117,40 @@ Oban.Period.to_milliseconds({5, :minutes})
 #=> 300_000
 ```
 
+## v2.24.2 - 2026-10-14
+
+### Enhancements
+
+- [Docs] Publish Markdown documentation alongside HTML
+
+  Docs are now also generated as Markdown, including an `llms.txt` index, which makes the modules
+  and guides easier to consume by LLMs and other tooling.
+
+### Bug Fixes
+
+- [Dolphin] Prevent deadlocks between concurrent fetches and inserts
+
+  MySQL could plan the fetch update as a full table scan, either when the fetched ids covered
+  most of the table or when statistics underestimated it, such as after pruning. The scan locked
+  rows held by other producers and uncommitted inserts, which caused fetches to wait across
+  queues and deadlock. The update now looks up each fetched job by primary key.
+
+- [Engine] Preserve meta updates during execution on snooze
+
+  Snoozing a job overwrote its meta with the values it had when execution started, discarding any
+  changes made during execution. Each engine now snoozes with a targeted update.
+
+- [Lite] Match `nil` arg values for uniqueness
+
+  Unique jobs with `args` that contained a `nil` value wouldn't conflict with existing jobs, which
+  caused duplicates. The comparison now checks JSON types, which also prevents `1` from matching
+  `true`.
+
+- [Queues] Release jobs that exit before a pkill is handled
+
+  A job whose process exited just before the producer handled its `pkill` stayed in the queue's
+  running list indefinitely. It's now released like any other finished job.
+
 ## v2.24.1 - 2026-09-03
 
 ### Bug Fixes
