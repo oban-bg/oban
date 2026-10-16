@@ -517,15 +517,14 @@ defmodule Oban do
   Additional options used to tune system behaviour. These are primarily useful for testing or
   troubleshooting and don't usually need modification.
 
-  * `:dispatch_cooldown` — the average number of milliseconds a producer will wait before
-    fetching and running more jobs. A cooldown period prevents a producer from flooding with
-    messages and thrashing the database. Jitter is applied so that the actual wait varies between
-    roughly `0` and `2x` the configured value, which prevents producers from synchronizing their
-    fetches and stampeding the database.
+  * `:dispatch_cooldown` — base milliseconds a producer will wait before fetching more jobs.
+    Cooldown prevents queue producers from thrashing the database. Jitter is applied so that the
+    actual time varies, which prevents producers from synchronizing their fetches and stampeding the
+    database.
 
     The cooldown period _directly impacts_ a producer's throughput: average jobs per second for a
-    single queue is approximately `(1000 / cooldown) * limit`. For example, with a `5ms` cooldown
-    and a queue limit of `25` a single queue averages 5,000 jobs/sec.
+    single queue is approximately `(1000 / (cooldown * 1.25)) * limit`. For example, with a `5ms`
+    cooldown and a queue limit of `25` a single queue averages 4,000 jobs/sec.
 
     The default is `5ms` and the minimum is `1ms`, which is likely faster than the database can
     return new jobs to run.
@@ -1019,7 +1018,7 @@ defmodule Oban do
   * `:local_only` - whether the queue will be started only on the local node, default: `false`
   * `:limit` - set the concurrency limit, required
   * `:paused` — set whether the queue starts in the "paused" state, optional
-  * `:dispatch_cooldown` — set the average time between fetching jobs, optional
+  * `:dispatch_cooldown` — set the base time between fetching jobs, optional
 
   In addition, all engine-specific queue options are passed along after validation.
 
