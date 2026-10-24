@@ -494,13 +494,25 @@ defmodule Oban.Engines.Basic do
       {:error, error}
   end
 
+  @doc false
+  def unique_lock_key(changeset) do
+    case unique_query(changeset) do
+      {:ok, _query, lock_key} -> lock_key
+      nil -> nil
+    end
+  end
+
   defp unique_query(%{changes: %{unique: %{} = unique}} = changeset) do
     %{fields: fields, keys: keys, period: period, states: states, timestamp: timestamp} = unique
 
     keys = Enum.map(keys, &to_string/1)
     states = Enum.map(states, &to_string/1)
     dynamic = Enum.reduce(fields, true, &unique_field({changeset, &1, keys}, &2))
-    lock_key = :erlang.phash2([keys, states, dynamic])
+
+    # Hash the uniqueness values, not the dynamic. A DynamicExpr also carries
+    # its fun, source file, and line, so the key changed between builds and
+    # Oban versions and nodes stopped sharing one advisory lock. See #1522.
+    lock_key = :erlang.phash2([keys, states, unique_lock_terms(changeset, fields, keys)])
 
     query =
       Job
@@ -514,8 +526,20 @@ defmodule Oban.Engines.Basic do
 
   defp unique_query(_changeset), do: nil
 
+  defp unique_lock_terms(changeset, fields, keys) do
+    Enum.map(fields, &{&1, unique_field_value(changeset, &1, keys)})
+  end
+
+  defp unique_field_value(changeset, field, keys) when field in [:args, :meta] do
+    unique_map_values(changeset, field, keys)
+  end
+
+  defp unique_field_value(changeset, field, _keys) do
+    Changeset.get_field(changeset, field)
+  end
+
   defp unique_field({changeset, field, keys}, acc) when field in [:args, :meta] do
-    value = unique_map_values(changeset, field, keys)
+    value = unique_field_value(changeset, field, keys)
 
     cond do
       value == %{} ->
@@ -533,8 +557,8 @@ defmodule Oban.Engines.Basic do
     end
   end
 
-  defp unique_field({changeset, field, _}, acc) do
-    value = Changeset.get_field(changeset, field)
+  defp unique_field({changeset, field, keys}, acc) do
+    value = unique_field_value(changeset, field, keys)
 
     dynamic([j], field(j, ^field) == ^value and ^acc)
   end
