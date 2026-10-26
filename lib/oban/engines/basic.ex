@@ -499,8 +499,9 @@ defmodule Oban.Engines.Basic do
 
     keys = Enum.map(keys, &to_string/1)
     states = Enum.map(states, &to_string/1)
-    dynamic = Enum.reduce(fields, true, &unique_field({changeset, &1, keys}, &2))
-    lock_key = :erlang.phash2([keys, states, dynamic])
+    values = Enum.map(fields, &{&1, unique_value(changeset, &1, keys)})
+    dynamic = Enum.reduce(values, true, &unique_field(&1, keys, &2))
+    lock_key = :erlang.phash2([keys, states, values])
 
     query =
       Job
@@ -514,9 +515,22 @@ defmodule Oban.Engines.Basic do
 
   defp unique_query(_changeset), do: nil
 
-  defp unique_field({changeset, field, keys}, acc) when field in [:args, :meta] do
-    value = unique_map_values(changeset, field, keys)
+  defp unique_value(changeset, field, keys) when field in [:args, :meta] do
+    case keys do
+      [] ->
+        Changeset.get_field(changeset, field)
 
+      [_ | _] ->
+        changeset
+        |> Changeset.get_field(field)
+        |> Map.new(fn {key, val} -> {to_string(key), val} end)
+        |> Map.take(keys)
+    end
+  end
+
+  defp unique_value(changeset, field, _keys), do: Changeset.get_field(changeset, field)
+
+  defp unique_field({field, value}, keys, acc) when field in [:args, :meta] do
     cond do
       value == %{} ->
         dynamic([j], fragment("? <@ ?", field(j, ^field), ^value) and ^acc)
@@ -533,23 +547,8 @@ defmodule Oban.Engines.Basic do
     end
   end
 
-  defp unique_field({changeset, field, _}, acc) do
-    value = Changeset.get_field(changeset, field)
-
+  defp unique_field({field, value}, _keys, acc) do
     dynamic([j], field(j, ^field) == ^value and ^acc)
-  end
-
-  defp unique_map_values(changeset, field, keys) do
-    case keys do
-      [] ->
-        Changeset.get_field(changeset, field)
-
-      [_ | _] ->
-        changeset
-        |> Changeset.get_field(field)
-        |> Map.new(fn {key, val} -> {to_string(key), val} end)
-        |> Map.take(keys)
-    end
   end
 
   defp since_period(query, :infinity, _timestamp), do: query
