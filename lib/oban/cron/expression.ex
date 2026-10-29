@@ -132,7 +132,9 @@ defmodule Oban.Cron.Expression do
       |> DateTime.truncate(:second)
       |> Map.put(:second, 0)
 
-    match_at(expr, time, :next)
+    expr
+    |> match_at(time, :next)
+    |> resolve_zone(time, :next)
   end
 
   defp match_at(expr, time, dir) do
@@ -261,7 +263,28 @@ defmodule Oban.Cron.Expression do
       |> DateTime.truncate(:second)
       |> Map.put(:second, 0)
 
-    match_at(expr, time, :last)
+    expr
+    |> match_at(time, :last)
+    |> resolve_zone(time, :last)
+  end
+
+  defp resolve_zone(match, origin, dir) do
+    date = DateTime.to_date(match)
+    time = DateTime.to_time(match)
+
+    case DateTime.new(date, time, match.time_zone) do
+      {:ok, datetime} ->
+        datetime
+
+      {:gap, _just_before, just_after} ->
+        just_after
+
+      {:ambiguous, first, second} when dir == :next ->
+        Enum.find([first, second], &(not DateTime.before?(&1, origin)))
+
+      {:ambiguous, first, second} ->
+        Enum.find([second, first], &(not DateTime.after?(&1, origin)))
+    end
   end
 
   defp day_of_week(datetime) do

@@ -150,6 +150,18 @@ defmodule Oban.Cron.ExpressionTest do
       assert ~U[2022-09-05 01:00:00Z] == last_at("0 1 5 9 MON", ~U[2024-11-21 00:00:00Z])
     end
 
+    test "calculating the last match across daylight saving changes" do
+      assert ~U[2026-10-23 15:00:00Z] == last_at_utc("0 16 * * MON-FRI", ~U[2026-10-25 01:01:00Z])
+      assert ~U[2026-10-24 23:00:00Z] == last_at_utc("0 0 * * *", ~U[2026-10-25 01:01:00Z])
+      assert ~U[2026-03-28 09:00:00Z] == last_at_utc("0 9 * * *", ~U[2026-03-29 07:00:00Z])
+    end
+
+    test "calculating the last match within a repeated or skipped hour" do
+      assert ~U[2026-10-25 00:30:00Z] == last_at_utc("30 1 * * *", ~U[2026-10-25 00:40:00Z])
+      assert ~U[2026-10-25 01:30:00Z] == last_at_utc("30 1 * * *", ~U[2026-10-25 01:40:00Z])
+      assert ~U[2026-03-29 01:00:00Z] == last_at_utc("30 1 * * *", ~U[2026-03-29 03:00:00Z])
+    end
+
     property "the last_at time is always in the past" do
       check all minutes <- minutes(),
                 hours <- hours(),
@@ -186,6 +198,17 @@ defmodule Oban.Cron.ExpressionTest do
       assert ~U[2027-09-05 01:00:00Z] == next_at("0 1 5 9 SUN", ~U[2024-11-21 00:00:00Z])
     end
 
+    test "calculating the next match across daylight saving changes" do
+      assert ~U[2026-03-29 08:00:00Z] == next_at_utc("0 9 * * *", ~U[2026-03-28 12:00:00Z])
+      assert ~U[2026-10-25 09:00:00Z] == next_at_utc("0 9 * * *", ~U[2026-10-24 12:00:00Z])
+    end
+
+    test "calculating the next match within a repeated or skipped hour" do
+      assert ~U[2026-10-25 00:30:00Z] == next_at_utc("30 1 * * *", ~U[2026-10-25 00:10:00Z])
+      assert ~U[2026-10-25 01:30:00Z] == next_at_utc("30 1 * * *", ~U[2026-10-25 01:10:00Z])
+      assert ~U[2026-03-29 01:00:00Z] == next_at_utc("30 1 * * *", ~U[2026-03-29 00:10:00Z])
+    end
+
     property "the next_at time is always in the future" do
       check all minutes <- minutes(),
                 hours <- hours(),
@@ -197,6 +220,17 @@ defmodule Oban.Cron.ExpressionTest do
                |> DateTime.after?(DateTime.utc_now())
       end
     end
+  end
+
+  defp last_at_utc(expr, utc), do: in_london(utc, &last_at(expr, &1))
+
+  defp next_at_utc(expr, utc), do: in_london(utc, &next_at(expr, &1))
+
+  defp in_london(utc, fun) do
+    utc
+    |> DateTime.shift_zone!("Europe/London")
+    |> fun.()
+    |> DateTime.shift_zone!("Etc/UTC")
   end
 
   defp minutes, do: expression(0..59)
