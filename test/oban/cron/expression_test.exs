@@ -122,6 +122,17 @@ defmodule Oban.Cron.ExpressionTest do
                |> Expr.now?(datetime)
       end
     end
+
+    test "fixed hours only match the first pass through a repeated hour" do
+      first = DateTime.shift_zone!(~U[2026-11-01 06:30:00Z], "America/Chicago")
+      second = DateTime.shift_zone!(~U[2026-11-01 07:30:00Z], "America/Chicago")
+
+      assert "30 1 * * *" |> Expr.parse!() |> Expr.now?(first)
+      refute "30 1 * * *" |> Expr.parse!() |> Expr.now?(second)
+
+      assert "30 * * * *" |> Expr.parse!() |> Expr.now?(first)
+      assert "30 * * * *" |> Expr.parse!() |> Expr.now?(second)
+    end
   end
 
   describe "last_at/2" do
@@ -157,9 +168,19 @@ defmodule Oban.Cron.ExpressionTest do
     end
 
     test "calculating the last match within a repeated or skipped hour" do
-      assert ~U[2026-10-25 00:30:00Z] == last_at_utc("30 1 * * *", ~U[2026-10-25 00:40:00Z])
-      assert ~U[2026-10-25 01:30:00Z] == last_at_utc("30 1 * * *", ~U[2026-10-25 01:40:00Z])
+      assert ~U[2026-10-25 00:30:00Z] == last_at_utc("30 * * * *", ~U[2026-10-25 00:40:00Z])
+      assert ~U[2026-10-25 01:30:00Z] == last_at_utc("30 * * * *", ~U[2026-10-25 01:40:00Z])
       assert ~U[2026-03-29 01:00:00Z] == last_at_utc("30 1 * * *", ~U[2026-03-29 03:00:00Z])
+    end
+
+    test "calculating the last match for fixed hours within a repeated hour" do
+      chicago = "America/Chicago"
+
+      assert ~U[2026-11-01 06:30:00Z] ==
+               last_at_utc("30 1 * * *", ~U[2026-11-01 06:40:00Z], chicago)
+
+      assert ~U[2026-11-01 06:30:00Z] ==
+               last_at_utc("30 1 * * *", ~U[2026-11-01 07:40:00Z], chicago)
     end
 
     property "the last_at time is always in the past" do
@@ -204,9 +225,22 @@ defmodule Oban.Cron.ExpressionTest do
     end
 
     test "calculating the next match within a repeated or skipped hour" do
-      assert ~U[2026-10-25 00:30:00Z] == next_at_utc("30 1 * * *", ~U[2026-10-25 00:10:00Z])
-      assert ~U[2026-10-25 01:30:00Z] == next_at_utc("30 1 * * *", ~U[2026-10-25 01:10:00Z])
+      assert ~U[2026-10-25 00:30:00Z] == next_at_utc("30 * * * *", ~U[2026-10-25 00:10:00Z])
+      assert ~U[2026-10-25 01:30:00Z] == next_at_utc("30 * * * *", ~U[2026-10-25 01:10:00Z])
       assert ~U[2026-03-29 01:00:00Z] == next_at_utc("30 1 * * *", ~U[2026-03-29 00:10:00Z])
+    end
+
+    test "calculating the next match for fixed hours within a repeated hour" do
+      chicago = "America/Chicago"
+
+      assert ~U[2026-11-01 06:30:00Z] ==
+               next_at_utc("30 1 * * *", ~U[2026-11-01 06:10:00Z], chicago)
+
+      assert ~U[2026-11-02 07:30:00Z] ==
+               next_at_utc("30 1 * * *", ~U[2026-11-01 06:40:00Z], chicago)
+
+      assert ~U[2026-11-02 07:30:00Z] ==
+               next_at_utc("30 1 * * *", ~U[2026-11-01 07:10:00Z], chicago)
     end
 
     property "the next_at time is always in the future" do
@@ -222,13 +256,17 @@ defmodule Oban.Cron.ExpressionTest do
     end
   end
 
-  defp last_at_utc(expr, utc), do: in_london(utc, &last_at(expr, &1))
+  defp last_at_utc(expr, utc, zone \\ "Europe/London") do
+    in_zone(utc, zone, &last_at(expr, &1))
+  end
 
-  defp next_at_utc(expr, utc), do: in_london(utc, &next_at(expr, &1))
+  defp next_at_utc(expr, utc, zone \\ "Europe/London") do
+    in_zone(utc, zone, &next_at(expr, &1))
+  end
 
-  defp in_london(utc, fun) do
+  defp in_zone(utc, zone, fun) do
     utc
-    |> DateTime.shift_zone!("Europe/London")
+    |> DateTime.shift_zone!(zone)
     |> fun.()
     |> DateTime.shift_zone!("Etc/UTC")
   end

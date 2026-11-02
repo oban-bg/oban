@@ -89,6 +89,10 @@ defmodule Oban.Cron.Expression do
   def now?(%__MODULE__{reboot?: true}, _datetime), do: true
 
   def now?(%__MODULE__{} = cron, datetime) do
+    matches?(cron, datetime) and datetime in run_times(cron, datetime)
+  end
+
+  defp matches?(cron, datetime) do
     dow = day_of_week(datetime)
 
     MapSet.member?(cron.months, datetime.month) and
@@ -132,14 +136,14 @@ defmodule Oban.Cron.Expression do
       |> DateTime.truncate(:second)
       |> Map.put(:second, 0)
 
-    expr
-    |> match_at(time, :next)
-    |> resolve_zone(time, :next)
+    times = run_times(expr, match_at(expr, time, :next))
+
+    Enum.find(times, &(not DateTime.before?(&1, time))) || next_at(expr, List.last(times))
   end
 
   defp match_at(expr, time, dir) do
     cond do
-      now?(expr, time) ->
+      matches?(expr, time) ->
         time
 
       not MapSet.member?(expr.months, time.month) ->
@@ -264,26 +268,21 @@ defmodule Oban.Cron.Expression do
       |> Map.put(:second, 0)
 
     expr
-    |> match_at(time, :last)
-    |> resolve_zone(time, :last)
+    |> run_times(match_at(expr, time, :last))
+    |> Enum.reverse()
+    |> Enum.find(&(not DateTime.after?(&1, time)))
   end
 
-  defp resolve_zone(match, origin, dir) do
-    date = DateTime.to_date(match)
-    time = DateTime.to_time(match)
+  defp run_times(expr, wall_time) do
+    date = DateTime.to_date(wall_time)
+    time = DateTime.to_time(wall_time)
+    fixed_hour? = MapSet.size(expr.hours) < 24
 
-    case DateTime.new(date, time, match.time_zone) do
-      {:ok, datetime} ->
-        datetime
-
-      {:gap, _just_before, just_after} ->
-        just_after
-
-      {:ambiguous, first, second} when dir == :next ->
-        Enum.find([first, second], &(not DateTime.before?(&1, origin)))
-
-      {:ambiguous, first, second} ->
-        Enum.find([second, first], &(not DateTime.after?(&1, origin)))
+    case DateTime.new(date, time, wall_time.time_zone) do
+      {:ok, datetime} -> [datetime]
+      {:gap, _just_before, just_after} -> [just_after]
+      {:ambiguous, first, _second} when fixed_hour? -> [first]
+      {:ambiguous, first, second} -> [first, second]
     end
   end
 
