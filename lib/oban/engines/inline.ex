@@ -94,6 +94,7 @@ defmodule Oban.Engines.Inline do
       |> Changeset.put_change(:attempted_by, [conf.node])
       |> Changeset.put_change(:attempted_at, utc_now())
       |> Changeset.put_change(:scheduled_at, utc_now())
+      |> Changeset.put_change(:inserted_at, utc_now())
       |> Changeset.update_change(:args, &json_recode/1)
       |> Changeset.update_change(:meta, &json_recode/1)
 

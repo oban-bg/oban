@@ -12,7 +12,7 @@ defmodule Oban.Engines.InlineTest do
     assert {:ok, job_4} = Oban.insert(name, Worker.new(%{ref: 4, action: "DISCARD"}))
     assert {:ok, job_5} = Oban.insert(name, Worker.new(%{ref: 5, action: "CANCEL"}))
 
-    assert %{attempt: 1, completed_at: %_{}, state: "completed"} = job_1
+    assert %{attempt: 1, completed_at: %_{}, inserted_at: %_{}, state: "completed"} = job_1
     assert %{attempt: 1, scheduled_at: %_{}, errors: [_], state: "retryable"} = job_2
     assert %{attempt: 0, scheduled_at: %_{}, state: "scheduled"} = job_3
     assert %{attempt: 1, discarded_at: %_{}, state: "discarded"} = job_4
