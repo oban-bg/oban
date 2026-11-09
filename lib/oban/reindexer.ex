@@ -31,7 +31,9 @@ defmodule Oban.Reindexer do
     * `:schedule` — a cron expression that controls when to reindex. Defaults to `"@midnight"`.
 
     * `:timeout` - the time to wait for each query call to finish, as either an integer number of
-      milliseconds, or an `Oban.Period` tuple like `{15, :seconds}`. Defaults to 15 seconds.
+      milliseconds, or an `Oban.Period` tuple like `{30, :minutes}`. A rebuild that exceeds the
+      timeout is cancelled and retried on the next scheduled run, so it must be long enough to
+      reindex the largest index. Defaults to 1 hour.
 
     * `:timezone` — which timezone to use when evaluating the schedule. To use a timezone other than
       the default of "Etc/UTC" you *must* have a timezone database like [tz][tz] installed and
@@ -60,7 +62,7 @@ defmodule Oban.Reindexer do
     :conf,
     indexes: ~w(oban_jobs_args_index oban_jobs_meta_index),
     schedule: "@midnight",
-    timeout: :timer.seconds(15),
+    timeout: :timer.hours(1),
     timezone: "Etc/UTC"
   ]
 
