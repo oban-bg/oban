@@ -420,12 +420,12 @@ defmodule Oban.TestingTest do
 
     test "refuting that jobs will eventually be enqueued" do
       Task.async(fn ->
-        Process.sleep(10)
+        Process.sleep(100)
 
         insert!(%{id: 1}, worker: Ping, queue: :alpha)
       end)
 
-      refute_enqueued [worker: Ping, args: %{id: 1}], 5
+      refute_enqueued [worker: Ping, args: %{id: 1}], 20
     end
   end
 
