@@ -76,7 +76,7 @@ use Oban.Worker,
 > 🌟 [Pro's Smart Engine][pro-smart-engine] *does* rely on unique constraints and provides strong
 > uniqueness guarantees.
 
-[pro-smart-engine]: https://oban.pro/docs/pro/Oban.Pro.Engines.Smart.html
+[pro-smart-engine]: https://oban.pro/docs/pro/Oban.Pro.Engine.html
 
 ## Uniqueness vs Concurrency
 
