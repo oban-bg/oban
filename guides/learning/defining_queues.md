@@ -117,4 +117,4 @@ queue. However, consider these important guidelines:
 
 [ffmpeg]: https://www.ffmpeg.org
 [imagemagick]: https://imagemagick.org/index.php
-[smart]: https://oban.pro/docs/pro/Oban.Pro.Engines.Smart.html
+[smart]: https://oban.pro/docs/pro/Oban.Pro.Engine.html
