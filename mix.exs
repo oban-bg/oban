@@ -8,7 +8,7 @@ defmodule Oban.MixProject do
     [
       app: :oban,
       version: @version,
-      elixir: "~> 1.15",
+      elixir: "~> 1.17",
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
       deps: deps(),
@@ -192,15 +192,15 @@ defmodule Oban.MixProject do
 
   defp deps do
     [
-      {:ecto_sql, "~> 3.10"},
+      {:ecto_sql, "~> 3.12"},
       {:telemetry, "~> 1.3"},
 
       # Optional
-      {:ecto_sqlite3, "~> 0.9", optional: true},
-      {:jason, "~> 1.1", optional: true},
-      {:igniter, "~> 0.5", optional: true},
+      {:ecto_sqlite3, "~> 0.17", optional: true},
+      {:jason, "~> 1.4", optional: true},
+      {:igniter, "~> 0.8", optional: true},
       {:myxql, "~> 0.7", optional: true},
-      {:postgrex, "~> 0.20", optional: true},
+      {:postgrex, "~> 0.22", optional: true},
 
       # Test and Dev
       {:stream_data, "~> 1.0", only: [:test, :dev]},

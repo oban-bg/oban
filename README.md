@@ -166,8 +166,8 @@ suitability for production.
 
 Oban requires:
 
-* Elixir 1.15+
-* Erlang 24+
+* Elixir 1.17+
+* Erlang 25+
 * PostgreSQL 14.0+, MySQL 8.4+, or SQLite3 3.37.0+
 
 ## Installation

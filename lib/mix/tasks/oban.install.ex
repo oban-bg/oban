@@ -112,7 +112,9 @@ if Code.ensure_loaded?(Igniter) do
             [Oban],
             {:code, test_code}
           )
-          |> Igniter.Project.Application.add_new_child({Oban, {:code, tree_code}}, after: [repo])
+          |> Igniter.Project.Application.add_new_child({Oban, {:code, tree_code}},
+            after: [repo, Ecto.Migrator]
+          )
           |> Igniter.Project.Formatter.import_dep(:oban)
           |> Igniter.Libs.Ecto.gen_migration(repo, "add_oban", body: migration, on_exists: :skip)
 
