@@ -3,8 +3,6 @@ defmodule Oban.JobTest do
 
   import Ecto.Query, only: [order_by: 2, limit: 2]
 
-  alias Ecto.Changeset
-
   doctest Oban.Job
 
   describe "new/2" do
@@ -236,17 +234,31 @@ defmodule Oban.JobTest do
   end
 
   describe "update/2" do
-    test "setting the state when scheduled_at is provided" do
-      job =
-        %{}
-        |> Job.new(worker: Fake)
-        |> Changeset.apply_action!(:insert)
+    test "scheduling available jobs when scheduled_at is in the future" do
+      job = %Job{state: "available"}
 
-      assert "available" == job.state
+      assert %{state: "scheduled"} =
+               Job.update(job, %{scheduled_at: seconds_from_now(60)}).changes
 
-      changeset = Job.update(job, %{scheduled_at: DateTime.utc_now()})
+      refute Map.has_key?(Job.update(job, %{scheduled_at: seconds_from_now(-60)}).changes, :state)
+    end
 
-      assert %{state: "scheduled", scheduled_at: %{}} = changeset.changes
+    test "making scheduled jobs available when scheduled_at is in the past" do
+      job = %Job{state: "scheduled"}
+
+      assert %{state: "available"} =
+               Job.update(job, %{scheduled_at: seconds_from_now(-60)}).changes
+
+      refute Map.has_key?(Job.update(job, %{scheduled_at: seconds_from_now(60)}).changes, :state)
+    end
+
+    test "retaining the state of jobs that aren't waiting to run" do
+      for state <- ~w(executing retryable completed cancelled discarded) do
+        changeset = Job.update(%Job{state: state}, %{scheduled_at: seconds_from_now(60)})
+
+        assert %{scheduled_at: %DateTime{}} = changeset.changes
+        refute Map.has_key?(changeset.changes, :state)
+      end
     end
   end
 

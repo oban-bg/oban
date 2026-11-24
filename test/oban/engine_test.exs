@@ -801,6 +801,20 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite, Oban.Engines.Dolphin] do
 
         assert_receive {:event, [:update_job, :stop], _, %{job: _}}
       end
+
+      test "transitioning between available and scheduled with scheduled_at", %{name: name} do
+        job_1 = insert!(name, %{}, state: "available")
+        job_2 = insert!(name, %{}, state: "scheduled", scheduled_at: seconds_from_now(60))
+        job_3 = insert!(name, %{}, state: "completed")
+
+        assert {:ok, job_1} = Oban.update_job(name, job_1, %{scheduled_at: seconds_from_now(60)})
+        assert {:ok, job_2} = Oban.update_job(name, job_2, %{scheduled_at: seconds_ago(60)})
+        assert {:ok, job_3} = Oban.update_job(name, job_3, %{scheduled_at: seconds_from_now(60)})
+
+        assert %{state: "scheduled"} = reload(name, job_1)
+        assert %{state: "available"} = reload(name, job_2)
+        assert %{state: "completed"} = reload(name, job_3)
+      end
     end
 
     describe "shutdown/2" do

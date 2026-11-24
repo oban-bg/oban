@@ -1643,6 +1643,17 @@ defmodule Oban do
   * `:tags`
   * `:worker`
 
+  ### Scheduling and State
+
+  Changing `:scheduled_at` only changes the state of jobs that are waiting to run:
+
+  * An `available` job becomes `scheduled` when the new time is in the future
+  * A `scheduled` job becomes `available` when the new time is in the past
+
+  Jobs in any other state keep their state. In particular, rescheduling won't interrupt an
+  `executing` job or revive a `completed`, `cancelled`, or `discarded` job. Use `retry_job/2` to
+  run a finished job again.
+
   > #### Updating Executing Jobs {: .warning}
   >
   > Use caution when updating jobs that are currently `executing`. Modifying fields like `:args`,

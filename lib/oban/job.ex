@@ -349,6 +349,10 @@ defmodule Oban.Job do
   Only a subset of fields are allowed to be updated, and all validations from `new/2`
   are applied to ensure data integrity.
 
+  Changing `:scheduled_at` only changes the state of jobs that are waiting to run: an `available`
+  job becomes `scheduled` for a future time, and a `scheduled` job becomes `available` for a past
+  time. Jobs in any other state keep their state.
+
   ## Examples
 
   Update the tags and priority of a job:
@@ -364,7 +368,7 @@ defmodule Oban.Job do
     |> validate_length(:worker, min: 1, max: 128)
     |> validate_number(:max_attempts, greater_than: 0)
     |> validate_number(:priority, greater_than: -1, less_than: 10)
-    |> normalize_state()
+    |> transition_state()
     |> check_constraint(:max_attempts, name: :positive_max_attempts)
     |> check_constraint(:priority, name: :priority_range)
   end
@@ -687,6 +691,22 @@ defmodule Oban.Job do
       _ -> changeset
     end
   end
+
+  defp transition_state(%{data: %{state: state}} = changeset) do
+    case fetch_change(changeset, :scheduled_at) do
+      {:ok, %DateTime{} = scheduled_at} ->
+        comparison = DateTime.compare(scheduled_at, DateTime.utc_now())
+
+        put_change(changeset, :state, next_state(state, comparison))
+
+      _ ->
+        changeset
+    end
+  end
+
+  defp next_state("available", :gt), do: "scheduled"
+  defp next_state("scheduled", comparison) when comparison in [:lt, :eq], do: "available"
+  defp next_state(state, _comparison), do: state
 
   defp normalize_tags(%{tags: [_ | _] = tags} = params) do
     normalize = fn string ->
