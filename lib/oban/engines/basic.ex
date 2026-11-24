@@ -396,11 +396,11 @@ defmodule Oban.Engines.Basic do
       query =
         Job
         |> where([j], j.id == ^id)
-        |> lock("FOR UPDATE SKIP LOCKED")
+        |> lock("FOR UPDATE")
 
       case Repo.one(conf, query) do
         nil ->
-          {:error, :locked_or_not_found}
+          {:error, :not_found}
 
         job ->
           job

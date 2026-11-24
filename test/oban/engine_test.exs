@@ -802,6 +802,14 @@ for engine <- [Oban.Engines.Basic, Oban.Engines.Lite, Oban.Engines.Dolphin] do
         assert_receive {:event, [:update_job, :stop], _, %{job: _}}
       end
 
+      test "returning an error for a job that no longer exists", %{name: name} do
+        job = insert!(name, %{}, [])
+
+        assert :ok = Oban.delete_job(name, job)
+
+        assert {:error, :not_found} = Oban.update_job(name, job, %{priority: 5})
+      end
+
       test "transitioning between available and scheduled with scheduled_at", %{name: name} do
         job_1 = insert!(name, %{}, state: "available")
         job_2 = insert!(name, %{}, state: "scheduled", scheduled_at: seconds_from_now(60))

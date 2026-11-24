@@ -339,11 +339,17 @@ defmodule Oban.Engines.Lite do
   end
 
   @impl Engine
-  def update_job(%Config{} = conf, %Job{} = job, changes) when is_map(changes) do
+  def update_job(%Config{} = conf, %Job{id: id}, changes) when is_map(changes) do
     updater = fn ->
-      job
-      |> Job.update(changes)
-      |> then(&Repo.update(conf, &1))
+      case Repo.get(conf, Job, id) do
+        nil ->
+          {:error, :not_found}
+
+        job ->
+          job
+          |> Job.update(changes)
+          |> then(&Repo.update(conf, &1))
+      end
     end
 
     case Repo.transaction(conf, updater) do

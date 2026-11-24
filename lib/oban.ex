@@ -1627,7 +1627,8 @@ defmodule Oban do
   function that receives the job and returns a map of changes.
 
   The update operation is wrapped in a transaction with a locking clause (when available) to
-  prevent concurrent modifications.
+  prevent concurrent modifications. Updates wait for the lock when another transaction holds it,
+  and return `{:error, :not_found}` when the job doesn't exist.
 
   ### Fields and Validations
 
