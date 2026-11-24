@@ -260,6 +260,15 @@ defmodule Oban.JobTest do
         refute Map.has_key?(changeset.changes, :state)
       end
     end
+
+    test "setting scheduled_at relative to now with scheduled_in" do
+      job = %Job{state: "available"}
+
+      assert %{state: "scheduled", scheduled_at: scheduled_at} =
+               Job.update(job, %{scheduled_in: {1, :minute}}).changes
+
+      assert_in_delta 60, DateTime.diff(scheduled_at, DateTime.utc_now()), 1
+    end
   end
 
   describe "to_map/1" do

@@ -1643,6 +1643,9 @@ defmodule Oban do
   * `:tags`
   * `:worker`
 
+  As a convenience, `:scheduled_in` is accepted in place of `:scheduled_at` to schedule relative
+  to the current time, with the same values as the `:scheduled_in` option for `Oban.Job.new/2`.
+
   ### Scheduling and State
 
   Changing `:scheduled_at` only changes the state of jobs that are waiting to run:
@@ -1674,6 +1677,10 @@ defmodule Oban do
   Update a job using a function:
 
       Oban.update_job(job, fn job -> %{tags: ["retry" | job.tags]} end)
+
+  Reschedule a job to run five minutes from now:
+
+      Oban.update_job(job, %{scheduled_in: {5, :minutes}})
 
   Using a named Oban instance:
 

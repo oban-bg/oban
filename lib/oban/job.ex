@@ -349,6 +349,9 @@ defmodule Oban.Job do
   Only a subset of fields are allowed to be updated, and all validations from `new/2`
   are applied to ensure data integrity.
 
+  In addition to the updatable fields, `:scheduled_in` is accepted as a convenience for setting
+  `:scheduled_at` relative to the current time.
+
   Changing `:scheduled_at` only changes the state of jobs that are waiting to run: an `available`
   job becomes `scheduled` for a future time, and a `scheduled` job becomes `available` for a past
   time. Jobs in any other state keep their state.
@@ -358,17 +361,22 @@ defmodule Oban.Job do
   Update the tags and priority of a job:
 
       Oban.Job.update(job, %{tags: ["urgent"], priority: 5})
+
+  Push a job five minutes into the future:
+
+      Oban.Job.update(job, %{scheduled_in: {5, :minutes}})
   """
   @doc since: "2.20.0"
   @spec update(t(), map()) :: Ecto.Changeset.t()
   def update(%__MODULE__{} = job, changes) when is_map(changes) do
     job
     |> cast(changes, @updatable_params)
+    |> put_scheduling(changes)
+    |> transition_state()
     |> validate_length(:queue, min: 1, max: 128)
     |> validate_length(:worker, min: 1, max: 128)
     |> validate_number(:max_attempts, greater_than: 0)
     |> validate_number(:priority, greater_than: -1, less_than: 10)
-    |> transition_state()
     |> check_constraint(:max_attempts, name: :positive_max_attempts)
     |> check_constraint(:priority, name: :priority_range)
   end
